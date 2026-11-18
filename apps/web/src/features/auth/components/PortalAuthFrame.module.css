@@ -26,22 +26,60 @@
   object-fit: cover;
 }
 
-/* Ảnh đường hầm + xe: bản vẽ dùng mặt nạ mờ dần ở mép trên để hoà vào nền tối. */
-.car {
-  object-fit: cover;
-  /* Bản vẽ: ảnh rộng bằng thẻ, cao 1694 và kéo lên 662 ⇒ neo đáy ảnh. */
-  object-position: center 100%;
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
+/*
+ * Khung bản vẽ 1256 × 1040 thu vừa thẻ (như `object-fit: contain`): rộng = min(bề rộng thẻ, cao thẻ ×
+ * 1256/1040). Mọi số đo bên trong là số Figma chia cho 1256 (bề rộng) hoặc 1040 (chiều cao).
+ */
+.stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
 }
 
+.art {
+  position: relative;
+  width: min(100cqw, 100cqh * 1256 / 1040);
+  aspect-ratio: 1256 / 1040;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+/* Ảnh đường hầm + xe: phủ khung, cắt giữa như Figma; mép trái/phải tan vào nền khi thẻ rộng hơn khung. */
+.tunnel {
+  object-fit: cover;
+  mask-image: linear-gradient(to right, transparent 0, #000 4%, #000 96%, transparent 100%);
+}
+
+/*
+ * Ánh vàng + sao: ảnh rộng bằng khung, cao 1694, kéo lên 662 ⇒ neo ĐÁY. Mặt nạ `32e67`: dải dọc
+ * đậm ở đỉnh, tan hết ở 728/1080 ≈ 67%.
+ */
+.car {
+  object-fit: cover;
+  object-position: center 100%;
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 67%);
+}
+
+/* Lưới mảnh: hoà màu `color-dodge`, mờ 40%, cùng mặt nạ dải dọc. */
+.grid {
+  object-fit: cover;
+  object-position: center 24%;
+  opacity: 0.4;
+  mix-blend-mode: color-dodge;
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 67%);
+}
+
+/* Logo + PARTNER: Figma x 264, y 101, rộng 414, khe 18. */
 .logoBlock {
   position: absolute;
-  top: clamp(40px, 9.4vh, 101px);
-  left: 21%;
+  top: calc(101 / 1040 * 100%);
+  left: calc(264 / 1256 * 100%);
   display: flex;
-  width: min(414px, 60%);
+  width: calc(414 / 1256 * 100cqw);
   flex-direction: column;
-  gap: 18px;
+  gap: calc(18 / 1256 * 100cqw);
 }
 
 .logo {
@@ -49,42 +87,45 @@
   height: auto;
 }
 
+/* "PARTNER": 50px, giãn chữ 29.5px. */
 .wordmark {
   margin: 0;
-  font-size: clamp(30px, 2.6vw, 50px);
+  font-size: calc(50 / 1256 * 100cqw);
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: 0.59em;
+  letter-spacing: calc(29.5 / 1256 * 100cqw);
   color: #fff;
 }
 
+/* Thẻ giới thiệu: Figma x 264, y 355, rộng 639, đệm 20, bo 20, khe 8. */
 .infoCard {
   position: absolute;
-  top: clamp(260px, 32.9vh, 355px);
-  left: 21%;
+  top: calc(355 / 1040 * 100%);
+  left: calc(264 / 1256 * 100%);
   display: flex;
-  width: min(639px, 72%);
+  width: calc(639 / 1256 * 100cqw);
   flex-direction: column;
-  gap: 8px;
-  padding: 20px;
+  gap: calc(8 / 1256 * 100cqw);
+  padding: calc(20 / 1256 * 100cqw);
   border: 1px solid #3e3312;
-  border-radius: 20px;
+  border-radius: calc(20 / 1256 * 100cqw);
   background: rgba(88, 88, 88, 0.1);
   backdrop-filter: blur(2px);
 }
 
+/* Tiêu đề 24/32, lời 18/28 - theo bề rộng khung. */
 .infoTitle {
   margin: 0;
-  font-size: 24px;
+  font-size: calc(24 / 1256 * 100cqw);
   font-weight: 600;
-  line-height: 32px;
+  line-height: calc(32 / 1256 * 100cqw);
   color: #edbb4f;
 }
 
 .infoBody {
   margin: 0;
-  font-size: 18px;
-  line-height: 28px;
+  font-size: calc(18 / 1256 * 100cqw);
+  line-height: calc(28 / 1256 * 100cqw);
   color: #d5d7da;
 }
 

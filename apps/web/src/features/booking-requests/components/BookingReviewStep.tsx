@@ -37,6 +37,8 @@ interface BookingReviewStepProps {
   control: Control<RequestFormValues>;
   /** `current` = bằng ĐÃ XÁC THỰC của tài khoản (bước bằng lái đã soát nó hợp lệ cho chuyến). */
   licence: { required: boolean; current: DriverLicence | null };
+  /** Cổng bằng lái cho chuyến này - chưa `ready` thì thẻ giấy tờ mời tải bằng và nút gửi bị khoá. */
+  licenceGate?: { ready: boolean; loading: boolean; uploader: ReactNode };
   /** Điều kiện chủ xe công bố cho đúng dịch vụ đang chọn (giấy tờ, điều khoản). */
   hostTerms: { text: string | null; documents: string[] } | null;
   /** Cọc thế chấp khi nhận xe — vẽ trong thẻ giấy tờ & điều kiện, không ở thẻ tiền. */
@@ -83,6 +85,7 @@ export function BookingReviewStep({
   renter,
   control,
   licence,
+  licenceGate,
   hostTerms,
   deposit,
   agreementCoversHostTerms,
@@ -95,6 +98,8 @@ export function BookingReviewStep({
   onSubmit,
 }: BookingReviewStepProps) {
   const t = useTranslations('BookingRequests.flow');
+  // Gửi chỉ mở khi bằng đã hợp lệ cho chuyến - cùng phép soát với cổng ở server (ADR 0057).
+  const licenceBlocked = licence.required && licenceGate !== undefined && !licenceGate.ready;
 
   return (
     <div className={styles.review}>
@@ -138,7 +143,12 @@ export function BookingReviewStep({
             </Form>
           </BookingRenterCard>
 
-          <BookingRequirementsCard licence={licence} hostTerms={hostTerms} deposit={deposit} />
+          <BookingRequirementsCard
+            licence={licence}
+            licenceGate={licenceGate}
+            hostTerms={hostTerms}
+            deposit={deposit}
+          />
         </div>
 
         {/* ── Cột phải: tiền · đồng ý + gửi · sau khi gửi ─────────────────────────────── */}
@@ -159,10 +169,21 @@ export function BookingReviewStep({
               </p>
             ) : null}
             {stepError ? <Alert type="error" showIcon title={stepError} role="alert" /> : null}
-            <CtaButton variant="gradient" size="form" block loading={submitting} onClick={onSubmit}>
+            <CtaButton
+              variant="gradient"
+              size="form"
+              block
+              loading={submitting}
+              disabled={licenceBlocked}
+              onClick={onSubmit}
+            >
               {t('reviewPage.submit.cta')}
             </CtaButton>
-            <p className={styles.submitHint}>{t('reviewPage.submit.hint')}</p>
+            <p className={styles.submitHint}>
+              {licenceBlocked
+                ? t('reviewPage.requirements.licenceRequiredToSubmit')
+                : t('reviewPage.submit.hint')}
+            </p>
           </section>
 
           <section className={styles.next} aria-label={t('reviewPage.next.title')}>

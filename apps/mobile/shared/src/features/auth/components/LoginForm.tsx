@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
   LOGIN_IDENTIFIER_KIND,
@@ -33,9 +33,11 @@ interface LoginFormProps {
   /** Nhận cả hồ sơ: đích sau đăng nhập phụ thuộc `hasPassword`, và chỉ nơi gọi mới biết đi đâu. */
   onSuccess: (user: CurrentUser) => void;
   onForgotPassword: () => void;
+  /** Dòng ngay dưới nút đăng nhập, khe 8 (Figma `24382:23384` - "Bạn chưa có tài khoản? Đăng ký ngay!"). */
+  belowSubmit?: ReactNode;
 }
 
-export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
+export function LoginForm({ onSuccess, onForgotPassword, belowSubmit }: LoginFormProps) {
   const colors = useColors();
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
@@ -95,7 +97,9 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
         name="identifier"
         required
         label={t(isPartnerApp ? 'login.partnerIdentifier' : 'login.phone')}
-        placeholder={t(isPartnerApp ? 'login.partnerIdentifierPlaceholder' : 'login.phonePlaceholder')}
+        placeholder={t(
+          isPartnerApp ? 'login.partnerIdentifierPlaceholder' : 'login.phonePlaceholder',
+        )}
         hint={isPartnerApp ? t('login.partnerIdentifierHint') : undefined}
         icon={isPartnerApp ? 'person-outline' : 'call-outline'}
         autoCapitalize="none"
@@ -141,12 +145,29 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
         phản chiếu lại chúng. Một cờ `isButtonDisabled` tự nuôi là một nguồn sự thật thứ hai, và
         nó sai đúng vào lúc khó thấy nhất: khi request hỏng giữa chừng.
       */}
-      <Button
-        label={t('login.submit')}
-        icon="log-in-outline"
-        onPress={onSubmit}
-        loading={login.isPending}
-      />
+      {isPartnerApp ? (
+        // Figma `24382:23382`: nút gradient cao 44 không icon, dòng mời đăng ký ngay dưới (khe 8).
+        <YStack gap={space.sm} mt={space.lg}>
+          <Button
+            label={t('login.submit')}
+            variant="gradient"
+            size="lg"
+            onPress={onSubmit}
+            loading={login.isPending}
+          />
+          {belowSubmit}
+        </YStack>
+      ) : (
+        <>
+          <Button
+            label={t('login.submit')}
+            icon="log-in-outline"
+            onPress={onSubmit}
+            loading={login.isPending}
+          />
+          {belowSubmit}
+        </>
+      )}
     </YStack>
   );
 }

@@ -512,7 +512,8 @@
         "driverBody": "Tài xế của chủ xe cầm lái nên bạn không cần giấy phép lái xe. Mang theo giấy tờ tuỳ thân để đối chiếu khi đón xe.",
         "documents": "Giấy tờ chủ xe yêu cầu: {documents}",
         "hostTerms": "Điều khoản thuê của chủ xe",
-        "reminder": "Việc xác minh và yêu cầu giấy tờ cụ thể được hướng dẫn theo chính sách hiện hành trước khi nhận xe."
+        "reminder": "Việc xác minh và yêu cầu giấy tờ cụ thể được hướng dẫn theo chính sách hiện hành trước khi nhận xe.",
+        "licenceRequiredToSubmit": "Thêm bằng lái hợp lệ để gửi yêu cầu thuê xe."
       },
       "costs": {
         "title": "Chi phí thuê xe",

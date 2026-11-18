@@ -259,22 +259,108 @@
 /* Hai lớp để thắng `display` của `.anticon` (AntD nạp CSS sau CSS Modules). */
 .cardIcon .onTouch,
 .cardText .onTouch,
+.reviewIcon .onTouch,
+.reviewCopy .onTouch,
 .root > .onTouch {
   display: none;
 }
 
 @media (pointer: coarse) {
   .cardIcon .onPointer,
-  .cardText .onPointer {
+  .cardText .onPointer,
+  .reviewIcon .onPointer,
+  .reviewCopy .onPointer {
     display: none;
   }
 
-  .cardIcon .onTouch {
+  .cardIcon .onTouch,
+  .reviewIcon .onTouch {
     display: inline-flex;
   }
 
   .cardText .onTouch,
+  .reviewCopy .onTouch,
   .root > .onTouch {
     display: block;
   }
+}
+
+/* ── Ô chọn ảnh của màn Xem lại đặt xe (Figma `21836:54301`) ─────────────────── */
+
+/* 352 × 220, nền xám nhạt, bo 16, viền đứt màu đỏ (bằng là việc còn thiếu trước khi gửi). */
+.reviewPicker {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+  width: min(100%, 352px);
+  min-height: 220px;
+  padding: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-error);
+  border-radius: var(--xp-border-radius-lg);
+  /* Figma `bg/gray-50` - nhạt hơn vòng tròn #f5f5f5 của chân dung để vòng tròn nổi lên. */
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.reviewPicker:hover,
+.reviewPicker:focus-visible {
+  background: var(--xp-color-primary-light);
+}
+
+.reviewPicker:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.reviewPortrait {
+  flex: none;
+  width: 96px;
+  height: 96px;
+}
+
+.reviewText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+/* Nút icon 40 × 40: nền trắng, viền xám, bo 12. */
+.reviewIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: 20px;
+}
+
+.reviewCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.reviewTitle {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+}
+
+.reviewHint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+  line-height: 18px;
 }

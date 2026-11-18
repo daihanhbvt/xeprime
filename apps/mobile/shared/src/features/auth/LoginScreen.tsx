@@ -12,6 +12,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
 import { LoginForm } from './components/LoginForm';
+import { PARTNER_AUTH_SECTION_GAP, PartnerAuthHeading } from './components/PartnerAuthHeading';
 import { SocialButtons } from './components/SocialButtons';
 
 /**
@@ -63,6 +64,42 @@ export function LoginScreen({
   const colors = useColors();
   const t = useTranslations('Auth');
   const tNav = useTranslations('Navigation');
+
+  /*
+   * App Partner - cột form Figma Partner-XePrime "Login - Partner/Admin" (`24382:23343`), như site
+   * partner khổ hẹp (chốt 18/11/2026): KHÔNG thanh trên (đây là màn gốc của app, không có chỗ lùi),
+   * tiêu đề "ĐĂNG NHẬP" căn giữa, form, nút gradient + "Đăng ký ngay!", vạch "hoặc đăng nhập bằng",
+   * Google/Facebook nằm ngang, điều khoản căn giữa. Thẻ ảnh trái, linh vật, "Ghi nhớ tài khoản" và
+   * "Về trang thuê xe" của bản desktop KHÔNG có trên app (app không có khu thuê xe để về).
+   */
+  if (APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER) {
+    return (
+      <Screen maxWidth="form">
+        <YStack gap={PARTNER_AUTH_SECTION_GAP} pt={space.xl}>
+          <PartnerAuthHeading title={t('market.login.title')} subtitle={t('portal.subtitle')} />
+          <LoginForm
+            onSuccess={onSuccess}
+            onForgotPassword={onForgotPassword}
+            belowSubmit={
+              onSwitchToRegister ? (
+                <AuthSwitchLink
+                  prompt={t('market.login.noAccount')}
+                  actionLabel={t('market.login.toRegister')}
+                  onPress={onSwitchToRegister}
+                  size="lg"
+                />
+              ) : null
+            }
+          />
+          <YStack gap={space.md}>
+            <SocialButtons onSuccess={onSuccess} layout="row" dividerLabel={t('market.divider')} />
+            <LegalConsentNote place="auth" align="center" />
+          </YStack>
+          <AppVersion />
+        </YStack>
+      </Screen>
+    );
+  }
 
   return (
     <>

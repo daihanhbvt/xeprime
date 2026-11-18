@@ -154,6 +154,14 @@
   font-weight: 600;
 }
 
+/* Chưa nhập đủ số: giữ màu vàng nhạt của bản vẽ, chỉ mờ đi - không chuyển xám kiểu AntD. */
+.otpSend.otpSend:disabled {
+  border-color: #f9df81;
+  background: #fff9e5;
+  color: #e9ac29;
+  opacity: 0.55;
+}
+
 .otpSend.otpSend:not(:disabled):hover {
   border-color: #e9ac29;
   background: #fff3cc;
@@ -170,13 +178,11 @@
   font-weight: var(--xp-font-weight-semibold);
 }
 
-
 .devHint {
   display: block;
   margin-top: var(--xp-space-xs);
   color: var(--xp-color-text-tertiary);
 }
-
 
 /* Popup nhập mã OTP. */
 .otpDialogBody {
@@ -232,14 +238,31 @@
  * SĐT đứng một mình một hàng (rộng nửa hàng như các ô khác) — để Mật khẩu và Nhập lại mật khẩu
  * luôn đi cặp với nhau ở hàng dưới.
  */
+/*
+ * Hàng SĐT + "Gửi mã OTP" (Figma `24382:23516` · `24382:85082`): chiếm cả hàng - ô SĐT giãn hết phần
+ * còn lại, nút 152 sát mép phải, khe 16.
+ */
 .fieldOwnRow {
   grid-column: 1 / -1;
 }
 
+/* Ô rộng hết hàng (Figma "Tên gian hàng" 616). */
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
 @media (min-width: 900px) {
-  .fieldOwnRow {
-    max-width: calc((100% - var(--xp-space-lg)) / 2);
+  .fieldOwnRow .otpRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 152px;
+    gap: var(--xp-space-md);
   }
+
+  .fieldOwnRow .otpSend.otpSend {
+    width: 100%;
+    min-width: 0;
+  }
+
 }
 
 /* Đầu cột form (Figma `24382:23516`): "Tạo tài khoản đối tác" 30/38 + phụ đề 18/28. */

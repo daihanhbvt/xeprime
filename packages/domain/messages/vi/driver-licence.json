@@ -6,7 +6,9 @@
   "intro": {
     "title": "Xác thực bằng lái xe",
     "body": "Chụp mặt trước bằng lái của bạn. Chỉ cần làm một lần - thường xong trong chưa đầy một phút.",
-    "bookingBody": "Thuê xe tự lái cần bằng lái hợp lệ. Chụp mặt trước bằng lái của bạn - chỉ cần làm một lần cho mọi chuyến sau."
+    "bookingBody": "Thuê xe tự lái cần bằng lái hợp lệ. Chụp mặt trước bằng lái của bạn - chỉ cần làm một lần cho mọi chuyến sau.",
+    "reviewTitle": "Xác thực bằng lái",
+    "reviewBody": "Để thuê xe tự lái, bạn cần xác minh bằng lái hợp lệ. Chỉ cần chụp mặt trước bằng lái một lần duy nhất, không cần xác thực lại cho các chuyến thuê tiếp theo."
   },
   "accepted": {
     "title": "Giấy tờ được chấp nhận",

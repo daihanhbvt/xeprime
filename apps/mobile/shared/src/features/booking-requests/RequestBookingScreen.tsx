@@ -31,7 +31,6 @@ import {
   evaluateDriverLicenceForTrip,
   type RentalMode,
 } from '@xeprime/domain';
-import { driverLicenceApi } from '@/api/driver-licence/api';
 import {
   useAccountPhonePrompt,
   useSuppressAccountPhoneReminder,
@@ -69,7 +68,7 @@ import { ROUTES } from '@/navigation/routes';
 import type { BookingRequestPrefillParams } from '@/navigation/routes-base';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import { BookingPriceSummary } from './components/BookingPriceSummary';
 import { NearPickupHoldNotice } from './components/NearPickupHoldNotice';
 import { PromoCodeField } from '@/features/promo-codes/PromoCodeField';
@@ -469,7 +468,9 @@ function RequestBookingBody({
     }
   }, [form, vehicleProvinceCode]);
 
-  const [rentalMode, setRentalMode] = useState<RentalMode>(restoredDraft?.rentalMode ?? RENTAL_MODE.DAILY);
+  const [rentalMode, setRentalMode] = useState<RentalMode>(
+    restoredDraft?.rentalMode ?? RENTAL_MODE.DAILY,
+  );
   /*
    * Như `seededRange` web: không bản nháp, không có cặp giờ từ trang xe và không phải dài hạn ⇒
    * điền khoảng thuê (kèm CHẾ ĐỘ ngày/giờ) từ bộ nhớ khoảng thuê. Có cặp giờ từ trang xe thì chế
@@ -669,9 +670,6 @@ function RequestBookingBody({
     ],
   );
 
-  /** Đang đọc bằng lái để quyết định có cần bước bằng lái — giữ nút ở trạng thái chờ. */
-  const [checkingLicence, setCheckingLicence] = useState(false);
-
   /**
    * Mời đăng nhập, GIỮ NGUYÊN thứ khách đã nhập (ADR 0060).
    *
@@ -693,45 +691,16 @@ function RequestBookingBody({
   }, [currentPath, dispatch, form, listing.id, promo.appliedCode, rentalMode, router]);
 
   /**
-   * Đã có phiên. Tự lái/dài hạn thì soát bằng lái cho CHÍNH chuyến này trước bước Xác nhận —
-   * hợp lệ rồi thì khách không thấy bước bằng lái. Đọc MỚI từ server (khách có thể vừa nộp ở màn
-   * Giấy tờ).
+   * Đã có phiên ⇒ vào thẳng Xem lại. Bằng lái không còn là một bước riêng (Figma `21836:54067`,
+   * như web): thẻ giấy tờ ở Xem lại tự soát và mời tải bằng; cổng thật vẫn ở server (ADR 0057).
    */
   const continueToReview = useCallback(async () => {
-    if (!needsLicence || !licenceTrip) {
-      // Thiếu dữ liệu chuyến (`licenceTrip` null) thì không soát được ở đây — bỏ bước là AN TOÀN vì
-      // cổng thật nằm ở server (`submitPublic`, ADR 0057): bằng lái sai hạng/hết hạn vẫn bị từ chối.
-      setStep(REQUEST_STEP.REVIEW);
-      return;
-    }
-    setCheckingLicence(true);
-    try {
-      const overview = await queryClient.fetchQuery({
-        queryKey: queryKeys.driverLicence.overview,
-        queryFn: () => driverLicenceApi.overview(),
-        staleTime: 0,
-      });
-      const gate = evaluateDriverLicenceForTrip(overview, licenceTrip);
-      setStep(gate === DRIVER_LICENCE_TRIP_GATE.OK ? REQUEST_STEP.REVIEW : REQUEST_STEP.LICENCE);
-    } catch (error) {
-      // Mất phiên: mời đăng nhập lại thay vì để khách bấm "Thử lại" vào một 401 mãi mãi.
-      if (isUnauthenticated(error)) {
-        requestSignIn();
-        return;
-      }
-      // Lỗi khác: bộ xác thực tự hiện lỗi tải + nút Thử lại.
-      setStep(REQUEST_STEP.LICENCE);
-    } finally {
-      setCheckingLicence(false);
-    }
-  }, [licenceTrip, needsLicence, queryClient, requestSignIn, setStep]);
+    setStep(REQUEST_STEP.REVIEW);
+  }, [setStep]);
 
-  /** Bằng lái ở bước bằng lái — nút Tiếp tục chỉ mở khi bằng đã hợp lệ cho chuyến này. */
+  /** Bằng lái của tài khoản - thẻ giấy tờ ở Xem lại soát nó cho chuyến này; nút Gửi khoá tới lúc hợp lệ. */
   const licenceQ = useDriverLicence({
-    enabled:
-      (state.step === REQUEST_STEP.LICENCE ||
-        (state.step === REQUEST_STEP.REVIEW && needsLicence)) &&
-      Boolean(me),
+    enabled: state.step === REQUEST_STEP.REVIEW && needsLicence && Boolean(me),
   });
   const licenceReady =
     licenceTrip !== null &&
@@ -739,18 +708,26 @@ function RequestBookingBody({
     evaluateDriverLicenceForTrip(licenceQ.data, licenceTrip) === DRIVER_LICENCE_TRIP_GATE.OK;
 
   /*
-   * Bằng vừa hợp lệ cho chuyến này (máy đọc xong ngay tại bước) ⇒ tự sang Xác nhận và báo ngắn,
-   * như web — không bắt khách bấm "Tiếp tục" cho một bước đã xong.
+   * Bằng lái tải NGAY TRONG thẻ giấy tờ ở Xem lại (Figma `21836:54301`, như web). Bằng vừa chuyển
+   * từ "chưa dùng được" sang "dùng được" cho chuyến này ⇒ báo ngắn, nút Gửi mở khoá (đổi state
+   * ngay trong render, mẫu "điều chỉnh state theo dữ liệu").
    */
   const licenceFetching = licenceQ.isFetching;
-  // Đổi bước NGAY TRONG render (mẫu "điều chỉnh state theo dữ liệu", như web); effect chỉ báo.
+  const [licenceWasBlocked, setLicenceWasBlocked] = useState(false);
   const [licenceAdvances, setLicenceAdvances] = useState(0);
-  if (state.step === REQUEST_STEP.LICENCE && licenceReady && !licenceFetching) {
-    setStepRaw(REQUEST_STEP.REVIEW);
-    // Như web: tự sang Xác nhận thì MỞ khối giá — khách cần thấy con số trước khi gửi.
-    setPriceExpanded(true);
-    setLicenceAdvances((n) => n + 1);
+  if (
+    state.step === REQUEST_STEP.REVIEW &&
+    licenceTrip &&
+    licenceQ.data !== undefined &&
+    !licenceFetching
+  ) {
+    if (!licenceReady && !licenceWasBlocked) setLicenceWasBlocked(true);
+    if (licenceReady && licenceWasBlocked) {
+      setLicenceWasBlocked(false);
+      setLicenceAdvances((n) => n + 1);
+    }
   }
+  const licenceBlocked = needsLicence && licenceTrip !== null && !licenceReady;
   // Báo theo SỐ LẦN đã báo, không theo lần chạy effect: `toast` đổi danh tính mỗi lần provider
   // render, nên effect chạy lại mà `licenceAdvances` không đổi — thiếu ref là toast lặp.
   const licenceAdvancesAnnounced = useRef(0);
@@ -972,12 +949,11 @@ function RequestBookingBody({
           }
           /*
            * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" trong khi giao diện tưởng là "được" — bằng
-           * vừa hết hạn, vừa bị thay, hoặc phiên vừa mất. Lùi về bước bằng lái với dữ liệu MỚI.
+           * vừa hết hạn, vừa bị thay, hoặc phiên vừa mất. Nạp lại bằng: thẻ giấy tờ tự hiện bộ tải bằng.
            */
           if (flow.isDriverLicenceGate(error)) {
             void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
             setError(null);
-            setStep(REQUEST_STEP.LICENCE);
             return;
           }
           setError(errorMessage(error));
@@ -1059,7 +1035,11 @@ function RequestBookingBody({
   const [preparing, setPreparing] = useState(
     () => prefill?.autoContinue === '1' && restoredDraft === null,
   );
-  logger.warn('[auto-continue] mở màn', { prefill: prefill?.autoContinue, draft: restoredDraft !== null, preparing });
+  logger.warn('[auto-continue] mở màn', {
+    prefill: prefill?.autoContinue,
+    draft: restoredDraft !== null,
+    preparing,
+  });
   const autoContinueStarted = useRef(false);
   /** Lượt tự đi tiếp KHÔNG qua được ⇒ đóng luồng, về trang xe và báo lý do. */
   const bounceToListing = (message: string | null) => {
@@ -1072,7 +1052,10 @@ function RequestBookingBody({
   useEffect(() => {
     if (!preparing || autoContinueStarted.current || meQuery.isPending) return;
     autoContinueStarted.current = true;
-    logger.warn('[auto-continue] bắt đầu', { prefill: prefill?.autoContinue, draft: restoredDraft !== null });
+    logger.warn('[auto-continue] bắt đầu', {
+      prefill: prefill?.autoContinue,
+      draft: restoredDraft !== null,
+    });
     enteredAtReview.current = true;
     /*
      * KHÔNG tắt màn chờ ngay khi `continueFromTrip` trả về: nó chỉ GỬI lượt kiểm lịch, kết quả và
@@ -1083,7 +1066,11 @@ function RequestBookingBody({
     void Promise.resolve()
       .then(continueFromTrip)
       .then(() => {
-        logger.warn('[auto-continue] xong lượt', { errors: Object.keys(form.formState.errors), step: state.step, error: state.error });
+        logger.warn('[auto-continue] xong lượt', {
+          errors: Object.keys(form.formState.errors),
+          step: state.step,
+          error: state.error,
+        });
         // Form không qua kiểm (giờ thuê sai/thiếu) ⇒ về trang xe sửa lịch, không mở bước Chuyến đi.
         if (Object.keys(form.formState.errors).length > 0) bounceToListing(null);
       });
@@ -1178,11 +1165,10 @@ function RequestBookingBody({
    * Khối DÍNH ĐÁY (tiền + lỗi + nút) — bản native của `.dock` bên web: khách đổi lựa chọn ở nửa
    * trên và thấy con số đổi theo ngay dưới mắt, thay vì khuất ở cuối một form dài.
    *
-   * Bước bằng lái không có khối tiền nhưng vẫn có dòng lỗi + nút Tiếp tục.
    */
-  const showDock = state.step !== REQUEST_STEP.LICENCE;
+  const showDock = true;
   const footer =
-    showDock || state.error || state.step === REQUEST_STEP.LICENCE ? (
+    showDock || state.error ? (
       <>
         {/*
           Màn Xem lại có HAI THẺ TIỀN ngay trong trang (web develop `variant="review"`) — thanh tổng
@@ -1219,58 +1205,55 @@ function RequestBookingBody({
         ) : null}
 
         {state.step === REQUEST_STEP.TRIP ? (
-          <Button variant="gradient"
+          <Button
+            variant="gradient"
             label={flow.availability.isPending ? t('actions.checking') : t('actions.continue')}
             icon="arrow-forward"
             size="lg"
-            loading={flow.availability.isPending || checkingLicence}
+            loading={flow.availability.isPending}
             onPress={() => void continueFromTrip()}
-          />
-        ) : null}
-
-        {state.step === REQUEST_STEP.LICENCE ? (
-          <Button variant="gradient"
-            label={t('actions.continue')}
-            icon="arrow-forward"
-            size="lg"
-            // Chỉ mở khi bằng đã hợp lệ CHO CHUYẾN NÀY — cùng phép soát với cổng ở server.
-            disabled={!licenceReady}
-            onPress={() => setStep(REQUEST_STEP.REVIEW)}
           />
         ) : null}
 
         {state.step === REQUEST_STEP.REVIEW ? (
           <YStack>
-          <XStack gap={space.sm}>
-            {/*
+            <XStack gap={space.sm}>
+              {/*
               KHÔNG gắn icon cho nút lùi này: nó chỉ được f={1} cạnh một nút f={2}, tức ~104dp; trừ 48dp
               đệm ngang còn 56dp, vừa đúng cho chữ "Quay lại" và không còn chỗ cho 22dp icon + khe. Icon
               đi cho nút CHÍNH của hàng, nơi có dư bề ngang — nút phụ hẹp thì chữ quan trọng hơn hình.
             */}
-            <YStack flexShrink={0}>
-              <Button
-                label={tCommon('back')}
-                variant="secondary"
-                size="lg"
-                onPress={() => backToTrip()}
-              />
-            </YStack>
-            {/*
+              <YStack flexShrink={0}>
+                <Button
+                  label={tCommon('back')}
+                  variant="secondary"
+                  size="lg"
+                  onPress={() => backToTrip()}
+                />
+              </YStack>
+              {/*
               "Quay lại" co vừa chữ, nút gửi lấy phần còn lại. Ở cỡ `lg` (chữ 16px) mỗi ký tự
               rộng hơn hẳn, nên "Gửi yêu cầu thuê" cần trọn phần còn lại của hàng.
             */}
-            <YStack f={1}>
-              <Button variant="gradient"
-                label={t('reviewPage.submit.cta')}
-                icon="send-outline"
-                size="lg"
-                loading={flow.submit.isPending}
-                disabled={!online}
-                onPress={() => void submitRequest()}
-              />
-            </YStack>
-          </XStack>
-          <OfflineActionHint />
+              <YStack f={1}>
+                <Button
+                  variant="gradient"
+                  label={t('reviewPage.submit.cta')}
+                  icon="send-outline"
+                  size="lg"
+                  loading={flow.submit.isPending}
+                  // Bằng chưa hợp lệ cho chuyến ⇒ khoá (Figma `21836:54067`); cổng thật ở server.
+                  disabled={!online || licenceBlocked}
+                  onPress={() => void submitRequest()}
+                />
+              </YStack>
+            </XStack>
+            {licenceBlocked ? (
+              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center" mt={space.xs}>
+                {t('reviewPage.requirements.licenceRequiredToSubmit')}
+              </Text>
+            ) : null}
+            <OfflineActionHint />
           </YStack>
         ) : null}
       </>
@@ -1287,7 +1270,9 @@ function RequestBookingBody({
           không mở ra một bước lạ (người dùng báo lỗi 28/10/2026). Sửa chuyến vẫn qua "Chỉnh sửa".
         */
         onBack={
-          state.step === REQUEST_STEP.TRIP || enteredAtReview.current ? closeFlow : () => backToTrip()
+          state.step === REQUEST_STEP.TRIP || enteredAtReview.current
+            ? closeFlow
+            : () => backToTrip()
         }
       />
       <Screen
@@ -1312,85 +1297,82 @@ function RequestBookingBody({
 
           {state.step === REQUEST_STEP.TRIP ? (
             <Animated.View key="step-trip" entering={stepEntering}>
-            <RequestTripStep
-              form={form}
-              listing={listing}
-              services={services}
-              busyDays={busyDays}
-              busyLoading={busyLoading}
-              rentalMode={rentalMode}
-              onRentalModeChange={setRentalMode}
-              quote={quote.data}
-            />
-            </Animated.View>
-          ) : null}
-
-          {/* Bằng lái — giữa hai bước, chỉ khi thuê tự lái/dài hạn (ADR 0057). */}
-          {state.step === REQUEST_STEP.LICENCE && licenceTrip ? (
-            <Animated.View key="step-licence" entering={stepEntering}>
-            <YStack gap={space.sm}>
-              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                {t('licence.title')}
-              </Text>
-              <DriverLicenceVerifier trip={licenceTrip} />
-            </YStack>
+              <RequestTripStep
+                form={form}
+                listing={listing}
+                services={services}
+                busyDays={busyDays}
+                busyLoading={busyLoading}
+                rentalMode={rentalMode}
+                onRentalModeChange={setRentalMode}
+                quote={quote.data}
+              />
             </Animated.View>
           ) : null}
 
           {state.step === REQUEST_STEP.REVIEW ? (
             <Animated.View key="step-review" entering={stepEntering}>
-            <RequestReviewStep
-              values={form.getValues()}
-              form={form}
-              listing={listing}
-              rentalMode={rentalMode}
-              renter={
-                me
-                  ? {
-                      name: me.displayName,
-                      phone: me.phone ?? null,
-                      email: me.email ?? null,
-                      verified: Boolean(me.phoneVerified),
-                    }
-                  : null
-              }
-              licence={{ required: needsLicence, current: licenceQ.data?.verified ?? null }}
-              agreementCoversHostTerms={agreementCoversHostTerms}
-              nextStep={nextStep}
-              agreementMissing={agreementMissing && !watchedAccepted}
-              consentRef={consentRef}
-              disabled={flow.submit.isPending}
-              breakdown={quoteWithPromo?.breakdown ?? null}
-              isDelivery={deliveryRequested}
-              costs={
-                <>
-                  <BookingPriceSummary
-                    listing={listing}
-                    serviceType={serviceType}
-                    routeType={routeType}
-                    quote={quoteWithPromo}
-                    quoteLoading={quote.isPending && quoteParams !== null}
-                    hasSelection={quoteParams !== null}
-                    isDelivery={deliveryRequested}
-                    variant="review"
-                    showDeposit={false}
-                    expanded
-                    onExpandedChange={setPriceExpanded}
-                    promoSlot={promoField}
-                  />
-                  {/*
+              <RequestReviewStep
+                values={form.getValues()}
+                form={form}
+                listing={listing}
+                rentalMode={rentalMode}
+                renter={
+                  me
+                    ? {
+                        name: me.displayName,
+                        phone: me.phone ?? null,
+                        email: me.email ?? null,
+                        verified: Boolean(me.phoneVerified),
+                      }
+                    : null
+                }
+                licence={{ required: needsLicence, current: licenceQ.data?.verified ?? null }}
+                licenceGate={
+                  licenceTrip
+                    ? {
+                        ready: licenceReady,
+                        loading: licenceQ.isPending,
+                        uploader: <DriverLicenceVerifier trip={licenceTrip} layout="review" />,
+                      }
+                    : undefined
+                }
+                agreementCoversHostTerms={agreementCoversHostTerms}
+                nextStep={nextStep}
+                agreementMissing={agreementMissing && !watchedAccepted}
+                consentRef={consentRef}
+                disabled={flow.submit.isPending}
+                breakdown={quoteWithPromo?.breakdown ?? null}
+                isDelivery={deliveryRequested}
+                costs={
+                  <>
+                    <BookingPriceSummary
+                      listing={listing}
+                      serviceType={serviceType}
+                      routeType={routeType}
+                      quote={quoteWithPromo}
+                      quoteLoading={quote.isPending && quoteParams !== null}
+                      hasSelection={quoteParams !== null}
+                      isDelivery={deliveryRequested}
+                      variant="review"
+                      showDeposit={false}
+                      expanded
+                      onExpandedChange={setPriceExpanded}
+                      promoSlot={promoField}
+                    />
+                    {/*
                     Đặt sát giờ ⇒ hạn thanh toán ngắn, có thể không có huỷ miễn phí — nói TRƯỚC khi
                     gửi (ADR 0032 điều 5 · ADR 0064), như web. Dài hạn chưa có giờ nhận nên không ước.
                   */}
-                  {serviceType === SERVICE_TYPE.LONG_TERM ? null : (
-                    <NearPickupHoldNotice
-                      pickupAt={pickupAt}
-                      fees={quoteWithPromo?.breakdown.fees}
-                    />
-                  )}
-                </>
-              }
-            />
+                    {serviceType === SERVICE_TYPE.LONG_TERM ? null : (
+                      <NearPickupHoldNotice
+                        pickupAt={pickupAt}
+                        fees={quoteWithPromo?.breakdown.fees}
+                      />
+                    )}
+                  </>
+                }
+              />
             </Animated.View>
           ) : null}
 

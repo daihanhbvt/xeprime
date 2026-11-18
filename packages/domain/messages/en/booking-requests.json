@@ -512,7 +512,8 @@
         "driverBody": "The owner's driver does the driving, so you don't need a driving licence. Bring an ID for the check at pick-up.",
         "documents": "Documents the owner requires: {documents}",
         "hostTerms": "Owner's rental terms",
-        "reminder": "Verification and the exact documents required are explained under the current policy before pick-up."
+        "reminder": "Verification and the exact documents required are explained under the current policy before pick-up.",
+        "licenceRequiredToSubmit": "Add a valid driving licence to send your request."
       },
       "costs": {
         "title": "Rental cost",
