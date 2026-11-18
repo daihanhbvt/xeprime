@@ -1323,7 +1323,10 @@
       "void": "Huỷ hợp đồng bảo hiểm"
     },
     "insurance_product": {
-      "update": "Cập nhật sản phẩm bảo hiểm"
+      "update": "Cập nhật sản phẩm bảo hiểm",
+      "premium_sync": "Đồng bộ biểu phí từ hãng bảo hiểm",
+      "premium_sync_failed": "Đồng bộ biểu phí từ hãng bảo hiểm thất bại",
+      "premium_drift": "Phí hãng báo lệch biểu phí đang lưu"
     },
     "listing": {
       "support": {
