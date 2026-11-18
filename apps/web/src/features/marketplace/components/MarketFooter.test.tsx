@@ -62,15 +62,21 @@ describe('MarketFooter - điều hướng', () => {
     expect(screen.queryByRole('link', { name: 'Quản lý xe' })).toBeNull();
   });
 
-  it('mọi liên kết đã render đều có đích nội bộ, không có "#" hay trang chủ trống', () => {
+  it('mọi liên kết đã render đều có đích thật, không có "#" hay trang chủ trống', () => {
     const { container } = render(<MarketFooter />);
-    const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    const anchors = Array.from(container.querySelectorAll('a'));
 
-    expect(hrefs.length).toBeGreaterThan(0);
-    for (const href of hrefs) {
+    expect(anchors.length).toBeGreaterThan(0);
+    for (const a of anchors) {
+      const href = a.getAttribute('href');
       expect(href).toBeTruthy();
       expect(href).not.toBe('#');
-      expect(href?.startsWith('/')).toBe(true);
+      if (href?.startsWith('/')) continue;
+      // Ngoại lệ duy nhất: nhãn cửa hàng dưới mã QR mở thẳng trang app (AppStoreQr) - link
+      // ngoài phải https và mở tab mới.
+      expect(href?.startsWith('https://')).toBe(true);
+      expect(a.getAttribute('target')).toBe('_blank');
+      expect(a.getAttribute('rel')).toContain('noopener');
     }
   });
 
