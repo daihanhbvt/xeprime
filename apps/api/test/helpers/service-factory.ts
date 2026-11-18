@@ -50,6 +50,7 @@ import { TaxReadService } from '../../src/modules/tax/tax-read.service';
 import { TaxService } from '../../src/modules/tax/tax.service';
 import { InsuranceEligibilityService } from '../../src/modules/insurance/insurance-eligibility.service';
 import { InsuranceOfferService } from '../../src/modules/insurance/insurance-offer.service';
+import { InsurancePremiumQuoteService } from '../../src/modules/insurance/insurance-premium-quote.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { SellerProfileService } from '../../src/modules/seller-profile/seller-profile.service';
 import { SupportService } from '../../src/modules/support/support.service';
@@ -321,10 +322,11 @@ export function makePricingService(
     insurancePartner?: 'none' | 'mic_mock';
   } = {},
 ): PricingService {
-  const offer = new InsuranceOfferService(
-    createInsurancePartner(overrides.insurancePartner ?? 'mic_mock', { appEnv: 'test' }),
-    prisma,
-  );
+  const partner = createInsurancePartner(overrides.insurancePartner ?? 'mic_mock', {
+    appEnv: 'test',
+  });
+  const offer = new InsuranceOfferService(partner, prisma);
+  const eligibility = new InsuranceEligibilityService(prisma, offer);
   return new PricingService(
     prisma,
     new AuditService(prisma),
@@ -332,7 +334,8 @@ export function makePricingService(
     overrides.depositPolicy ?? makeDepositPolicyService(prisma),
     new FeePoliciesService(prisma, new AuditService(prisma)),
     offer,
-    new InsuranceEligibilityService(prisma, offer),
+    eligibility,
+    new InsurancePremiumQuoteService(partner, eligibility),
   );
 }
 

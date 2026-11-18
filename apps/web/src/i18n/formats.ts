@@ -59,5 +59,10 @@ export const formats = {
      */
     distance: { maximumFractionDigits: 1 },
     percent: { style: 'percent', maximumFractionDigits: 0 },
+    /**
+     * Một TỶ LỆ đã là số phần trăm (`0.013` nghĩa là 0,013%): tới bốn chữ số lẻ — biểu phí bảo hiểm
+     * theo bậc dùng đủ bốn — không ép số 0 thừa (`15` chứ không `15,00`). Chữ `%` do câu chữ gắn.
+     */
+    rate: { maximumFractionDigits: 4 },
   },
 } satisfies Formats;

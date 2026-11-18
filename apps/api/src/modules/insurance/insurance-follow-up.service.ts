@@ -7,6 +7,8 @@ import {
   INSURANCE_PENDING_CHECKS_MAX,
   INSURANCE_POLICY_STATUS,
   type BookingPriceSnapshot,
+  type InsurancePremiumFallbackReason,
+  type InsurancePremiumSource,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
@@ -53,19 +55,14 @@ export class InsuranceFollowUpService {
     return count;
   }
 
+  /** Số hợp đồng cần xử lý gấp — ô "Việc tồn" của Tổng quan (ADR 0097). */
+  attentionCount(): Promise<number> {
+    return this.prisma.bookingInsurancePolicy.count({ where: attentionWhere() });
+  }
+
   /** Hợp đồng cần người xử lý gấp — khối cảnh báo đầu màn Bảo hiểm của admin. */
   async attention(): Promise<InsuranceAttentionPageDto> {
-    const where: Prisma.BookingInsurancePolicyWhereInput = {
-      OR: [
-        { escalatedAt: { not: null }, status: { in: AWAITING_ISSUE } },
-        {
-          status: INSURANCE_POLICY_STATUS.ISSUED,
-          partnerStatus: INSURANCE_PARTNER_STATUS.PENDING_PHOTOS,
-          nextAttemptAt: null,
-          partnerPendingChecks: { gte: INSURANCE_PENDING_CHECKS_MAX },
-        },
-      ],
-    };
+    const where = attentionWhere();
     const [total, rows] = await Promise.all([
       this.prisma.bookingInsurancePolicy.count({ where }),
       this.prisma.bookingInsurancePolicy.findMany({
@@ -117,6 +114,9 @@ export class InsuranceFollowUpService {
         insuredValue: true,
         serviceFeeAmount: true,
         refundedAt: true,
+        premiumSource: true,
+        formulaPremiumAmount: true,
+        premiumQuoteFallbackReason: true,
         booking: { select: { priceSnapshot: true } },
       },
     });
@@ -141,6 +141,25 @@ export class InsuranceFollowUpService {
       tierPercent: tier?.percent ?? null,
       serviceFeeAmount: row.serviceFeeAmount.toFixed(0),
       refundedAt: row.refundedAt?.toISOString() ?? null,
+      premiumSource: (row.premiumSource as InsurancePremiumSource | null) ?? null,
+      formulaPremiumAmount: row.formulaPremiumAmount?.toFixed(0) ?? null,
+      premiumQuoteFallbackReason:
+        (row.premiumQuoteFallbackReason as InsurancePremiumFallbackReason | null) ?? null,
     };
   }
+}
+
+/** Điều kiện "cần xử lý gấp" — một định nghĩa cho danh sách và cho con số đếm. */
+function attentionWhere(): Prisma.BookingInsurancePolicyWhereInput {
+  return {
+    OR: [
+      { escalatedAt: { not: null }, status: { in: AWAITING_ISSUE } },
+      {
+        status: INSURANCE_POLICY_STATUS.ISSUED,
+        partnerStatus: INSURANCE_PARTNER_STATUS.PENDING_PHOTOS,
+        nextAttemptAt: null,
+        partnerPendingChecks: { gte: INSURANCE_PENDING_CHECKS_MAX },
+      },
+    ],
+  };
 }

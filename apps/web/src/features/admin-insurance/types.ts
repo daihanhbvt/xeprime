@@ -1,4 +1,9 @@
-import type { components, InsuranceProductKind, InsuranceQueueStatusFilter } from '@xeprime/types';
+import type {
+  components,
+  InsuranceProductKind,
+  InsuranceQueueStatusFilter,
+  InsuranceVehicleEligibilityFilter,
+} from '@xeprime/types';
 
 type Schemas = components['schemas'];
 
@@ -35,6 +40,20 @@ export type InsuranceRemittanceLine = Schemas['InsuranceRemittanceLineDto'];
 export type InsuranceRemittancePending = Schemas['InsuranceRemittancePendingDto'];
 export type CreateInsuranceRemittanceInput = Schemas['CreateInsuranceRemittanceDto'];
 export type PayInsuranceRemittanceInput = Schemas['PayInsuranceRemittanceDto'];
+
+// ── Tổng quan · xe · đối chiếu biểu phí (ADR 0097) ──
+export type InsuranceOverview = Schemas['InsuranceOverviewDto'];
+export type InsuranceVehicleRow = Schemas['InsuranceVehicleRowDto'];
+export type InsuranceTierPremium = Schemas['InsuranceTierPremiumDto'];
+export type InsurancePremiumCheckInput = Schemas['InsurancePremiumCheckDto'];
+export type InsurancePremiumCheckResult = Schemas['InsurancePremiumCheckResultDto'];
+
+export interface InsuranceVehicleFilters {
+  q?: string;
+  eligibility?: InsuranceVehicleEligibilityFilter;
+  page?: number;
+  limit?: number;
+}
 
 export interface RemittanceFilters {
   page?: number;

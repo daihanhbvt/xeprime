@@ -1,10 +1,144 @@
-.hint {
-  margin: 0 0 var(--xp-space-md);
+/* Tiêu đề hộp + dấu ⓘ "lưu nháp / lưu và áp dụng" */
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Chiều cao sàn cho vùng tab — đổi tab không làm cả hộp nhảy lên xuống. */
+.tabs :global(.ant-tabs-content-holder) {
+  min-height: 440px;
+}
+
+.hintLine {
+  margin: 0;
+}
+
+.hintLine + .hintLine {
+  margin-top: var(--xp-space-xs);
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Một khối trong tab: tiêu đề nhỏ + ⓘ, ô nhập bên dưới. */
+.section {
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--xp-space-12);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Mục cuối của khối không cần lề dưới — khối đã có padding. */
+.section > :global(.ant-form-item:last-child),
+.section > .grid2:last-child > :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+/* Hai cột: ô tô | xe máy, tối thiểu | tối đa. Ô thứ năm (lẻ) tự nằm hàng riêng bên trái. */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.grid2 > :global(.ant-form-item) {
+  margin-bottom: var(--xp-space-md);
+}
+
+.scope {
+  margin: 0 0 var(--xp-space-sm);
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
 
-.alert {
-  margin-bottom: var(--xp-space-md);
+.label {
+  margin: var(--xp-space-sm) 0 var(--xp-space-6);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .tabs :global(.ant-tabs-content-holder) {
+    min-height: 0;
+  }
+
+  .grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footer > :global(.ant-btn) {
+    flex: 1 1 auto;
+  }
+}
+
+/* Phí sàn một loại xe: số tiền, cách tính (hai nút chia đều), ví dụ 3 ngày. */
+.platformFee {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.platformFee :global(.ant-form-item) {
+  margin-bottom: var(--xp-space-sm);
+}
+
+.basis.basis {
+  display: flex;
+  width: 100%;
+}
+
+.basis :global(.ant-radio-button-wrapper) {
+  flex: 1 1 0;
+  text-align: center;
+}
+
+.example {
+  margin: var(--xp-space-6) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
 }

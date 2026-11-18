@@ -23,7 +23,8 @@ export function queueParams(
   filters: TripRequestFilters | TripBookingFilters | TripDriverFilters,
 ): QueryParams {
   return {
-    queue: 'queue' in filters ? filters.queue : null,
+    queue: 'queue' in filters ? (filters.queue ?? null) : null,
+    phone: 'phone' in filters ? (filters.phone ?? null) : null,
     q: filters.q ?? null,
     tenantId: filters.tenantId ?? null,
     page: filters.page ?? 1,

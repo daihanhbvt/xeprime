@@ -24,6 +24,7 @@ import {
   TRIP_REQUEST_URGENT_MINUTES,
   type PaginationMeta,
   type PlatformTripDriverIssue,
+  type PlatformTripRequestQueue,
 } from '@xeprime/types';
 import {
   emptyMoneySides,
@@ -32,7 +33,8 @@ import {
 } from '../../common/booking-money';
 import { dayEndUtc, dayStartUtc, vnDateKey } from '../../common/day-range';
 import { maskPhone } from '../../common/mask';
-import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { paginationMeta, resolvePaging, type ResolvedPaging } from '../../common/pagination';
+import { phoneLookupVariants } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -359,19 +361,27 @@ export class PlatformTripsService {
     };
   }
 
-  /** Hàng đợi yêu cầu — `pending_approval` xếp theo hạn trả lời, `awaiting_hold` theo hạn giữ chỗ. */
+  /**
+   * Hàng đợi yêu cầu — `pending_approval` xếp theo hạn trả lời, `awaiting_hold` theo hạn giữ chỗ.
+   * Bỏ trống `queue` = cả hai chặng, xếp theo hạn của CHẶNG mỗi dòng đang đứng (`requestDeadline`).
+   */
   async requests(
     query: PlatformTripRequestListQueryDto,
   ): Promise<{ data: PlatformTripRequestDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, PLATFORM_TRIP_DEFAULT_LIMIT, PLATFORM_TRIP_MAX_LIMIT);
     const q = query.q?.trim();
-    const isPending = query.queue === PLATFORM_TRIP_QUEUE.PENDING_APPROVAL;
+    const phone = query.phone?.trim();
+    const statuses =
+      query.queue === PLATFORM_TRIP_QUEUE.PENDING_APPROVAL
+        ? [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL]
+        : query.queue === PLATFORM_TRIP_QUEUE.AWAITING_HOLD
+          ? [BOOKING_REQUEST_STATUS.AWAITING_HOLD]
+          : [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, BOOKING_REQUEST_STATUS.AWAITING_HOLD];
 
     const where: Prisma.BookingRequestWhereInput = {
-      status: isPending
-        ? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
-        : BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+      status: { in: statuses },
       ...(query.tenantId ? { tenantId: query.tenantId } : {}),
+      ...(phone ? { customerPhone: { in: phoneLookupVariants(phone) } } : {}),
       ...(q
         ? {
             OR: [
@@ -384,10 +394,27 @@ export class PlatformTripsService {
         : {}),
     };
 
-    const orderBy: Prisma.BookingRequestOrderByWithRelationInput[] = isPending
-      ? [{ respondBy: 'asc' }, { id: 'asc' }]
-      : [{ hold: { expiresAt: 'asc' } }, { id: 'asc' }];
+    const { total, rows } = query.queue
+      ? await this.requestPageOfOneStage(where, query.queue, paging)
+      : await this.requestPageOfBothStages(where, paging);
 
+    const lastReminds = await this.lastPlatformReminds(rows.map((row) => row.id));
+    return {
+      data: rows.map((row) => toRequestItem(row, lastReminds.get(row.id) ?? null)),
+      meta: paginationMeta(paging, total),
+    };
+  }
+
+  /** Một chặng: hạn của chặng đó là một cột, nên DB xếp và cắt trang. */
+  private async requestPageOfOneStage(
+    where: Prisma.BookingRequestWhereInput,
+    queue: PlatformTripRequestQueue,
+    paging: ResolvedPaging,
+  ): Promise<{ total: number; rows: RequestRow[] }> {
+    const orderBy: Prisma.BookingRequestOrderByWithRelationInput[] =
+      queue === PLATFORM_TRIP_QUEUE.PENDING_APPROVAL
+        ? [{ respondBy: 'asc' }, { id: 'asc' }]
+        : [{ hold: { expiresAt: 'asc' } }, { id: 'asc' }];
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.bookingRequest.count({ where }),
       this.prisma.bookingRequest.findMany({
@@ -398,11 +425,41 @@ export class PlatformTripsService {
         select: REQUEST_SELECT,
       }),
     ]);
+    return { total, rows };
+  }
 
-    const lastReminds = await this.lastPlatformReminds(rows.map((row) => row.id));
+  /**
+   * Cả hai chặng: hạn nằm ở HAI cột (`respond_by` của yêu cầu, `expires_at` của hold) nên Prisma
+   * không xếp chung được. Đọc khoá xếp (id + hai mốc) của mọi dòng khớp lọc, xếp trong Node, rồi
+   * mới đọc đủ cột cho đúng một trang.
+   *
+   * Tập này bị chặn bởi chính nghiệp vụ, không phải bởi hy vọng: hạn trả lời tối đa 240′ (ADR 0066)
+   * và cửa sổ chuyển tiền tối đa 120′ (ADR 0044), worker đóng yêu cầu khi hết hạn — nên đây là
+   * lưu lượng ĐANG CHẠY của vài giờ, không phải lịch sử. Mọi phép lọc vẫn chạy ở DB.
+   */
+  private async requestPageOfBothStages(
+    where: Prisma.BookingRequestWhereInput,
+    paging: ResolvedPaging,
+  ): Promise<{ total: number; rows: RequestRow[] }> {
+    const keys = await this.prisma.bookingRequest.findMany({
+      where,
+      select: { id: true, status: true, respondBy: true, hold: { select: { expiresAt: true } } },
+    });
+    const pageIds = keys
+      .map((k) => ({ id: k.id, deadline: requestDeadline(k).getTime() }))
+      .sort((a, b) => a.deadline - b.deadline || a.id.localeCompare(b.id))
+      .slice(paging.skip, paging.skip + paging.take)
+      .map((k) => k.id);
+    if (pageIds.length === 0) return { total: keys.length, rows: [] };
+
+    const rows = await this.prisma.bookingRequest.findMany({
+      where: { id: { in: pageIds } },
+      select: REQUEST_SELECT,
+    });
+    const byId = new Map(rows.map((r) => [r.id, r]));
     return {
-      data: rows.map((row) => toRequestItem(row, lastReminds.get(row.id) ?? null)),
-      meta: paginationMeta(paging, total),
+      total: keys.length,
+      rows: pageIds.map((id) => byId.get(id)).filter((r): r is RequestRow => r !== undefined),
     };
   }
 
@@ -518,6 +575,21 @@ export class PlatformTripsService {
 /** `@db.Date` về từ Prisma là 00:00 UTC của đúng ngày đó — cắt 10 ký tự là ra `YYYY-MM-DD`. */
 function dateKey(value: Date | null): string | null {
   return value ? value.toISOString().slice(0, 10) : null;
+}
+
+/**
+ * Hạn của CHẶNG một yêu cầu đang đứng: chờ chủ xe ⇒ hạn trả lời; chờ khách ⇒ hạn chuyển tiền giữ
+ * chỗ. `awaiting_hold` luôn có hold (lượt duyệt tạo cả hai trong một transaction) — rơi về
+ * `respondBy` chỉ để một dòng lệch dữ liệu vẫn có chỗ trong danh sách thay vì làm hỏng phép xếp.
+ */
+function requestDeadline(r: {
+  status: string;
+  respondBy: Date;
+  hold: { expiresAt: Date } | null;
+}): Date {
+  return r.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && r.hold
+    ? r.hold.expiresAt
+    : r.respondBy;
 }
 
 function iso(value: Date | null): string | null {

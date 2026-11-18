@@ -5086,6 +5086,10 @@ model FeePolicy {
   /// `S` — PHÍ SÀN cố định MỖI ĐƠN, phía khách, áp cho cả hai tuyến (thay `service_fee_percent`).
   customerPlatformFeeCar          Decimal @default(0) @map("customer_platform_fee_car") @db.Decimal(14, 2)
   customerPlatformFeeMotorbike    Decimal @default(0) @map("customer_platform_fee_motorbike") @db.Decimal(14, 2)
+  /// Cách tính `S` theo loại xe (ADR 0098): `per_trip` một lần mỗi chuyến · `per_day` × số ngày thuê.
+  /// @xeprime/types → PlatformFeeBasis; DB canh CHECK.
+  customerPlatformFeeBasisCar       String @default("per_trip") @map("customer_platform_fee_basis_car") @db.VarChar(10)
+  customerPlatformFeeBasisMotorbike String @default("per_trip") @map("customer_platform_fee_basis_motorbike") @db.VarChar(10)
   /// `H` — nấc hoa hồng lũy tiến theo NGÀY của tuyến hoa hồng: `[{fromDay, percent}]`, `fromDay`
   /// tăng nghiêm ngặt từ 1. Hình dạng do `feePolicyActivationBlockers` canh (DB chỉ canh "là mảng").
   ownerCommissionTiers            Json    @default("[]") @map("owner_commission_tiers") @db.JsonB
@@ -5487,6 +5491,13 @@ model BookingInsurancePolicy {
   partnerPremiumAmount  Decimal?  @map("partner_premium_amount") @db.Decimal(14, 2)
   /// Giá trị xe đã dùng để tính phí — snapshot lúc duyệt (bảo hiểm theo bậc).
   insuredValue          Decimal?  @map("insured_value") @db.Decimal(14, 2)
+  /// Nguồn của `premium_amount` (ADR 0097) — `partner` = MIC báo lúc duyệt, `formula` = công thức bậc
+  /// (MIC lỗi/chậm quá 1,5s). NULL = hợp đồng trước ADR 0097 hoặc sản phẩm phí ngày. DB canh CHECK.
+  premiumSource              String?  @map("premium_source") @db.VarChar(20)
+  /// Phí theo công thức bậc lúc duyệt — luôn ghi khi có báo giá bậc, để so với số MIC báo.
+  formulaPremiumAmount       Decimal? @map("formula_premium_amount") @db.Decimal(14, 2)
+  /// Vì sao dùng công thức (`timeout`/`unavailable`/`rejected`/`out_of_range`/`not_supported`).
+  premiumQuoteFallbackReason String?  @map("premium_quote_fallback_reason") @db.VarChar(30)
   /// Mốc đã gửi đủ ảnh xe sang đối tác — gửi lại không cần gửi ảnh lần nữa.
   photosSentAt          DateTime? @map("photos_sent_at") @db.Timestamptz(3)
   /// Bảng kê trả phí cho hãng đã gom hợp đồng này (ADR 0088 điều 6). NULL = chưa kê.
@@ -5610,9 +5621,15 @@ model InsuranceProduct {
   /// Hotline báo sự cố / bồi thường của hãng — hiện cạnh GCN cho khách và chủ xe.
   claimHotline           String?  @map("claim_hotline") @db.VarChar(30)
   /// Phí thu hộ bảo hiểm của NỀN TẢNG (ADR 0091 điều 3 — Proposed, chờ luật sư): bật thì mỗi chuyến
-  /// có `IV` thu thêm `roundVnd(IV × %)`. CHECK: chỉ `vehicle_trip`, bật thì % > 0, % trong 0..50.
+  /// có `IV` thu thêm `roundVnd(IV × %)`. CHECK: chỉ `vehicle_trip`, bật thì % > 0, % trong 0..100.
   serviceFeeEnabled      Boolean  @default(false) @map("service_fee_enabled")
   serviceFeePercent      Decimal  @default(0) @map("service_fee_percent") @db.Decimal(5, 2)
+  /// % hoa hồng đại lý theo hợp đồng đại lý với hãng (ADR 0097) — mặc định cho bảng kê tháng. CHECK 0..100.
+  agencyCommissionPercent Decimal @default(0) @map("agency_commission_percent") @db.Decimal(5, 2)
+  /// Phí MỖI NGÀY theo loại xe của sản phẩm tính theo ngày (`premium_basis = daily`) — ADR 0098
+  /// chuyển từ `fee_policies` sang đây. NULL = không áp dụng. CHECK ≥ 0, bội 1.000.
+  dailyAmountCar          Decimal? @map("daily_amount_car") @db.Decimal(14, 2)
+  dailyAmountMotorbike    Decimal? @map("daily_amount_motorbike") @db.Decimal(14, 2)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

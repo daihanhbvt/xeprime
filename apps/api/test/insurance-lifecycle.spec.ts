@@ -291,6 +291,68 @@ describe('Giữ chỗ hợp đồng lúc tạo đơn', () => {
     await run();
     expect(await prisma.bookingInsurancePolicy.count({ where: { bookingId } })).toBe(1);
   });
+
+  maybe('nguồn phí chốt lúc duyệt đi theo hợp đồng (ADR 0097)', async () => {
+    const reserveWith = async (tier: Record<string, unknown>) => {
+      const bookingId = await makeBooking();
+      const snapshot = snapshotWith('118000', '0');
+      (snapshot.fees as unknown as Record<string, unknown>).vehicleProtectionTier = {
+        amount: '118000',
+        insuredValue: '340000000',
+        maxDays: 5,
+        percent: '0.033',
+        ...tier,
+      };
+      await prisma.$transaction((tx) =>
+        insurance.reserveForBookingWithinTx(tx, {
+          bookingId,
+          tenantId,
+          holdId: null,
+          snapshot,
+          consent: null,
+        }),
+      );
+      return prisma.bookingInsurancePolicy.findFirstOrThrow({ where: { bookingId } });
+    };
+
+    const fromPartner = await reserveWith({ source: 'partner', formulaAmount: '112200' });
+    expect(fromPartner.premiumSource).toBe('partner');
+    expect(fromPartner.formulaPremiumAmount?.toFixed(0)).toBe('112200');
+    expect(fromPartner.premiumQuoteFallbackReason).toBeNull();
+    expect(fromPartner.insuredValue?.toFixed(0)).toBe('340000000');
+
+    const fallback = await reserveWith({
+      source: 'formula',
+      formulaAmount: '118000',
+      fallbackReason: 'timeout',
+    });
+    expect(fallback.premiumSource).toBe('formula');
+    expect(fallback.premiumQuoteFallbackReason).toBe('timeout');
+
+    // Snapshot trước ADR 0097 (không có `source`) ⇒ để trống, không đoán.
+    const legacy = await reserveWith({});
+    expect(legacy.premiumSource).toBeNull();
+    expect(legacy.formulaPremiumAmount).toBeNull();
+  });
+
+  maybe('DB TỪ CHỐI lý do dự phòng trên hợp đồng mà phí lấy từ hãng — CHECK', async () => {
+    const bookingId = await makeBooking();
+    await prisma.$transaction((tx) =>
+      insurance.reserveForBookingWithinTx(tx, {
+        bookingId,
+        tenantId,
+        holdId: null,
+        snapshot: snapshotWith('28000', '0'),
+        consent: null,
+      }),
+    );
+    await expect(
+      prisma.bookingInsurancePolicy.updateMany({
+        where: { bookingId },
+        data: { premiumSource: 'partner', premiumQuoteFallbackReason: 'timeout' },
+      }),
+    ).rejects.toThrow(/premium_fallback_reason_check/);
+  });
 });
 
 describe('Phát hành — không có đường nào ghi `issued` tay không', () => {
@@ -925,23 +987,31 @@ describe('ADR 0064 — cổng bán bảo hiểm theo TỪNG sản phẩm (Insura
     ).toEqual({ vehicleProtection: false, tripInsurance: false });
   });
 
-  maybe('tắt sản phẩm ⇒ thôi bán ĐÚNG sản phẩm đó (nguồn giả, không đụng dòng dùng chung)', async () => {
-    const rows = await realProducts();
-    let vehicleTripActive = true;
-    const source = productSource(() =>
-      rows.map((r) =>
-        r.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP ? { ...r, isActive: vehicleTripActive } : r,
-      ),
-    );
-    const offer = new InsuranceOfferService(new MicMockInsurancePartner(), source);
-    expect(await offer.offeredByKind()).toEqual({ vehicleProtection: true, tripInsurance: true });
+  maybe(
+    'tắt sản phẩm ⇒ thôi bán ĐÚNG sản phẩm đó (nguồn giả, không đụng dòng dùng chung)',
+    async () => {
+      const rows = await realProducts();
+      let vehicleTripActive = true;
+      const source = productSource(() =>
+        rows.map((r) =>
+          r.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP
+            ? { ...r, isActive: vehicleTripActive }
+            : r,
+        ),
+      );
+      const offer = new InsuranceOfferService(new MicMockInsurancePartner(), source);
+      expect(await offer.offeredByKind()).toEqual({ vehicleProtection: true, tripInsurance: true });
 
-    vehicleTripActive = false;
-    // Bộ nhớ đệm: chưa xoá thì vẫn là câu trả lời cũ — đúng là nó KHÔNG đọc DB mỗi lượt.
-    expect(await offer.offeredByKind()).toMatchObject({ vehicleProtection: true });
-    offer.invalidate();
-    expect(await offer.offeredByKind()).toEqual({ vehicleProtection: false, tripInsurance: true });
-  });
+      vehicleTripActive = false;
+      // Bộ nhớ đệm: chưa xoá thì vẫn là câu trả lời cũ — đúng là nó KHÔNG đọc DB mỗi lượt.
+      expect(await offer.offeredByKind()).toMatchObject({ vehicleProtection: true });
+      offer.invalidate();
+      expect(await offer.offeredByKind()).toEqual({
+        vehicleProtection: false,
+        tripInsurance: true,
+      });
+    },
+  );
 
   maybe('đọc danh mục MỘT lần trong TTL, đọc lại khi hết hạn', async () => {
     const rows = await realProducts();
@@ -989,26 +1059,31 @@ describe('ADR 0064 — lượt `issuing` bỏ dở được nhặt lại (worker
   }
   const leaseMs = INSURANCE_ISSUING_LEASE_MINUTES * 60_000;
 
-  maybe('quá hạn thuê ⇒ worker chiếm lại và phát hành ĐÚNG số GCN cũ; còn hạn ⇒ không đụng', async () => {
-    const { policyId } = await claimedPolicy();
-    // Lượt vừa chiếm còn trong hạn thuê: chiếm lại là gọi đôi.
-    expect(await mockInsurance.claimDue(10)).not.toContain(policyId);
+  maybe(
+    'quá hạn thuê ⇒ worker chiếm lại và phát hành ĐÚNG số GCN cũ; còn hạn ⇒ không đụng',
+    async () => {
+      const { policyId } = await claimedPolicy();
+      // Lượt vừa chiếm còn trong hạn thuê: chiếm lại là gọi đôi.
+      expect(await mockInsurance.claimDue(10)).not.toContain(policyId);
 
-    await prisma.bookingInsurancePolicy.update({
-      where: { id: policyId },
-      data: { lastAttemptAt: new Date(Date.now() - leaseMs - 60_000) },
-    });
-    const reclaimed = await mockInsurance.claimDue(10);
-    expect(reclaimed).toContain(policyId);
-    // Hai worker cùng thấy nó quá hạn: chỉ một bên chiếm được (mốc vừa được ghi mới).
-    expect(await mockInsurance.claimDue(10)).not.toContain(policyId);
+      await prisma.bookingInsurancePolicy.update({
+        where: { id: policyId },
+        data: { lastAttemptAt: new Date(Date.now() - leaseMs - 60_000) },
+      });
+      const reclaimed = await mockInsurance.claimDue(10);
+      expect(reclaimed).toContain(policyId);
+      // Hai worker cùng thấy nó quá hạn: chỉ một bên chiếm được (mốc vừa được ghi mới).
+      expect(await mockInsurance.claimDue(10)).not.toContain(policyId);
 
-    expect(await mockInsurance.issueOne(policyId)).toBe('issued');
-    const row = await prisma.bookingInsurancePolicy.findUniqueOrThrow({ where: { id: policyId } });
-    expect(row.status).toBe(INSURANCE_POLICY_STATUS.ISSUED);
-    // Khoá idempotency không đổi ⇒ số GCN tất định, đúng như lượt bỏ dở lẽ ra đã nhận.
-    expect(row.certificateNumber).toMatch(/^TEST-MIC-VCX-[0-9A-F]{8}$/);
-  });
+      expect(await mockInsurance.issueOne(policyId)).toBe('issued');
+      const row = await prisma.bookingInsurancePolicy.findUniqueOrThrow({
+        where: { id: policyId },
+      });
+      expect(row.status).toBe(INSURANCE_POLICY_STATUS.ISSUED);
+      // Khoá idempotency không đổi ⇒ số GCN tất định, đúng như lượt bỏ dở lẽ ra đã nhận.
+      expect(row.certificateNumber).toMatch(/^TEST-MIC-VCX-[0-9A-F]{8}$/);
+    },
+  );
 
   maybe('admin thử lại nhận `issuing` quá hạn, từ chối `issuing` còn hạn', async () => {
     const { policyId } = await claimedPolicy();
@@ -1028,7 +1103,9 @@ describe('ADR 0064 — lượt `issuing` bỏ dở được nhặt lại (worker
     expect(queued.nextAttemptAt).not.toBeNull();
     expect(await mockInsurance.claimDue(10)).toContain(policyId);
     expect(await mockInsurance.issueOne(policyId)).toBe('issued');
-    await prisma.auditLog.deleteMany({ where: { action: 'insurance_policy.retry', targetId: policyId } });
+    await prisma.auditLog.deleteMany({
+      where: { action: 'insurance_policy.retry', targetId: policyId },
+    });
   });
 });
 
@@ -1215,30 +1292,35 @@ describe('ADR 0064 — sản phẩm ĐÓNG BĂNG lúc duyệt, không lúc tiề
    * Không tắt dòng dùng chung (spec chạy song song): bản đóng băng KHÁC danh mục hiện hành là đủ
    * để chứng minh không ai đọc lại danh mục.
    */
-  maybe('hợp đồng và lượt phát hành dùng bản đóng băng, không dùng danh mục hiện hành', async () => {
-    const product = await frozenAtApproval();
-    const snapshot: BookingPriceSnapshot = {
-      ...snapshotWith('50000', '0'),
-      insuranceProducts: { [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: product },
-    };
-    const bookingId = await makeBooking();
-    await prisma.$transaction((tx) =>
-      mockInsurance.reserveForBookingWithinTx(tx, {
-        bookingId,
-        tenantId,
-        holdId: null,
-        snapshot,
-        consent: null,
-      }),
-    );
-    const row = await prisma.bookingInsurancePolicy.findFirstOrThrow({ where: { bookingId } });
-    expect(row.productSnapshotJson).toMatchObject({ nameVi: product.nameVi });
+  maybe(
+    'hợp đồng và lượt phát hành dùng bản đóng băng, không dùng danh mục hiện hành',
+    async () => {
+      const product = await frozenAtApproval();
+      const snapshot: BookingPriceSnapshot = {
+        ...snapshotWith('50000', '0'),
+        insuranceProducts: { [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: product },
+      };
+      const bookingId = await makeBooking();
+      await prisma.$transaction((tx) =>
+        mockInsurance.reserveForBookingWithinTx(tx, {
+          bookingId,
+          tenantId,
+          holdId: null,
+          snapshot,
+          consent: null,
+        }),
+      );
+      const row = await prisma.bookingInsurancePolicy.findFirstOrThrow({ where: { bookingId } });
+      expect(row.productSnapshotJson).toMatchObject({ nameVi: product.nameVi });
 
-    await prisma.$transaction((tx) => mockInsurance.markDueWithinTx(tx, bookingId));
-    expect(await mockInsurance.claimDue(10)).toContain(row.id);
-    expect(await mockInsurance.issueOne(row.id)).toBe('issued');
-    const issued = await prisma.bookingInsurancePolicy.findUniqueOrThrow({ where: { id: row.id } });
-    expect(issued.certificateUrl?.startsWith(`https://frozen-${RUN}.test/gcn/`)).toBe(true);
-    expect(issued.requestPayloadJson).toMatchObject({ product: { nameVi: product.nameVi } });
-  });
+      await prisma.$transaction((tx) => mockInsurance.markDueWithinTx(tx, bookingId));
+      expect(await mockInsurance.claimDue(10)).toContain(row.id);
+      expect(await mockInsurance.issueOne(row.id)).toBe('issued');
+      const issued = await prisma.bookingInsurancePolicy.findUniqueOrThrow({
+        where: { id: row.id },
+      });
+      expect(issued.certificateUrl?.startsWith(`https://frozen-${RUN}.test/gcn/`)).toBe(true);
+      expect(issued.requestPayloadJson).toMatchObject({ product: { nameVi: product.nameVi } });
+    },
+  );
 });

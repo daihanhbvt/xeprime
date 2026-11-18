@@ -59,7 +59,11 @@
     "customer": "Customer",
     "vehicle": "Vehicle · shop",
     "schedule": "Rental period",
-    "sentAt": "Sent",
+    "stage": "Stage",
+    "waited": "Waiting",
+    "deadline": "Deadline",
+    "sentAtValue": "Sent {time}",
+    "acceptedAtValue": "Host accepted {time}",
     "respondBy": "Answer by",
     "holdBy": "Hold by",
     "longTerm": "Long term · {package}",
@@ -93,6 +97,7 @@
     "total": "{count, plural, one {# booking} other {# bookings}}"
   },
   "empty": {
+    "both": "No request is waiting for a host or for a customer hold.",
     "pending_approval": "No request is waiting for a host right now.",
     "awaiting_hold": "No request is waiting for a customer's hold.",
     "pickup_soon": "No pickup in the next 24 hours.",
@@ -105,7 +110,10 @@
     "inDays": "{count} d left",
     "lateMinutes": "{count} min late",
     "lateHours": "{count} h late",
-    "lateDays": "{count} d late"
+    "lateDays": "{count} d late",
+    "elapsedMinutes": "{count, plural, one {# min} other {# min}}",
+    "elapsedHours": "{count, plural, one {# hour} other {# hours}}",
+    "elapsedDays": "{count, plural, one {# day} other {# days}}"
   },
   "dashboard": {
     "title": "Trip operations",

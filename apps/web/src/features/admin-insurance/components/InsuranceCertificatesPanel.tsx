@@ -28,7 +28,7 @@ import type { CertificateFilters, InsurancePolicy } from '../types';
 import { InsuranceAttentionAlert } from './InsuranceAttentionAlert';
 import { InsuranceCertificateDrawer } from './InsuranceCertificateDrawer';
 import styles from './InsuranceCertificatesPanel.module.css';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, isZeroMoney } from '@xeprime/domain';
 
 const MIN_TABLE_WIDTH = 1040;
 
@@ -179,8 +179,26 @@ export function InsuranceCertificatesPanel() {
       title: t('columns.premium'),
       key: 'premium',
       align: 'right',
-      width: 120,
-      render: (_, row) => <span className={styles.amount}>{fmt.money(row.premiumAmount)}</span>,
+      width: 170,
+      // Phí khách trả · phí MIC tính lúc cấp · phí thu hộ · nguồn phí lúc duyệt (ADR 0097).
+      render: (_, row) => (
+        <div className={styles.stackEnd}>
+          <span className={styles.amount}>{fmt.money(row.premiumAmount)}</span>
+          {row.partnerPremiumAmount ? (
+            <span className={styles.muted}>
+              {t('premiumPartner', { amount: fmt.money(row.partnerPremiumAmount) })}
+            </span>
+          ) : null}
+          {isZeroMoney(row.serviceFeeAmount) ? null : (
+            <span className={styles.muted}>
+              {t('premiumServiceFee', { amount: fmt.money(row.serviceFeeAmount) })}
+            </span>
+          )}
+          {row.premiumSource ? (
+            <span className={styles.muted}>{t(`premiumSource.${row.premiumSource}`)}</span>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: t('columns.status'),

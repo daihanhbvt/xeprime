@@ -36,6 +36,7 @@ import { IsMoneyStep } from '../../../common/validators/money-step.validator';
 import {
   OwnerCommissionTierDto,
   PerVehicleTypeAmountDto,
+  PerVehicleTypeFeeBasisDto,
   TaxRatesDto,
 } from '../../fee-policies/dto/fee-policy.dto';
 import { AutoAcceptPreviewDto } from '../../vehicle-settings/dto/vehicle-settings.dto';
@@ -716,8 +717,14 @@ export class FeePolicySnapshotDto {
   depositPercent!: number;
   @ApiProperty({ description: 'Sàn của `D` (VND): D = max(% × tiền thuê, sàn)' })
   depositMinAmount!: string;
-  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`S` - phí sàn cố định mỗi đơn' })
+  @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`S` - phí sàn theo loại xe' })
   customerPlatformFee!: PerVehicleTypeAmountDto;
+  @ApiPropertyOptional({
+    type: PerVehicleTypeFeeBasisDto,
+    description:
+      'Cách tính `S` (ADR 0098): per_trip một lần mỗi chuyến, per_day × số ngày. Vắng ở snapshot trước 17/11/2026 = mỗi chuyến.',
+  })
+  customerPlatformFeeBasis?: PerVehicleTypeFeeBasisDto;
   @ApiProperty({ type: [OwnerCommissionTierDto], description: '`H` - nấc hoa hồng lũy tiến' })
   ownerCommissionTiers!: readonly OwnerCommissionTierDto[];
   @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`IV` - biểu phí mỗi ngày' })
@@ -942,6 +949,7 @@ export class PublicFeePolicySnapshotDto extends PickType(FeePolicySnapshotDto, [
   'freeCancelHours',
   'depositPercent',
   'customerPlatformFee',
+  'customerPlatformFeeBasis',
   'tripInsuranceEnabled',
   'tripInsuranceDailyAmount',
   'vehicleProtectionEnabled',

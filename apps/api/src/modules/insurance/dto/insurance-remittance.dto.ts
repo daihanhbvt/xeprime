@@ -98,15 +98,22 @@ export class InsuranceRemittanceDto {
   @ApiProperty({ example: '2026-11' }) periodMonth!: string;
   @ApiProperty({ enum: INSURANCE_REMITTANCE_STATUS_VALUES }) status!: InsuranceRemittanceStatus;
   @ApiProperty() policyCount!: number;
-  @ApiProperty({ description: 'Tổng phí các hợp đồng (VND string)' }) grossPremium!: string;
+  @ApiProperty({
+    description:
+      'Tổng phí PHẢI KÊ (VND string) - phí hãng tính lúc cấp; hợp đồng không có số hãng thì lấy phí khách trả (ADR 0097)',
+  })
+  grossPremium!: string;
   @ApiProperty() commissionPercent!: string;
   @ApiProperty() commissionAmount!: string;
   @ApiProperty({ description: 'Phải trả hãng = tổng phí - hoa hồng' }) payableAmount!: string;
-  @ApiProperty({
-    description:
-      'Tổng phí hãng tính lúc cấp (đối soát) - lệch với tổng phí là phần XePrime bù/được lợi',
-  })
+  @ApiProperty({ description: 'Tổng phí hãng tính lúc cấp (chỉ các hợp đồng có số hãng)' })
   partnerPremiumTotal!: string;
+  @ApiProperty({
+    description: 'Tổng phí khách đã trả - lệch với tổng phí phải kê là phần XePrime bù/được lợi',
+  })
+  collectedPremiumTotal!: string;
+  @ApiProperty({ description: 'Số hợp đồng hãng không trả phí lúc cấp - kê theo phí khách trả' })
+  partnerPremiumMissingCount!: number;
   @ApiProperty({ description: 'Số hợp đồng GCN thử nghiệm (sandbox) trong bảng kê' })
   testPolicyCount!: number;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAmount!: string | null;
@@ -148,11 +155,17 @@ export class InsuranceRemittanceLinePageDto {
 export class InsuranceRemittancePendingDto {
   @ApiProperty({ description: 'Số hợp đồng đã cấp, chưa nằm trong bảng kê nào' })
   policyCount!: number;
-  @ApiProperty() grossPremium!: string;
+  @ApiProperty({ description: 'Tổng phí phải kê - theo phí hãng tính, thiếu thì phí khách trả' })
+  grossPremium!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     description: 'Mốc cấp sớm nhất còn chưa kê',
   })
   oldestIssuedAt!: string | null;
+  @ApiProperty({
+    description:
+      '% hoa hồng đại lý đang cấu hình trên sản phẩm (ADR 0097) - mặc định khi lập bảng kê',
+  })
+  agencyCommissionPercent!: string;
 }

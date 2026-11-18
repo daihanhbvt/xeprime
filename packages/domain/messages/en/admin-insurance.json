@@ -1,18 +1,18 @@
 {
   "page": {
     "title": "Trip insurance",
-    "subtitle": "The MIC product catalogue shown to customers and the queue of certificates sold.",
+    "subtitle": "Monthly insurance money, MIC rates, eligible vehicles, policies sold and premium remittances.",
     "tabsLabel": "Insurance admin areas"
   },
   "tabs": {
-    "products": "Products",
-    "certificates": "Certificates",
-    "remittances": "Premium statements"
+    "products": "Rates & products",
+    "certificates": "Policies",
+    "remittances": "Premium statements",
+    "overview": "Overview",
+    "vehicles": "Vehicles"
   },
   "products": {
     "tableLabel": "Insurance product catalogue",
-    "feePolicyNote": "Daily rates (car / motorbike) are configured in Fee policies and are versioned. Here you only edit the description customers see and switch products on or off.",
-    "openFeePolicies": "Open Fee policies",
     "columns": {
       "product": "Product",
       "deductible": "Deductible / incident",
@@ -29,19 +29,26 @@
       "title": "No insurance products yet",
       "description": "The catalogue is loaded by the base data seed (SEED_MODE=system)."
     },
-    "loadError": "Could not load the product catalogue."
+    "loadError": "Could not load the product catalogue.",
+    "money": "Service fee {serviceFee} · agency commission {commission}",
+    "off": "off",
+    "dailyRate": "Daily rate: {value}",
+    "notSold": "not sold"
   },
   "form": {
     "title": "Edit product · {name}",
     "submit": "Save changes",
     "intro": "Policies already sold keep their own snapshot of the product - changes here only apply to trips from now on.",
     "sections": {
-      "naming": "Display name",
+      "naming": "Product name",
       "coverage": "Coverage",
-      "amounts": "Deductible & payout",
-      "operation": "Operations",
-      "premium": "Premium by car value tier",
-      "serviceFee": "Insurance collection fee"
+      "amounts": "Deductible & maximum payout",
+      "premium": "Premium tiers by trip length",
+      "serviceFee": "Service fee & agency commission",
+      "payoutNote": "Payout note",
+      "status": "Status",
+      "partner": "Partner connection",
+      "daily": "Daily premium"
     },
     "fields": {
       "nameVi": "Name (Vietnamese)",
@@ -60,22 +67,23 @@
       "isActive": "On",
       "isActiveDescription": "When off, customers no longer see this option. Policies already sold are not affected.",
       "premiumTiers": "Premium tiers",
-      "tierMaxDays": "Trip up to",
       "tierDaysSuffix": "days",
-      "tierPercent": "% of car value",
       "claimHotline": "Incident hotline",
       "serviceFeeEnabled": "Charge a collection fee",
       "serviceFeeEnabledDescription": "When on, every trip with vehicle damage insurance adds a collection fee = % of the premium. Renters see it merged into the insurance line with an ⓘ splitting the two amounts; it is refunded with the premium, and promo codes never reduce it.",
-      "serviceFeePercent": "% of the premium"
+      "serviceFeePercent": "% of the premium",
+      "agencyCommissionPercent": "Agency commission",
+      "dailyAmountCar": "Daily premium - car",
+      "dailyAmountMotorbike": "Daily premium - motorbike"
     },
     "help": {
       "amountEmpty": "Leave empty if not applicable.",
       "maxPayoutNote": "For example: “Up to the vehicle’s actual value”, “Per person, per incident”.",
-      "certificateUrlTemplate": "Starts with https:// and contains '{certCode}' - where the certificate number goes.",
-      "premiumTiers": "Tiers must increase in both days and rate. Partial days round up to the next tier.",
-      "valueTierIntro": "Sold with eligible self-drive cars; each owner chooses Required or Optional for their cars. Premium = car value × the rate of the trip duration tier (VAT included), per MIC tariff for vehicle type M1.11.",
-      "claimHotline": "Shown next to the certificate for renters and owners.",
-      "serviceFeeLegal": "Do NOT turn this on in production until the lawyer has signed off (ADR 0091 clause 3). A new rate applies to quotes and approvals from the moment you save - existing bookings and reservation payments keep their locked amounts."
+      "agencyCommissionPercent": "Per the agency agreement with MIC - the default when creating a monthly remittance.",
+      "premiumTiersHint": "Premium = vehicle value × the trip-length tier's rate (VAT included), per MIC's M1.11 schedule. Tiers increase in both days and rate; partial days round up to the next tier. Sold with eligible self-drive cars; the owner picks Required or Optional.",
+      "serviceFeePercent": "Charged on the premium. A new rate applies to quotes and approvals from save - existing bookings and holds keep their locked amount.",
+      "partnerSection": "Product code issued by MIC. The hotline is shown next to the certificate for renters and owners. The URL template starts with https:// and contains '{certCode}' - where the certificate number goes.",
+      "dailyAmount": "Optional for the renter, charged per rental day. Leave blank or 0 to not sell it for that vehicle type. A new rate applies to quotes from save - existing bookings keep their locked amount."
     },
     "validation": {
       "required": "Required.",
@@ -88,12 +96,53 @@
       "amountMax": "The amount is too large.",
       "tiers": "Invalid tiers: days 1-30, rate above 0 with up to 4 decimals, both increasing.",
       "serviceFeePercent": "Rate from 0 to {max}%, up to 2 decimals.",
-      "serviceFeePercentRequired": "The rate must be above 0 when the fee is on."
+      "serviceFeePercentRequired": "The rate must be above 0 when the fee is on.",
+      "agencyCommissionPercent": "From 0 to {max}%, at most two decimals"
     },
     "saved": "Saved product {name}.",
     "actions": {
       "addTier": "Add tier",
       "removeTier": "Remove this tier"
+    },
+    "tabs": {
+      "pricing": "Premium & service fee",
+      "content": "Display content",
+      "payout": "Deductible & payout",
+      "operation": "Operations",
+      "premiumOnly": "Premium"
+    },
+    "tabErrors": "{count, plural, one {# field to fix} other {# fields to fix}}",
+    "hints": {
+      "intro": "What editing affects",
+      "premium": "How tiered premiums work",
+      "serviceFee": "What the service fee is",
+      "serviceFeePercent": "When a new rate takes effect",
+      "agencyCommission": "What the agency commission is for",
+      "amounts": "When to leave blank",
+      "payoutNote": "Note examples",
+      "isActive": "What turning it off does",
+      "partner": "About the connection fields",
+      "daily": "How the daily premium works"
+    },
+    "placeholders": {
+      "notApplicable": "Not applicable",
+      "maxPayoutNoteVi": "Theo giá trị thực tế của xe",
+      "maxPayoutNoteEn": "Up to the vehicle's actual value",
+      "notSold": "Not sold"
+    },
+    "tiers": {
+      "duration": "Trip length",
+      "maxDays": "Up to",
+      "percent": "Rate",
+      "maxDaysAria": "Maximum days of tier {index}",
+      "percentAria": "Rate (% of vehicle value) of tier {index}"
+    },
+    "preview": {
+      "title": "Preview",
+      "hint": "Uses the values being edited, not yet saved. To compare with MIC, save and use \"Check against MIC\" on the calculator card.",
+      "hintLabel": "How the preview is calculated",
+      "sampleValue": "Sample vehicle value",
+      "invalidTiers": "Fix the premium tiers to see a preview."
     }
   },
   "certificates": {
@@ -109,7 +158,7 @@
       "booking": "Booking",
       "tenant": "Shop · vehicle",
       "product": "Product",
-      "premium": "Premium collected",
+      "premium": "Premium",
       "status": "Status",
       "certificate": "Certificate",
       "attempts": "Attempts",
@@ -146,6 +195,12 @@
       "reasonOverdueNoTime": "Not issued 2 hours after handover",
       "reasonPhotos": "MIC has not received the car photos - contact MIC",
       "more": "and {count, plural, one {# more policy} other {# more policies}} in the queue"
+    },
+    "premiumPartner": "MIC charged {amount}",
+    "premiumServiceFee": "Service fee {amount}",
+    "premiumSource": {
+      "partner": "Quoted by MIC at approval",
+      "formula": "Fallback formula"
     }
   },
   "drawer": {
@@ -233,7 +288,21 @@
       "differenceUnder": "XePrime covers {amount}",
       "serviceFee": "Collection fee (XePrime)",
       "refunded": "Refunded to points wallet",
-      "refundedValue": "{amount} to the renter’s points wallet - {at}"
+      "refundedValue": "{amount} to the renter’s points wallet - {at}",
+      "source": "Premium source at approval",
+      "sources": {
+        "partner": "Quoted by MIC",
+        "formula": "Tier table formula (fallback)"
+      },
+      "fallbackReasons": {
+        "timeout": "MIC did not answer within 1.5 seconds",
+        "unavailable": "Could not reach MIC (network or server error)",
+        "rejected": "MIC refused to quote",
+        "out_of_range": "MIC quote too far from the tier table",
+        "not_supported": "The active partner has no quoting API"
+      },
+      "formulaWas": "Formula gave {amount}",
+      "sourceUnrecorded": "Not recorded (policy predates this)"
     }
   },
   "remittances": {
@@ -255,7 +324,7 @@
       "period": "Period",
       "status": "Status",
       "policies": "Policies",
-      "gross": "Gross premium",
+      "gross": "MIC premium",
       "commission": "Agency commission",
       "payable": "Payable",
       "paid": "Paid",
@@ -287,18 +356,18 @@
     },
     "facts": {
       "policies": "Policies",
-      "gross": "Premium paid by renters",
+      "gross": "Premium to remit (MIC figure)",
       "commission": "Agency commission ({percent}%)",
       "payable": "Payable to MIC",
-      "partnerTotal": "Premium charged by MIC at issue",
       "test": "Test",
       "testCount": "{count, plural, one {# sandbox policy} other {# sandbox policies}}",
       "paid": "Transferred",
       "paidAt": "Transfer date",
       "bankReference": "Bank reference",
-      "note": "Note"
+      "note": "Note",
+      "collected": "Collected from customers"
     },
-    "mismatch": "MIC premium differs from what renters paid - check each policy before finalizing.",
+    "mismatch": "{count, plural, one {# policy has} other {# policies have}} no MIC premium from issuance - remitted at the customer premium; check before finalising.",
     "lines": {
       "label": "Policies in this statement",
       "booking": "Booking",
@@ -327,7 +396,7 @@
       "intro": "Collects every issued, unbilled policy issued before the end of the selected month.",
       "period": "Month",
       "commission": "Agency commission",
-      "commissionHelp": "Per the agency agreement with MIC. Leave 0 if MIC pays commission separately.",
+      "commissionHelp": "Defaults to the agency rate on the insurance product. Set 0 if MIC pays commission separately.",
       "note": "Note",
       "submit": "Create statement",
       "done": "Statement created with {count, plural, one {# policy} other {# policies}}",
@@ -348,6 +417,139 @@
         "required": "Required",
         "amount": "Amount must be above 0"
       }
+    }
+  },
+  "overview": {
+    "month": "Month",
+    "loadError": "Could not load this month.",
+    "retry": "Retry",
+    "testCount": "{count, plural, one {# sandbox policy} other {# sandbox policies}} included (not real cover)",
+    "lead": {
+      "label": "Insurance results for the month",
+      "earnings": "XePrime earns from insurance",
+      "earningsInfo": "Service fee + agency commission + the gap between what customers paid and what MIC charged, on policies issued this month.",
+      "earningsHint": "Service fee {serviceFee} · commission {commission}",
+      "netPayable": "Owed to MIC",
+      "netPayableInfo": "MIC premium at issuance minus agency commission. The final figure lives in the monthly remittance.",
+      "netPayableHint": "MIC premium {gross} - commission {percent}%",
+      "collected": "Premium collected from customers",
+      "collectedHint": "{count, plural, one {# policy} other {# policies}} issued this month"
+    },
+    "detail": {
+      "label": "Money lines",
+      "payable": "MIC premium",
+      "payableInfo": "What MIC charged at issuance (total_fee, VAT included). Policies without a MIC figure use the customer premium.",
+      "payableMissing": "{count, plural, one {# policy} other {# policies}} without a MIC figure",
+      "commission": "Agency commission ({percent}%)",
+      "commissionLabel": "Agency commission",
+      "commissionInfo": "Estimated from the rate set on the product. The final figure lives in the monthly remittance.",
+      "serviceFee": "Service fee",
+      "serviceFeeInfo": "What the platform adds on top of the premium. Never sent to MIC.",
+      "difference": "Collected vs owed",
+      "differenceInfo": "Customer premium minus MIC premium. Negative means XePrime is covering the gap.",
+      "refunds": "Refunded to customers",
+      "refundsHint": "{count, plural, one {# policy} other {# policies}} could not be issued"
+    },
+    "difference": {
+      "none": "Matches",
+      "over": "Over by {amount}",
+      "under": "Short by {amount}"
+    },
+    "sources": {
+      "title": "Premium source at approval",
+      "rateLabel": "Share of premiums quoted by MIC",
+      "partner": "Quoted by MIC",
+      "formula": "Fallback formula",
+      "unrecorded": "Not recorded (before rollout)",
+      "empty": "No policies this month.",
+      "lowRate": "Many policies fell back to the formula - check the MIC connection or the rate table."
+    },
+    "backlog": {
+      "title": "Open work",
+      "attention": "Urgent",
+      "failed": "Failed to issue",
+      "unremitted": "Issued, not remitted",
+      "unremittedValue": "{count, plural, one {# policy} other {# policies}} - {amount}"
+    }
+  },
+  "plan": {
+    "columns": {
+      "duration": "Rental length",
+      "premium": "MIC premium",
+      "serviceFee": "Service fee",
+      "customerPays": "Customer pays",
+      "commission": "Agency commission",
+      "netToPartner": "Sent to MIC",
+      "platformEarns": "XePrime keeps",
+      "partnerQuote": "MIC quote",
+      "difference": "Gap"
+    },
+    "durationFirst": "Up to {to} days",
+    "durationRange": "Over {from} up to {to} days",
+    "percentOfValue": "{percent}% of vehicle value",
+    "noAnswer": "No figure",
+    "match": "Matches",
+    "partnerHigher": "MIC higher by {amount}",
+    "partnerLower": "MIC lower by {amount}",
+    "empty": "No tiers yet"
+  },
+  "calculator": {
+    "title": "Premium calculator",
+    "intro": "Enter a vehicle value to see, for each rental length, what the customer pays, what goes to MIC and what XePrime keeps.",
+    "check": "Check against MIC",
+    "checkedBy": "Asked {partner} for each tier of this vehicle",
+    "tableLabel": "Premium by rental length",
+    "enterValue": "Enter a vehicle value to see the table.",
+    "fields": {
+      "insuredValue": "Vehicle value",
+      "manufactureYear": "Year",
+      "seatCount": "Seats"
+    },
+    "validation": {
+      "insuredValue": "Vehicle value from 50 million to 20 billion",
+      "year": "Invalid year",
+      "seats": "Seats from 2 to 60"
+    }
+  },
+  "vehicles": {
+    "tableLabel": "Cars and insurance",
+    "loadError": "Could not load vehicles.",
+    "total": "{count, plural, one {# vehicle} other {# vehicles}}",
+    "noResults": "No vehicles match the filters.",
+    "empty": {
+      "title": "No cars yet",
+      "description": "Cars listed by owners show up here with their insurance eligibility."
+    },
+    "filters": {
+      "search": "Search vehicles",
+      "searchPlaceholder": "Plate, name, shop",
+      "eligibility": "Insurance eligibility"
+    },
+    "eligibility": {
+      "eligible": "Eligible",
+      "missing": "Missing data"
+    },
+    "columns": {
+      "vehicle": "Vehicle",
+      "insuredValue": "Vehicle value",
+      "mode": "Mode",
+      "eligibility": "Eligibility",
+      "premiums": "MIC premium by tier"
+    },
+    "eligibleTag": "Eligible",
+    "tierDays": "Up to {days} days",
+    "check": "Check MIC",
+    "card": {
+      "value": "Vehicle value {amount}",
+      "firstTier": "Up to {days} days: {amount}"
+    },
+    "checkDialog": {
+      "title": "Rate check - {name}",
+      "intro": "Asks MIC for each tier using this vehicle value, year and seats, next to the tier table in use.",
+      "again": "Ask MIC again",
+      "checkedBy": "Asked {partner} for each tier",
+      "tableLabel": "MIC premium vs tier table",
+      "noTiers": "The insurance product has no tier table yet."
     }
   }
 }

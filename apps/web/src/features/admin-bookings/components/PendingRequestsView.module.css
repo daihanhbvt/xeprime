@@ -1,0 +1,28 @@
+.intro {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+}
+
+.filters {
+  margin-bottom: var(--xp-space-md);
+}
+
+.search {
+  width: 260px;
+}
+
+.phone {
+  width: 190px;
+}
+
+.select {
+  width: 210px;
+}
+
+@media (max-width: 560px) {
+  .search,
+  .phone,
+  .select {
+    width: 100%;
+  }
+}

@@ -38,6 +38,7 @@ import {
   type PerVehicleTypeAmount,
   type ServiceType,
   type TaxRatesByServiceType,
+  type PlatformFeeBasis,
   type VehicleType,
 } from '@xeprime/types';
 import type { FeePolicy, UpsertFeePolicyInput } from './types';
@@ -96,6 +97,8 @@ export interface FeePolicyFormValues {
   name: string;
   note: string;
   customerPlatformFee: PerVehicleTypeFormValue;
+  /** Cách tính phí sàn từng loại xe — mỗi chuyến hay × số ngày (ADR 0098). */
+  customerPlatformFeeBasis: Record<VehicleType, PlatformFeeBasis>;
   ownerCommissionTiers: CommissionTierFormValue[];
   depositPercent: number | null;
   depositMinAmount: MoneyValue;
@@ -224,6 +227,7 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
       name: '',
       note: '',
       customerPlatformFee: perVehicleToForm(FEE_SCHEDULE_DEFAULTS.customerPlatformFee),
+      customerPlatformFeeBasis: { ...FEE_SCHEDULE_DEFAULTS.customerPlatformFeeBasis },
       ownerCommissionTiers: FEE_SCHEDULE_DEFAULTS.ownerCommissionTiers.map((tier) => ({ ...tier })),
       depositPercent: FEE_SCHEDULE_DEFAULTS.depositPercent,
       depositMinAmount: Number(FEE_SCHEDULE_DEFAULTS.depositMinAmount),
@@ -251,6 +255,9 @@ export function feePolicyFormDefaults(source: FeePolicy | null): FeePolicyFormVa
     name: source.name,
     note: source.note ?? '',
     customerPlatformFee: perVehicleToForm(source.customerPlatformFee),
+    customerPlatformFeeBasis: {
+      ...(source.customerPlatformFeeBasis ?? FEE_SCHEDULE_DEFAULTS.customerPlatformFeeBasis),
+    },
     ownerCommissionTiers: source.ownerCommissionTiers.map((tier) => ({
       fromDay: tier.fromDay,
       percent: tier.percent,
@@ -293,6 +300,7 @@ export function toUpsertFeePolicyBody(values: FeePolicyFormValues): UpsertFeePol
     name: values.name.trim(),
     note: values.note.trim() || null,
     customerPlatformFee: perVehicleToWire(values.customerPlatformFee),
+    customerPlatformFeeBasis: { ...values.customerPlatformFeeBasis },
     ownerCommissionTiers: values.ownerCommissionTiers.map((tier) => ({
       fromDay: tier.fromDay ?? 1,
       percent: tier.percent ?? 0,
@@ -335,6 +343,7 @@ export function formToPolicyValues(values: FeePolicyFormValues): FeePolicyValues
     depositPercent: values.depositPercent ?? Number.NaN,
     depositMinAmount: body.depositMinAmount,
     customerPlatformFee: perVehicleToWire(values.customerPlatformFee),
+    customerPlatformFeeBasis: { ...values.customerPlatformFeeBasis },
     ownerCommissionTiers: tiersFromForm(values.ownerCommissionTiers),
     taxEnabled: values.taxEnabled,
     taxRates: values.taxEnabled ? taxRatesFromForm(values.taxRates) : null,
@@ -667,3 +676,36 @@ export function buildFeePolicySchema(m: FeePolicyFormMessages) {
 
 /** Loại xe theo thứ tự hiển thị — ô tô trước. */
 export const FEE_POLICY_VEHICLE_TYPES: readonly VehicleType[] = VEHICLE_TYPE_VALUES;
+
+/**
+ * Các TAB của form chính sách phí — mỗi tab một nhóm số admin hay đổi cùng nhau. Tên và ghi chú
+ * nằm trên hàng tab (luôn thấy), nên không thuộc tab nào. Không có tab bảo hiểm: bảo hiểm (công
+ * tắc bán, phí ngày, đối tác) quản lý ở Admin › Bảo hiểm (ADR 0098) — các trường bảo hiểm cũ của
+ * chính sách vẫn đi qua form nguyên trạng để bản nháp mới không làm mất số của phiên bản cũ. Trang chính dùng cùng khoá để nút "Sửa"
+ * của từng thẻ mở thẳng tab tương ứng.
+ */
+export const FEE_POLICY_FORM_TAB = {
+  FEES: 'fees',
+  DEPOSIT: 'deposit',
+  BOOKING: 'booking',
+  TAX: 'tax',
+} as const;
+export type FeePolicyFormTab = (typeof FEE_POLICY_FORM_TAB)[keyof typeof FEE_POLICY_FORM_TAB];
+
+export const FEE_POLICY_FORM_TABS: readonly FeePolicyFormTab[] = Object.values(FEE_POLICY_FORM_TAB);
+
+export const FEE_POLICY_FORM_TAB_FIELDS: Record<
+  FeePolicyFormTab,
+  readonly (keyof FeePolicyFormValues)[]
+> = {
+  fees: ['customerPlatformFee', 'customerPlatformFeeBasis', 'ownerCommissionTiers'],
+  deposit: [
+    'depositPercent',
+    'depositMinAmount',
+    'holdMinAmount',
+    'holdPaymentWindowMinutes',
+    'freeCancelHours',
+  ],
+  booking: ['maxAdvanceBookingDays', 'selfDriveMaxDays', 'withDriverLimits'],
+  tax: ['taxEnabled', 'taxLegalBasis', 'taxRates'],
+};

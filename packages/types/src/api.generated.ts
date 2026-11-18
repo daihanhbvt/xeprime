@@ -6488,6 +6488,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/insurance/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tổng quan bảo hiểm một tháng - phí thu khách, phải trả hãng, hoa hồng đại lý, phí thu hộ, chênh lệch, nguồn phí
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformInsuranceInsightsController_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/insurance/premium-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Đối chiếu biểu phí với hãng - hỏi hãng phí từng bậc cho một xe, so với bảng bậc
+         * @description Gọi API tính phí của đối tác (MIC `phi_vcx`) cho mỗi bậc, chờ tối đa 8 giây. Không ghi gì. Đối tác chưa cắm hoặc không có API tính phí ⇒ cột hãng trống kèm lý do.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.insurance.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        post: operations["PlatformInsuranceInsightsController_premiumCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/insurance/products": {
         parameters: {
             query?: never;
@@ -6540,6 +6594,32 @@ export interface paths {
          *     **Quyền yêu cầu:** `platform.insurance.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         patch: operations["PlatformInsuranceProductsController_update"];
+        trace?: never;
+    };
+    "/platform/insurance/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ô tô và bảo hiểm - giá trị xe, chế độ chủ xe, điều kiện còn thiếu, phí theo từng bậc
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` - phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng - chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.insurance.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformInsuranceInsightsController_vehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/platform/locations": {
@@ -16236,7 +16316,7 @@ export interface components {
              */
             periodMonth: string;
             /**
-             * @description Hoa hồng đại lý XePrime được hưởng, % trên tổng phí (0-50, tối đa 2 chữ số lẻ)
+             * @description Hoa hồng đại lý XePrime được hưởng, % trên tổng phí (0-100, tối đa 2 chữ số lẻ)
              * @example 0
              */
             commissionPercent: string;
@@ -18063,6 +18143,7 @@ export interface components {
             vehicleProtectionPercent?: number | null;
             insurancePartnerName?: string | null;
             customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            customerPlatformFeeBasis: components["schemas"]["PerVehicleTypeFeeBasisDto"];
             ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
             vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
             tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
@@ -18105,8 +18186,10 @@ export interface components {
             depositPercent: number;
             /** @description Sàn của `D` (VND): D = max(% × tiền thuê, sàn) */
             depositMinAmount: string;
-            /** @description `S` - phí sàn cố định mỗi đơn */
+            /** @description `S` - phí sàn theo loại xe */
             customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description Cách tính `S` (ADR 0098): per_trip một lần mỗi chuyến, per_day × số ngày. Vắng ở snapshot trước 17/11/2026 = mỗi chuyến. */
+            customerPlatformFeeBasis?: components["schemas"]["PerVehicleTypeFeeBasisDto"];
             /** @description `H` - nấc hoa hồng lũy tiến */
             ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
             /** @description `IV` - biểu phí mỗi ngày */
@@ -18515,6 +18598,66 @@ export interface components {
             /** @description `IP` - bảo hiểm tai nạn người trên xe */
             tripInsurance: boolean;
         };
+        InsuranceOverviewBacklogDto: {
+            /** @description Hợp đồng đang lỗi cấp */
+            failed: number;
+            /** @description Hợp đồng cần xử lý gấp */
+            attention: number;
+            /** @description Hợp đồng đã cấp chưa nằm trong bảng kê */
+            unremittedCount: number;
+            /** @description Phí phải kê của các hợp đồng trên */
+            unremittedPremium: string;
+        };
+        InsuranceOverviewDto: {
+            /** @example 2026-11 */
+            month: string;
+            issued: components["schemas"]["InsuranceOverviewIssuedDto"];
+            sources: components["schemas"]["InsuranceOverviewSourcesDto"];
+            refunds: components["schemas"]["InsuranceOverviewRefundsDto"];
+            backlog: components["schemas"]["InsuranceOverviewBacklogDto"];
+        };
+        InsuranceOverviewFallbackDto: {
+            /** @enum {string} */
+            reason: "timeout" | "unavailable" | "rejected" | "out_of_range" | "not_supported";
+            count: number;
+        };
+        InsuranceOverviewIssuedDto: {
+            count: number;
+            /** @description Số hợp đồng GCN thử nghiệm (sandbox) trong số trên */
+            testCount: number;
+            /** @description Phí bảo hiểm đã thu của khách (VND string) */
+            collectedPremium: string;
+            /** @description Phí phải trả hãng - phí hãng tính lúc cấp, thiếu thì phí khách trả */
+            payablePremium: string;
+            /** @description Số hợp đồng hãng không trả phí lúc cấp */
+            partnerPremiumMissingCount: number;
+            /** @description Đã thu - phải trả: dương = XePrime được lợi, âm = XePrime bù */
+            premiumDifference: string;
+            /** @description Phí thu hộ bảo hiểm của nền tảng trên các hợp đồng này */
+            serviceFee: string;
+            /** @description % hoa hồng đại lý đang cấu hình trên sản phẩm */
+            agencyCommissionPercent: string;
+            /** @description Hoa hồng đại lý dự kiến = phải trả × % */
+            agencyCommission: string;
+            /** @description Phải trả hãng sau hoa hồng */
+            netPayable: string;
+            /** @description XePrime thu từ bảo hiểm = phí thu hộ + hoa hồng + chênh lệch */
+            platformEarnings: string;
+        };
+        InsuranceOverviewRefundsDto: {
+            count: number;
+            /** @description Phí + phí thu hộ đã hoàn vào Ví điểm khách trong tháng */
+            amount: string;
+        };
+        InsuranceOverviewSourcesDto: {
+            /** @description Phí lấy từ hãng lúc duyệt */
+            partner: number;
+            /** @description Phí theo công thức dự phòng */
+            formula: number;
+            /** @description Hợp đồng không ghi nguồn (trước ADR 0097) */
+            unrecorded: number;
+            fallbacks: components["schemas"]["InsuranceOverviewFallbackDto"][];
+        };
         InsurancePolicyPricingDto: {
             /** @description Phí bảo hiểm đã thu của khách (VND string) */
             premiumAmount: string;
@@ -18532,6 +18675,54 @@ export interface components {
             serviceFeeAmount: string;
             /** @description Mốc đã tự hoàn phí bảo hiểm + phí thu hộ vào Ví điểm khách (ADR 0091 điều 7) */
             refundedAt?: string | null;
+            /**
+             * @description Nguồn phí chốt lúc duyệt (ADR 0097): partner = hãng báo, formula = công thức dự phòng. null = hợp đồng trước ADR 0097
+             * @enum {string|null}
+             */
+            premiumSource?: "partner" | "formula" | null;
+            /** @description Phí theo công thức bậc lúc duyệt - để so với số hãng báo */
+            formulaPremiumAmount?: string | null;
+            /**
+             * @description Vì sao dùng công thức thay vì số hãng báo
+             * @enum {string|null}
+             */
+            premiumQuoteFallbackReason?: "timeout" | "unavailable" | "rejected" | "out_of_range" | "not_supported" | null;
+        };
+        InsurancePremiumCheckDto: {
+            /** @description Đối chiếu theo một xe - đọc giá trị, năm SX, số chỗ của xe */
+            vehicleId?: string;
+            /** @description Giá trị xe (đồng) - khi không chọn xe */
+            insuredValue?: string;
+            manufactureYear?: number;
+            seatCount?: number;
+        };
+        InsurancePremiumCheckResultDto: {
+            insuredValue: string;
+            manufactureYear: number;
+            seatCount: number;
+            /** @description Tên đối tác đang chạy */
+            partnerName: string;
+            rows: components["schemas"]["InsurancePremiumCheckRowDto"][];
+        };
+        InsurancePremiumCheckRowDto: {
+            maxDays: number;
+            percent: string;
+            /** @description Thời lượng chuyến mẫu đã hỏi hãng (giờ) */
+            sampleHours: number;
+            /** @description Phí theo công thức bậc */
+            formulaPremium: string;
+            /** @description Phí hãng báo */
+            partnerPremium?: string | null;
+            /** @description Hãng - công thức: dương = hãng tính cao hơn bảng */
+            difference?: string | null;
+            /**
+             * @description Lý do không có / không nhận số hãng
+             * @enum {string|null}
+             */
+            problem?: "timeout" | "unavailable" | "rejected" | "out_of_range" | "not_supported" | null;
+            /** @description Mã + câu báo của hãng */
+            partnerMessage?: string | null;
+            elapsedMs: number;
         };
         InsurancePremiumTierDto: {
             maxDays: number;
@@ -18560,6 +18751,10 @@ export interface components {
             maxPayoutCar?: string | null;
             /** @description Bồi thường tối đa - xe máy */
             maxPayoutMotorbike?: string | null;
+            /** @description Phí mỗi ngày - ô tô (sản phẩm tính theo ngày, ADR 0098). `null` = không áp dụng */
+            dailyAmountCar?: string | null;
+            /** @description Phí mỗi ngày - xe máy */
+            dailyAmountMotorbike?: string | null;
             maxPayoutNoteVi?: string | null;
             maxPayoutNoteEn?: string | null;
             /** @description Mẫu URL tra cứu GCN, `{certCode}` là chỗ thay số chứng nhận */
@@ -18578,6 +18773,8 @@ export interface components {
             serviceFeeEnabled: boolean;
             /** @description % phí thu hộ trên IV, 0..50, hai chữ số lẻ */
             serviceFeePercent: number;
+            /** @description % hoa hồng đại lý theo hợp đồng đại lý với hãng (ADR 0097) - mặc định cho bảng kê tháng, 0..50 */
+            agencyCommissionPercent: number;
         };
         InsuranceRemittanceDto: {
             id: string;
@@ -18587,14 +18784,18 @@ export interface components {
             /** @enum {string} */
             status: "draft" | "finalized" | "paid";
             policyCount: number;
-            /** @description Tổng phí các hợp đồng (VND string) */
+            /** @description Tổng phí PHẢI KÊ (VND string) - phí hãng tính lúc cấp; hợp đồng không có số hãng thì lấy phí khách trả (ADR 0097) */
             grossPremium: string;
             commissionPercent: string;
             commissionAmount: string;
             /** @description Phải trả hãng = tổng phí - hoa hồng */
             payableAmount: string;
-            /** @description Tổng phí hãng tính lúc cấp (đối soát) - lệch với tổng phí là phần XePrime bù/được lợi */
+            /** @description Tổng phí hãng tính lúc cấp (chỉ các hợp đồng có số hãng) */
             partnerPremiumTotal: string;
+            /** @description Tổng phí khách đã trả - lệch với tổng phí phải kê là phần XePrime bù/được lợi */
+            collectedPremiumTotal: string;
+            /** @description Số hợp đồng hãng không trả phí lúc cấp - kê theo phí khách trả */
+            partnerPremiumMissingCount: number;
             /** @description Số hợp đồng GCN thử nghiệm (sandbox) trong bảng kê */
             testPolicyCount: number;
             paidAmount?: string | null;
@@ -18631,9 +18832,44 @@ export interface components {
         InsuranceRemittancePendingDto: {
             /** @description Số hợp đồng đã cấp, chưa nằm trong bảng kê nào */
             policyCount: number;
+            /** @description Tổng phí phải kê - theo phí hãng tính, thiếu thì phí khách trả */
             grossPremium: string;
             /** @description Mốc cấp sớm nhất còn chưa kê */
             oldestIssuedAt?: string | null;
+            /** @description % hoa hồng đại lý đang cấu hình trên sản phẩm (ADR 0097) - mặc định khi lập bảng kê */
+            agencyCommissionPercent: string;
+        };
+        InsuranceTierPremiumDto: {
+            maxDays: number;
+            /** @description % giá trị xe (chuỗi thập phân) */
+            percent: string;
+            /** @description Phí theo công thức bậc (VND string) */
+            premium: string;
+            /** @description Phí thu hộ của nền tảng trên phí này (0 khi tắt) */
+            serviceFee: string;
+        };
+        InsuranceVehiclePageDto: {
+            data: components["schemas"]["InsuranceVehicleRowDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        InsuranceVehicleRowDto: {
+            vehicleId: string;
+            vehicleName: string;
+            plateNumber?: string | null;
+            tenantId: string;
+            tenantName: string;
+            insuredValue?: string | null;
+            manufactureYear?: number | null;
+            seatCount?: number | null;
+            /**
+             * @description Chế độ chủ xe chọn (ADR 0091)
+             * @enum {string}
+             */
+            insuranceMode: "required" | "optional";
+            eligible: boolean;
+            gaps: ("not_car" | "insured_value_missing" | "photos_missing" | "registration_missing" | "vehicle_info_missing")[];
+            /** @description Phí theo từng bậc - rỗng khi xe chưa có giá trị xe */
+            tiers: components["schemas"]["InsuranceTierPremiumDto"][];
         };
         InsuranceVoidPlanDto: {
             /** @enum {string} */
@@ -20287,6 +20523,18 @@ export interface components {
              */
             motorbike: string;
         };
+        PerVehicleTypeFeeBasisDto: {
+            /**
+             * @example per_trip
+             * @enum {string}
+             */
+            car: "per_trip" | "per_day";
+            /**
+             * @example per_day
+             * @enum {string}
+             */
+            motorbike: "per_trip" | "per_day";
+        };
         PickupPointDto: {
             /** @description Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng. */
             branchName?: string | null;
@@ -21214,6 +21462,15 @@ export interface components {
             status: "reserved" | "issuing" | "issued" | "failed" | "cancelled" | "voided" | "claim";
             /** @description Phí đã thu của khách cho sản phẩm này */
             premiumAmount: string;
+            /** @description Phí hãng tính lúc cấp (MIC total_fee) - null khi chưa cấp */
+            partnerPremiumAmount?: string | null;
+            /** @description Phí thu hộ bảo hiểm của nền tảng đã thu - "0" khi không có */
+            serviceFeeAmount: string;
+            /**
+             * @description Nguồn phí chốt lúc duyệt (ADR 0097) - null với hợp đồng trước đó
+             * @enum {string|null}
+             */
+            premiumSource?: "partner" | "formula" | null;
             partnerName: string;
             partnerProductCode?: string | null;
             /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) - `null` với hợp đồng tạo trước danh mục */
@@ -21273,6 +21530,15 @@ export interface components {
             status: "reserved" | "issuing" | "issued" | "failed" | "cancelled" | "voided" | "claim";
             /** @description Phí đã thu của khách cho sản phẩm này */
             premiumAmount: string;
+            /** @description Phí hãng tính lúc cấp (MIC total_fee) - null khi chưa cấp */
+            partnerPremiumAmount?: string | null;
+            /** @description Phí thu hộ bảo hiểm của nền tảng đã thu - "0" khi không có */
+            serviceFeeAmount: string;
+            /**
+             * @description Nguồn phí chốt lúc duyệt (ADR 0097) - null với hợp đồng trước đó
+             * @enum {string|null}
+             */
+            premiumSource?: "partner" | "formula" | null;
             partnerName: string;
             partnerProductCode?: string | null;
             /** @description Tên sản phẩm đã bán (snapshot, tiếng Việt) - `null` với hợp đồng tạo trước danh mục */
@@ -22430,8 +22696,10 @@ export interface components {
             insurancePartnerName?: string | null;
             /** @description % phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm phí giao xe) - ADR 0066 */
             depositPercent: number;
-            /** @description `S` - phí sàn cố định mỗi đơn */
+            /** @description `S` - phí sàn theo loại xe */
             customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description Cách tính `S` (ADR 0098): per_trip một lần mỗi chuyến, per_day × số ngày. Vắng ở snapshot trước 17/11/2026 = mỗi chuyến. */
+            customerPlatformFeeBasis?: components["schemas"]["PerVehicleTypeFeeBasisDto"];
             /** @description `IV` - biểu phí mỗi ngày */
             vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
             /** @description `IP` - biểu phí mỗi ngày */
@@ -24888,6 +25156,10 @@ export interface components {
             deductibleMotorbike?: string | null;
             maxPayoutCar?: string | null;
             maxPayoutMotorbike?: string | null;
+            /** @description Phí mỗi ngày - ô tô, bội 1.000đ (sản phẩm tính theo ngày, ADR 0098) */
+            dailyAmountCar?: string | null;
+            /** @description Phí mỗi ngày - xe máy */
+            dailyAmountMotorbike?: string | null;
             maxPayoutNoteVi?: string | null;
             maxPayoutNoteEn?: string | null;
             /** @description https://…{certCode}… */
@@ -24901,6 +25173,8 @@ export interface components {
             /** @description Bật phí thu hộ bảo hiểm của nền tảng (ADR 0091 điều 3). Chỉ vật chất xe; bật thì % > 0. Chưa có ý kiến luật sư thì KHÔNG bật ở production. */
             serviceFeeEnabled?: boolean;
             serviceFeePercent?: number;
+            /** @description % hoa hồng đại lý hãng trả lại cho XePrime (ADR 0097) */
+            agencyCommissionPercent?: number;
         };
         UpdateMeDto: {
             displayName?: string;
@@ -25305,8 +25579,10 @@ export interface components {
             vehicleProtectionPercent?: number | null;
             /** @description Đối tác bảo hiểm THẬT - chỉ điền khi đã có hợp đồng (ADR 0028 điều 5) */
             insurancePartnerName?: string | null;
-            /** @description `S` - phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
+            /** @description `S` - phí sàn phía khách theo loại xe, áp cho cả hai tuyến; cách tính ở customerPlatformFeeBasis. */
             customerPlatformFee?: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description Cách tính `S` theo loại xe (ADR 0098): per_trip = một lần mỗi chuyến, per_day = × số ngày thuê (mọi loại thuê). Vắng ⇒ giữ của bản đang sửa / mặc định mỗi chuyến. */
+            customerPlatformFeeBasis?: components["schemas"]["PerVehicleTypeFeeBasisDto"];
             /** @description `H` - nấc hoa hồng lũy tiến theo ngày của tuyến hoa hồng, `fromDay` tăng dần từ 1 */
             ownerCommissionTiers?: components["schemas"]["OwnerCommissionTierDto"][];
             /** @description `IV` - biểu phí bảo hiểm vật chất xe MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
@@ -68722,6 +68998,288 @@ export interface operations {
             };
         };
     };
+    PlatformInsuranceInsightsController_overview: {
+        parameters: {
+            query: {
+                /** @description Tháng (giờ Việt Nam) */
+                month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InsuranceOverviewDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformInsuranceInsightsController_premiumCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InsurancePremiumCheckDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InsurancePremiumCheckResultDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 10 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PlatformInsuranceProductsController_list: {
         parameters: {
             query?: never;
@@ -68953,6 +69511,137 @@ export interface operations {
                      *       "error": {
                      *         "code": "CONFLICT",
                      *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformInsuranceInsightsController_vehicles: {
+        parameters: {
+            query?: {
+                /** @description Biển số, tên xe hoặc tên gian hàng */
+                q?: string;
+                eligibility?: "eligible" | "missing";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsuranceVehiclePageDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
                      *       }
                      *     }
                      */
@@ -85886,14 +86575,17 @@ export interface operations {
     };
     PlatformTripsController_requests: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Tìm theo tên khách / tên xe / biển số / tên gian hàng */
                 q?: string;
                 /** @description Giới hạn theo gian hàng (ULID) */
                 tenantId?: string;
                 page?: number;
                 limit?: number;
-                queue: "pending_approval" | "awaiting_hold";
+                /** @description Bỏ trống = cả hai chặng trước khi có đơn */
+                queue?: "pending_approval" | "awaiting_hold";
+                /** @description Tra CHÍNH XÁC theo SĐT khách */
+                phone?: string;
             };
             header?: never;
             path?: never;

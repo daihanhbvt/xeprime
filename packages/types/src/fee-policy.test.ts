@@ -5,6 +5,7 @@ import {
   FEE_BENEFICIARY,
   FEE_LINE,
   FEE_SCHEDULE_DEFAULTS,
+  PLATFORM_FEE_BASIS,
   allocationTotals,
   computeCustomerFees,
   customerHoldAllocation,
@@ -675,6 +676,53 @@ describe('computeCustomerFees — tuyến GÓI (0% hoa hồng)', () => {
 
   it('tuyến hoa hồng KHÔNG truyền depositRequired ⇒ mặc định LUÔN thu cọc', () => {
     expect(fees().holdAmount).toBe('1210000');
+  });
+});
+
+describe('computeCustomerFees — phí sàn theo chuyến hoặc theo ngày, từng loại xe (ADR 0098)', () => {
+  // Ô tô theo ngày, xe máy theo chuyến.
+  const perDay = () => ({
+    ...PILOT,
+    customerPlatformFeeBasis: {
+      [VEHICLE_TYPE.CAR]: PLATFORM_FEE_BASIS.PER_DAY,
+      [VEHICLE_TYPE.MOTORBIKE]: PLATFORM_FEE_BASIS.PER_TRIP,
+    },
+  });
+
+  it('mặc định (bản cũ không có trường) ⇒ một lần mỗi chuyến, dòng không có đơn giá × ngày', () => {
+    const line = lineOf(fees(), FEE_LINE.SERVICE_FEE);
+    expect(line?.amount).toBe('50000');
+    expect(line?.quantity).toBeUndefined();
+  });
+
+  it('ô tô theo ngày ⇒ 50.000 × 5 ngày = 250.000, dòng mang đơn giá và số ngày, tiền giữ chỗ tăng đúng 200.000', () => {
+    const r = fees({ policy: perDay() });
+    expect(lineOf(r, FEE_LINE.SERVICE_FEE)).toMatchObject({
+      unitAmount: '50000',
+      quantity: 5,
+      amount: '250000',
+    });
+    expect(Number(r.holdAmount) - Number(fees().holdAmount)).toBe(200000);
+    expect(Number(r.customerTotalAmount) - Number(fees().customerTotalAmount)).toBe(200000);
+  });
+
+  it('chọn riêng từng loại xe: xe máy vẫn theo chuyến khi ô tô theo ngày', () => {
+    const r = fees({ policy: perDay(), vehicleType: VEHICLE_TYPE.MOTORBIKE });
+    const line = lineOf(r, FEE_LINE.SERVICE_FEE);
+    expect(line?.amount).toBe('30000');
+    expect(line?.quantity).toBeUndefined();
+  });
+
+  it('áp cho thuê dài hạn: 182 ngày × 50.000 = 9.100.000', () => {
+    const r = fees({ policy: perDay(), rentalDays: 182, baseAmount: '91000000' });
+    expect(amountOf(r, FEE_LINE.SERVICE_FEE)).toBe(9100000);
+  });
+
+  it('khách thấy cách tính trong bản công khai của chính sách', () => {
+    const pub = toPublicFeeBreakdown(fees({ policy: perDay() }));
+    expect(pub.policy.customerPlatformFeeBasis?.[VEHICLE_TYPE.CAR]).toBe(
+      PLATFORM_FEE_BASIS.PER_DAY,
+    );
   });
 });
 

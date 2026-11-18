@@ -8,6 +8,7 @@ import { OWNER_COMMISSION_PERCENT_MAX } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { NumberField } from '@/components/form/NumberField';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDecimalSeparator } from '@/i18n/use-decimal-separator';
 import {
   OWNER_COMMISSION_FROM_DAY_MAX,
   OWNER_COMMISSION_TIERS_MAX,
@@ -30,6 +31,7 @@ export function CommissionTiersField({ control }: { control: Control<FeePolicyFo
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
+  const decimalSeparator = useDecimalSeparator();
   const rangeLabel = useTierRangeLabel();
 
   const { fields, append, remove } = useFieldArray({ control, name: 'ownerCommissionTiers' });
@@ -37,8 +39,7 @@ export function CommissionTiersField({ control }: { control: Control<FeePolicyFo
   const { errors } = useFormState({ control, name: 'ownerCommissionTiers' });
 
   const tierErrors = errors.ownerCommissionTiers as
-    | { root?: { message?: string }; message?: string }
-    | undefined;
+    { root?: { message?: string }; message?: string } | undefined;
   const crossError = tierErrors?.root?.message ?? tierErrors?.message;
   const ranges = commissionTierRanges(tiers);
   const preview = commissionPreview(tiers);
@@ -84,7 +85,8 @@ export function CommissionTiersField({ control }: { control: Control<FeePolicyFo
                 percent
                 min={0}
                 max={OWNER_COMMISSION_PERCENT_MAX}
-                precision={1}
+                decimals={1}
+                decimalSeparator={decimalSeparator}
               />
               {index === 0 ? (
                 <span />

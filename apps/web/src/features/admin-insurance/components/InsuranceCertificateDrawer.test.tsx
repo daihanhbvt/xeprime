@@ -145,7 +145,7 @@ describe('InsuranceCertificateDrawer - nút theo trạng thái', () => {
     state.detail.data = policy(INSURANCE_POLICY_STATUS.ISSUED);
     renderDrawer();
     expect(screen.getByRole('region', { name: 'Phí bảo hiểm' })).toBeTruthy();
-    expect(screen.getByText('Tới 10 ngày - 0.066% giá trị xe')).toBeTruthy();
+    expect(screen.getByText('Tới 10 ngày - 0,066% giá trị xe')).toBeTruthy();
     expect(screen.getByText(/^XePrime bù/)).toBeTruthy();
     // Không có phí thu hộ / chưa hoàn ⇒ không có hai dòng đó.
     expect(screen.queryByText('Phí thu hộ (XePrime)')).toBeNull();

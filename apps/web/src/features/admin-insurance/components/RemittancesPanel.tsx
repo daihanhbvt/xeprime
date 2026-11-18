@@ -105,7 +105,7 @@ export function RemittancesPanel() {
       align: 'right',
       render: (_, r) => (
         <span className={styles.amount}>
-          {fmt.money(r.commissionAmount)} ({r.commissionPercent}%)
+          {fmt.money(r.commissionAmount)} ({fmt.rate(r.commissionPercent)}%)
         </span>
       ),
     },
@@ -159,6 +159,7 @@ export function RemittancesPanel() {
           <Button
             type="primary"
             icon={<PlusOutlined aria-hidden />}
+            disabled={!pending.data}
             onClick={() => setCreating(true)}
           >
             {t('actions.create')}
@@ -198,8 +199,9 @@ export function RemittancesPanel() {
         }}
       />
 
-      {creating ? (
+      {creating && pending.data ? (
         <CreateRemittanceDialog
+          defaultCommissionPercent={Number(pending.data.agencyCommissionPercent)}
           onClose={() => setCreating(false)}
           onCreated={(id) => setFilters({ remittance: id }, { resetPage: false })}
         />
@@ -222,9 +224,12 @@ function monthLabel(month: string): string {
 // ── Lập bảng kê ─────────────────────────────────────────────────────────────
 
 function CreateRemittanceDialog({
+  defaultCommissionPercent,
   onClose,
   onCreated,
 }: {
+  /** % hoa hồng đại lý cấu hình trên sản phẩm (ADR 0097) — người lập vẫn sửa được. */
+  defaultCommissionPercent: number;
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
@@ -268,7 +273,11 @@ function CreateRemittanceDialog({
   type Values = yup.InferType<typeof schema>;
   const { control, handleSubmit } = useForm<Values>({
     resolver: yupResolver(schema),
-    defaultValues: { periodMonth: months[0]!.value, commissionPercent: 0, note: '' },
+    defaultValues: {
+      periodMonth: months[0]!.value,
+      commissionPercent: defaultCommissionPercent,
+      note: '',
+    },
   });
 
   const onSubmit = handleSubmit((values) => {
@@ -466,19 +475,19 @@ function RemittanceDrawer({ id, onClose }: { id: string | null; onClose: () => v
               { key: 'count', label: t('facts.policies'), value: r.policyCount },
               { key: 'gross', label: t('facts.gross'), value: fmt.money(r.grossPremium) },
               {
+                key: 'collected',
+                label: t('facts.collected'),
+                value: fmt.money(r.collectedPremiumTotal),
+              },
+              {
                 key: 'commission',
-                label: t('facts.commission', { percent: r.commissionPercent }),
+                label: t('facts.commission', { percent: fmt.rate(r.commissionPercent) }),
                 value: fmt.money(r.commissionAmount),
               },
               {
                 key: 'payable',
                 label: t('facts.payable'),
                 value: <strong>{fmt.money(r.payableAmount)}</strong>,
-              },
-              {
-                key: 'partner',
-                label: t('facts.partnerTotal'),
-                value: fmt.money(r.partnerPremiumTotal),
               },
               ...(r.testPolicyCount > 0
                 ? [
@@ -505,8 +514,12 @@ function RemittanceDrawer({ id, onClose }: { id: string | null; onClose: () => v
                 : []),
             ]}
           />
-          {r.partnerPremiumTotal !== '0' && r.partnerPremiumTotal !== r.grossPremium ? (
-            <Alert type="warning" showIcon title={t('mismatch')} />
+          {r.partnerPremiumMissingCount > 0 ? (
+            <Alert
+              type="warning"
+              showIcon
+              title={t('mismatch', { count: r.partnerPremiumMissingCount })}
+            />
           ) : null}
           <DataTable<InsuranceRemittanceLine>
             label={t('lines.label')}

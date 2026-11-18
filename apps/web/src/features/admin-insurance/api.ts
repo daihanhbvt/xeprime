@@ -11,6 +11,11 @@ import {
 import type {
   CertificateFilters,
   InsuranceAttentionPage,
+  InsuranceOverview,
+  InsurancePremiumCheckInput,
+  InsurancePremiumCheckResult,
+  InsuranceVehicleFilters,
+  InsuranceVehicleRow,
   InsurancePolicy,
   InsurancePolicyDetail,
   InsurancePolicyPricing,
@@ -130,6 +135,37 @@ export const payRemittance = (
 
 export const deleteRemittance = (id: string): Promise<void> =>
   apiDelete<void>(`${REMITTANCES}/${encodeURIComponent(id)}`);
+
+// ── Tổng quan · xe · đối chiếu biểu phí (ADR 0097) ──────────────────────────
+
+export const fetchInsuranceOverview = (month: string): Promise<InsuranceOverview> =>
+  apiGet<InsuranceOverview>('/platform/insurance/overview', { month });
+
+export const INSURANCE_VEHICLE_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
+
+export function vehicleFiltersToParams(filters: InsuranceVehicleFilters): QueryParams {
+  return {
+    q: filters.q ?? null,
+    eligibility: filters.eligibility ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? INSURANCE_VEHICLE_DEFAULT_LIMIT,
+  };
+}
+
+export const fetchInsuranceVehicles = (
+  filters: InsuranceVehicleFilters,
+): Promise<Paged<InsuranceVehicleRow>> =>
+  fetchPage<InsuranceVehicleRow>(
+    '/platform/insurance/vehicles',
+    vehicleFiltersToParams(filters),
+    INSURANCE_VEHICLE_DEFAULT_LIMIT,
+  );
+
+/** Hỏi hãng phí từng bậc cho một xe / một bộ giá trị — không ghi gì. */
+export const checkInsurancePremium = (
+  body: InsurancePremiumCheckInput,
+): Promise<InsurancePremiumCheckResult> =>
+  apiPost<InsurancePremiumCheckResult>('/platform/insurance/premium-check', body);
 
 /** Tải CSV bảng kê — cùng origin, cookie phiên tự đi kèm. */
 export const remittanceCsvHref = (id: string): string =>

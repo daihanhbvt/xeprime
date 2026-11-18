@@ -20,8 +20,14 @@ export interface TripQueueFilters {
   limit?: number;
 }
 
+/**
+ * Bỏ trống `queue` = CẢ HAI chặng trước khi có đơn (tab "Chưa giữ chỗ" của Đơn thuê toàn hệ
+ * thống), server xếp theo hạn của chặng mỗi dòng.
+ */
 export interface TripRequestFilters extends TripQueueFilters {
-  queue: PlatformTripRequestQueue;
+  queue?: PlatformTripRequestQueue;
+  /** Tra CHÍNH XÁC SĐT khách. */
+  phone?: string;
 }
 
 export interface TripBookingFilters extends TripQueueFilters {
