@@ -277,7 +277,7 @@ function ScanStatus({
 
 /**
  * Các trường cà vẹt trong thẻ "Thông tin xe" (Figma: Số khung · Số máy). Luôn nhập được - ảnh đọc
- * xong thì tự điền ô còn trống; ảnh vẫn bắt buộc (`checkRegistration`).
+ * xong thì tự điền ô còn trống; ảnh tuỳ chọn, ba ô bắt buộc (`checkRegistration`, ADR 0100).
  */
 export function RegistrationFieldsBlock({
   state,

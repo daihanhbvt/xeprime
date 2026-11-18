@@ -1,5 +1,5 @@
-import { App } from 'antd';
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { App, ConfigProvider } from 'antd';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useController, type Control } from 'react-hook-form';
 import {
@@ -259,15 +259,20 @@ const VEHICLE = {
   publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT,
 };
 
+/*
+ * Tắt hiệu ứng của AntD: jsdom không bao giờ kết thúc hiệu ứng đóng, nên hộp xác nhận vừa đóng
+ * nằm lại trong DOM với nội dung cũ (nút còn quay) — ca "thử lại sau lượt hỏng" không mở lại được.
+ */
 function render(source = VEHICLE_REGISTRATION_SOURCE.MARKETPLACE) {
   return renderWithIntl(
-    <App>
-      <QuickVehicleWizard source={source} />
-    </App>,
+    <ConfigProvider theme={{ token: { motion: false } }}>
+      <App>
+        <QuickVehicleWizard source={source} />
+      </App>
+    </ConfigProvider>,
   );
 }
 
-/** Điền tối thiểu để qua bước 1 và bước 2 rồi tới bước ảnh. */
 /**
  * Khai xong bước "Hồ sơ chủ xe" của người CHƯA có gian hàng.
  *
@@ -281,7 +286,7 @@ async function fillOwnerStep() {
     target: { value: '12 Nguyễn Huệ' },
   });
   fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
-  await screen.findByText('1. Thông tin xe');
+  await screen.findByRole('heading', { name: 'Ảnh xe' });
 }
 
 /**
@@ -297,8 +302,8 @@ async function fillIdentity() {
 }
 
 /**
- * Đủ NĂM góc ảnh bắt buộc của ô tô (07/10/2026) — không còn ô "ảnh đại diện" riêng, nên năm ô
- * tải lên trên bảng ảnh chính là năm góc.
+ * Đủ NĂM góc ảnh bắt buộc của ô tô (07/10/2026). Ô "Cà vẹt xe" đứng CUỐI lưới ảnh ở bước 1
+ * (ADR 0099), nên năm ô đầu vẫn là năm góc.
  */
 async function uploadPhotos() {
   const inputs = [...document.querySelectorAll('input[type="file"]')].slice(0, 5);
@@ -310,9 +315,19 @@ async function uploadPhotos() {
   }
 }
 
-async function gotoRentalStep() {
+/** Cà vẹt nhập tay — ảnh TUỲ CHỌN (ADR 0100), ba ô Tên chủ xe · Số khung · Số máy bắt buộc. */
+function fillRegistration() {
+  fireEvent.change(screen.getByLabelText(/^Tên chủ xe/), { target: { value: 'Nguyễn Văn An' } });
+  fireEvent.change(screen.getByLabelText(/^Số khung/), { target: { value: 'RL4B29F30K1234567' } });
+  fireEvent.change(screen.getByLabelText(/^Số máy/), { target: { value: '2NRX123456' } });
+}
+
+/** Bước 1 "Thông tin xe": ảnh + cà vẹt + thông tin phương tiện. */
+async function fillInfoStep({ identity = true }: { identity?: boolean } = {}) {
+  await uploadPhotos();
+  fillRegistration();
   fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
-  fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
+  fireEvent.change(screen.getByLabelText(/^Tên xe/), {
     target: { value: 'Toyota Vios 2023' },
   });
   fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
@@ -321,35 +336,46 @@ async function gotoRentalStep() {
     target: { value: '7.5' },
   });
   fireEvent.mouseDown(screen.getByLabelText(/Hộp số/));
-  fireEvent.click(await screen.findByText('Số tự động (AT)'));
-  await fillIdentity();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-  await screen.findByText('2. Thiết lập cho thuê');
-}
-
-async function fillToLastStep({ photos = true }: { photos?: boolean } = {}) {
-  fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
-  fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
-    target: { value: 'Toyota Vios 2023' },
-  });
-  fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
-  const gasoline = await screen.findByText('Xăng');
-  fireEvent.click(gasoline);
-  const consumption = await screen.findByLabelText(/Mức tiêu thụ nhiên liệu/);
-  fireEvent.change(consumption, { target: { value: '7.5' } });
-  fireEvent.mouseDown(screen.getByLabelText(/Hộp số/));
   // Nhãn hộp số nói rõ ký hiệu từ 09/09/2026 — 'Tự động' một mình không phân biệt nổi AT với
   // CVT hay tay ga của xe máy.
   fireEvent.click(await screen.findByText('Số tự động (AT)'));
-  await fillIdentity();
+  if (identity) await fillIdentity();
+}
 
+async function gotoRentalStep() {
+  await fillInfoStep();
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+  await screen.findByRole('heading', { name: 'Cho thuê' });
+}
+
+async function fillToLastStep() {
+  await gotoRentalStep();
   const price = await screen.findByLabelText(/Giá thuê tự lái mỗi ngày/);
   fireEvent.change(price, { target: { value: '700000' } });
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-  await screen.findByText('3. Hình ảnh xe');
-  if (photos) await uploadPhotos();
+  await screen.findByRole('heading', { name: 'Tiện ích & mô tả' });
+}
+
+/** Bước cuối: "Gửi duyệt" mở hộp xác nhận — trả về hộp đó để bấm "Lưu nháp"/"Gửi duyệt". */
+async function openConfirm() {
+  // Nút ở CHÂN wizard — hộp xác nhận cũng có một nút "Gửi duyệt" (jsdom không chạy hết hiệu ứng
+  // đóng của AntD nên hộp vừa đóng vẫn nằm trong DOM).
+  const footerSubmit = screen
+    .getAllByRole('button', { name: 'Gửi duyệt' })
+    .find((button) => !button.closest('[role="dialog"]'))!;
+  fireEvent.click(footerSubmit);
+  return screen.findByRole('dialog', { name: 'Xác nhận thông tin & gửi duyệt xe' });
+}
+
+/** Lưu từ hộp xác nhận: `draft` = "Lưu nháp", ngược lại "Gửi duyệt". */
+async function saveFromConfirm(action: 'draft' | 'submit') {
+  const dialog = await openConfirm();
+  // `findBy`: hộp mở lại sau một lượt hỏng cần một nhịp render để hết trạng thái đang lưu.
+  fireEvent.click(
+    await within(dialog).findByRole('button', {
+      name: action === 'draft' ? 'Lưu nháp' : 'Gửi duyệt',
+    }),
+  );
 }
 
 beforeEach(() => {
@@ -450,24 +476,29 @@ describe('Cửa vào', () => {
 describe('Ba bước - đúng ba, và nút cuối nói đúng việc', () => {
   it('thanh bước có đúng ba mục, không có bước "Xác nhận"', () => {
     render();
-    expect(screen.getByText('1. Thông tin xe')).toBeTruthy();
+    expect(screen.getAllByText('Thông tin xe').length).toBeGreaterThan(0);
+    expect(screen.getByText('Cho thuê')).toBeTruthy();
+    expect(screen.getByText('Tiện ích & mô tả')).toBeTruthy();
     expect(screen.queryByText(/Xác nhận/)).toBeNull();
   });
 
-  it('bước cuối đổi nút "Kế tiếp" thành hai hành động thật', async () => {
+  it('bước cuối: "Gửi duyệt" mở hộp xác nhận có hai hành động thật', async () => {
     render();
     await fillToLastStep();
 
     expect(screen.queryByRole('button', { name: 'Tiếp tục' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Lưu nháp' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Lưu & gửi duyệt' })).toBeTruthy();
+    const dialog = await openConfirm();
+    expect(within(dialog).getByRole('button', { name: 'Lưu nháp' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Gửi duyệt' })).toBeTruthy();
+    // Mở hộp chưa lưu gì.
+    expect(api.createVehicle).not.toHaveBeenCalled();
   });
 
   it('lưu nháp KHÔNG gửi duyệt', async () => {
     render();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await saveFromConfirm('draft');
     await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(1));
     expect(api.submitVehiclePublic).not.toHaveBeenCalled();
     expect(await screen.findByRole('heading', { name: 'Đã lưu xe ở dạng nháp' })).toBeTruthy();
@@ -482,33 +513,55 @@ describe('Ba bước - đúng ba, và nút cuối nói đúng việc', () => {
     await fillToLastStep();
     publishGate.missing = ['photos'];
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
     expect(
       await screen.findByText(/Cần bổ sung để xe đủ điều kiện lên chợ: Đủ các góc ảnh bắt buộc/),
     ).toBeTruthy();
     expect(api.createVehicle).not.toHaveBeenCalled();
+    // Thiếu điều kiện thì không mở hộp xác nhận — đưa về đúng bước, không hỏi "gửi chứ?".
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('thiếu hãng/mẫu/năm ở bước 1: báo lỗi dưới TỪNG ô, KHÔNG cho đi tiếp', async () => {
     render();
-    fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
-    fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
-      target: { value: 'Toyota Vios 2023' },
-    });
-    fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
-    fireEvent.click(await screen.findByText('Xăng'));
-    fireEvent.change(await screen.findByLabelText(/Mức tiêu thụ nhiên liệu/), {
-      target: { value: '7.5' },
-    });
-    fireEvent.mouseDown(screen.getByLabelText(/Hộp số/));
-    fireEvent.click(await screen.findByText('Số tự động (AT)'));
+    await fillInfoStep({ identity: false });
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
     // Lỗi của schema nằm dưới đúng ô, như mọi trường bắt buộc khác.
     expect(await screen.findByText('Chọn hãng xe')).toBeTruthy();
     expect(screen.getByText('Chọn dòng xe')).toBeTruthy();
     expect(screen.getByText('Nhập năm sản xuất')).toBeTruthy();
-    expect(screen.queryByText('2. Thiết lập cho thuê')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Cho thuê' })).toBeNull();
+  });
+
+  /** Cà vẹt (ADR 0099 · ADR 0100): ba ô bắt buộc, ảnh tuỳ chọn. */
+  it('cà vẹt: thiếu ba ô thì không qua bước 1; KHÔNG ảnh mà nhập tay đủ thì đi tiếp', async () => {
+    render();
+    await fillInfoStep();
+    for (const label of [/^Tên chủ xe/, /^Số khung/, /^Số máy/]) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value: '' } });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    expect(await screen.findByText('Nhập số khung')).toBeTruthy();
+    expect(screen.queryByText('Vui lòng chụp hoặc tải ảnh cà vẹt')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Cho thuê' })).toBeNull();
+
+    fillRegistration();
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    const price = await screen.findByLabelText(/Giá thuê tự lái mỗi ngày/);
+    fireEvent.change(price, { target: { value: '700000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    await screen.findByRole('heading', { name: 'Tiện ích & mô tả' });
+    await saveFromConfirm('draft');
+
+    await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(1));
+    const body = api.createVehicle.mock.calls[0]![0] as { registration: object };
+    expect(body.registration).toMatchObject({
+      holderName: 'Nguyễn Văn An',
+      chassisNumber: 'RL4B29F30K1234567',
+      engineNumber: '2NRX123456',
+    });
+    expect(body.registration).not.toHaveProperty('uploadId');
   });
 });
 
@@ -517,7 +570,8 @@ describe('Không bao giờ tạo hai chiếc xe', () => {
     render();
     await fillToLastStep();
 
-    const save = screen.getByRole('button', { name: 'Lưu & gửi duyệt' });
+    const dialog = await openConfirm();
+    const save = within(dialog).getByRole('button', { name: 'Gửi duyệt' });
     fireEvent.click(save);
     fireEvent.click(save);
 
@@ -531,7 +585,7 @@ describe('Không bao giờ tạo hai chiếc xe', () => {
     render();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+    await saveFromConfirm('submit');
     const success = await screen.findByText('Xe đã được lưu, còn một phần chưa xong');
     expect(success).toBeTruthy();
     expect(api.createVehicle).toHaveBeenCalledTimes(1);
@@ -540,7 +594,7 @@ describe('Không bao giờ tạo hai chiếc xe', () => {
 
     // Người dùng bấm "Đăng thêm xe" rồi lưu lại: vẫn KHÔNG được tạo chiếc thứ hai cho lần dở này.
     fireEvent.click(screen.getByRole('button', { name: 'Đăng thêm xe' }));
-    await screen.findByText('1. Thông tin xe');
+    await screen.findByRole('heading', { name: 'Ảnh xe' });
     expect(api.createVehicle).toHaveBeenCalledTimes(1);
   });
 
@@ -551,7 +605,7 @@ describe('Không bao giờ tạo hai chiếc xe', () => {
     render();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+    await saveFromConfirm('submit');
     expect(await screen.findByText('Xe đã được lưu, còn một phần chưa xong')).toBeTruthy();
     expect(screen.queryByText(/tạo xe thất bại/i)).toBeNull();
     expect(api.createVehicle).toHaveBeenCalledTimes(1);
@@ -562,7 +616,7 @@ describe('Dữ liệu gửi lên', () => {
   it('gửi đúng dịch vụ TỰ LÁI và giá dạng chuỗi', async () => {
     render();
     await fillToLastStep();
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await saveFromConfirm('draft');
 
     await waitFor(() => expect(api.createVehicle).toHaveBeenCalled());
     const body = api.createVehicle.mock.calls[0]![0] as Record<string, unknown>;
@@ -578,7 +632,7 @@ describe('Dữ liệu gửi lên', () => {
   it('không bật giảm giá thì KHÔNG gửi phần trăm nào', async () => {
     render();
     await fillToLastStep();
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await saveFromConfirm('draft');
 
     await waitFor(() => expect(api.createVehicle).toHaveBeenCalled());
     const body = api.createVehicle.mock.calls[0]![0] as Record<string, unknown>;
@@ -609,7 +663,7 @@ describe('Dữ liệu gửi lên', () => {
     }));
     render();
     await fillToLastStep();
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await saveFromConfirm('draft');
 
     await waitFor(() => expect(api.saveVehiclePricing).toHaveBeenCalled());
     const [, body] = api.saveVehiclePricing.mock.calls[0]! as [string, Record<string, never>];
@@ -624,7 +678,7 @@ describe('Dữ liệu gửi lên', () => {
 /**
  * MỘT cổng duyệt cho tuyến hoa hồng — ADR 0036.
  *
- * Bản trước của wizard rẽ hai nhánh ở nút "Lưu & gửi duyệt": gian hàng chưa `active` thì gọi
+ * Bản trước của wizard rẽ hai nhánh ở nút gửi duyệt: gian hàng chưa `active` thì gọi
  * `submitShopReview` (gửi HỒ SƠ GIAN HÀNG), `active` rồi mới gọi `submitVehiclePublic`. Nó chạy
  * được, nhưng vẫn là hai vòng duyệt cho một người có một chiếc xe — và chủ xe phải chờ hết vòng
  * thứ nhất mới biết chiếc xe của mình có vấn đề gì không.
@@ -633,11 +687,11 @@ describe('Dữ liệu gửi lên', () => {
  * nhánh, và không bao giờ nói "đã gửi duyệt" khi chưa có phiếu thật.
  */
 describe('Một cổng duyệt: gửi thẳng XE', () => {
-  it('bấm "Lưu & gửi duyệt" → gọi submit-public, KHÔNG gọi gửi duyệt gian hàng', async () => {
+  it('bấm "Gửi duyệt" → gọi submit-public, KHÔNG gọi gửi duyệt gian hàng', async () => {
     render();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+    await saveFromConfirm('submit');
 
     await waitFor(() => expect(api.submitVehiclePublic).toHaveBeenCalledTimes(1));
     expect(api.submitVehiclePublic).toHaveBeenCalledWith('v1');
@@ -657,7 +711,7 @@ describe('Một cổng duyệt: gửi thẳng XE', () => {
     render();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+    await saveFromConfirm('submit');
 
     await waitFor(() => expect(api.submitVehiclePublic).toHaveBeenCalledTimes(1));
     expect(await screen.findByRole('heading', { name: 'Đã gửi xe đi duyệt' })).toBeTruthy();
@@ -680,14 +734,14 @@ describe('Một cổng duyệt: gửi thẳng XE', () => {
     render();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+    await saveFromConfirm('submit');
 
     expect(await screen.findByRole('heading', { name: 'Xe chưa gửi duyệt được' })).toBeTruthy();
     expect(screen.getByText('Đủ các góc ảnh bắt buộc')).toBeTruthy();
     expect(screen.getByText('Chi nhánh có tỉnh/thành')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Đã gửi xe đi duyệt' })).toBeNull();
     // Xe ĐÃ tồn tại — lối vào sửa phải có mặt để chủ xe bổ sung rồi gửi lại.
-    expect(screen.getByRole('button', { name: 'Bổ sung ngay' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Bổ sung ngay' })).toBeTruthy();
   });
 });
 
@@ -806,7 +860,7 @@ describe('Gian hàng chỉ mở cùng chiếc xe', () => {
     await fillOwnerStep();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await saveFromConfirm('draft');
     await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(1));
 
     expect(shopApi.registerShop).toHaveBeenCalledTimes(1);
@@ -830,7 +884,6 @@ describe('Gian hàng chỉ mở cùng chiếc xe', () => {
   it('chọn ảnh đầu tiên: mở gian hàng ngay trước khi presign', async () => {
     render();
     await fillOwnerStep();
-    await fillToLastStep({ photos: false });
     expect(shopApi.registerShop).not.toHaveBeenCalled();
 
     const input = document.querySelector('input[type="file"]');
@@ -856,12 +909,20 @@ describe('Gian hàng chỉ mở cùng chiếc xe', () => {
     await fillOwnerStep();
     await fillToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await saveFromConfirm('draft');
     await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(1));
     expect(shopApi.registerShop).toHaveBeenCalledTimes(1);
+    // Lượt hỏng đã khép lại: nút "Gửi duyệt" ở chân wizard hết quay (hết trạng thái đang lưu).
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole('button', { name: 'Gửi duyệt' })
+          .some((button) => !button.closest('[role="dialog"]')),
+      ).toBe(true),
+    );
 
     // Người dùng bấm lại: gian hàng ĐÃ mở ở lần trước, gọi `POST /tenants` lần nữa là 409.
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await saveFromConfirm('draft');
     await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(2));
     expect(shopApi.registerShop).toHaveBeenCalledTimes(1);
   });
