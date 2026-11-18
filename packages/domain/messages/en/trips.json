@@ -195,6 +195,19 @@
     "hostOpenTitle": "This trip has an open complaint",
     "hostOpenBody": "XePrime is holding the money for this trip and will contact both sides to verify. If you have handed the vehicle over, confirm the handover record (with photos if you have them) so XePrime has evidence to verify."
   },
+  "notReturned": {
+    "title": "The owner marked the vehicle as returned early",
+    "lead": "The owner confirmed getting the vehicle back before the booked return time ({returnAt}). The rental price stays as booked. If you still have the vehicle, let XePrime know before {time}.",
+    "action": "I still have the vehicle",
+    "dialogTitle": "Report that you still have the vehicle",
+    "dialogBody": "XePrime will contact both you and the owner to verify and agree on the rest of the trip.",
+    "dialogNote": "Only report this if you really still have the vehicle. If you have returned it, ignore this.",
+    "confirm": "Send report",
+    "keep": "Go back",
+    "success": "Report sent. XePrime will contact you shortly.",
+    "openTitle": "Your report is being handled",
+    "openBody": "XePrime will contact you and the owner to verify."
+  },
   "cancel": {
     "title": "Cancel trip",
     "leadPending": "Your rental request will be withdrawn and the host will be notified. You can send a new request for this car at any time. This cannot be undone!",

@@ -160,6 +160,22 @@ describe('TripNotReceivedReport', () => {
     });
   });
 
+  /*
+   * ADR 0104 điều 2: chủ xe bấm giao xe TRƯỚC giờ nhận ⇒ server trả mốc mở là lúc giao
+   * (`notReceivedReportFrom`), và nút hiện ngay dù chưa tới `pickupAt`.
+   */
+  it('chủ xe giao SỚM ⇒ nút hiện từ lúc giao, trước giờ nhận', () => {
+    clock.fixed = Date.parse('2026-10-22T02:40:00.000Z'); // 20′ trước giờ nhận
+    renderReport(trip({ notReceivedReportFrom: '2026-10-22T02:30:00.000Z' }));
+    expect(screen.getByRole('button', { name: 'Chưa nhận được xe' })).toBeTruthy();
+  });
+
+  it('chưa ai giao xe ⇒ trước giờ nhận vẫn chưa có nút', () => {
+    clock.fixed = Date.parse('2026-10-22T02:40:00.000Z');
+    renderReport(trip({ notReceivedReportFrom: PICKUP_AT }));
+    expect(screen.queryByRole('button', { name: 'Chưa nhận được xe' })).toBeNull();
+  });
+
   it('báo lỗi từ server hiện theo MÃ lỗi trong hộp thoại', () => {
     state.report.isError = true;
     state.report.error = {

@@ -9,6 +9,7 @@ import {
   SUPPORT_CASE_STATUS_OPEN,
   SUPPORT_PARTY,
   type SupportCaseCategory,
+  type SupportCaseOpenReason,
   type SupportCasePriority,
   type SupportParty,
 } from '@xeprime/types';
@@ -151,6 +152,24 @@ export async function openTripNotReceivedReports(
   bookingIds: readonly string[],
   customerUserId?: string,
 ): Promise<Map<string, { id: string; code: string }>> {
+  return openCustomerMarkedReports(
+    db,
+    bookingIds,
+    SUPPORT_CASE_OPEN_REASON.TRIP_NOT_RECEIVED,
+    customerUserId,
+  );
+}
+
+/**
+ * Tranh chấp CÒN MỞ do KHÁCH mở qua một nút chuyên biệt - nhận ra bằng dấu `reason` trên dòng audit
+ * mở case (`trip_not_received` · `trip_not_returned`). Case cũ nhất mỗi đơn.
+ */
+async function openCustomerMarkedReports(
+  db: SupportCaseReader,
+  bookingIds: readonly string[],
+  reason: SupportCaseOpenReason,
+  customerUserId?: string,
+): Promise<Map<string, { id: string; code: string }>> {
   const found = new Map<string, { id: string; code: string }>();
   if (bookingIds.length === 0) return found;
   const candidates = await db.supportCase.findMany({
@@ -170,7 +189,7 @@ export async function openTripNotReceivedReports(
       targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
       targetId: { in: candidates.map((c) => c.id) },
       action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
-      afterJson: { path: ['reason'], equals: SUPPORT_CASE_OPEN_REASON.TRIP_NOT_RECEIVED },
+      afterJson: { path: ['reason'], equals: reason },
     },
     select: { targetId: true },
   });
@@ -182,6 +201,27 @@ export async function openTripNotReceivedReports(
   return found;
 }
 
+/**
+ * Case này có phải lời báo "CHƯA NHẬN ĐƯỢC XE" của khách không - theo ĐÚNG dấu mà
+ * `openTripNotReceivedReports` đọc (`reason = trip_not_received` trên dòng audit mở case). Kết luận
+ * chuyến trên đơn ĐANG THUÊ chỉ mở cho loại lời báo này (ADR 0104 điều 3).
+ */
+export async function isTripNotReceivedReport(
+  db: SupportCaseReader,
+  caseId: string,
+): Promise<boolean> {
+  const marked = await db.auditLog.findFirst({
+    where: {
+      targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
+      targetId: caseId,
+      action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
+      afterJson: { path: ['reason'], equals: SUPPORT_CASE_OPEN_REASON.TRIP_NOT_RECEIVED },
+    },
+    select: { id: true },
+  });
+  return marked !== null;
+}
+
 /** Một đơn của `openTripNotReceivedReports`. */
 export async function findOpenTripNotReceivedReport(
   db: SupportCaseReader,
@@ -189,5 +229,23 @@ export async function findOpenTripNotReceivedReport(
   customerUserId?: string,
 ): Promise<{ id: string; code: string } | null> {
   const found = await openTripNotReceivedReports(db, [bookingId], customerUserId);
+  return found.get(bookingId) ?? null;
+}
+
+/**
+ * Lời báo "TÔI CHƯA TRẢ XE" còn mở của khách trên một đơn (ADR 0105) - case `dispute` khách mở mà dòng
+ * audit mở case mang `reason = trip_not_returned`.
+ */
+export async function findOpenTripNotReturnedReport(
+  db: SupportCaseReader,
+  bookingId: string,
+  customerUserId?: string,
+): Promise<{ id: string; code: string } | null> {
+  const found = await openCustomerMarkedReports(
+    db,
+    [bookingId],
+    SUPPORT_CASE_OPEN_REASON.TRIP_NOT_RETURNED,
+    customerUserId,
+  );
   return found.get(bookingId) ?? null;
 }

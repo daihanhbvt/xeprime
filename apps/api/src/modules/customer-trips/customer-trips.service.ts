@@ -2,6 +2,7 @@ import { ConflictException, Injectable, Logger, NotFoundException } from '@nestj
 import { canEditReview } from '../review/review-edit';
 import {
   findOpenTripNotReceivedReport,
+  findOpenTripNotReturnedReport,
   hasOpenSupportCase,
   Prisma,
   releasePromoRedemption,
@@ -38,13 +39,16 @@ import {
   HANDOVER_PHOTO_SLOT_VALUES,
   customerCanReportReturn,
   customerPickupConfirmState,
+  HANDOVER_CONFIRM_SOURCE,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
   NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES,
   SUPPORT_CASE_CATEGORY,
   driverIncidentState,
   handoverGraceEndsAt,
+  notReceivedWindowOpensAt,
   notReceivedWindowPhase,
+  notReturnedReportUntil,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
   PROMO_RELEASE_REASON,
@@ -469,13 +473,23 @@ export class CustomerTripsService {
       ? await this.hasOpenDispute(base.role as TripRole, booking.id, viewerUserId)
       : false;
     const notReceived = notReceivedReportState(base.role as TripRole, booking, openDispute, now);
+    const notReturnedOpen =
+      base.role === TRIP_ROLE.RENTER && booking
+        ? (await findOpenTripNotReturnedReport(this.prisma, booking.id, viewerUserId)) !== null
+        : false;
+    const notReturnedUntil = notReturnedOpen
+      ? null
+      : notReturnedReportState(base.role as TripRole, booking, now);
     const handover = customerHandoverState(base.role as TripRole, booking, now);
 
     return {
       ...base,
       openDispute,
       canReportNotReceived: notReceived.canReport,
+      notReceivedReportFrom: notReceived.from,
       notReceivedReportUntil: notReceived.until,
+      notReturnedReportOpen: notReturnedOpen,
+      notReturnedReportUntil: notReturnedUntil?.toISOString() ?? null,
       ...handover,
       customerNote: row.note,
       // Liên hệ CHÍNH người thuê đã khai — phía chủ xe không cần (đã có `renter`, có gác).
@@ -1025,6 +1039,7 @@ export class CustomerTripsService {
               code: true,
               status: true,
               pickupAt: true,
+              actualPickupAt: true,
               deletedAt: true,
             },
           })
@@ -1040,6 +1055,61 @@ export class CustomerTripsService {
         tenantId: booking.tenantId,
         code: booking.code,
         bookingRequestId: row.id,
+      });
+    });
+    return this.detail(customerUserId, id);
+  }
+
+  /**
+   * "TÔI CHƯA TRẢ XE" (ADR 0105 điều 2) - chủ xe xác nhận nhận lại xe SỚM hơn giờ trả, khách nói vẫn
+   * đang giữ xe. Mở tranh chấp khẩn cho CSKH; đơn giữ nguyên `completed` (tiền đã quyết toán lúc chủ
+   * xe xác nhận). Kiểm SAU khi khoá dòng đơn, cùng transaction với lượt mở case; bấm lại trả về
+   * chính chuyến, không mở thêm case. Chuyến của người khác là 404.
+   */
+  async reportNotReturned(customerUserId: string, id: string): Promise<CustomerTripDetailDto> {
+    const row = await this.prisma.bookingRequest.findFirst({
+      where: { customerUserId, OR: [{ id }, { bookingId: id }] },
+      select: { id: true, bookingId: true },
+    });
+    if (!row) throw tripNotFound();
+
+    await this.prisma.$transaction(async (tx) => {
+      if (row.bookingId) {
+        await tx.$queryRaw`SELECT 1 FROM "public"."bookings" WHERE "id" = ${row.bookingId} FOR UPDATE`;
+      }
+      const locked = row.bookingId
+        ? await tx.booking.findUnique({
+            where: { id: row.bookingId },
+            select: {
+              id: true,
+              tenantId: true,
+              code: true,
+              status: true,
+              returnAt: true,
+              deletedAt: true,
+              handovers: {
+                where: { status: HANDOVER_STATUS.CONFIRMED, type: HANDOVER_TYPE.RETURN },
+                select: { type: true, confirmedAt: true, confirmSource: true },
+              },
+            },
+          })
+        : null;
+      const booking = locked && !locked.deletedAt ? locked : null;
+      // `now` đọc SAU khoá.
+      const confirmedAt = booking ? earlyHostReturnConfirmedAt(booking, new Date()) : null;
+      if (!booking || !confirmedAt) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.TRIP_NOT_RETURNED_NOT_ALLOWED,
+          message: 'Chuyến này không còn báo "chưa trả xe" được',
+        });
+      }
+      await this.support.openTripNotReturnedWithinTx(tx, customerUserId, {
+        id: booking.id,
+        tenantId: booking.tenantId,
+        code: booking.code,
+        bookingRequestId: row.id,
+        returnAt: booking.returnAt,
+        returnConfirmedAt: confirmedAt,
       });
     });
     return this.detail(customerUserId, id);
@@ -1285,7 +1355,11 @@ const BOOKING_SELECT = {
   // Lời báo trả xe đang chờ gian hàng + biên bản đã xác nhận — hai nút "Đã nhận / Đã trả xe" (ADR 0081).
   customerReturnedAt: true,
   returnAutoCompleteAt: true,
-  handovers: { where: { status: HANDOVER_STATUS.CONFIRMED }, select: { type: true } },
+  // Giờ + nguồn xác nhận: lượt trả SỚM do chủ xe xác nhận mở nút "Tôi chưa trả xe" (ADR 0105).
+  handovers: {
+    where: { status: HANDOVER_STATUS.CONFIRMED },
+    select: { type: true, confirmedAt: true, confirmSource: true },
+  },
   baseAmount: true,
   discountAmount: true,
   deliveryFee: true,
@@ -1860,22 +1934,73 @@ function evidencePhotoNotFound(): NotFoundException {
  */
 function notReceivedReportState(
   role: TripRole,
-  booking: { status: string; pickupAt: Date; deletedAt?: Date | null } | null,
+  booking: {
+    status: string;
+    pickupAt: Date;
+    actualPickupAt?: Date | null;
+    deletedAt?: Date | null;
+  } | null,
   openDispute: boolean,
   now: Date,
-): { canReport: boolean; until: string | null } {
-  if (role !== TRIP_ROLE.RENTER || !booking || openDispute) {
-    return { canReport: false, until: null };
-  }
+): { canReport: boolean; from: string | null; until: string | null } {
+  const none = { canReport: false, from: null, until: null };
+  if (role !== TRIP_ROLE.RENTER || !booking || openDispute) return none;
   if (!NOT_RECEIVED_REPORTABLE_BOOKING_STATUSES.includes(booking.status as BookingStatus)) {
-    return { canReport: false, until: null };
+    return none;
   }
-  const phase = notReceivedWindowPhase(booking.pickupAt, now);
-  if (phase === 'closed') return { canReport: false, until: null };
+  const handedOverAt = handedOverAtOf(booking);
+  const phase = notReceivedWindowPhase(booking.pickupAt, now, handedOverAt);
+  if (phase === 'closed') return none;
   return {
     canReport: phase === 'open',
+    from: notReceivedWindowOpensAt(booking.pickupAt, handedOverAt).toISOString(),
     until: handoverGraceEndsAt(booking.pickupAt).toISOString(),
   };
+}
+
+/**
+ * Giờ giao xe THỰC TẾ khi đơn đã `active` - mở cửa sổ báo "Chưa nhận được xe" từ lúc chủ xe bấm giao
+ * nếu sớm hơn giờ nhận (ADR 0104 điều 2). Đơn chưa giao thì không có mốc này.
+ */
+function handedOverAtOf(booking: { status: string; actualPickupAt?: Date | null }): Date | null {
+  return booking.status === BOOKING_STATUS.ACTIVE ? (booking.actualPickupAt ?? null) : null;
+}
+
+/**
+ * Lượt trả xe SỚM do CHỦ XE xác nhận mà khách còn phản bác được lúc `now` (ADR 0105 điều 2): đơn
+ * `completed`, biên bản trả xe nguồn `host` xác nhận sớm hơn `returnAt` ít nhất
+ * `EARLY_RETURN_MIN_MINUTES`, và `now` chưa quá `returnAt + 120′`. Trả mốc xác nhận (giờ server ghi,
+ * chủ xe không lùi được), ngoài ra `null`. Lượt trả do khách tự báo / tự lập / nền tảng kết luận
+ * không mở nút: khách đã lên tiếng hoặc đã có người xác minh.
+ */
+function earlyHostReturnConfirmedAt(
+  booking: {
+    status: string;
+    returnAt: Date;
+    handovers: readonly { type: string; confirmedAt: Date | null; confirmSource: string }[];
+  },
+  now: Date,
+): Date | null {
+  if (booking.status !== BOOKING_STATUS.COMPLETED) return null;
+  const ret = booking.handovers.find((h) => h.type === HANDOVER_TYPE.RETURN);
+  if (!ret?.confirmedAt || ret.confirmSource !== HANDOVER_CONFIRM_SOURCE.HOST) return null;
+  const until = notReturnedReportUntil(booking.returnAt, ret.confirmedAt);
+  return until && now.getTime() <= until.getTime() ? ret.confirmedAt : null;
+}
+
+/** Mốc ĐÓNG nút "Tôi chưa trả xe" khi người đi thuê còn bấm được lúc này, ngoài ra `null`. */
+function notReturnedReportState(
+  role: TripRole,
+  booking: {
+    status: string;
+    returnAt: Date;
+    handovers: readonly { type: string; confirmedAt: Date | null; confirmSource: string }[];
+  } | null,
+  now: Date,
+): Date | null {
+  if (role !== TRIP_ROLE.RENTER || !booking) return null;
+  const confirmedAt = earlyHostReturnConfirmedAt(booking, now);
+  return confirmedAt ? notReturnedReportUntil(booking.returnAt, confirmedAt) : null;
 }
 
 /**
@@ -1930,7 +2055,7 @@ function customerHandoverState(
  * `TRIP_NOT_RECEIVED_TOO_EARLY` / `TRIP_NOT_RECEIVED_WINDOW_CLOSED`.
  */
 function assertNotReceivedReportable<
-  B extends { status: string; pickupAt: Date; deletedAt: Date | null },
+  B extends { status: string; pickupAt: Date; actualPickupAt: Date | null; deletedAt: Date | null },
 >(requestStatus: BookingRequestStatus, locked: B | null, now: Date): B {
   const booking = locked && !locked.deletedAt ? locked : null;
   const bookingStatus = (booking?.status as BookingStatus | undefined) ?? null;
@@ -1946,10 +2071,11 @@ function assertNotReceivedReportable<
     });
   }
 
-  const phase = notReceivedWindowPhase(booking.pickupAt, now);
+  const handedOverAt = handedOverAtOf(booking);
+  const phase = notReceivedWindowPhase(booking.pickupAt, now, handedOverAt);
   if (phase !== 'open') {
     const details = {
-      windowStartsAt: booking.pickupAt.toISOString(),
+      windowStartsAt: notReceivedWindowOpensAt(booking.pickupAt, handedOverAt).toISOString(),
       windowEndsAt: handoverGraceEndsAt(booking.pickupAt).toISOString(),
     };
     throw new ConflictException(

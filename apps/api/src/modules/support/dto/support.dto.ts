@@ -8,16 +8,7 @@ import {
   TRIP_VERDICT_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import {
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 export const SUPPORT_DEFAULT_LIMIT = 20;
@@ -195,6 +186,17 @@ export class TripVerdictMoneyDto {
 
 export class TripVerdictPreviewDto {
   @ApiProperty({ type: [TripVerdictMoneyDto] }) items!: TripVerdictMoneyDto[];
+  /**
+   * Đơn ĐANG THUÊ (chủ xe đã bấm giao xe) và case là lời báo "Chưa nhận được xe" (ADR 0104 điều 3):
+   * các kết luận huỷ / khách không đến sẽ GỠ biên bản giao xe và đảo nghĩa vụ thuế của chuyến trước.
+   */
+  @ApiProperty() revertsHandover!: boolean;
+  /**
+   * Chuyến đã có Giấy chứng nhận bảo hiểm phát hành (hoặc đang phát hành). Kết luận huỷ vẫn hoàn tiền
+   * bảo hiểm cho khách; phí trả hãng của GCN đó do XePrime chịu cho tới khi có API huỷ với hãng
+   * (ADR 0104 điều 4).
+   */
+  @ApiProperty() insuranceIssued!: boolean;
 }
 
 /** Nhân sự nền tảng kết luận CHUYẾN của một case xác minh bàn giao (ADR 0094). */

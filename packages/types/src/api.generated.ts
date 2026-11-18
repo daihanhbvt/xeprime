@@ -12369,6 +12369,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{id}/report-not-returned": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Khách báo chưa trả xe khi chủ xe đã xác nhận nhận lại xe sớm - mở tranh chấp khẩn
+         * @description Mở được khi đơn `completed` bằng biên bản trả xe do CHỦ XE xác nhận sớm hơn giờ trả ≥ 60′, tới `returnAt + 120′`. Mở MỘT case `dispute` mức `urgent` gắn đơn, báo gian hàng. Đơn giữ nguyên trạng thái, tiền đã quyết toán không đổi. Idempotent. Lỗi: 409 `TRIP_NOT_RETURNED_NOT_ALLOWED`; chuyến của người khác 404. Trả về chính chuyến đó.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` - phiên của realm khác bị từ chối.
+         */
+        post: operations["CustomerTripsController_reportNotReturned"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{id}/report-returned": {
         parameters: {
             query?: never;
@@ -17139,7 +17163,10 @@ export interface components {
             actualReturnAt?: string | null;
             openDispute: boolean;
             canReportNotReceived: boolean;
+            notReceivedReportFrom?: string | null;
             notReceivedReportUntil?: string | null;
+            notReturnedReportOpen: boolean;
+            notReturnedReportUntil?: string | null;
             canConfirmPickup: boolean;
             pickupConfirmOpensAt?: string | null;
             canReportReturn: boolean;
@@ -18365,6 +18392,8 @@ export interface components {
             bookingPickupAt: string;
             /** @description Giờ trả xe theo đơn (ISO-8601 UTC) */
             bookingReturnAt: string;
+            /** @description Mốc sớm nhất xác nhận GIAO XE được: `pickupAt − 60′` (ADR 0104 điều 1, ISO-8601 UTC). Bấm sớm hơn ⇒ 409 `HANDOVER_PICKUP_NOT_OPEN` */
+            pickupConfirmOpensAt: string;
             /** @description KM hiện tại của xe theo hệ thống - null = chưa từng ghi nhận */
             vehicleOdometerKm?: number | null;
             pickupOdometerKm?: number | null;
@@ -25018,6 +25047,8 @@ export interface components {
         };
         TripVerdictPreviewDto: {
             items: components["schemas"]["TripVerdictMoneyDto"][];
+            revertsHandover: boolean;
+            insuranceIssued: boolean;
         };
         UnregisterPushDeviceDto: {
             /** @description Token cần tắt. Bỏ trống = mọi thiết bị của phiên này. */
@@ -104842,6 +104873,177 @@ export interface operations {
         };
     };
     CustomerTripsController_reportNotReceived: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CustomerTripDetailDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    CustomerTripsController_reportNotReturned: {
         parameters: {
             query?: never;
             header?: never;

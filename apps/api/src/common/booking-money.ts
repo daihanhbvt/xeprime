@@ -241,3 +241,48 @@ export async function loadBookingMoneySides(
   }
   return result;
 }
+
+/**
+ * "Còn phải thu của khách" (`counterDueAmount`) của MỘT đơn, đọc thẳng từ DB — `null` khi không
+ * có đơn trong gian hàng.
+ *
+ * Nguồn duy nhất cho ba chỗ phải nói cùng một số: ô "Còn phải thu" của trang đơn (qua
+ * `BookingsService`), lượt nhận lại xe (`SettlementService.collectableAmount`) và TRẦN của hộp
+ * "Thu tiền" (`BookingPaymentWriter`). `extraSurcharge` cộng các khoản phát sinh còn ở dạng nháp.
+ *
+ * `db` là client thường hoặc transaction của người gọi; trong transaction, gọi SAU khi đã khoá
+ * dòng đơn để hai lượt thu song song không cùng đọc một mức trần cũ.
+ */
+export async function loadCounterDueAmount(
+  db: Pick<Prisma.TransactionClient, 'booking' | 'bookingSurcharge' | 'receipt' | 'payment'>,
+  tenantId: string,
+  bookingId: string,
+  extraSurcharge: Prisma.Decimal = new Prisma.Decimal(0),
+): Promise<Prisma.Decimal | null> {
+  const booking = await db.booking.findFirst({
+    where: { id: bookingId, tenantId, deletedAt: null },
+    select: {
+      totalAmount: true,
+      paidAmount: true,
+      priceSnapshot: true,
+      hold: { select: { paidAmount: true } },
+    },
+  });
+  if (!booking) return null;
+  const sides = (await loadBookingMoneySides(db, [bookingId])).get(bookingId) ?? ZERO_SIDES;
+  const money = bookingMoney({
+    totalAmount: booking.totalAmount,
+    paidAmount: booking.paidAmount,
+    ...sides,
+    surchargeTotal: sides.surchargeTotal.plus(extraSurcharge),
+  });
+  return counterDueAmount(
+    money.debtAmount,
+    ownerShareHeldOnline({
+      holdPaid: booking.hold?.paidAmount != null,
+      priceSnapshot: booking.priceSnapshot as Parameters<
+        typeof ownerShareHeldOnline
+      >[0]['priceSnapshot'],
+    }),
+  );
+}

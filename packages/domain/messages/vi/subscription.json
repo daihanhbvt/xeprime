@@ -150,7 +150,7 @@
       "title": "Thông tin gian hàng",
       "intro": "Đây là mặt tiền khách nhìn thấy trên chợ. Thông tin hiện có đã điền sẵn - kiểm tra lại rồi tạo hoá đơn.",
       "phoneHelp": "Số khách gọi khi cần liên hệ gian hàng. Lưu vào chi nhánh mặc định của bạn.",
-      "logoHelp": "Chưa bắt buộc để mua gói, nhưng gian hàng phải có logo trước khi gửi xe lên chợ.",
+      "logoHelp": "Bắt buộc. Logo hiện trên trang gian hàng và trên mọi xe bạn đăng.",
       "missingTitle": "Còn thiếu thông tin bắt buộc của gian hàng",
       "loadError": "Không tải được thông tin gian hàng",
       "noBranch": "Không tìm thấy chi nhánh của gian hàng",
@@ -161,7 +161,8 @@
       "addressLineMax": "Địa chỉ quá dài",
       "wardInvalid": "Mã xã/phường không hợp lệ",
       "phoneRequired": "Nhập số điện thoại liên hệ của gian hàng",
-      "phoneInvalid": "Số điện thoại không hợp lệ"
+      "phoneInvalid": "Số điện thoại không hợp lệ",
+      "logoRequired": "Tải logo gian hàng lên để tiếp tục"
     },
     "planTitle": "Chọn gói gian hàng phù hợp",
     "planSubtitle": "Lựa chọn gói phù hợp với nhu cầu hiện tại và định hướng phát triển của bạn.",

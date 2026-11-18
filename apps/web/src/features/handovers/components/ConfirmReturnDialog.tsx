@@ -20,6 +20,7 @@ import {
   HANDOVER_CONDITION,
   HANDOVER_TYPE,
   handoverPhotoSlotsFor,
+  isEarlyReturn,
   isSingleEntrySurchargeCategory,
   ODOMETER_MAX_KM,
   PAYMENT_METHOD,
@@ -312,14 +313,25 @@ export function ConfirmReturnDialog({
   const late = lateMinutes > 0;
   // Lối về giờ hẹn — chỉ khi giờ hẹn đã qua (không ghi được mốc tương lai) VÀ ô đang lệch nó.
   const backToScheduled =
-    scheduled?.isValid() &&
-    scheduled.isBefore(openedAt) &&
-    !occurredAt.isSame(scheduled, 'minute')
+    scheduled?.isValid() && scheduled.isBefore(openedAt) && !occurredAt.isSame(scheduled, 'minute')
       ? scheduled
       : null;
   // Viên đọc lướt: một đơn vị như câu "Quá giờ trả xe 7 ngày" của thẻ. Câu dưới ô giờ thì chính xác
   // tới phút khi còn dưới một ngày — đó là thứ tính phí quá giờ.
-  const timeliness = late ? t('late', { duration: fmt.roughDuration(lateMinutes) }) : t('onTime');
+  /*
+   * Trả SỚM (ADR 0105): đo bằng lúc MỞ hộp - mốc bấm xác nhận server dùng - chứ không bằng giờ trả
+   * thực tế chọn ở ô dưới (chủ xe được lùi ô đó). Cùng ngưỡng với nút "Tôi chưa trả xe" của khách.
+   */
+  const earlyMinutes =
+    scheduled?.isValid() && isEarlyReturn(scheduled.toDate(), openedAt.toDate())
+      ? scheduled.diff(openedAt, 'minute')
+      : 0;
+  const earlyDuration = earlyMinutes > 0 ? fmt.roughDuration(earlyMinutes) : null;
+  const timeliness = late
+    ? t('late', { duration: fmt.roughDuration(lateMinutes) })
+    : earlyDuration
+      ? t('early', { duration: earlyDuration })
+      : t('onTime');
   const lateDetail =
     lateMinutes < 24 * 60 ? fmt.minutesDuration(lateMinutes) : fmt.roughDuration(lateMinutes);
 
@@ -495,10 +507,24 @@ export function ConfirmReturnDialog({
                 })}
               </span>
             </div>
-            <span className={cx(styles.badge, late ? styles.badgeLate : styles.badgeOnTime)}>
+            <span
+              className={cx(
+                styles.badge,
+                late || earlyDuration ? styles.badgeLate : styles.badgeOnTime,
+              )}
+            >
               {timeliness}
             </span>
           </section>
+
+          {earlyDuration ? (
+            <Alert
+              type="warning"
+              showIcon
+              title={t('earlyTitle', { duration: earlyDuration })}
+              description={t('earlyBody')}
+            />
+          ) : null}
 
           {/* Giờ nhận thực tế · Odo. */}
           <div className={styles.fieldRow}>

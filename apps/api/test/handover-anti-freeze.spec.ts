@@ -279,9 +279,21 @@ const disputesOf = (bookingId: string) =>
 
 const TENANT_ACTOR = () => ({ userId: ownerId, scope: SUPPORT_PARTY.TENANT, tenantId });
 
-/** Chủ xe xác nhận biên bản GIAO XE theo luồng nhanh (không cần nháp trước). */
+/**
+ * Chủ xe xác nhận biên bản GIAO XE theo luồng nhanh (không cần nháp trước). Đồng hồ là mốc quét:
+ * chuyến của lượt quét có giờ nhận ở 2031, và giao xe chỉ mở từ `pickupAt − 60′` (ADR 0104).
+ */
 const confirmPickup = (bookingId: string) =>
-  handovers.confirm(tenantId, bookingId, HANDOVER_TYPE.PICKUP, ownerId, {}, { canViewFiles: true });
+  handovers.confirm(
+    tenantId,
+    bookingId,
+    HANDOVER_TYPE.PICKUP,
+    ownerId,
+    {},
+    { canViewFiles: true },
+    undefined,
+    SWEEP_NOW,
+  );
 
 /** Gian hàng tự mở một tranh chấp thường trên chuyến (`POST /support/cases`). */
 const openShopDispute = (bookingId: string) =>
@@ -305,6 +317,44 @@ const openCustomerReport = (booking: { bookingId: string; requestId: string; cod
       bookingRequestId: booking.requestId,
     }),
   );
+
+/*
+ * ADR 0104 điều 1: giao xe chỉ mở từ `pickupAt − 60′` - bấm sớm hơn là chuyến thành "Đang thuê" nhiều
+ * ngày trước giờ hẹn mà khách chưa thể phản bác.
+ */
+describe('Mốc mở giao xe', () => {
+  maybe('trước pickupAt − 60′ ⇒ HANDOVER_PICKUP_NOT_OPEN, đơn vẫn chờ giao xe', async () => {
+    const { bookingId } = await seedBooking({ pickupAt: minutesFromNow(120) });
+    await expect(
+      handovers.confirm(
+        tenantId,
+        bookingId,
+        HANDOVER_TYPE.PICKUP,
+        ownerId,
+        {},
+        { canViewFiles: true },
+      ),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.HANDOVER_PICKUP_NOT_OPEN },
+    });
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
+  });
+
+  maybe('trong 60′ trước giờ nhận ⇒ giao được, đơn sang đang thuê', async () => {
+    const { bookingId } = await seedBooking({ pickupAt: minutesFromNow(30) });
+    await handovers.confirm(
+      tenantId,
+      bookingId,
+      HANDOVER_TYPE.PICKUP,
+      ownerId,
+      {},
+      { canViewFiles: true },
+    );
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(booking.status).toBe(BOOKING_STATUS.ACTIVE);
+  });
+});
 
 describe('Lớp 1 — khách báo "Chưa nhận được xe"', () => {
   maybe(
@@ -360,6 +410,29 @@ describe('Lớp 1 — khách báo "Chưa nhận được xe"', () => {
       pickupAt: minutesFromNow(-60),
       status: BOOKING_STATUS.ACTIVE,
     });
+    await trips.reportNotReceived(customerId, requestId);
+    expect(await disputesOf(bookingId)).toHaveLength(1);
+  });
+
+  /*
+   * ADR 0104 điều 2: chủ xe bấm giao xe TRƯỚC giờ nhận ⇒ chuyến đã "Đang thuê" trên màn khách, nên
+   * khách phản bác được ngay từ lúc đó, không phải chờ tới giờ hẹn.
+   */
+  maybe('chủ xe giao SỚM hơn giờ nhận ⇒ khách báo được ngay từ lúc giao', async () => {
+    const { bookingId, requestId } = await seedBooking({
+      pickupAt: minutesFromNow(45),
+      status: BOOKING_STATUS.ACTIVE,
+    });
+    const handedOverAt = minutesFromNow(-5);
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: { actualPickupAt: handedOverAt },
+    });
+
+    const detail = await trips.detail(customerId, requestId);
+    expect(detail.canReportNotReceived).toBe(true);
+    expect(detail.notReceivedReportFrom).toBe(handedOverAt.toISOString());
+
     await trips.reportNotReceived(customerId, requestId);
     expect(await disputesOf(bookingId)).toHaveLength(1);
   });
@@ -733,3 +806,113 @@ describe('Case GIỮ tiền chỉ nền tảng kết luận/đóng', () => {
     expect(closed.status).toBe(SUPPORT_CASE_STATUS.CLOSED);
   });
 });
+
+/*
+ * ADR 0105 điều 2: chủ xe xác nhận nhận lại xe SỚM hơn giờ trả (≥ 60′) ⇒ khách được báo riêng và có
+ * nút "Tôi chưa trả xe" tới `returnAt + 120′`. Đơn giữ `completed`; lời báo là MỘT tranh chấp khẩn.
+ */
+describe('Trả xe sớm — khách báo "Tôi chưa trả xe"', () => {
+  /** Chuyến đã giao xe thật (đồng hồ thật), rồi chủ xe xác nhận trả xe ngay bây giờ. */
+  async function seedReturned(pickupInMinutes: number) {
+    const seeded = await seedBooking({ pickupAt: minutesFromNow(pickupInMinutes) });
+    await handovers.confirm(
+      tenantId,
+      seeded.bookingId,
+      HANDOVER_TYPE.PICKUP,
+      ownerId,
+      {},
+      { canViewFiles: true },
+    );
+    await handovers.confirm(
+      tenantId,
+      seeded.bookingId,
+      HANDOVER_TYPE.RETURN,
+      ownerId,
+      {},
+      { canViewFiles: true },
+    );
+    return seeded;
+  }
+
+  maybe(
+    'trả sớm ⇒ khách được báo luật tiền + nút; bấm ⇒ MỘT tranh chấp khẩn, đơn vẫn hoàn thành',
+    async () => {
+      // Giờ trả = giờ nhận + 24h ⇒ xác nhận trả bây giờ là sớm gần một ngày.
+      const { bookingId, requestId } = await seedReturned(30);
+
+      const notice = await prisma.notification.findFirst({
+        where: { userId: customerId, targetId: bookingId },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(notice?.body).toContain('Tôi chưa trả xe');
+
+      const before = await trips.detail(customerId, requestId);
+      const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+      expect(before.notReturnedReportOpen).toBe(false);
+      expect(before.notReturnedReportUntil).toBe(
+        new Date(
+          booking.returnAt.getTime() + HANDOVER_CONFIRMATION_GRACE_MINUTES * MINUTE,
+        ).toISOString(),
+      );
+
+      const after = await trips.reportNotReturned(customerId, requestId);
+      expect(after.notReturnedReportOpen).toBe(true);
+      expect(after.notReturnedReportUntil).toBeNull();
+      // Bấm lại không mở thêm case.
+      await trips.reportNotReturned(customerId, bookingId);
+
+      const cases = await disputesOf(bookingId);
+      expect(cases).toHaveLength(1);
+      expect(cases[0]).toMatchObject({
+        priority: SUPPORT_CASE_PRIORITY.URGENT,
+        openedByUserId: customerId,
+        openedByScope: SUPPORT_PARTY.CUSTOMER,
+      });
+      const marker = await prisma.auditLog.findFirst({
+        where: {
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
+          targetId: cases[0]!.id,
+          action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
+        },
+      });
+      expect(marker?.afterJson).toMatchObject({ reason: 'trip_not_returned' });
+      const hostNotice = await prisma.notification.findFirst({
+        where: { userId: ownerId, targetId: bookingId, title: { contains: 'chưa trả xe' } },
+      });
+      expect(hostNotice).not.toBeNull();
+      expect((await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } })).status).toBe(
+        BOOKING_STATUS.COMPLETED,
+      );
+      // Lời báo này không phải "chưa nhận được xe" - cờ của nút kia không lật.
+      expect(after.openDispute).toBe(false);
+    },
+  );
+
+  maybe('trả đúng giờ (sớm < 60′) ⇒ không có nút, bấm bị từ chối', async () => {
+    // Giờ nhận ~23h30 trước ⇒ giờ trả còn ~30′ nữa.
+    const { requestId } = await seedReturned(-(24 * 60 - 30));
+    const detail = await trips.detail(customerId, requestId);
+    expect(detail.notReturnedReportUntil).toBeNull();
+    await expect(trips.reportNotReturned(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TRIP_NOT_RETURNED_NOT_ALLOWED },
+    });
+  });
+
+  maybe('đơn còn đang thuê ⇒ TRIP_NOT_RETURNED_NOT_ALLOWED', async () => {
+    const { bookingId, requestId } = await seedBooking({ pickupAt: minutesFromNow(30) });
+    await confirmPickupNow(bookingId);
+    await expect(trips.reportNotReturned(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TRIP_NOT_RETURNED_NOT_ALLOWED },
+    });
+  });
+
+  maybe('chuyến của người khác ⇒ 404', async () => {
+    const { requestId } = await seedReturned(30);
+    await expect(trips.reportNotReturned(strangerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
+  });
+});
+
+const confirmPickupNow = (bookingId: string) =>
+  handovers.confirm(tenantId, bookingId, HANDOVER_TYPE.PICKUP, ownerId, {}, { canViewFiles: true });

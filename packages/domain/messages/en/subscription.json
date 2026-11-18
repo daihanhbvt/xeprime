@@ -150,7 +150,7 @@
       "title": "Shop details",
       "intro": "This is the storefront guests see on the marketplace. We have filled in what you already have - check it, then create the invoice.",
       "phoneHelp": "The number guests call to reach your shop. Saved on your default branch.",
-      "logoHelp": "Not required to buy a plan, but your shop needs a logo before you can list a vehicle on the marketplace.",
+      "logoHelp": "Required. The logo appears on your shop page and on every vehicle you list.",
       "missingTitle": "Your shop details are still missing something",
       "loadError": "Could not load your shop details",
       "noBranch": "No branch found for this shop",
@@ -161,7 +161,8 @@
       "addressLineMax": "That address is too long",
       "wardInvalid": "Invalid ward code",
       "phoneRequired": "Enter your shop's contact phone number",
-      "phoneInvalid": "Invalid phone number"
+      "phoneInvalid": "Invalid phone number",
+      "logoRequired": "Upload your shop logo to continue"
     },
     "planTitle": "Pick the shop plan that fits",
     "planSubtitle": "Choose the plan that matches your fleet today and where you are taking it.",

@@ -350,6 +350,9 @@ async function makeMissingReturnKm(vehicleId: string, dayOffset: number) {
         ...(type === HANDOVER_TYPE.RETURN ? { allowMissingOdometer: true } : {}),
       },
       FULL_HANDOVER_SCOPE,
+      undefined,
+      // Giờ nhận của đơn mẫu ở tương lai - giao xe chỉ mở từ `pickupAt − 60′` (ADR 0104).
+      days(dayOffset),
     );
   }
   return { ...booking, pickupKm };

@@ -1,0 +1,98 @@
+/* Ô logo của form đăng ký gian hàng: ô vuông xem trước bên trái, gợi ý + nút bên phải. */
+
+.item {
+  grid-column: 1 / -1;
+}
+
+.row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-md);
+}
+
+.tile {
+  display: grid;
+  width: 96px;
+  height: 96px;
+  flex: none;
+  overflow: hidden;
+  padding: 0;
+  border: 1.5px dashed var(--xp-color-primary-glow);
+  border-radius: 16px;
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-strong);
+  cursor: pointer;
+  place-items: center;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.tile:hover:not(:disabled) {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Đã có ảnh: viền liền, nền trắng - tấm logo là thứ đang được nhìn, không phải khung chờ. */
+.tileFilled {
+  border-style: solid;
+  border-color: var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.tileError,
+.tileError:hover:not(:disabled) {
+  border-color: var(--xp-color-error);
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 18px;
+}
+
+.placeholder :global(.anticon) {
+  font-size: 24px;
+}
+
+.preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.side {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.hint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 20px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}

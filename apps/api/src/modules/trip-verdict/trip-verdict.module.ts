@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BookingsModule } from '../bookings/bookings.module';
 import { HoldSettlementModule } from '../holds/hold-settlement.module';
 import { SupportModule } from '../support/support.module';
+import { TaxModule } from '../tax/tax.module';
 import { PlatformTripVerdictController } from './platform-trip-verdict.controller';
 import { TripVerdictService } from './trip-verdict.service';
 
@@ -11,7 +12,7 @@ import { TripVerdictService } from './trip-verdict.service';
  * là bắt module đó import module kia chỉ cho một endpoint.
  */
 @Module({
-  imports: [BookingsModule, HoldSettlementModule, SupportModule],
+  imports: [BookingsModule, HoldSettlementModule, SupportModule, TaxModule],
   controllers: [PlatformTripVerdictController],
   providers: [TripVerdictService],
 })

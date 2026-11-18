@@ -2,7 +2,10 @@ import { Prisma, createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BOOKING_HOLD_STATUS,
+  BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  FEE_POLICY_STATUS,
   MEMBERSHIP_STATUS,
   PAYMENT_KIND,
   PAYMENT_METHOD,
@@ -27,6 +30,7 @@ import {
   makeCustomersService,
   makeNotificationService,
 } from './helpers/service-factory';
+import { customerAccountFor } from './helpers/customer-account';
 
 /**
  * S2 — Ghi nhận thanh toán (writer duy nhất của paid_amount), chạy trên PostgreSQL THẬT. Kiểm
@@ -142,6 +146,76 @@ async function makeBooking(base: string) {
   });
 }
 
+/**
+ * Gắn vào đơn một khoản giữ chỗ ĐÃ TRẢ (đơn qua chợ) — đủ để `ownerShareHeldOnline` coi `D` đang
+ * nằm ở XePrime. Trả về hàm dọn dẹp: khách, yêu cầu, chính sách phí chỉ sống trong test gọi nó.
+ */
+async function attachPaidHold(bookingId: string, pickupAt: Date): Promise<() => Promise<void>> {
+  const run = newId().slice(-8);
+  const customerId = await customerAccountFor(
+    asService,
+    `0914${run.slice(-6).replace(/\D/g, '2')}`,
+    'Khách chợ',
+  );
+  const feePolicyId = newId();
+  const requestId = newId();
+  const holdId = newId();
+  await prisma.feePolicy.create({
+    data: {
+      id: feePolicyId,
+      version: 800 + Math.floor(Math.random() * 90),
+      status: FEE_POLICY_STATUS.ARCHIVED,
+      name: `Policy pay ${run}`,
+      serviceFeePercent: new Prisma.Decimal(0),
+    },
+  });
+  await prisma.bookingRequest.create({
+    data: {
+      id: requestId,
+      tenantId,
+      vehicleId,
+      customerUserId: customerId,
+      customerName: 'Khách chợ',
+      customerPhone: '0914000222',
+      status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+      respondBy: pickupAt,
+      decidedAt: pickupAt,
+      pickupAt,
+      returnAt: new Date(new Date(pickupAt).getTime() + 86_400_000),
+    },
+  });
+  await prisma.bookingHold.create({
+    data: {
+      id: holdId,
+      code: `XPH${holdId.slice(-8)}`,
+      tenantId,
+      bookingRequestId: requestId,
+      bookingId,
+      customerUserId: customerId,
+      vehicleId,
+      depositRequired: true,
+      status: BOOKING_HOLD_STATUS.PAID,
+      amount: new Prisma.Decimal(470_000),
+      paidAmount: new Prisma.Decimal(470_000),
+      paidAt: pickupAt,
+      freeCancelUntil: pickupAt,
+      depositAmount: new Prisma.Decimal(420_000),
+      serviceFeeAmount: new Prisma.Decimal(50_000),
+      feePolicyId,
+      allocationJson: [],
+      priceSnapshotJson: {},
+      scheduleJson: {},
+      expiresAt: pickupAt,
+    },
+  });
+  return async () => {
+    await prisma.bookingHold.deleteMany({ where: { id: holdId } });
+    await prisma.bookingRequest.deleteMany({ where: { id: requestId } });
+    await prisma.feePolicy.deleteMany({ where: { id: feePolicyId } });
+    await prisma.user.deleteMany({ where: { id: customerId } });
+  };
+}
+
 describe('Payments — thu tiền đơn (S2)', () => {
   maybe('ghi thu → paidAmount tăng, debt giảm, auto-tạo phiếu thu đã duyệt', async () => {
     const b = await makeBooking('1000000');
@@ -204,14 +278,55 @@ describe('Payments — thu tiền đơn (S2)', () => {
     });
   });
 
-  maybe('thu quá tay → công nợ = 0, không âm', async () => {
+  maybe('thu quá số còn phải thu → 409 PAYMENT_EXCEEDS_DUE, không ghi gì', async () => {
     const b = await makeBooking('1000000');
-    const after = await payments.recordForBooking(tenantId, ownerId, b.id, {
-      amount: '1500000',
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '400000',
       method: PAYMENT_METHOD.CASH,
     });
-    expect(String(after.paidAmount)).toBe('1500000');
+    // Còn 600k: thu 600.001 là vượt; đúng 600k thì được.
+    await expect(
+      payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '600001',
+        method: PAYMENT_METHOD.CASH,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.PAYMENT_EXCEEDS_DUE, details: { counterDueAmount: '600000' } },
+    });
+    expect(await prisma.receipt.count({ where: { bookingId: b.id } })).toBe(1);
+    const after = await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '600000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    expect(String(after.paidAmount)).toBe('1000000');
     expect(String(after.debtAmount)).toBe('0');
+  });
+
+  maybe('đơn qua chợ: trần tiền thuê trừ phần D khách đã trả trước qua XePrime', async () => {
+    const b = await makeBooking('1400000');
+    // Đơn qua chợ: hold đã trả + snapshot giữ `D` = 420k (phần tiền thuê của chủ xe trong khoản online).
+    await prisma.booking.update({
+      where: { id: b.id },
+      data: { priceSnapshot: { fees: { depositAmount: '420000', lines: [] } } },
+    });
+    const cleanup = await attachPaidHold(b.id, b.pickupAt as unknown as Date);
+    try {
+      await expect(
+        payments.recordForBooking(tenantId, ownerId, b.id, {
+          amount: '1400000',
+          method: PAYMENT_METHOD.CASH,
+        }),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.PAYMENT_EXCEEDS_DUE, details: { counterDueAmount: '980000' } },
+      });
+      const after = await payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '980000',
+        method: PAYMENT_METHOD.CASH,
+      });
+      expect(String(after.counterDueAmount)).toBe('0');
+    } finally {
+      await cleanup();
+    }
   });
 
   maybe('lịch sử thu tiền của đơn', async () => {

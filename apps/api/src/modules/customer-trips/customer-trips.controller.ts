@@ -245,6 +245,29 @@ export class CustomerTripsController {
   }
 
   /**
+   * "Tôi chưa trả xe" (ADR 0105) - chủ xe xác nhận nhận lại xe SỚM, khách nói vẫn đang giữ xe. Chỉ
+   * realm khách, chỉ chuyến của chính người gọi.
+   */
+  @Post(':id/report-not-returned')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Khách báo chưa trả xe khi chủ xe đã xác nhận nhận lại xe sớm - mở tranh chấp khẩn',
+    description:
+      'Mở được khi đơn `completed` bằng biên bản trả xe do CHỦ XE xác nhận sớm hơn giờ trả ≥ 60′, ' +
+      'tới `returnAt + 120′`. Mở MỘT case `dispute` mức `urgent` gắn đơn, báo gian hàng. Đơn giữ ' +
+      'nguyên trạng thái, tiền đã quyết toán không đổi. Idempotent. Lỗi: 409 ' +
+      '`TRIP_NOT_RETURNED_NOT_ALLOWED`; chuyến của người khác 404. Trả về chính chuyến đó.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  reportNotReturned(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    return this.trips.reportNotReturned(user.id, id);
+  }
+
+  /**
    * "Đã nhận xe" — khách xác nhận chuyến đã bắt đầu (ADR 0081). Chỉ realm khách, chỉ chuyến tự lái /
    * dài hạn: đơn sang `active` ngay, biên bản giao xe nguồn `customer`.
    */

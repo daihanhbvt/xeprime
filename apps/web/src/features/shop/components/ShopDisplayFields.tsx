@@ -125,12 +125,15 @@ export function ShopDisplayNameField<T extends FieldValues & { displayName: stri
 export function ShopLogoField<T extends FieldValues & { logoUrl?: string | null }>({
   control,
   help,
+  required = false,
   readOnly = false,
 }: {
   control: Control<T>;
   readOnly?: boolean;
-  /** Gợi ý thay thế — luồng nâng cấp nói rõ logo bắt buộc TRƯỚC KHI gửi xe lên chợ, không phải lúc mua gói. */
+  /** Gợi ý thay thế cho ngữ cảnh của màn gọi. */
   help?: ReactNode;
+  /** Dấu bắt buộc - luồng nâng cấp lên gian hàng đòi logo (ADR 0103); schema vẫn là nguồn luật. */
+  required?: boolean;
 }) {
   const t = useTranslations('Shop');
   return (
@@ -140,6 +143,7 @@ export function ShopLogoField<T extends FieldValues & { logoUrl?: string | null 
       label={t('form.display.logo.label')}
       help={help ?? t('form.display.logo.hint')}
       presign={presignShopMedia}
+      required={required}
       /*
        * Đích của CTA "Tải logo" ở dải chào mừng sau khi thanh toán, và của lỗi thiếu logo khi
        * gửi xe duyệt (ADR 0040). Hằng số dùng chung nên hai nơi kia không gõ tay một chuỗi

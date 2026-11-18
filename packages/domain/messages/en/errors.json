@@ -73,6 +73,7 @@
     "HANDOVER_ODOMETER_SUSPICIOUS": "That mileage difference looks unusual. Please double-check it.",
     "HANDOVER_NOT_ELIGIBLE": "This booking isn't ready for handover.",
     "HANDOVER_COLLECT_AMOUNT_CHANGED": "The amount still to collect has just changed. Check the new amount, then confirm.",
+    "PAYMENT_EXCEEDS_DUE": "The amount is more than the customer still owes on this booking. For money paid on top of the booking, add an income receipt in the Cash book.",
     "VEHICLE_CODE_DUPLICATE": "This vehicle code is already used in your shop (including deleted vehicles). Use another code or leave it blank to auto-generate.",
     "CUSTOMER_PHONE_DUPLICATE": "This phone number is already in your customer book.",
     "CUSTOMER_ARCHIVED": "This customer has been archived.",
@@ -106,6 +107,7 @@
     "TRIP_NOT_RECEIVED_NOT_ALLOWED": "You can no longer report that you did not receive the vehicle for this trip. Please contact support.",
     "TRIP_NOT_RECEIVED_TOO_EARLY": "The pickup time has not arrived yet, so you cannot report that you did not receive the vehicle.",
     "TRIP_NOT_RECEIVED_WINDOW_CLOSED": "The time to report that you did not receive the vehicle has passed. Please open a support request.",
+    "TRIP_NOT_RETURNED_NOT_ALLOWED": "You can no longer report that you still have the vehicle for this trip. Please open a support request if needed.",
     "TRIP_PICKUP_CONFIRM_NOT_ALLOWED": "You can no longer confirm pickup for this trip - the host may have already confirmed it. Please reload the page.",
     "TRIP_PICKUP_CONFIRM_TOO_EARLY": "The pickup time has not arrived yet, so you cannot confirm that you received the vehicle.",
     "TRIP_RETURN_REPORT_NOT_ALLOWED": "You can no longer report the return for this trip - the host may have already confirmed it. Please reload the page.",
@@ -276,7 +278,8 @@
     "VEHICLE_REGISTRATION_IMAGE_INVALID": "The registration photo is not valid - choose a JPG, PNG or WEBP image and upload again.",
     "VEHICLE_REGISTRATION_UPLOAD_INVALID": "The registration photo can no longer be used - please upload it again.",
     "VEHICLE_REGISTRATION_UPLOAD_LIMIT": "You have uploaded registration photos too many times in the last 24 hours - please try again later.",
-    "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other."
+    "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other.",
+    "HANDOVER_PICKUP_NOT_OPEN": "It is not handover time yet - handover can only be confirmed from 60 minutes before pickup."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",
