@@ -664,6 +664,38 @@ describe('BẤT BIẾN: không nơi nào đọc `purpose` để tách quỹ (ADR
 describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần nằm trong hold chưa chốt', () => {
   const d = (a: string, b: string) => Number(a) - Number(b);
 
+  type Custodied = Awaited<ReturnType<typeof holds.dailyReconciliation>>['custodied'];
+  /** Các vế cộng thành `custodied.total` — cùng danh sách `dailyReconciliation` cộng. */
+  const CUSTODIED_PARTS = [
+    'holdsUnsettled',
+    'walletTotal',
+    'refundsPending',
+    'unmatchedIn',
+    'insuranceReserved',
+    'taxAccrued',
+    'extensionsUnsettled',
+    'subscriptionsUnapplied',
+    'ignoredKept',
+  ] as const satisfies readonly (keyof Custodied)[];
+
+  /**
+   * Độ tăng của `total` sau khi bỏ phần tăng của các vế ca kiểm KHÔNG đụng tới. CI chạy jest nhiều
+   * worker trên CÙNG một DB: spec khác ghi ví/tiền chưa khớp đúng giữa hai lần chụp làm `total`
+   * lệch (18/11/2026: +140.000đ ở lượt deploy staging #318) dù vế đang kiểm vẫn đúng. Phép trừ này
+   * vẫn bắt được lỗi cộng đôi: vế bảo hiểm tính hai lần vào tổng thì phần dư vẫn gấp đôi.
+   */
+  function totalDelta(
+    after: Custodied,
+    before: Custodied,
+    touched: readonly (typeof CUSTODIED_PARTS)[number][],
+  ): number {
+    const noise = CUSTODIED_PARTS.filter((part) => !touched.includes(part)).reduce(
+      (sum, part) => sum + d(after[part], before[part]),
+      0,
+    );
+    return d(after.total, before.total) - noise;
+  }
+
   /** Một đơn gắn vào hold (hoặc đứng một mình khi `holdId` là null). */
   async function bookingFor(holdId: string | null): Promise<string> {
     const bookingId = newId();
@@ -747,7 +779,7 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
 
     const after = await holds.dailyReconciliation(RECON_DAY);
     expect(d(after.custodied.insuranceReserved, before.custodied.insuranceReserved)).toBe(28_000);
-    expect(d(after.custodied.total, before.custodied.total)).toBe(28_000);
+    expect(totalDelta(after.custodied, before.custodied, ['insuranceReserved'])).toBe(28_000);
   });
 
   maybe('phí bảo hiểm NẰM TRONG hold chưa chốt ⇒ KHÔNG cộng lần hai', async () => {
@@ -762,7 +794,9 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
     expect(d(after.custodied.insuranceReserved, before.custodied.insuranceReserved)).toBe(0);
     // Và tổng giữ hộ tăng ĐÚNG số tiền khách đã chuyển, không phải số đó cộng thêm phí bảo hiểm.
     expect(d(after.custodied.holdsUnsettled, before.custodied.holdsUnsettled)).toBe(220_000);
-    expect(d(after.custodied.total, before.custodied.total)).toBe(220_000);
+    expect(
+      totalDelta(after.custodied, before.custodied, ['holdsUnsettled', 'insuranceReserved']),
+    ).toBe(220_000);
   });
 
   maybe('hợp đồng đã huỷ/vô hiệu ⇒ không còn là nghĩa vụ của ai', async () => {
@@ -774,7 +808,7 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
 
     const after = await holds.dailyReconciliation(RECON_DAY);
     expect(d(after.custodied.insuranceReserved, before.custodied.insuranceReserved)).toBe(0);
-    expect(d(after.custodied.total, before.custodied.total)).toBe(0);
+    expect(totalDelta(after.custodied, before.custodied, ['insuranceReserved'])).toBe(0);
   });
 
   maybe('thuế chưa nộp: cộng khi đơn KHÔNG có hold mở, trừ lại khi có', async () => {
@@ -792,7 +826,9 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
 
     const running = await holds.dailyReconciliation(RECON_DAY);
     expect(d(running.custodied.taxAccrued, standalone.custodied.taxAccrued)).toBe(0);
-    expect(d(running.custodied.total, standalone.custodied.total)).toBe(220_000);
+    expect(
+      totalDelta(running.custodied, standalone.custodied, ['holdsUnsettled', 'taxAccrued']),
+    ).toBe(220_000);
   });
 
   /**

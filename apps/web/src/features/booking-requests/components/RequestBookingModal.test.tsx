@@ -590,7 +590,10 @@ describe('RequestBookingModal - luồng đặt xe', () => {
       expect(screen.getByRole('link', { name: 'Chính sách huỷ & hoàn tiền' })).toBeTruthy();
       expect(screen.getByRole('link', { name: 'Chính sách bảo mật' })).toBeTruthy();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }));
+      // Bằng lái soát NGAY trên màn Xem lại: nút gửi mở khoá khi bằng đã nạp xong và hợp lệ.
+      const send = screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }) as HTMLButtonElement;
+      await waitFor(() => expect(send.disabled).toBe(false));
+      fireEvent.click(send);
       expect(
         await screen.findByText('Bạn cần đồng ý điều khoản trước khi gửi yêu cầu.'),
       ).toBeTruthy();
@@ -1680,22 +1683,26 @@ describe('RequestBookingModal - luồng đặt xe', () => {
       expect(screen.queryByRole('heading', { name: 'Xác thực bằng lái' })).toBeNull();
     });
 
-    it('chưa có bằng lái → dừng ở bước Xác thực bằng lái, KHÔNG đi tới bước gửi', async () => {
+    /*
+     * 18/11/2026: bằng lái KHÔNG còn là bước riêng trước màn Xem lại — thẻ giấy tờ của màn Xem lại
+     * mời tải bằng ngay tại chỗ (Figma `21836:54301`), nút Gửi khoá tới khi bằng hợp lệ.
+     */
+    it('chưa có bằng lái → màn Xem lại mời tải bằng ngay tại chỗ, nút gửi KHOÁ', async () => {
       api.fetchDriverLicenceOverview.mockResolvedValue(NO_LICENCE);
-      const { onClose } = renderModal();
+      renderModal();
 
       await screen.findByRole('heading', { name: 'Xác thực bằng lái' });
       expect(await screen.findByText('Kéo thả hoặc bấm để chọn ảnh')).toBeTruthy();
-      const next = screen.getByRole('button', { name: 'Tiếp tục' });
-      expect((next as HTMLButtonElement).disabled).toBe(true);
-      expect(screen.queryByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeNull();
+      const send = screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }) as HTMLButtonElement;
+      expect(send.disabled).toBe(true);
+      expect(screen.getByText('Thêm bằng lái hợp lệ để gửi yêu cầu thuê xe.')).toBeTruthy();
+      acceptTerms();
+      fireEvent.click(send);
+      await act(async () => {});
       expect(api.submitBookingRequest).not.toHaveBeenCalled();
-      // Bằng lái nằm TRƯỚC màn Xem lại, không phải một chặng riêng: thanh vẫn sáng chặng Gửi yêu cầu.
+      // Bằng lái không phải một chặng riêng: thanh vẫn sáng chặng Gửi yêu cầu.
       const steps = screen.getByRole('list', { name: 'Tiến trình đặt xe' });
       expect(within(steps).getAllByRole('listitem')[0]?.getAttribute('aria-current')).toBe('step');
-      // Không có bước nào phía trước để "quay lại" — nút phụ là Huỷ, đóng hộp.
-      fireEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
-      expect(onClose).toHaveBeenCalled();
     });
 
     it('máy đọc xong ngay tại bước và bằng hợp lệ → TỰ sang bước Xác nhận, kèm lời báo', async () => {
@@ -1720,14 +1727,14 @@ describe('RequestBookingModal - luồng đặt xe', () => {
       expect(screen.queryByRole('heading', { name: 'Xác thực bằng lái' })).toBeNull();
     });
 
-    it('bằng ô tô mà đặt xe máy → bước bằng lái nói rõ hạng không phù hợp', async () => {
+    it('bằng ô tô mà đặt xe máy → màn Xem lại nói rõ hạng không phù hợp, nút gửi KHOÁ', async () => {
       listing.data = { ...LISTING, vehicleType: 'motorbike' };
       renderModal();
 
       expect(await screen.findByText(/không lái được xe máy/)).toBeTruthy();
-      expect((screen.getByRole('button', { name: 'Tiếp tục' }) as HTMLButtonElement).disabled).toBe(
-        true,
-      );
+      expect(
+        (screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }) as HTMLButtonElement).disabled,
+      ).toBe(true);
     });
 
     it('server từ chối vì bằng lái lúc gửi → lùi về bước bằng lái, giữ nguyên dữ liệu', async () => {
