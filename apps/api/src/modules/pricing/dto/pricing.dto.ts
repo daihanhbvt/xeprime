@@ -711,11 +711,11 @@ export class FeePolicySnapshotDto {
   @ApiPropertyOptional({ type: String, nullable: true }) insurancePartnerName!: string | null;
   @ApiProperty({
     description:
-      '% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi của xe, không gồm ' +
-      'phí giao xe) - ADR 0066',
+      '% tiền thuê trả trước `C = D + H` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi ' +
+      'của xe, không gồm phí giao xe), hoa hồng H nằm trong C - ADR 0101',
   })
   depositPercent!: number;
-  @ApiProperty({ description: 'Sàn của `D` (VND): D = max(% × tiền thuê, sàn)' })
+  @ApiProperty({ description: 'Sàn của `C` (VND): C = max(% × tiền thuê, sàn)' })
   depositMinAmount!: string;
   @ApiProperty({ type: PerVehicleTypeAmountDto, description: '`S` - phí sàn theo loại xe' })
   customerPlatformFee!: PerVehicleTypeAmountDto;
@@ -760,15 +760,15 @@ export class PromoCodeSnapshotDto {
 }
 
 /**
- * Bảng tiền của MỘT chuyến — luồng tiền v2, tiền giữ chỗ theo ADR 0066 (`computeCustomerFees`):
+ * Bảng tiền của MỘT chuyến — luồng tiền v2, tiền giữ chỗ theo ADR 0101 (`computeCustomerFees`):
  *
  *   tổng khách trả   = B + S + IV + IP − P
- *   D_target         = max(roundVnd(depositPercent% × B), depositMinAmount) (B = tiền thuê, không gồm G)
+ *   C_target (D + H) = max(roundVnd(depositPercent% × B), depositMinAmount) (B = tiền thuê, không gồm G)
  *   T                = roundVnd(vat% × B) + roundVnd(pit% × B)      (theo loại dịch vụ — ADR 0068)
- *   tiền giữ chỗ     = min(B + S + IV + IP, max(S + H + IV + IP + D_target,
+ *   tiền giữ chỗ     = min(B + S + IV + IP, max(S + IV + IP + C_target,
  *                          S + H + IV + IP + T, holdMinAmount))      (trước mã)
- *   trả khi nhận xe  = tổng khách trả trước mã − tiền giữ chỗ
- *   D (của chủ xe)   = tiền giữ chỗ − S − H − IV − IP
+ *   trả khi nhận xe  = tổng khách trả trước mã − tiền giữ chỗ    (= 70% B + G ở chính sách mặc định)
+ *   D (của chủ xe)   = tiền giữ chỗ − S − H − IV − IP             (= C_target − H)
  *   sàn giữ lại      = S + H
  *   chuyển ví chủ xe = D − T
  *   chủ xe thực nhận = B − H − T

@@ -265,9 +265,10 @@ export class UpsertFeePolicyDto {
 
   @ApiProperty({
     description:
-      '% phần chủ xe `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi trực tiếp của xe, ' +
-      'không gồm phí giao xe) - ADR 0066. Phí sàn, hoa hồng và bảo hiểm cộng THÊM trên D',
-    example: 15,
+      '% tiền thuê trả trước `C = D + H` trong tiền giữ chỗ, tính trên TIỀN THUÊ (sau khuyến mãi ' +
+      'trực tiếp của xe, không gồm phí giao xe) - ADR 0101. Hoa hồng H nằm GỌN trong C; phí sàn và ' +
+      'bảo hiểm cộng THÊM trên C',
+    example: 30,
   })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(DEPOSIT_PERCENT_MIN)
@@ -275,11 +276,11 @@ export class UpsertFeePolicyDto {
   depositPercent!: number;
 
   @ApiProperty({
-    description: 'Sàn của `D` (VND string, bội 1.000đ): D = max(% × tiền thuê, sàn); 0 = không sàn',
+    description: 'Sàn của `C` (VND string, bội 1.000đ): C = max(% × tiền thuê, sàn); 0 = không sàn',
     example: '0',
   })
   @IsNumberString()
-  @IsMoneyStep({ message: 'Sàn phần giữ chỗ của chủ xe phải là bội của 1.000đ' })
+  @IsMoneyStep({ message: 'Sàn tiền thuê trả trước phải là bội của 1.000đ' })
   depositMinAmount!: string;
 
   @ApiProperty({ description: 'Cổng khấu trừ thuế thay chủ xe (ADR 0068)' })

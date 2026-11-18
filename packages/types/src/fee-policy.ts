@@ -14,8 +14,9 @@
  *
  * ⚠️ So với ADR đang Accepted, v2 đổi hai điều: phí XePrime không còn chỉ nằm phía khách (ADR 0029
  * điều 1 — nay có `H` trừ vào tiền chủ xe), và tiền giữ chỗ online là TỔNG các phần có chủ
- * `S + H + IV + IP + D` với `D` = % trên TIỀN THUÊ (ADR 0066, thay "% trên tổng khách trả" của
- * ADR 0064 điều 5). Bất biến của ADR 0046 giữ nguyên: mã khuyến mãi chỉ trừ vào phần
+ * `S + IV + IP + X + C` với `C = D + H` = % trên TIỀN THUÊ (ADR 0101: hoa hồng nằm GỌN trong
+ * `C`, thay `S + H + IV + IP + 15% × R` của ADR 0066 và "% trên tổng khách trả" của ADR 0064
+ * điều 5). Bất biến của ADR 0046 giữ nguyên: mã khuyến mãi chỉ trừ vào phần
  * khách chuyển online, không đổi một đồng nào của chủ xe, hãng bảo hiểm hay ngân sách.
  *
  * **Đúng tới đồng (ADR 0069).** Mọi khoản TÍNH RA từ tỷ lệ (hoa hồng `H`, phần giữ chỗ `D`, thuế
@@ -551,13 +552,14 @@ export interface FeePolicyValues {
    */
   freeCancelHours: number;
   /**
-   * % PHẦN CHỦ XE `D` trong tiền giữ chỗ, tính trên TIỀN THUÊ `B` (sau khuyến mãi trực tiếp của
-   * xe, KHÔNG gồm phí giao xe `G`) — 15% từ ADR 0066 (trước đó là % trên tổng khách trả). **Nền
-   * tảng đặt, không phải gian hàng** (ADR 0033 điều 7): để mỗi shop tự đặt thì cùng một hạng xe
-   * lại có mức trả trước khác nhau mà khách không giải thích được.
+   * % TIỀN THUÊ TRẢ TRƯỚC `C = D + H` trong tiền giữ chỗ, tính trên TIỀN THUÊ `R` (sau khuyến
+   * mãi trực tiếp của xe, KHÔNG gồm phí giao xe `G`) — 30% từ ADR 0101. Hoa hồng `H` nằm GỌN bên
+   * trong `C`, không cộng thêm: phần thực của chủ xe là `D = C − H` (ADR 0066 trước đó cộng `H`
+   * lên trên 15%). **Nền tảng đặt, không phải gian hàng** (ADR 0033 điều 7): để mỗi shop tự đặt
+   * thì cùng một hạng xe lại có mức trả trước khác nhau mà khách không giải thích được.
    */
   depositPercent: number;
-  /** Sàn của `D` (VND), áp sau phép nhân %: `D = max(depositPercent% × B, depositMinAmount)`. */
+  /** Sàn của `C` (VND), áp sau phép nhân %: `C = max(depositPercent% × R, depositMinAmount)`. */
   depositMinAmount: string;
   /** `S` — phí sàn phía khách, theo loại xe. Áp cho cả hai tuyến. */
   customerPlatformFee: PerVehicleTypeAmount;
@@ -632,7 +634,7 @@ export function platformFeeBasisFor(
  * và form admin. Chính sách đang hiệu lực mới là nguồn sự thật; đừng đọc hằng này lúc tính tiền.
  */
 export const FEE_SCHEDULE_DEFAULTS = {
-  depositPercent: 15,
+  depositPercent: 30,
   depositMinAmount: '0',
   customerPlatformFee: { [VEHICLE_TYPE.CAR]: '50000', [VEHICLE_TYPE.MOTORBIKE]: '30000' },
   customerPlatformFeeBasis: {
@@ -642,8 +644,8 @@ export const FEE_SCHEDULE_DEFAULTS = {
   ownerCommissionTiers: [
     { fromDay: 1, percent: 10 },
     { fromDay: 3, percent: 7 },
-    { fromDay: 8, percent: 3 },
-    { fromDay: 31, percent: 0 },
+    { fromDay: 8, percent: 5 },
+    { fromDay: 31, percent: 3 },
   ],
   vehicleProtectionDailyAmount: { [VEHICLE_TYPE.CAR]: '50000', [VEHICLE_TYPE.MOTORBIKE]: '15000' },
   tripInsuranceDailyAmount: { [VEHICLE_TYPE.CAR]: '20000', [VEHICLE_TYPE.MOTORBIKE]: '5000' },
@@ -669,7 +671,7 @@ export interface FeePolicySnapshot extends FeePolicyValues {
 /**
  * Kết quả tính tiền cho MỘT chuyến — snapshot vào `bookings.price_snapshot_json.fees`.
  *
- * Luồng tiền v2 (tiền giữ chỗ theo ADR 0066), theo đúng thứ tự khách và chủ xe hỏi:
+ * Luồng tiền v2 (tiền giữ chỗ theo ADR 0101), theo đúng thứ tự khách và chủ xe hỏi:
  *
  * ```text
  *   R  (tiền thuê)         = B − G      (G = phí giao nhận nằm trong B)
@@ -677,16 +679,17 @@ export interface FeePolicySnapshot extends FeePolicyValues {
  *   GTGT                   = roundVnd(vat% × R)   ┐ mức theo LOẠI DỊCH VỤ (ADR 0068), 0 khi
  *   TNCN                   = roundVnd(pit% × R)   ┘ cổng tắt hoặc người bán là doanh nghiệp
  *   T                      = GTGT + TNCN
- *   grossCustomerTotal     = B + S + IV + IP                           ← tổng trước mã
- *   D_target               = max(roundVnd(depositPercent% × R), depositMinAmount)
+ *   grossCustomerTotal     = B + S + IV + IP + X                       ← tổng trước mã
+ *   C_target (= D + H)     = max(roundVnd(depositPercent% × R), depositMinAmount)
  *   grossOnlineAmount      = min(grossCustomerTotal − G,
- *                                max(S + H + IV + IP + D_target,
- *                                    S + H + IV + IP + T,
+ *                                max(S + IV + IP + X + C_target,
+ *                                    S + H + IV + IP + X + T,
  *                                    holdMinAmount))               ← tiền giữ chỗ trước mã
  *   onlineAmount           = grossOnlineAmount − P                     ← trả NGAY qua QR
  *   payAtPickupAmount      = grossCustomerTotal − grossOnlineAmount    ← trả TRỰC TIẾP chủ xe
  *   customerTotalAmount    = grossCustomerTotal − P                    ← tổng cả chuyến
- *   depositAmount (D)      = grossOnlineAmount − S − H − IV − IP       ← phần chủ xe giữ chỗ
+ *   depositAmount (D)      = grossOnlineAmount − S − H − IV − IP − X   ← phần chủ xe giữ chỗ
+ *                          = C_target − H  (đơn thường, khi C_target ≥ H + T)
  *   platformRetainedAmount = S + H                                     ← "sàn giữ lại"
  *   ownerPayableAmount     = D − T                                     ← sàn chuyển ví chủ xe
  *   taxableBaseAmount      = R                                         ← mẫu số của T
@@ -698,7 +701,7 @@ export interface FeePolicySnapshot extends FeePolicyValues {
  *
  * Ba đẳng thức bảo toàn đúng ở MỌI đầu vào, nên không có đường nào lệch một đồng:
  * `onlineAmount + payAtPickupAmount = customerTotalAmount`,
- * `grossOnlineAmount = D + S + H + IV + IP`,
+ * `grossOnlineAmount = D + S + H + IV + IP + X`,
  * `payAtPickupAmount + ownerPayableAmount = ownerNetAmount + G` — phí giao `G` là tiền mặt chủ xe
  * nhận tận tay, hiện riêng ở `deliveryAmount`, không gộp vào "chủ xe nhận cho tiền thuê" (ADR 0064
  * điều 5: `ownerNet = B − H − T` với `B` không gồm `G`).
@@ -712,11 +715,11 @@ export interface FeePolicySnapshot extends FeePolicyValues {
  *
  * 1. **`D` là tiền thuê trả trước, không phải phụ phí.** Nó không nằm trong `lines` và không cộng
  *    vào `customerTotalAmount` — cộng vào là tính tiền thuê hai lần.
- * 2. **`H` và `T` do CHỦ XE chịu** nên không vào `customerTotalAmount`. `H` là một khoản RIÊNG
- *    trong tiền giữ chỗ, cộng THÊM trên `D` (ADR 0066) — không cắt từ phần cam kết giữ xe của chủ
- *    xe; `T` được khấu trừ từ `D` lúc quyết toán. `S`/`IV`/`IP` thì ngược lại: KHÁCH trả, cộng vào
- *    tổng khách.
- * 3. **Tiền giữ chỗ luôn đủ trả mọi thứ không phải của chủ xe** (`S + H + IV + IP + T`). XePrime
+ * 2. **`H` và `T` do CHỦ XE chịu** nên không vào `customerTotalAmount`. `H` nằm GỌN trong tiền
+ *    thuê trả trước `C = depositPercent% × R` (ADR 0101) — khách chuyển `C` chứ không chuyển
+ *    `C + H`, và phần thực của chủ xe là `D = C − H`; `T` được khấu trừ từ `D` lúc quyết toán.
+ *    `S`/`IV`/`IP`/`X` thì ngược lại: KHÁCH trả, cộng vào tổng khách.
+ * 3. **Tiền giữ chỗ luôn đủ trả mọi thứ không phải của chủ xe** (`S + H + IV + IP + X + T`). XePrime
  *    không thu hộ phần trả tay, nên một khoản nhỏ hơn số đó sẽ để lại một món nợ ngược từ chủ xe
  *    mà không có chỗ nào để đòi — `ownerPayableAmount` vì thế không âm chừng nào `H + T ≤ B`.
  *
@@ -1245,19 +1248,19 @@ export function computeCustomerFees(input: {
   const grossCustomerTotal = base + customerFeeTotal;
 
   /*
-   * TIỀN GIỮ CHỖ (ADR 0066). Báo giá tạm tính thì không thu đồng nào — CLAUDE.md cấm thu phần
-   * trăm trên một con số chưa chốt.
+   * TIỀN GIỮ CHỖ (ADR 0101, thay công thức của ADR 0066). Báo giá tạm tính thì không thu đồng
+   * nào — CLAUDE.md cấm thu phần trăm trên một con số chưa chốt.
    *
-   * Nó là TỔNG các phần có chủ: `S` của XePrime, `H` XePrime giữ lại từ phía chủ xe, `IV + IP` của
-   * hãng bảo hiểm, cộng phần CAM KẾT GIỮ XE của chủ xe `D_target = max(depositPercent% × R, sàn)`
-   * — `D` tính trên TIỀN THUÊ `R`, không trên tổng khách trả, nên hoa hồng không ăn vào phần đền
-   * chủ xe khi khách huỷ muộn.
+   * Nó là TỔNG các phần có chủ: `S` của XePrime, `IV + IP` của hãng bảo hiểm, `X` phí thu hộ bảo
+   * hiểm, cộng TIỀN THUÊ TRẢ TRƯỚC `C_target = max(depositPercent% × R, sàn)` — `C` tính trên TIỀN
+   * THUÊ `R`, không trên tổng khách trả, và hoa hồng `H` nằm GỌN trong `C` chứ không cộng thêm:
+   * khách chuyển đúng 30% tiền thuê, XePrime giữ `H` từ đó, phần còn lại `D = C − H` là của chủ xe.
    *
-   * Sàn của nó là mọi thứ KHÔNG phải tiền của chủ xe (`S + H + IV + IP + T`): XePrime không thu
-   * hộ phần trả tay, nên đó là lần duy nhất nó cầm được tiền của chính mình, của hãng bảo hiểm và
-   * của ngân sách. CHECK `fee_policies_deposit_covers_tax_check` (`depositPercent ≥` mức thuế tổng
-   * cao nhất của bảng) đã làm `D_target ≥ T` ở mọi chính sách hợp lệ; sàn này vẫn đứng riêng để bất
-   * biến không phụ thuộc vào một CHECK ở bảng khác.
+   * Sàn của nó là mọi thứ KHÔNG phải tiền của chủ xe (`S + H + IV + IP + X + T`): XePrime không
+   * thu hộ phần trả tay, nên đó là lần duy nhất nó cầm được tiền của chính mình, của hãng bảo hiểm
+   * và của ngân sách. Ở chính sách mặc định (30%, nấc hoa hồng cao nhất 10%, thuế cao nhất 7%)
+   * `C_target ≥ H + T` nên sàn này không chạm; nó đứng riêng để `D ≥ T` và `D ≥ 0` không phụ
+   * thuộc vào cấu hình — chính sách nào để `C < H + T` thì tiền giữ chỗ tự nâng lên đủ.
    *
    * Không thu cọc (tuyến gói tắt công tắc) thì khoản online đúng bằng phần không phải của chủ xe
    * và không hơn.
@@ -1274,13 +1277,14 @@ export function computeCustomerFees(input: {
   const onlineBase = grossCustomerTotal - delivery;
   let grossOnline = 0;
   if (collectsOnline) {
-    const ownerHoldTarget = Math.max(
+    // `C = D + H` — hoa hồng đã nằm trong con số này, nên vế đầu của sàn KHÔNG cộng `commission`.
+    const rentPrepaidTarget = Math.max(
       percentOfVnd(rent, p.depositPercent),
       Number(p.depositMinAmount),
     );
     const floor = depositRequired
       ? Math.max(
-          serviceFee + commission + insuranceTotal + insuranceServiceFee + ownerHoldTarget,
+          serviceFee + insuranceTotal + insuranceServiceFee + rentPrepaidTarget,
           notOwnersMoney,
         )
       : notOwnersMoney;
@@ -1656,12 +1660,13 @@ export function feePolicyActivationBlockers(values: FeePolicyValues): string[] {
     blockers.push('deposit_percent_out_of_range');
   }
   /*
-   * Thuế tính trên TIỀN THUÊ `B` nhưng chỉ khấu trừ được từ phần của chủ xe `D` trong tiền giữ
-   * chỗ. Cùng mẫu số (ADR 0066) nên `depositPercent ≥` mức thuế tổng CAO NHẤT của bảng bảo đảm
-   * `D ≥ T` ở mọi đơn, mọi loại dịch vụ (ADR 0068 điều 3). Phép tính vẫn nâng tiền giữ chỗ lên đủ
-   * giữ `T` (`computeCustomerFees`), nhưng một chính sách có % giữ chỗ dưới % thuế thì sàn đó kích
-   * hoạt trên mọi đơn và mức % công bố với khách không còn đúng ở đơn nào. Chặn ở cổng kích hoạt
-   * (và CHECK cùng tên ở DB), không để phát hiện ra lúc quyết toán chuyến đầu tiên.
+   * Thuế tính trên TIỀN THUÊ `R` nhưng chỉ khấu trừ được từ phần của chủ xe `D` trong tiền giữ
+   * chỗ. Cùng mẫu số (ADR 0066) nên `depositPercent` dưới mức thuế tổng CAO NHẤT của bảng là một
+   * cấu hình chắc chắn sai: sàn `S + H + IV + IP + X + T` của `computeCustomerFees` kích hoạt trên
+   * mọi đơn và mức % công bố với khách không còn đúng ở đơn nào (ADR 0068 điều 3). Chặn ở cổng
+   * kích hoạt (và CHECK cùng tên ở DB), không để phát hiện ra lúc quyết toán chuyến đầu tiên. Từ
+   * ADR 0101 `H` cũng nằm trong `C`, nên `D ≥ T` thật sự cần `C ≥ H + T` — phần hoa hồng không chặn
+   * ở đây (nấc là dữ liệu theo ngày), sàn của phép tính tự nâng tiền giữ chỗ khi thiếu.
    */
   if (
     values.taxEnabled &&

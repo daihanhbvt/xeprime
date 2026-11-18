@@ -113,7 +113,8 @@ export function CatalogLineVehicles({
         onRowClick={(r) => onOpen(r.id)}
         selectedRowKey={selectedId}
         renderCard={renderCard}
-        striped={false}
+        // Bảng con nằm trên nền xám của dòng mở: khung viền + kẻ dòng + zebra để tách từng xe.
+        framed
         pagination={
           data && data.meta.total > LINE_VEHICLES_PAGE_SIZE
             ? {

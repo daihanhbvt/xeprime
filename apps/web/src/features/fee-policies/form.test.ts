@@ -64,7 +64,7 @@ function errorsOf(values: FeePolicyFormValues): Record<string, string> {
 describe('feePolicyFormDefaults - tạo mới', () => {
   it('lấy bộ số luồng tiền v2', () => {
     const d = feePolicyFormDefaults(null);
-    expect(d.depositPercent).toBe(15); // ADR 0066: 15% tiền thuê
+    expect(d.depositPercent).toBe(30); // ADR 0101: 30% tiền thuê, đã gồm hoa hồng
     expect(d.depositMinAmount).toBe(0);
     expect(d.customerPlatformFee).toEqual({ car: 50_000, motorbike: 30_000 });
     expect(d.ownerCommissionTiers).toEqual(FEE_SCHEDULE_DEFAULTS.ownerCommissionTiers);
@@ -144,8 +144,8 @@ describe('nấc hoa hồng lũy tiến', () => {
     expect(commissionTierRanges(FEE_SCHEDULE_DEFAULTS.ownerCommissionTiers)).toEqual([
       { fromDay: 1, toDay: 2, percent: 10 },
       { fromDay: 3, toDay: 7, percent: 7 },
-      { fromDay: 8, toDay: 30, percent: 3 },
-      { fromDay: 31, toDay: null, percent: 0 },
+      { fromDay: 8, toDay: 30, percent: 5 },
+      { fromDay: 31, toDay: null, percent: 3 },
     ]);
   });
 

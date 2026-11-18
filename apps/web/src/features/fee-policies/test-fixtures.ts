@@ -10,7 +10,7 @@ export function feePolicyFixture(over: Partial<FeePolicy> = {}): FeePolicy {
     name: 'Pilot - phí dịch vụ 10%',
     note: null,
     serviceFeePercent: 0,
-    depositPercent: 15,
+    depositPercent: 30,
     depositMinAmount: '0',
     holdMinAmount: '20000',
     holdPaymentWindowMinutes: 120,
@@ -36,7 +36,8 @@ export function feePolicyFixture(over: Partial<FeePolicy> = {}): FeePolicy {
     ownerCommissionTiers: [
       { fromDay: 1, percent: 10 },
       { fromDay: 3, percent: 7 },
-      { fromDay: 8, percent: 3 },
+      { fromDay: 8, percent: 5 },
+      { fromDay: 31, percent: 3 },
     ],
     vehicleProtectionDailyAmount: { car: '50000', motorbike: '15000' },
     tripInsuranceDailyAmount: { car: '20000', motorbike: '5000' },

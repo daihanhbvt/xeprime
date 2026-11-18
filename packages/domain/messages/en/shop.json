@@ -294,7 +294,7 @@
     },
     "mode": {
       "onTitle": "Guests pay the reservation hold amount after you approve",
-      "onBody": "After you approve the booking request, the customer scans a VietQR transfer to pay the reservation hold amount (platform fee + insurance + 15% rental hold) within the dynamic payment window. The booking is confirmed as soon as XePrime receives full payment. If you cancel after accepting, the guest receives a 100% refund and your reliability score is penalized.",
+      "onBody": "After you approve the booking request, the customer scans a VietQR transfer to pay the reservation hold amount (platform fee + insurance + 30% of the rental paid in advance) within the dynamic payment window. The booking is confirmed as soon as XePrime receives full payment. If you cancel after accepting, the guest receives a 100% refund and your reliability score is penalized.",
       "offTitle": "You arrange it with the guest yourself",
       "offBody": "Approving creates the booking straight away, with no wait for money. You contact the guest to arrange the security deposit at pickup - XePrime neither collects nor reconciles it, so if a dispute arises XePrime has no record to support you."
     },

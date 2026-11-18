@@ -84,6 +84,6 @@ $$\begin{aligned}
 \end{aligned}$$
 
 *Quy tắc bất biến:*
-* Tiền **tính ra từ tỷ lệ** (hoa hồng, phần giữ chỗ 15%, GTGT, TNCN) đúng tới **đồng** (`roundVnd`); chỉ khoản **giảm giá theo %** làm tròn LÊN 1.000đ; số **cấu hình** là bội 1.000đ (ADR 0069 — thay quy tắc `roundToThousand` cũ).
+* Tiền **tính ra từ tỷ lệ** (hoa hồng, tiền thuê trả trước 30%, GTGT, TNCN) đúng tới **đồng** (`roundVnd`); chỉ khoản **giảm giá theo %** làm tròn LÊN 1.000đ; số **cấu hình** là bội 1.000đ (ADR 0069 — thay quy tắc `roundToThousand` cũ).
 * Sàn giữ chỗ $S + H + IV + IP + T$ đảm bảo $D \ge T$, ví chủ xe không bao giờ bị ghi nhận số âm.
 

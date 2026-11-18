@@ -34,7 +34,7 @@ export const FEE_POLICY_V2_OFF: Pick<
 
 /**
  * Chính sách phí ĐÓNG BĂNG theo NĐ 117/2025 · NĐ 68/2026 (ADR 0068) với các mặc định của luồng tiền
- * v2 — phí sàn, nấc hoa hồng 10/7/3/0, giữ chỗ 15%, thuế theo loại dịch vụ, không bảo hiểm.
+ * v2 — phí sàn, nấc hoa hồng 10/7/5/3, tiền thuê trả trước 30% (gồm hoa hồng), thuế theo loại dịch vụ, không bảo hiểm.
  *
  * Cho spec cần một bảng phí THẬT (`computeCustomerFees`) đúng như các ví dụ đối soát của đặc tả 05 §6.
  */

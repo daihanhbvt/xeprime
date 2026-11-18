@@ -120,8 +120,9 @@ describe('/admin/fee-policies - sổ "Đang áp dụng" trình bày bản đang 
     expect(within(cardOf('Phí sàn phía khách (S)')).getByText('50.000 ₫/chuyến')).toBeTruthy();
     const commission = cardOf('Hoa hồng chủ xe lũy tiến (H)');
     expect(within(commission).getByText('Ngày 1-2')).toBeTruthy();
-    expect(within(commission).getByText('Từ ngày 8')).toBeTruthy();
-    expect(within(cardOf('Tiền giữ chỗ')).getByText('15%')).toBeTruthy();
+    expect(within(commission).getByText('Ngày 8-30')).toBeTruthy();
+    expect(within(commission).getByText('Từ ngày 31')).toBeTruthy();
+    expect(within(cardOf('Tiền giữ chỗ')).getByText('30%')).toBeTruthy();
     expect(within(cardOf('Giới hạn đặt xe')).getByText('30 ngày')).toBeTruthy();
     // Thuế tắt — nói "chưa áp dụng", không nói 0%.
     expect(within(cardOf('Thuế khấu trừ')).getByText('Chưa áp dụng')).toBeTruthy();
@@ -310,7 +311,7 @@ describe('/admin/fee-policies - ba sổ: đang áp dụng · nháp · lịch s�
     const row = rowOf('Bản v6');
     expect(within(row).getByText('50.000 ₫/chuyến')).toBeTruthy();
     expect(within(row).getByText('30.000 ₫/chuyến')).toBeTruthy();
-    expect(within(row).getByText('10% · 7% · 3%')).toBeTruthy();
+    expect(within(row).getByText('10% · 7% · 5% · 3%')).toBeTruthy();
     expect(within(row).getByText('7% · 7% · 4,5%')).toBeTruthy();
     expect(within(row).getByRole('button', { name: 'Chi tiết mức thuế khấu trừ' })).toBeTruthy();
     expect(within(rowOf('Bản v5')).getByText('10% (một mức, chính sách cũ)')).toBeTruthy();

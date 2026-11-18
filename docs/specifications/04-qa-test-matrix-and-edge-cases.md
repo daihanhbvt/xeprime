@@ -20,7 +20,7 @@
 | `TS-SLA-02` | SLA co giãn động & Cửa sổ thời gian | Hạn duyệt xe clamp(20%*ΔT), Hạn thanh toán 30%, Huỷ miễn phí 20%, Sàn 15 phút | 5 | Critical | ✅ PASS (`holds.test.ts`, `booking-request.test.ts`) |
 | `TS-DRIVER-03`| Gán tài xế & SLA phản hồi | SLA tài xế clamp(10%*ΔT), Tài xế nhận/từ chối, Quá hạn gán lại 30p không huỷ đơn; tài xế ngoài hệ thống, nhắc thiếu tài xế 2h không tự huỷ (ADR 0067) | 7 | High | ✅ PASS (`driver-assignment-expiry.spec.ts`, `external-driver.spec.ts`) |
 | `TS-HAND-04` | Bàn giao xe & Lưới chống treo đơn | Ảnh/công tơ mét tuỳ chọn, Nút đỏ "Chưa nhận xe" 120p, Hồ sơ dispute hoãn quyết toán, Worker quét, chỉ nền tảng đóng hồ sơ hoãn tiền, giao muộn tự đóng hồ sơ | 8 | Critical | ✅ PASS (`handover-anti-freeze.spec.ts`, `TripNotReceivedReport.test.tsx`) |
-| `TS-REFUND-05`| Ma trận Hoàn huỷ & Quyết toán ví | Hoàn 100% trong hạn, Huỷ muộn trả 100% bảo hiểm + 15% chủ xe, Thuế huỷ = 0đ | 4 | Critical | ✅ PASS (`hold-decide-outcome.unit.spec.ts`) |
+| `TS-REFUND-05`| Ma trận Hoàn huỷ & Quyết toán ví | Hoàn 100% trong hạn, Huỷ muộn trả 100% bảo hiểm + trọn D (30% tiền thuê - H) cho chủ xe, Thuế huỷ = 0đ | 4 | Critical | ✅ PASS (`hold-decide-outcome.unit.spec.ts`) |
 | `TS-PLAN-06` | Quản lý Gói dịch vụ & Gỡ Ghost field| Modal gói gỡ ô hoa hồng 10%, Card tuyến mặc định read-only, Gói theo loại xe ADR 0065 | 3 | High | ✅ PASS (`PlanFormModal.test.tsx`) |
 | `TS-TAX-07` | Thuế khấu trừ, làm tròn tiền & Bảng cộng ví chủ xe | GTGT/TNCN theo loại dịch vụ (7% / 4,5%), doanh nghiệp đã xác minh miễn, xác minh lại khi đổi chủ thể, sổ thuế + CSV, tiền đúng tới đồng, giảm giá làm tròn lên, bảng cộng ví, sao kê ví | 11 | Critical | ✅ PASS (`fee-policy.test.ts`, `tax-withholding.spec.ts`, `owner-payout.unit.spec.ts`, `OwnerPayoutTable.test.tsx`) |
 
@@ -276,7 +276,7 @@
 
 #### TC-ROUND-01: Tiền tính ra đúng tới đồng
 * **Test Steps:** 1 ngày × 650.000đ, khuyến mãi xe 10% ⇒ B = 585.000đ.
-* **Expected Result:** H = 58.500; giữ chỗ 15% = 87.750; QR = **196.250đ**; trả khi nhận xe = 438.750; thuế 29.250 + 11.700; cộng ví = 46.800.
+* **Expected Result (ADR 0101):** H = 58.500; tiền thuê trả trước 30% = 175.500 (đã gồm H, D = 117.000); QR = **225.500đ**; trả khi nhận xe = 409.500; thuế 29.250 + 11.700; cộng ví = 76.050.
 * **Trạng thái:** ✅ **PASS** (`owner-payout.unit.spec.ts`).
 
 #### TC-ROUND-02: Khuyến mãi % của xe làm tròn LÊN 1.000đ

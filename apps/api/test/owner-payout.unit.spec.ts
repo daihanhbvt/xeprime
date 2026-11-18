@@ -60,13 +60,15 @@ describe('ownerPayoutOf — đặc tả 05 §6', () => {
       taxTotalPercent: 7,
       taxExemptReason: null,
       ownerNetAmount: '647400',
-      payAtPickupRentAmount: '585000',
-      ownerPayableAmount: '62400',
+      // b = R − D − H = 70% tiền thuê (ADR 0101: H nằm trong 30% trả trước).
+      payAtPickupRentAmount: '546000',
+      // D − T = (234.000 − 78.000) − 54.600.
+      ownerPayableAmount: '101400',
       collectsHold: true,
     });
   });
 
-  it('§6.2 có tài xế 2 ngày × 1.200.000đ ⇒ GTGT 3% + TNCN 1,5%, cộng ví 252.000', () => {
+  it('§6.2 có tài xế 2 ngày × 1.200.000đ ⇒ GTGT 3% + TNCN 1,5%, cộng ví 372.000', () => {
     const fees = computeCustomerFees({
       billingMode: BILLING_MODE.COMMISSION,
       policy: ND117,
@@ -83,11 +85,11 @@ describe('ownerPayoutOf — đặc tả 05 §6', () => {
     expect([p.vatAmount, p.pitAmount, p.taxAmount]).toEqual(['72000', '36000', '108000']);
     expect([p.vatPercent, p.pitPercent]).toEqual([3, 1.5]);
     expect(p.ownerNetAmount).toBe('2052000');
-    expect(p.payAtPickupRentAmount).toBe('1800000');
-    expect(p.ownerPayableAmount).toBe('252000');
+    expect(p.payAtPickupRentAmount).toBe('1680000');
+    expect(p.ownerPayableAmount).toBe('372000');
   });
 
-  it('§6.3 tuyến gói, doanh nghiệp đã xác minh ⇒ T = 0 "company", cộng ví 450.000', () => {
+  it('§6.3 tuyến gói, doanh nghiệp đã xác minh ⇒ T = 0 "company", cộng ví 900.000', () => {
     const fees = computeCustomerFees({
       billingMode: BILLING_MODE.PACKAGE,
       depositRequired: true,
@@ -106,11 +108,11 @@ describe('ownerPayoutOf — đặc tả 05 §6', () => {
     expect(p.taxExemptReason).toBe(TAX_EXEMPT_REASON.COMPANY);
     expect(p.unitAmount).toBe('1000000');
     expect(p.ownerNetAmount).toBe('3000000');
-    expect(p.payAtPickupRentAmount).toBe('2550000');
-    expect(p.ownerPayableAmount).toBe('450000');
+    expect(p.payAtPickupRentAmount).toBe('2100000');
+    expect(p.ownerPayableAmount).toBe('900000');
   });
 
-  it('§6.3 tuyến gói, hộ kinh doanh ⇒ vẫn khấu trừ 210.000, cộng ví 240.000', () => {
+  it('§6.3 tuyến gói, hộ kinh doanh ⇒ vẫn khấu trừ 210.000, cộng ví 690.000', () => {
     const fees = computeCustomerFees({
       billingMode: BILLING_MODE.PACKAGE,
       depositRequired: true,
@@ -125,10 +127,10 @@ describe('ownerPayoutOf — đặc tả 05 §6', () => {
     const p = expectIdentities(fees);
     expect(p.taxAmount).toBe('210000');
     expect(p.taxExemptReason).toBeNull();
-    expect(p.ownerPayableAmount).toBe('240000');
+    expect(p.ownerPayableAmount).toBe('690000');
   });
 
-  it('§6.4 số lẻ thật: 585.000đ ⇒ cộng ví 46.800, không làm tròn nghìn', () => {
+  it('§6.4 số lẻ thật: 585.000đ ⇒ cộng ví 76.050, không làm tròn nghìn', () => {
     const fees = computeCustomerFees({
       billingMode: BILLING_MODE.COMMISSION,
       policy: ND117,
@@ -140,8 +142,9 @@ describe('ownerPayoutOf — đặc tả 05 §6', () => {
     });
     const p = expectIdentities(fees);
     expect(p.taxAmount).toBe('40950');
-    expect(p.payAtPickupRentAmount).toBe('438750');
-    expect(p.ownerPayableAmount).toBe('46800');
+    // C = 30% × 585.000 = 175.500 · H 58.500 ⇒ D 117.000 · b = 585.000 − 175.500.
+    expect(p.payAtPickupRentAmount).toBe('409500');
+    expect(p.ownerPayableAmount).toBe('76050');
   });
 
   it('phí giao xe KHÔNG vào doanh thu, (a) hay (b) — dù nằm trong `payAtPickupAmount`', () => {
@@ -157,8 +160,8 @@ describe('ownerPayoutOf — đặc tả 05 §6', () => {
     });
     const p = expectIdentities(fees);
     expect(p.rentAmount).toBe('780000');
-    expect(p.payAtPickupRentAmount).toBe('585000');
-    expect(fees.payAtPickupAmount).toBe('685000'); // gồm G — đúng thứ bảng KHÔNG chép
+    expect(p.payAtPickupRentAmount).toBe('546000');
+    expect(fees.payAtPickupAmount).toBe('646000'); // gồm G — đúng thứ bảng KHÔNG chép
   });
 
   it('giá khác nhau theo ngày ⇒ đơn giá null; không biết giá từng ngày ⇒ null trừ chuyến 1 ngày', () => {
@@ -246,8 +249,8 @@ describe('ownerPayoutOf — nấc phí dịch vụ chủ xe từ chính sách Đ
     expect(ownerPayoutOf(tripOn(ND117, BILLING_MODE.COMMISSION)).commissionTiers).toEqual([
       { fromDay: 1, percent: 10 },
       { fromDay: 3, percent: 7 },
-      { fromDay: 8, percent: 3 },
-      { fromDay: 31, percent: 0 },
+      { fromDay: 8, percent: 5 },
+      { fromDay: 31, percent: 3 },
     ]);
   });
 

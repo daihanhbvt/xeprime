@@ -829,8 +829,8 @@
     "owner_commission_tiers_invalid": "Commission tiers must start on day 1, increase, and stay between 0% and 30%",
     "hold_window_out_of_range": "Payment window is out of the allowed range",
     "free_cancel_out_of_range": "Free-cancel hours is out of the allowed range",
-    "deposit_percent_out_of_range": "Owner's reservation share % is out of range or above the policy cap",
-    "deposit_percent_below_tax_percent": "Owner's reservation share % must not be lower than the highest tax rate in the table",
+    "deposit_percent_out_of_range": "Prepaid rental % is out of the allowed range (0-50%)",
+    "deposit_percent_below_tax_percent": "Prepaid rental % must not be lower than the highest tax rate in the table",
     "free_cancel_shorter_than_payment_window": "Free-cancel window must not be shorter than the payment window",
     "with_driver_limits_invalid": "With-driver limits are invalid (need 0 < minimum < maximum, multiples of 1,000)"
   },

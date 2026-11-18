@@ -14,9 +14,11 @@
 
 Khoản tiền khách quét mã QR SePay để xác nhận đặt xe được xác định theo công thức bảo toàn:
 
-$\text{grossOnline} = S + H + (IV + IP) + \text{roundVnd}(15\% \times B)$
+$\text{grossOnline} = S + (IV + IP) + C$, với $C = \text{roundVnd}(30\% \times B)$
 
-*(Đúng tới đồng — ADR 0069; trước 22/10/2026 phần 15% được làm tròn 1.000đ.)*
+*$C$ là tiền thuê trả trước, ĐÃ GỒM hoa hồng $H$ (ADR 0101): phần thực của chủ xe $D = C - H$, khách trả tay chủ xe $70\% \times B + G$. Tiền giữ chỗ vẫn được nâng tới đủ $S + H + IV + IP + T$ và sàn đối soát.*
+
+*(Đúng tới đồng — ADR 0069. Trước 18/11/2026 là $S + H + IV + IP + 15\% \times B$ — ADR 0066; trước 22/10/2026 phần 15% được làm tròn 1.000đ.)*
 
 *Trong đó:*
 * $B$: Tiền thuê xe sau khuyến mãi của xe (không gồm phí giao xe $G$).
@@ -43,7 +45,7 @@ flowchart TD
 
     Event -- "Kịch bản 1: Khách huỷ trong hạn miễn phí" --> Case1["Hoàn 100% tiền khách đã trả\nXePrime: 0đ\nChủ xe: 0đ\nThuế: 0đ"]
     
-    Event -- "Kịch bản 2: Khách huỷ muộn / No-show" --> Case2["Khách nhận lại: 100% tiền Bảo hiểm (IV + IP)\nXePrime nhận: S + H (Phí sàn + Hoa hồng cam kết)\nChủ xe nhận: 15% x B (Tiền đền bù giữ xe)\nThuế: 0đ"]
+    Event -- "Kịch bản 2: Khách huỷ muộn / No-show" --> Case2["Khách nhận lại: 100% tiền Bảo hiểm (IV + IP)\nXePrime nhận: S + H (Phí sàn + Hoa hồng cam kết)\nChủ xe nhận: D = 30% x B - H (Tiền đền bù giữ xe)\nThuế: 0đ"]
 
     Event -- "Kịch bản 3: Chủ xe / Gian hàng Huỷ" --> Case3["Khách nhận lại: 100% toàn bộ tiền đã trả\nChủ xe: 0đ + Phạt trừ Uy tín sàn\nXePrime: 0đ\nThuế: 0đ"]
 ```
@@ -86,25 +88,25 @@ flowchart TD
 * $S = 50.000đ$ (cố định ô tô)
 * $H = (2 \times 1.000.000 \times 10\%) + (3 \times 1.000.000 \times 7\%) = 200k + 210k = 410.000đ$
 * $IV = 5 \times 50.000đ = 250.000đ$
-* $15\% \times B = 15\% \times 5.000.000đ = 750.000đ$
+* Tiền thuê trả trước $C = 30\% \times B = 1.500.000đ$ (đã gồm $H$) ⇒ phần thực của chủ xe $D = C - H = 1.090.000đ$
 * Thuế $T = (5\% + 2\%) \times B = 250.000 + 100.000 = 350.000đ$ (chủ xe cá nhân, tự lái — ghi sổ khi chuyến bắt đầu, trừ khi chuyến xong)
 * Phí giao xe tận nơi $G = 200.000đ$ (khách trả tay lúc nhận xe)
 
 $$\begin{aligned}
 \text{Tổng khách trả cả chuyến} &= 5.000.000 + 50.000 + 250.000 + 200.000 = \mathbf{5.500.000đ} \\
-\text{Tiền giữ chỗ QR} &= 50.000 + 410.000 + 250.000 + 750.000 = \mathbf{1.460.000đ} \\
-\text{Khách trả tay khi nhận xe} &= 5.500.000 - 1.460.000 = \mathbf{4.040.000đ} \text{ (gồm 200k tiền giao xe)}
+\text{Tiền giữ chỗ QR} &= 50.000 + 250.000 + 1.500.000 = \mathbf{1.800.000đ} \\
+\text{Khách trả tay khi nhận xe} &= 5.500.000 - 1.800.000 = \mathbf{3.700.000đ} \text{ (70\% tiền thuê + 200k tiền giao xe)}
 \end{aligned}$$
 
 ### Bảng đối soát khi có sự kiện huỷ:
 
 | Kịch bản | Khách nhận lại | XePrime nhận | Ví chủ xe ghi có |
 | :--- | :---: | :---: | :---: |
-| **Khách huỷ sớm (trong hạn)** | **1.460.000đ** | 0đ | 0đ |
-| **Khách huỷ muộn / No-show** | **250.000đ** *(tiền bảo hiểm IV)* | **460.000đ** *($S + H$)* | **750.000đ** *($15\% \times B$)* |
-| **Chủ xe huỷ chuyến** | **1.460.000đ** | 0đ | 0đ *(bị trừ điểm uy tín)* |
+| **Khách huỷ sớm (trong hạn)** | **1.800.000đ** | 0đ | 0đ |
+| **Khách huỷ muộn / No-show** | **250.000đ** *(tiền bảo hiểm IV)* | **460.000đ** *($S + H$)* | **1.090.000đ** *($D = 30\% \times B - H$)* |
+| **Chủ xe huỷ chuyến** | **1.800.000đ** | 0đ | 0đ *(bị trừ điểm uy tín)* |
 | **Chuyến xe hoàn thành bình thường** | — | **460.000đ** | **4.440.000đ** *(thuê thuần $B - H - T + G$ = 5.000.000 − 410.000 − 350.000 + 200.000)* |
 
 *Kiểm tra bảo toàn dòng tiền:*
-Khách huỷ muộn: Số tiền khách nộp $1.460.000đ = 250.000đ \text{ (hoàn khách)} + 460.000đ \text{ (XePrime)} + 750.000đ \text{ (Chủ xe)}$ $\rightarrow$ **Cân bằng tuyệt đối $\pm 0đ$**.
+Khách huỷ muộn: Số tiền khách nộp $1.800.000đ = 250.000đ \text{ (hoàn khách)} + 460.000đ \text{ (XePrime)} + 1.090.000đ \text{ (Chủ xe)}$ $\rightarrow$ **Cân bằng tuyệt đối $\pm 0đ$**.
 

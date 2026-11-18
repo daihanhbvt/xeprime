@@ -284,7 +284,7 @@ export class PricingService {
       insuranceOffered?: InsuranceOfferedByKind;
       /**
        * PHỤ LỤC GIA HẠN (ADR 0077 điều 4): miễn phí nền tảng — không phí sàn `S`, không hoa hồng
-       * `H`, không bán bảo hiểm. Mọi thứ khác (thuế, phần giữ chỗ 15%, sàn đối soát) đi qua ĐÚNG
+       * `H`, không bán bảo hiểm. Mọi thứ khác (thuế, tiền thuê trả trước 30%, sàn đối soát) đi qua ĐÚNG
        * hàm phí của đơn, nên phụ lục không có bản thứ hai của công thức nào.
        */
       platformFeesWaived?: boolean;

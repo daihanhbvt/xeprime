@@ -491,7 +491,7 @@ describe('Cộng dồn của kỳ', () => {
       dayAmounts: ['780000'],
       delivery: 100_000,
     });
-    await creditTrip(trip, 62_400);
+    await creditTrip(trip, 101_400);
 
     const february = await statement.tenantStatement(tenantId, owner(), { period: '2027-02' });
     const row = february.items.find((i) => i.bookingId === trip)!;
@@ -500,8 +500,8 @@ describe('Cộng dồn của kỳ', () => {
     expect(row.ownerCommissionAmount).toBe('78000');
     expect(row.taxAmount).toBe('54600');
     expect(row.ownerIncomeAmount).toBe('647400');
-    expect(row.payAtPickupAmount).toBe('585000');
-    expect(row.balanceChange).toBe('62400');
+    expect(row.payAtPickupAmount).toBe('546000');
+    expect(row.balanceChange).toBe('101400');
     expect(Number(row.ownerIncomeAmount) - Number(row.payAtPickupAmount)).toBe(
       Number(row.balanceChange),
     );
@@ -524,16 +524,16 @@ describe('Cộng dồn của kỳ', () => {
       vatPercent: 5,
       pitPercent: 2,
       ownerNetAmount: '647400',
-      payAtPickupRentAmount: '585000',
-      ownerPayableAmount: '62400',
+      payAtPickupRentAmount: '546000',
+      ownerPayableAmount: '101400',
       collectsHold: true,
     });
 
     expect(february.totals.revenueTotal).toBe('780000');
     expect(february.totals.deliveryTotal).toBe('100000');
-    expect(february.totals.payAtPickupTotal).toBe('585000');
+    expect(february.totals.payAtPickupTotal).toBe('546000');
     expect(february.totals.ownerIncome).toBe('647400');
-    expect(february.totals.balanceChangeTotal).toBe('62400');
+    expect(february.totals.balanceChangeTotal).toBe('101400');
   });
 
   /** Sổ là nguồn sự thật của cột số dư: một bút toán đảo phải kéo con số xuống. */
