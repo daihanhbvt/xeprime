@@ -12,7 +12,7 @@ import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { usePremiumCheck } from '../hooks';
-import { premiumPlan, type PremiumPlanConfig } from '../premium-plan';
+import { premiumConfigForYear, premiumPlan, type PremiumPlanConfig } from '../premium-plan';
 import type { InsurancePremiumCheckResult } from '../types';
 import { PremiumPlanTable } from './PremiumPlanTable';
 import styles from './PremiumCalculatorCard.module.css';
@@ -88,7 +88,19 @@ export function PremiumCalculatorCard({
     typeof insuredValue === 'number' && Number.isFinite(insuredValue)
       ? String(Math.trunc(insuredValue))
       : '';
-  const rows = premiumPlan(value, config);
+  /*
+   * % bậc theo NĂM SẢN XUẤT của xe mẫu (ADR 0106). Trong form sản phẩm (không có ô năm) ⇒ biểu phí
+   * chung. Đời xe hãng không bán ⇒ không có bảng.
+   */
+  const yearConfig = allowPartnerCheck
+    ? premiumConfigForYear(
+        config,
+        typeof manufactureYear === 'number' && Number.isFinite(manufactureYear)
+          ? manufactureYear
+          : null,
+      )
+    : config;
+  const rows = yearConfig ? premiumPlan(value, yearConfig) : null;
   const inputKey = `${value}|${manufactureYear}|${seatCount}`;
   const shownCheck = checked && checked.key === inputKey ? checked.result : null;
 
@@ -168,13 +180,13 @@ export function PremiumCalculatorCard({
       ) : null}
       {rows ? (
         <PremiumPlanTable
-          tiers={config.tiers as readonly InsurancePremiumTier[]}
+          tiers={(yearConfig ?? config).tiers as readonly InsurancePremiumTier[]}
           rows={rows}
           check={shownCheck}
           label={t('tableLabel')}
         />
       ) : (
-        <p className={styles.muted}>{t('enterValue')}</p>
+        <p className={styles.muted}>{yearConfig ? t('enterValue') : t('yearNotSold')}</p>
       )}
     </section>
   );

@@ -32,13 +32,7 @@ import {
   type DepositStatus,
   type PaymentMethod,
 } from '@xeprime/types';
-import {
-  bookingMoney,
-  counterDueAmount,
-  emptyMoneySides,
-  loadBookingMoneySides,
-  ownerShareHeldOnline,
-} from '../../../common/booking-money';
+import { loadCounterDueAmount } from '../../../common/booking-money';
 import { assertBookingMoneyOpenWithinTx } from '../../../common/booking-money-gate';
 import { formatVnd } from '../../../common/money';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -322,36 +316,14 @@ export class SettlementService {
     bookingId: string,
     extraSurcharge: Prisma.Decimal = ZERO,
   ): Promise<Prisma.Decimal> {
-    const booking = await db.booking.findFirst({
-      where: { id: bookingId, tenantId, deletedAt: null },
-      select: {
-        totalAmount: true,
-        paidAmount: true,
-        priceSnapshot: true,
-        hold: { select: { paidAmount: true } },
-      },
-    });
-    if (!booking) {
+    const due = await loadCounterDueAmount(db, tenantId, bookingId, extraSurcharge);
+    if (!due) {
       throw new NotFoundException({
         code: API_ERROR_CODE.NOT_FOUND,
         message: 'Không tìm thấy đơn',
       });
     }
-    const sides =
-      (await loadBookingMoneySides(db, [bookingId])).get(bookingId) ?? emptyMoneySides();
-    const money = bookingMoney({
-      totalAmount: booking.totalAmount,
-      paidAmount: booking.paidAmount,
-      ...sides,
-      surchargeTotal: sides.surchargeTotal.plus(extraSurcharge),
-    });
-    return counterDueAmount(
-      money.debtAmount,
-      ownerShareHeldOnline({
-        holdPaid: booking.hold?.paidAmount != null,
-        priceSnapshot: booking.priceSnapshot as unknown as BookingPriceSnapshot | null,
-      }),
-    );
+    return due;
   }
 
   /**

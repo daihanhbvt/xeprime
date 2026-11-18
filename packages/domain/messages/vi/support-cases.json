@@ -104,7 +104,10 @@
         "insurer": "trả hãng bảo hiểm {amount}",
         "tax": "thuế {amount}",
         "deferred": "Đơn còn tranh chấp khác đang mở nên tiền chờ người trực chốt tay ở màn Tài chính."
-      }
+      },
+      "revertsHandover": "Chủ xe đã bấm giao xe: kết luận này gỡ biên bản giao xe và đảo nghĩa vụ thuế của chuyến trước khi khép đơn.",
+      "keepsActive": "Chủ xe đã bấm giao xe: kết luận này giữ nguyên chuyến đang thuê.",
+      "insuranceIssued": "Giấy chứng nhận bảo hiểm đã phát hành: khách vẫn được hoàn tiền bảo hiểm, phí trả hãng do XePrime chịu - báo bộ phận bảo hiểm để làm việc với hãng."
     }
   }
 }

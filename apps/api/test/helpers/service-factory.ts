@@ -50,6 +50,7 @@ import { TaxReadService } from '../../src/modules/tax/tax-read.service';
 import { TaxService } from '../../src/modules/tax/tax.service';
 import { InsuranceEligibilityService } from '../../src/modules/insurance/insurance-eligibility.service';
 import { InsuranceOfferService } from '../../src/modules/insurance/insurance-offer.service';
+import { InsuranceProductsService } from '../../src/modules/insurance/insurance-products.service';
 import { InsurancePremiumQuoteService } from '../../src/modules/insurance/insurance-premium-quote.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { SellerProfileService } from '../../src/modules/seller-profile/seller-profile.service';
@@ -335,7 +336,11 @@ export function makePricingService(
     new FeePoliciesService(prisma, new AuditService(prisma)),
     offer,
     eligibility,
-    new InsurancePremiumQuoteService(partner, eligibility),
+    new InsurancePremiumQuoteService(
+      partner,
+      eligibility,
+      new InsuranceProductsService(prisma, new AuditService(prisma), offer),
+    ),
   );
 }
 

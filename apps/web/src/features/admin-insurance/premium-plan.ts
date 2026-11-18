@@ -1,8 +1,10 @@
 import {
   computeValueTierPremium,
+  insurancePremiumTiersForYear,
   insuranceRemittanceCommission,
   percentOfVnd,
   type InsurancePremiumTier,
+  type InsurancePremiumYearBand,
 } from '@xeprime/types';
 
 /**
@@ -32,6 +34,8 @@ export interface PremiumPlanRow {
 
 export interface PremiumPlanConfig {
   tiers: readonly InsurancePremiumTier[];
+  /** Nhóm năm sản xuất (ADR 0106) — `null` = một biểu phí cho mọi năm. */
+  bands?: readonly InsurancePremiumYearBand[] | null;
   /** `null` / 0 = phí thu hộ đang tắt. */
   serviceFeePercent: number | null;
   /** % hoa hồng đại lý, 0..50, tối đa hai chữ số lẻ. */
@@ -82,6 +86,10 @@ export function previousTierDays(tiers: readonly InsurancePremiumTier[], index: 
  */
 export function premiumConfigOf(product: {
   premiumTiers?: readonly InsurancePremiumTier[] | null;
+  /** Trên dây `yearFrom`/`yearTo` vắng = `null` (mở về một phía). */
+  premiumYearBands?:
+    | readonly { yearFrom?: number | null; yearTo?: number | null; percents: readonly string[] }[]
+    | null;
   serviceFeeEnabled: boolean;
   serviceFeePercent: number;
   agencyCommissionPercent: number;
@@ -90,7 +98,40 @@ export function premiumConfigOf(product: {
   if (tiers.length === 0) return null;
   return {
     tiers,
+    bands: product.premiumYearBands?.length
+      ? product.premiumYearBands.map((b) => ({
+          yearFrom: b.yearFrom ?? null,
+          yearTo: b.yearTo ?? null,
+          percents: [...b.percents],
+        }))
+      : null,
     serviceFeePercent: product.serviceFeeEnabled ? product.serviceFeePercent : null,
     agencyCommissionPercent: product.agencyCommissionPercent,
   };
+}
+
+/**
+ * Cấu hình bảng phí cho MỘT đời xe (ADR 0106): % của nhóm năm phủ năm đó. `null` = hãng không bán
+ * cho đời xe này. Năm vắng ⇒ biểu phí chung.
+ */
+export function premiumConfigForYear(
+  config: PremiumPlanConfig,
+  manufactureYear: number | null | undefined,
+): PremiumPlanConfig | null {
+  const tiers = insurancePremiumTiersForYear(config.tiers, config.bands ?? null, manufactureYear);
+  return tiers ? { ...config, tiers } : null;
+}
+
+/**
+ * Nhóm năm "mới nhất" (mở về tương lai, hoặc năm kết thúc lớn nhất) — biểu phí chung của sản phẩm
+ * luôn mang % của nhóm này (cùng luật với đồng bộ ở server).
+ */
+export function newestBand(
+  bands: readonly InsurancePremiumYearBand[],
+): InsurancePremiumYearBand | null {
+  return (
+    [...bands].sort(
+      (a, b) => (b.yearTo ?? Number.MAX_SAFE_INTEGER) - (a.yearTo ?? Number.MAX_SAFE_INTEGER),
+    )[0] ?? null
+  );
 }

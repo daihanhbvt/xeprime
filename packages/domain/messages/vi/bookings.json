@@ -50,7 +50,8 @@
     "handoverPhotos": "Ảnh bàn giao",
     "confirmPickup": "Xác nhận đã giao xe",
     "confirmReturn": "Xác nhận đã nhận xe",
-    "confirmPermissionHint": "Cần quyền handovers.confirm để xác nhận bàn giao"
+    "confirmPermissionHint": "Cần quyền handovers.confirm để xác nhận bàn giao",
+    "pickupNotOpen": "Chưa tới giờ giao xe. Xác nhận giao xe mở từ {time} (60 phút trước giờ nhận). Khách cần nhận sớm hơn thì đổi giờ nhận với khách trước."
   },
   "statusActions": {
     "cancel": "Hủy đơn",
@@ -330,6 +331,9 @@
       "onTime": "Đúng giờ",
       "late": "Trễ {duration}",
       "lateHint": "Trễ {duration} so với giờ hẹn",
+      "early": "Sớm {duration}",
+      "earlyTitle": "Trả sớm {duration} so với giờ hẹn",
+      "earlyBody": "Xe trống lịch ngay khi xác nhận và khách khác đặt được. Tiền thuê giữ nguyên theo đơn, XePrime không tự hoàn các ngày khách không dùng. Khách sẽ được báo và có thể báo \"Tôi chưa trả xe\" nếu vẫn đang giữ xe.",
       "timeLabel": "Thời gian nhận thực tế",
       "useNow": "Hiện tại",
       "useScheduled": "Đúng giờ",
@@ -507,11 +511,18 @@
     "recordDepositTitle": "Thu tiền cọc",
     "recordOk": "Ghi nhận",
     "debtLead": "Còn nợ",
+    "counterLead": "Còn phải thu của khách",
     "depositLead": "Cọc còn phải thu",
     "depositNoticeTitle": "Cọc không trừ vào công nợ",
     "depositNoticeBody": "Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến - nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ.",
     "descriptionLabel": "Ghi chú (tuỳ chọn)",
-    "recordDepositSuccess": "Đã ghi nhận thu cọc"
+    "recordDepositSuccess": "Đã ghi nhận thu cọc",
+    "validation": {
+      "amountRequired": "Nhập số tiền",
+      "amountPositive": "Số tiền phải lớn hơn 0",
+      "amountOverDue": "Không thu quá {amount}. Khoản khách đưa thêm ngoài đơn, hãy lập phiếu thu ở Sổ Thu-Chi.",
+      "methodRequired": "Chọn hình thức"
+    }
   },
   "create": {
     "title": "Tạo đơn tại quầy",
@@ -523,8 +534,8 @@
       "price": "Giá"
     },
     "vehicle": {
-        "available": "Sẵn sàng",
-        "pricePerDay": "{price}/ngày",
+      "available": "Sẵn sàng",
+      "pricePerDay": "{price}/ngày",
       "title": "Chọn xe cho chuyến",
       "searchLabel": "Tìm xe",
       "searchPlaceholder": "Tên xe, biển số, mã xe…",
@@ -949,7 +960,11 @@
     }
   },
   "detailPage": {
-    "tabs": { "prep": "Chuẩn bị", "trip": "Chuyến & thời gian", "extra": "Phát sinh" },
+    "tabs": {
+      "prep": "Chuẩn bị",
+      "trip": "Chuyến & thời gian",
+      "extra": "Phát sinh"
+    },
     "title": "Chi tiết đơn · #{code}",
     "createdAt": "Tạo lúc {date}",
     "stepperLabel": "Tiến trình đơn thuê",

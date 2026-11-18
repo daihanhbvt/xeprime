@@ -149,10 +149,7 @@ const TRANSITIONS: Readonly<Record<SupportCaseStatus, readonly SupportCaseStatus
   [SUPPORT_CASE_STATUS.CLOSED]: [],
 };
 
-export function canTransitionSupportCase(
-  from: SupportCaseStatus,
-  to: SupportCaseStatus,
-): boolean {
+export function canTransitionSupportCase(from: SupportCaseStatus, to: SupportCaseStatus): boolean {
   return TRANSITIONS[from].includes(to);
 }
 
@@ -224,7 +221,12 @@ export const SUPPORT_CASE_OPEN_REASON = {
   RETURN_DISPUTED: 'return_disputed',
   /** ADR 0094: worker — quá ân hạn trả xe mà cả hai bên im lặng. */
   RETURN_OVERDUE: 'return_overdue',
+  /** ADR 0105: chủ xe xác nhận trả xe SỚM nhưng khách báo "Tôi chưa trả xe". */
+  TRIP_NOT_RETURNED: 'trip_not_returned',
 } as const;
+
+export type SupportCaseOpenReason =
+  (typeof SUPPORT_CASE_OPEN_REASON)[keyof typeof SUPPORT_CASE_OPEN_REASON];
 
 /**
  * Kết luận TỰ ĐỘNG một case (không có nhân sự nào bấm) — ghi vào `audit_logs.after_json.reason`.

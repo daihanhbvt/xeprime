@@ -88,9 +88,18 @@ export function customerReturnAutoCompleteAt(reportedAt: Date): Date {
   return new Date(reportedAt.getTime() + CUSTOMER_RETURN_CONFIRM_WINDOW_HOURS * 60 * MS_PER_MINUTE);
 }
 
+/**
+ * Mốc sớm nhất xác nhận GIAO XE được - ADR 0104 điều 1: CÙNG một mốc cho gian hàng bấm "Đã giao xe"
+ * và khách bấm "Đã nhận xe" (`pickupAt − 60′`). Giao sớm hơn nữa là đổi giờ nhận, không phải bàn giao:
+ * mốc giao xe khởi động thuế, bảo hiểm và tính giờ của chuyến.
+ */
+export function pickupHandoverOpensAt(pickupAt: Date): Date {
+  return new Date(pickupAt.getTime() - CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES * MS_PER_MINUTE);
+}
+
 /** Mốc sớm nhất khách bấm "Đã nhận xe" được. */
 export function customerPickupConfirmOpensAt(pickupAt: Date): Date {
-  return new Date(pickupAt.getTime() - CUSTOMER_PICKUP_CONFIRM_LEAD_MINUTES * MS_PER_MINUTE);
+  return pickupHandoverOpensAt(pickupAt);
 }
 
 export interface CustomerPickupConfirmInput {

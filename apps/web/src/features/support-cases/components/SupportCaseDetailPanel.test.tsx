@@ -210,6 +210,32 @@ describe('SupportCaseDetailPanel - tranh chấp trước nhận xe', () => {
     expect(within(dialog).getByText(/tiền chờ người trực chốt tay/)).toBeTruthy();
   });
 
+  /*
+   * ADR 0104: lời báo "chưa nhận được xe" trên đơn ĐANG THUÊ - kết luận huỷ gỡ biên bản giao xe, và
+   * GCN đã phát hành thì khoản trả hãng do XePrime chịu. Hai câu đến từ bản xem trước của server.
+   */
+  it('đơn đang thuê ⇒ hộp huỷ nói sẽ gỡ biên bản giao xe và GCN đã phát hành', async () => {
+    detail.data = caseDetail(SUPPORT_CASE_CATEGORY.DISPUTE, DISPUTE_VERDICTS);
+    preview.data = { items: [], revertsHandover: true, insuranceIssued: true };
+    renderPanel(SUPPORT_SURFACE.PLATFORM);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Huỷ, không tính lỗi bên nào' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/gỡ biên bản giao xe/)).toBeTruthy();
+    expect(within(dialog).getByText(/phí trả hãng do XePrime chịu/)).toBeTruthy();
+  });
+
+  it('đơn đang thuê ⇒ "xe đã giao" nói rõ giữ nguyên chuyến', async () => {
+    detail.data = caseDetail(SUPPORT_CASE_CATEGORY.DISPUTE, DISPUTE_VERDICTS);
+    preview.data = { items: [], revertsHandover: true, insuranceIssued: true };
+    renderPanel(SUPPORT_SURFACE.PLATFORM);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xe đã giao' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/giữ nguyên chuyến đang thuê/)).toBeTruthy();
+    expect(within(dialog).queryByText(/phí trả hãng/)).toBeNull();
+  });
+
   it('"xe đã giao" ⇒ nói rõ chưa chốt tiền', async () => {
     detail.data = caseDetail(SUPPORT_CASE_CATEGORY.DISPUTE, DISPUTE_VERDICTS);
     preview.data = { items: [] };

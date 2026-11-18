@@ -198,6 +198,27 @@ export function SupportCaseDetailPanel({
     const line = parts.join(LIST_SEPARATOR);
     return money.deferred ? `${line}. ${t('detail.verdict.money.deferred')}` : `${line}.`;
   }
+  /*
+   * Hai lời nhắc của đơn ĐANG THUÊ mà khách báo chưa nhận được xe (ADR 0104): kết luận nào gỡ biên
+   * bản giao xe, và GCN bảo hiểm đã phát hành thì khoản trả hãng do XePrime chịu. Đọc từ bản xem
+   * trước của server - màn hình không tự suy trạng thái đơn.
+   */
+  function verdictNotes(verdict: TripVerdict): string[] {
+    const preview = verdictPreview.data;
+    if (!preview) return [];
+    const notes: string[] = [];
+    if (preview.revertsHandover) {
+      notes.push(
+        NEGATIVE_VERDICTS.has(verdict)
+          ? t('detail.verdict.revertsHandover')
+          : t('detail.verdict.keepsActive'),
+      );
+    }
+    if (preview.insuranceIssued && NEGATIVE_VERDICTS.has(verdict)) {
+      notes.push(t('detail.verdict.insuranceIssued'));
+    }
+    return notes;
+  }
   const allowedTransitions = SUPPORT_CASE_STATUS_VALUES.filter(
     (next) =>
       canTransitionSupportCase(status, next) &&
@@ -235,7 +256,9 @@ export function SupportCaseDetailPanel({
         {row.assigneeName ? (
           <Descriptions.Item label={t('detail.assignee')}>{row.assigneeName}</Descriptions.Item>
         ) : null}
-        <Descriptions.Item label={t('detail.createdAt')}>{fmt.dateTime(row.createdAt)}</Descriptions.Item>
+        <Descriptions.Item label={t('detail.createdAt')}>
+          {fmt.dateTime(row.createdAt)}
+        </Descriptions.Item>
       </Descriptions>
 
       <p className={styles.description}>{row.description}</p>
@@ -307,15 +330,16 @@ export function SupportCaseDetailPanel({
             </Checkbox>
           ) : null}
           <div className={styles.actions}>
-            <Button type="primary" loading={post.isPending} disabled={!body.trim()} onClick={sendMessage}>
+            <Button
+              type="primary"
+              loading={post.isPending}
+              disabled={!body.trim()}
+              onClick={sendMessage}
+            >
               {t('detail.send')}
             </Button>
             {allowedTransitions.map((next) => (
-              <Button
-                key={next}
-                loading={transition.isPending}
-                onClick={() => changeStatus(next)}
-              >
+              <Button key={next} loading={transition.isPending} onClick={() => changeStatus(next)}>
                 {t('detail.moveTo', { status: domainLabel('supportCaseStatus', next) })}
               </Button>
             ))}
@@ -343,7 +367,11 @@ export function SupportCaseDetailPanel({
                 title={openVerdict ? t(`detail.verdict.action.${openVerdict}`) : ''}
                 summary={
                   openVerdict
-                    ? `${t(`detail.verdict.summary.${openVerdict}`)} ${moneySummary(openVerdict, verdictMoney)}`
+                    ? [
+                        t(`detail.verdict.summary.${openVerdict}`),
+                        moneySummary(openVerdict, verdictMoney),
+                        ...verdictNotes(openVerdict),
+                      ].join(' ')
                     : undefined
                 }
                 audienceHint={t('detail.verdict.audience')}

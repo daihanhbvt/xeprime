@@ -13,13 +13,15 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 
 import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
 import { useCatalogSpecLock } from '../hooks/use-catalog-spec-lock';
-import { SpecLockedField } from './SpecLockedField';
+import { useSpecFieldLock } from '../hooks/use-spec-field-lock';
 
 interface VehicleClassificationFieldsProps {
   control: Control<VehicleFormValues>;
   vehicleType: string;
   /** Ô kiểu dáng ô tô dùng thẻ có ảnh, nên nơi gọi tự dựng và truyền vào đây. */
   bodyTypePicker?: ReactNode;
+  /** Kiểu dáng là ô chọn cỡ một cột (wizard thêm xe) thay vì cả hàng thẻ ảnh. */
+  bodyTypeCompact?: boolean;
   /** Hiện dấu * ở số chỗ (khi loại xe cần) — wizard thêm xe nhanh bắt buộc đủ điều kiện lên chợ. */
   required?: boolean;
   disabled?: boolean;
@@ -47,6 +49,7 @@ export function VehicleClassificationFields({
   control,
   vehicleType,
   bodyTypePicker,
+  bodyTypeCompact = false,
   disabled,
   setValue,
   required = false,
@@ -68,6 +71,8 @@ export function VehicleClassificationFields({
   const seatLock = useCatalogSpecLock(control, vehicleType, 'seatCount', {
     modelLocked: seatLocked,
   });
+  const toFieldLock = useSpecFieldLock();
+  const seatLockActive = seatLock.locked && !disabled && seatCount != null;
   const seatLockHelp = seatLock.fromData
     ? tCatalog('specLocked')
     : seatLock.locked && spec.model
@@ -97,21 +102,14 @@ export function VehicleClassificationFields({
   return (
     <Row gutter={16}>
       {policy.seatCount !== 'hidden' ? (
-        <Col xs={24} sm={12}>
+        // `data-field`: ô có ba dạng (khoá / nút chọn / ô số) - lưới wizard thêm xe xếp theo mốc này.
+        <Col xs={24} sm={12} data-field="seatCount" data-dep="model">
           {/*
             Số chỗ theo MẪU XE đang chọn (`catalogSpecRule`): một cấu hình ⇒ điền sẵn và khoá;
-            nhiều cấu hình ⇒ chỉ chọn trong đó; mẫu chưa khai ⇒ nhập tự do như trước.
+            nhiều cấu hình ⇒ chỉ chọn trong đó; mẫu chưa khai ⇒ nhập tự do như trước. Khoá là trạng
+            thái của CHÍNH ô số (chỉ đọc + bút trong ô) - đổi mẫu xe không dựng lại ô.
           */}
-          {seatLock.locked && !disabled && seatCount != null ? (
-            <SpecLockedField
-              name="seatCount"
-              label={t('seatCount')}
-              value={tCommon('units.seat', { count: seatCount })}
-              lock={seatLock}
-              help={seatLockHelp}
-              required={seatRequired}
-            />
-          ) : spec.model && spec.seats.kind === 'choice' ? (
+          {!seatLockActive && spec.model && spec.seats.kind === 'choice' ? (
             <SeatChoiceField
               control={control}
               label={t('seatCount')}
@@ -136,13 +134,15 @@ export function VehicleClassificationFields({
               min={1}
               max={64}
               disabled={disabled}
+              help={seatLockActive ? seatLockHelp : undefined}
+              lock={toFieldLock(seatLock, t('seatCount'), seatLockActive)}
             />
           )}
         </Col>
       ) : null}
 
       {policy.motorbikeCategory !== 'hidden' ? (
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} data-field="motorbikeCategory" data-dep="model">
           <SelectField
             control={control}
             name="motorbikeCategory"
@@ -159,7 +159,11 @@ export function VehicleClassificationFields({
 
       {trailing}
 
-      {policy.bodyType !== 'hidden' && bodyTypePicker ? <Col xs={24}>{bodyTypePicker}</Col> : null}
+      {policy.bodyType !== 'hidden' && bodyTypePicker ? (
+        <Col xs={24} {...(bodyTypeCompact ? { sm: 12 } : {})} data-field="bodyType" data-dep="model">
+          {bodyTypePicker}
+        </Col>
+      ) : null}
     </Row>
   );
 }

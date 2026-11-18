@@ -2,16 +2,19 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestj
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ACCOUNT_REALM, PERMISSION } from '@xeprime/types';
-import { PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
+import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   InsuranceOverviewDto,
   InsuranceOverviewQueryDto,
   InsurancePremiumCheckDto,
   InsurancePremiumCheckResultDto,
+  InsurancePremiumSyncResultDto,
   InsuranceVehicleListQueryDto,
   InsuranceVehiclePageDto,
 } from './dto/insurance-insights.dto';
 import { InsuranceInsightsService } from './insurance-insights.service';
+import { InsurancePremiumSyncService } from './insurance-premium-sync.service';
 
 /**
  * Số liệu quản trị bảo hiểm của nền tảng — ADR 0097. Chỉ đọc.
@@ -25,7 +28,10 @@ import { InsuranceInsightsService } from './insurance-insights.service';
 @PlatformOnly()
 @Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformInsuranceInsightsController {
-  constructor(private readonly insights: InsuranceInsightsService) {}
+  constructor(
+    private readonly insights: InsuranceInsightsService,
+    private readonly sync: InsurancePremiumSyncService,
+  ) {}
 
   @Get('overview')
   @RequirePermissions(PERMISSION.PLATFORM_MONEY_MANAGE)
@@ -62,5 +68,23 @@ export class PlatformInsuranceInsightsController {
   @ApiOkResponse({ type: InsurancePremiumCheckResultDto })
   premiumCheck(@Body() dto: InsurancePremiumCheckDto): Promise<InsurancePremiumCheckResultDto> {
     return this.insights.premiumCheck(dto);
+  }
+
+  @Post('premium-sync')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.PLATFORM_INSURANCE_MANAGE)
+  // ~50-60 lần gọi API của hãng mỗi lượt — hai lượt mỗi phút là đủ cho người bấm tay.
+  @Throttle({ default: { limit: 2, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Đồng bộ biểu phí từ hãng ngay - mốc bậc + % theo năm sản xuất (ADR 0106)',
+    description:
+      'Hỏi API tính phí của hãng (MIC `phi_vcx`) để dựng lại biểu phí: mốc ngày các bậc và % của ' +
+      'từng nhóm năm sản xuất. Được ⇒ ghi biểu phí và KHOÁ sửa tay; hỏng ⇒ giữ biểu phí đang chạy, ' +
+      'mở cho sửa tay. Môi trường không cắm adapter thật ⇒ `not_supported`, không ghi gì. KHÔNG có ' +
+      'vòng tự chạy: chỉ chạy khi admin bấm (~50-60 lượt hỏi hãng).',
+  })
+  @ApiOkResponse({ type: InsurancePremiumSyncResultDto })
+  premiumSync(@CurrentUser() user: AuthenticatedUser): Promise<InsurancePremiumSyncResultDto> {
+    return this.sync.sync(user.id);
   }
 }

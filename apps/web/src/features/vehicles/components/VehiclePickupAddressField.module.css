@@ -1,0 +1,34 @@
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+/* Cao bằng một ô nhập để đứng thẳng hàng trong lưới 3 cột. */
+.box {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-height: 40px;
+  padding: 0 var(--xp-space-sm) 0 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.text,
+.placeholder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.placeholder {
+  color: var(--xp-color-text-tertiary);
+}
+
+.box > button {
+  flex-shrink: 0;
+}

@@ -13,6 +13,7 @@ import { InsuranceFollowUpSweeper } from './insurance-follow-up.sweeper';
 import { InsuranceRefundService } from './insurance-refund.service';
 import { InsuranceOfferService } from './insurance-offer.service';
 import { InsurancePremiumQuoteService } from './insurance-premium-quote.service';
+import { InsurancePremiumSyncService } from './insurance-premium-sync.service';
 import { InsuranceProductsService } from './insurance-products.service';
 import { InsuranceReadService } from './insurance-read.service';
 import { InsuranceRemittanceController } from './insurance-remittance.controller';
@@ -91,6 +92,8 @@ function micConfigFrom(config: ConfigService) {
     // Bảng kê trả phí hãng (ADR 0088 điều 6) — writer duy nhất của insurance_premium_remittances.
     InsuranceRemittanceService,
     InsuranceInsightsService,
+    // Đồng bộ biểu phí từ hãng (mốc bậc + % theo năm sản xuất) — chỉ khi admin bấm (ADR 0106).
+    InsurancePremiumSyncService,
     /*
      * Client MIC dùng chung cho API (tải GCN PDF). `null` khi không chạy adapter MIC thật — mọi
      * chỗ dùng nó phải xử lý nhánh đó (GCN giả lập không có PDF).

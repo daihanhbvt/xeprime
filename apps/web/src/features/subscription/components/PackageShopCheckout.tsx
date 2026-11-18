@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { paymentPath } from '@/constants/routes';
+import { cx } from '@/lib/cx';
 
 import { onePerPaymentTarget } from '../payable';
 import { PLAN_LANE_SCOPES, pendingInvoiceForScope } from '../plan-lanes';
@@ -45,15 +46,25 @@ import styles from './PackageShopCheckout.module.css';
  * KHÔNG có gói hoa hồng tạm ở đây (ADR 0040 điều 2): người đăng ký tuyến gói nhận gói THẬT lúc
  * tiền về.
  */
-export function PackageShopCheckout() {
+export function PackageShopCheckout({
+  purchaseLocked = false,
+}: {
+  /**
+   * Chưa mua gói được (gian hàng còn thiếu logo - ADR 0103): chỉ hiện mã đang chờ nếu có, không
+   * luồng chọn gói, không lối mở lại. Không có mã nào thì không vẽ gì.
+   */
+  purchaseLocked?: boolean;
+}) {
   const t = useTranslations('ShopOnboarding.checkout');
 
   const pending = usePendingInvoices();
   const invoices = pending.data ?? [];
   /** Người dùng mở lại luồng chọn gói trong khi đang có hoá đơn chờ. */
   const [editing, setEditing] = useState(false);
-  const showFlow = !pending.isLoading && (invoices.length === 0 || editing);
+  const showFlow = !purchaseLocked && !pending.isLoading && (invoices.length === 0 || editing);
   const me = useMySubscription(showFlow);
+
+  if (purchaseLocked && invoices.length === 0) return null;
 
   if (pending.isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
 
@@ -84,8 +95,9 @@ export function PackageShopCheckout() {
    * nút nói dối. Còn loại xe trống thì lối là "Thêm gói …".
    */
   const canEdit = invoices.every((item) => item.status === SUBSCRIPTION_INVOICE_STATUS.ISSUED);
-  const reopenLabel =
-    openScopes.length === 1 && onlyOpenScope
+  const reopenLabel = purchaseLocked
+    ? null
+    : openScopes.length === 1 && onlyOpenScope
       ? t('addOtherScope', { scope: t(`scope.${onlyOpenScope}`) })
       : openScopes.length > 1
         ? t('addPlan')
@@ -94,7 +106,8 @@ export function PackageShopCheckout() {
           : null;
 
   return (
-    <div className={styles.wrap}>
+    // Đứng dưới bước logo trong cùng một khung: một vạch ngăn cho mắt biết đó là hai việc.
+    <div className={cx(styles.wrap, purchaseLocked && styles.belowStep)}>
       {/* Dải chờ tiền dùng CHUNG với luồng nâng cấp — cùng một trạng thái thì cùng một câu chữ. */}
       {onePerPaymentTarget(invoices).map((invoice) => (
         <InvoiceWaitingPanel key={invoice.id} invoice={invoice} />

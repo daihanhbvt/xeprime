@@ -620,7 +620,8 @@ export function workspacePaths(workspace: Workspace): {
   return {
     home: ROUTES.MANAGE.ROOT,
     vehicles: ROUTES.MANAGE.VEHICLES,
-    vehicleNew: listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT),
+    // Thêm xe: CÙNG wizard đầy đủ với gian hàng (18/11/2026), ẩn phần không thuộc tuyến này.
+    vehicleNew: ROUTES.MANAGE.VEHICLE_NEW,
     calendar: ROUTES.MANAGE.CALENDAR,
     chat: ROUTES.MANAGE.CHAT,
     bookings: ROUTES.MANAGE.BOOKINGS,

@@ -14,6 +14,7 @@ import type {
   InsuranceOverview,
   InsurancePremiumCheckInput,
   InsurancePremiumCheckResult,
+  InsurancePremiumSyncResult,
   InsuranceVehicleFilters,
   InsuranceVehicleRow,
   InsurancePolicy,
@@ -166,6 +167,10 @@ export const checkInsurancePremium = (
   body: InsurancePremiumCheckInput,
 ): Promise<InsurancePremiumCheckResult> =>
   apiPost<InsurancePremiumCheckResult>('/platform/insurance/premium-check', body);
+
+/** Đồng bộ biểu phí từ hãng ngay (ADR 0106) — được thì khoá biểu phí, hỏng thì mở sửa tay. */
+export const syncInsurancePremium = (): Promise<InsurancePremiumSyncResult> =>
+  apiPost<InsurancePremiumSyncResult>('/platform/insurance/premium-sync', {});
 
 /** Tải CSV bảng kê — cùng origin, cookie phiên tự đi kèm. */
 export const remittanceCsvHref = (id: string): string =>

@@ -4,7 +4,9 @@
 > tính năng. Quyết định gốc: [ADR 0088](../decisions/0088-mic-trip-insurance-integration.md) (MIC VCX
 > theo chuyến) · [ADR 0089](../decisions/0089-vehicle-registration-at-car-create.md) (cà vẹt khi tạo ô
 > tô) · [ADR 0090](../decisions/0090-vehicle-master-data-catalog.md) (giá trị xe gợi ý từ dữ liệu xe
-> chuẩn). Mâu thuẫn với ADR thì ADR thắng.
+> chuẩn) · [ADR 0106](../decisions/0106-insurance-premium-by-manufacture-year-synced-from-partner.md)
+> (biểu phí theo năm sản xuất, đồng bộ từ MIC, khoá sửa tay; hợp đồng không dài hơn bậc đã trả). Mâu
+> thuẫn với ADR thì ADR thắng.
 
 ## 1. Bức tranh một trang
 
@@ -26,7 +28,7 @@ Chủ xe khai xe đủ điều kiện + chọn Bắt buộc/Tuỳ chọn ─► 
 | Worker | Cấp GCN ở mốc giao xe, thử lại khi MIC lỗi tạm thời | `apps/worker` |
 | Admin vận hành | Theo dõi GCN, xử lý lượt cấp lỗi, huỷ GCN | Admin › Bảo hiểm › Chứng nhận |
 | Kế toán | Lập/chốt/trả bảng kê tháng, xuất CSV | Admin › Bảo hiểm › Bảng kê |
-| Admin sản phẩm | Sửa biểu phí bậc, mức khấu trừ, hotline, bật/tắt sản phẩm | Admin › Bảo hiểm › Sản phẩm |
+| Admin sản phẩm | Xem biểu phí đang áp dụng (theo năm sản xuất), bấm "Đồng bộ từ MIC ngay" (~50-60 lượt hỏi MIC, không có vòng tự chạy), thấy nhãn "Lệch với MIC" khi một lượt duyệt đơn ra số MIC khác biểu phí; chỉ sửa tay khi đồng bộ hỏng hoặc đang lệch; sửa mức khấu trừ, hotline, bật/tắt sản phẩm | Admin › Bảo hiểm › Biểu phí & sản phẩm |
 
 ## 2. Màn Admin › Bảo hiểm — ĐANG CÓ
 

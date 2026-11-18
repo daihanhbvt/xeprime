@@ -1,5 +1,6 @@
 import type { VehicleFormValues } from '@xeprime/validators';
 import {
+  SERVICE_TYPE,
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   vehicleFeatureAppliesTo,
@@ -56,6 +57,10 @@ function insuredValueToInput(values: VehicleFormValues): string | null {
 }
 
 export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput {
+  const services = values.serviceTypes ?? [];
+  const selfDrive = services.includes(SERVICE_TYPE.SELF_DRIVE);
+  const withDriver = services.includes(SERVICE_TYPE.WITH_DRIVER);
+  const longTerm = services.includes(SERVICE_TYPE.LONG_TERM);
   return {
     code: textOrUndefined(values.code),
     // Form thêm xe không có ô tên: trống ⇒ server ghép từ hãng + dòng + phiên bản + năm (ADR 0102).
@@ -97,18 +102,26 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     electricRangeKm: values.electricRangeKm ?? undefined,
     batteryCapacityKwh: values.batteryCapacityKwh ?? undefined,
     electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km ?? undefined,
-    weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
-    weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
-    hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
-    monthlyPrice: values.monthlyPrice == null ? null : String(values.monthlyPrice),
+    /*
+     * Giá CHỈ đi theo dịch vụ đang BẬT (18/11/2026): wizard tự điền giá tham khảo vào cả ba nhóm, và
+     * chủ xe có thể nhập rồi tắt dịch vụ - giá của dịch vụ đã tắt không được lên server.
+     */
+    weekdayPrice: selfDrive && values.weekdayPrice != null ? String(values.weekdayPrice) : undefined,
+    weekendPrice: selfDrive && values.weekendPrice != null ? String(values.weekendPrice) : undefined,
+    hourlyPrice: selfDrive && values.hourlyPrice != null ? String(values.hourlyPrice) : null,
+    monthlyPrice: longTerm && values.monthlyPrice != null ? String(values.monthlyPrice) : null,
     withDriverDailyPrice:
-      values.withDriverDailyPrice == null ? null : String(values.withDriverDailyPrice),
+      withDriver && values.withDriverDailyPrice != null ? String(values.withDriverDailyPrice) : null,
     withDriverInterCityPrice:
-      values.withDriverInterCityPrice == null ? null : String(values.withDriverInterCityPrice),
+      withDriver && values.withDriverInterCityPrice != null
+        ? String(values.withDriverInterCityPrice)
+        : null,
     withDriverOneWayPrice:
-      values.withDriverOneWayPrice == null ? null : String(values.withDriverOneWayPrice),
+      withDriver && values.withDriverOneWayPrice != null
+        ? String(values.withDriverOneWayPrice)
+        : null,
     deliveryEnabled: values.deliveryEnabled,
-    discountPercent: values.discountPercent ?? null,
+    discountPercent: selfDrive ? (values.discountPercent ?? null) : null,
     description: textOrUndefined(values.description),
     // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),

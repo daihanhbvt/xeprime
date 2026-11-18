@@ -1,7 +1,7 @@
 'use client';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { App, Badge, Tabs } from 'antd';
+import { App, Badge, Button, Tabs } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   INSURANCE_PREMIUM_BASIS,
@@ -30,14 +30,17 @@ import {
   insuranceProductFormTabErrors,
   insuranceProductFormTabs,
   offersServiceFee,
+  premiumLocked,
   toUpdateInsuranceProductBody,
   type InsuranceProductFormTab,
   type InsuranceProductFormValues,
 } from '../form';
 import { useUpdateInsuranceProduct } from '../hooks';
-import { premiumConfigOf } from '../premium-plan';
+import { newestBand, premiumConfigOf } from '../premium-plan';
 import type { InsuranceProduct } from '../types';
+import { PremiumSyncNotice } from './PremiumSyncNotice';
 import { PremiumTiersField } from './PremiumTiersField';
+import { PremiumYearBandsField } from './PremiumYearBandsField';
 import { ProductPremiumPreview } from './ProductPremiumPreview';
 import styles from './InsuranceProductFormDialog.module.css';
 
@@ -91,6 +94,7 @@ export function InsuranceProductFormDialog({
         urlTemplate: t('validation.urlTemplate'),
         displayOrder: (min, max) => t('validation.displayOrder', { min, max }),
         tiers: t('validation.tiers'),
+        bands: t('validation.bands'),
         serviceFeePercent: (max) => t('validation.serviceFeePercent', { max }),
         serviceFeePercentRequired: t('validation.serviceFeePercentRequired'),
         agencyCommissionPercent: (max) => t('validation.agencyCommissionPercent', { max }),
@@ -101,6 +105,8 @@ export function InsuranceProductFormDialog({
   const {
     control,
     handleSubmit,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<InsuranceProductFormValues>({
     resolver: yupResolver(schema),
@@ -112,15 +118,47 @@ export function InsuranceProductFormDialog({
    * Xem trước bảng phí theo số ĐANG SỬA (ADR 0097). Biểu phí đang gõ dở (sai luật) ⇒ `null`, khung
    * xem trước nói rõ vì sao thay vì vẽ một bảng sai.
    */
-  const [watchedTiers, serviceFeeEnabledValue, watchedServiceFee, watchedCommission] = useWatch({
-    control,
-    name: ['premiumTiers', 'serviceFeeEnabled', 'serviceFeePercent', 'agencyCommissionPercent'],
-  });
+  const [watchedTiers, watchedBands, serviceFeeEnabledValue, watchedServiceFee, watchedCommission] =
+    useWatch({
+      control,
+      name: [
+        'premiumTiers',
+        'premiumYearBands',
+        'serviceFeeEnabled',
+        'serviceFeePercent',
+        'agencyCommissionPercent',
+      ],
+    });
   const serviceFeeEnabled = serviceFeeEnabledValue === true;
-  const previewTiers = (watchedTiers ?? []).map((tier) => ({
+  /*
+   * Biểu phí theo năm sản xuất (ADR 0106): đồng bộ từ hãng thì KHOÁ; có nhóm năm thì sửa % từng nhóm,
+   * xem trước theo nhóm mới nhất (cùng % với biểu phí chung).
+   */
+  const locked = premiumLocked(product);
+  const bandRows = watchedBands ?? [];
+  const hasBands = bandRows.length > 0;
+  const newest = hasBands
+    ? newestBand(
+        bandRows.map((b) => ({
+          yearFrom: b.yearFrom ?? null,
+          yearTo: b.yearTo ?? null,
+          percents: b.percents.map((x) => String(x ?? '')),
+        })),
+      )
+    : null;
+  const previewTiers = (watchedTiers ?? []).map((tier, i) => ({
     maxDays: Number(tier.maxDays),
-    percent: String(tier.percent ?? '').trim(),
+    percent: String((newest ? newest.percents[i] : tier.percent) ?? '').trim(),
   }));
+  /** Bỏ nhóm năm: một biểu phí cho mọi năm, lấy % của nhóm mới nhất làm điểm bắt đầu. */
+  const collapseBands = () => {
+    const tiers = getValues('premiumTiers').map((tier, i) => ({
+      ...tier,
+      percent: newest?.percents[i] ?? tier.percent,
+    }));
+    setValue('premiumTiers', tiers, { shouldDirty: true });
+    setValue('premiumYearBands', [], { shouldDirty: true, shouldValidate: true });
+  };
   const preview =
     valueTier && previewTiers.length > 0 && insurancePremiumTiersProblem(previewTiers) === null
       ? premiumConfigOf({
@@ -191,7 +229,17 @@ export function InsuranceProductFormDialog({
               hint={t('help.premiumTiersHint')}
               hintLabel={t('hints.premium')}
             >
-              <PremiumTiersField control={control} />
+              <PremiumSyncNotice product={product} />
+              {locked || hasBands ? (
+                <PremiumYearBandsField control={control} readOnly={locked} />
+              ) : (
+                <PremiumTiersField control={control} />
+              )}
+              {!locked && hasBands ? (
+                <Button type="link" className={styles.inlineAction} onClick={collapseBands}>
+                  {t('actions.collapseBands')}
+                </Button>
+              ) : null}
             </FormSection>
           ) : null}
           {withServiceFee ? (

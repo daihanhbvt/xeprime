@@ -9,7 +9,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { licenceTripLastDayKey } from '@xeprime/domain';
+import { DATE_TIME_SEPARATOR, licenceTripLastDayKey, toAppTz } from '@xeprime/domain';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -41,6 +41,7 @@ import {
   PRICE_ROW,
   canTransitionBooking,
   isBookingFinal,
+  isEarlyReturn,
   occupiesSchedule,
   isLongTermPackageMonths,
   longTermReturnAt,
@@ -534,7 +535,8 @@ export class BookingsService {
       contractId: contract?.id ?? null,
       contractSigned:
         contract !== null &&
-        (contract.status === CONTRACT_STATUS.SIGNED || contract.signedAt !== null),      pickupPhotoCount: photos.length,
+        (contract.status === CONTRACT_STATUS.SIGNED || contract.signedAt !== null),
+      pickupPhotoCount: photos.length,
       pickupPhotoRequired: requiredSlots.length,
       driverReady: withDriver
         ? detail.driver?.assignmentStatus === DRIVER_ASSIGNMENT_STATUS.ACCEPTED
@@ -1188,6 +1190,14 @@ export class BookingsService {
     if (to === BOOKING_STATUS.NO_SHOW) {
       await this.assertNoShowAllowed(tx, tenantId, id);
     }
+    // Giao xe sớm quá làm hợp đồng bảo hiểm vượt bậc phí khách đã trả (ADR 0106 điều 4).
+    if (to === BOOKING_STATUS.ACTIVE) {
+      await this.insurance.assertHandoverKeepsTierWithinTx(
+        tx,
+        id,
+        opts.actualPickupAt ? new Date(opts.actualPickupAt) : new Date(),
+      );
+    }
 
     // Điều kiện `status: from` trong WHERE: nếu ai đó vừa chuyển trạng thái xen vào giữa thì
     // 0 dòng khớp và ta 409 thay vì ghi đè quyết định của họ.
@@ -1389,6 +1399,17 @@ export class BookingsService {
           opts.reason?.trim()
             ? opts.reason.trim()
             : null;
+        /*
+         * Gian hàng xác nhận nhận lại xe SỚM hơn giờ trả (ADR 0105): khách phải biết ngay, kèm luật
+         * tiền (giữ nguyên theo đơn) và đường phản bác nếu họ vẫn đang giữ xe. Đo bằng giờ BẤM
+         * (server), không bằng giờ trả thực tế chủ xe khai - đó là mốc nút "Tôi chưa trả xe" dùng.
+         */
+        const earlyReturnBody =
+          to === BOOKING_STATUS.COMPLETED &&
+          (opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT) === AUDIT_ACTOR_SCOPE.TENANT &&
+          isEarlyReturn(updated.returnAt, new Date())
+            ? earlyReturnNotice(updated.returnAt)
+            : null;
         if (request?.customerUserId) {
           await this.notifications.emitToUser(
             request.customerUserId,
@@ -1398,7 +1419,7 @@ export class BookingsService {
               title: customerFacing.title.replace('{vehicle}', updated.vehicle.name),
               body: hostNote
                 ? `Chủ xe nhắn: “${hostNote}” ${CANCELLED_BY_HOST_REFUND_NOTE}`
-                : customerFacing.body,
+                : (earlyReturnBody ?? customerFacing.body),
               tenantId,
               targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
               targetId: id,
@@ -1429,6 +1450,51 @@ export class BookingsService {
    * Đọc trong CÙNG transaction với lệnh ghi: kiểm ngoài rồi mới mở transaction là để lại đúng
    * cái khe hở mà `updateMany` có điều kiện đang đóng lại.
    */
+  /**
+   * GỠ lượt giao xe - ADR 0104 điều 3: nền tảng xác minh khách CHƯA từng nhận xe dù chủ xe đã bấm
+   * giao. Đưa đơn `active` về `reserved` và xoá giờ nhận thực tế, để lượt kết luận đi tiếp ĐÚNG đường
+   * của một đơn chưa giao (huỷ / khách không đến) với mọi hệ quả tiền, bảo hiểm, uy tín như thường.
+   *
+   * KHÔNG phải một cạnh của `BOOKING_STATUS_TRANSITIONS`: thêm `active → reserved` vào bảng chung là
+   * mở cho mọi đường gọi một lối lùi chuyến. Chỉ `HandoversService.revertPickupWithinTx` gọi, trong
+   * transaction đã khoá dòng đơn; nó tự huỷ biên bản giao xe, còn thuế do người kết luận đảo.
+   * Không có chiếm lịch nào đổi (`reserved` và `active` cùng chiếm lịch).
+   */
+  async revertPickupWithinTx(
+    tx: Prisma.TransactionClient,
+    input: { tenantId: string; bookingId: string; actorUserId: string; reason: string },
+  ): Promise<void> {
+    const claimed = await tx.booking.updateMany({
+      where: {
+        id: input.bookingId,
+        tenantId: input.tenantId,
+        status: BOOKING_STATUS.ACTIVE,
+        actualReturnAt: null,
+        deletedAt: null,
+      },
+      data: { status: BOOKING_STATUS.RESERVED, actualPickupAt: null },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Đơn không còn ở trạng thái đang thuê - tải lại rồi thử lại',
+      });
+    }
+    await this.audit.record(
+      {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+        action: 'booking.pickup_reverted',
+        targetType: 'booking',
+        targetId: input.bookingId,
+        before: { status: BOOKING_STATUS.ACTIVE },
+        after: { status: BOOKING_STATUS.RESERVED, reason: input.reason },
+      },
+      tx,
+    );
+  }
+
   private async assertNoShowAllowed(
     tx: Prisma.TransactionClient,
     tenantId: string,
@@ -1451,7 +1517,8 @@ export class BookingsService {
         bookingId: id,
         tenantId,
         type: HANDOVER_TYPE.PICKUP,
-        confirmedAt: { not: null },
+        // Biên bản bị nền tảng GỠ (ADR 0104) giữ `confirmed_at` làm lịch sử nhưng đã `canceled`.
+        status: HANDOVER_STATUS.CONFIRMED,
       },
       select: { id: true },
     });
@@ -1500,6 +1567,16 @@ const CUSTOMER_FACING_TRANSITIONS: Partial<Record<BookingStatus, { title: string
       body: 'Chủ xe ghi nhận bạn không đến nhận xe. Liên hệ hỗ trợ nếu có nhầm lẫn.',
     },
   };
+
+/** Thân thông báo hoàn thành khi chủ xe xác nhận nhận lại xe SỚM (ADR 0105). */
+function earlyReturnNotice(returnAt: Date): string {
+  const local = toAppTz(returnAt);
+  const point = `${local.format('HH:mm')}${DATE_TIME_SEPARATOR}${local.format('DD/MM')}`;
+  return (
+    `Chủ xe đã xác nhận nhận lại xe, sớm hơn giờ trả theo đơn (${point}). Tiền thuê giữ nguyên ` +
+    'theo đơn đã đặt. Nếu bạn vẫn đang giữ xe, bấm "Tôi chưa trả xe" ở trang chuyến để XePrime xử lý.'
+  );
+}
 
 function money(v: string | undefined): Prisma.Decimal {
   return new Prisma.Decimal(v ?? '0');
@@ -1823,7 +1900,10 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     ownerTaxAmount: internalSnapshot?.fees?.taxAmount ?? null,
     ownerNetAmount: internalSnapshot?.fees?.ownerNetAmount ?? null,
     ownerPayout: internalSnapshot?.fees
-      ? ownerPayoutOf(internalSnapshot.fees, undefined, { pickupAt: b.pickupAt, returnAt: b.returnAt })
+      ? ownerPayoutOf(internalSnapshot.fees, undefined, {
+          pickupAt: b.pickupAt,
+          returnAt: b.returnAt,
+        })
       : null,
     routeType: b.routeType,
     pickupAddress: b.pickupAddress,

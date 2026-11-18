@@ -19,11 +19,14 @@ import {
   insuranceEligibilityGaps,
   insuranceRemittanceCommission,
   partnerPremiumProblem,
+  insurancePremiumTiersForYear,
   readInsurancePremiumTiers,
+  readInsurancePremiumYearBands,
   requiredVehicleImageTypes,
   percentOfVnd,
   type InsurancePremiumFallbackReason,
   type InsurancePremiumTier,
+  type InsurancePremiumYearBand,
 } from '@xeprime/types';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -39,6 +42,7 @@ import {
 } from './dto/insurance-insights.dto';
 import { InsuranceFollowUpService } from './insurance-follow-up.service';
 import { InsurancePremiumQuoteService } from './insurance-premium-quote.service';
+import { nextVnMorning, tierSampleHours } from './insurance-premium-sample';
 import { periodOf } from './insurance-remittance.service';
 import { INSURANCE_PARTNER, type InsurancePartner } from './partner/insurance-partner.port';
 
@@ -59,6 +63,8 @@ const VN_OFFSET_MS = 7 * HOUR_MS;
 
 type VehicleTripProduct = {
   tiers: InsurancePremiumTier[];
+  /** Nhóm năm sản xuất (ADR 0106) — `null` = một biểu phí cho mọi năm. */
+  bands: InsurancePremiumYearBand[] | null;
   serviceFeePercent: number | null;
   agencyCommissionPercent: Prisma.Decimal;
 };
@@ -273,7 +279,8 @@ export class InsuranceInsightsService {
           }),
           eligible: gaps.length === 0,
           gaps,
-          tiers: insuredValue && product ? tierPremiums(insuredValue, product) : [],
+          tiers:
+            insuredValue && product ? tierPremiums(insuredValue, product, row.manufactureYear) : [],
         };
       }),
       meta: paginationMeta(paging, total),
@@ -292,10 +299,14 @@ export class InsuranceInsightsService {
     }
     const input = await this.checkInput(dto);
     const from = nextVnMorning();
+    // % của đúng nhóm năm của xe (ADR 0106); đời xe không thuộc nhóm nào ⇒ so với biểu phí chung.
+    const tiers =
+      insurancePremiumTiersForYear(product.tiers, product.bands, input.manufactureYear) ??
+      product.tiers;
     const rows = await Promise.all(
-      product.tiers.map(async (tier) => {
+      tiers.map(async (tier) => {
         // Giữa bậc này và bậc trước: thời lượng tối đa của bậc trừ 1 giờ — chắc chắn rơi đúng bậc.
-        const sampleHours = tier.maxDays * 24 - 1;
+        const sampleHours = tierSampleHours(tier.maxDays);
         const formulaPremium = computeValueTierPremium(input.insuredValue, tier.percent);
         const answer = await this.quotes.ask(
           {
@@ -342,16 +353,19 @@ export class InsuranceInsightsService {
       orderBy: [{ isActive: 'desc' }, { displayOrder: 'asc' }],
       select: {
         premiumTiersJson: true,
+        premiumYearBandsJson: true,
         serviceFeeEnabled: true,
         serviceFeePercent: true,
         agencyCommissionPercent: true,
       },
     });
     const tiers = row ? readInsurancePremiumTiers(row.premiumTiersJson) : null;
+    const bands = row ? readInsurancePremiumYearBands(row.premiumYearBandsJson, tiers) : null;
     if (!row || !tiers) return null;
     const percent = Number(row.serviceFeePercent);
     return {
       tiers,
+      bands,
       serviceFeePercent: row.serviceFeeEnabled && percent > 0 ? percent : null,
       agencyCommissionPercent: row.agencyCommissionPercent,
     };
@@ -406,12 +420,17 @@ function dec(value: Prisma.Decimal | null | undefined): Prisma.Decimal {
   return new Prisma.Decimal(value ?? 0);
 }
 
-/** Phí từng bậc của một giá trị xe — công thức hệ thống, kèm phí thu hộ nếu đang bật. */
+/**
+ * Phí từng bậc của một xe — công thức hệ thống theo NHÓM NĂM của xe (ADR 0106), kèm phí thu hộ nếu
+ * đang bật. Đời xe hãng không bán ⇒ không bậc nào.
+ */
 function tierPremiums(
   insuredValue: string,
   product: VehicleTripProduct,
+  manufactureYear: number | null,
 ): InsuranceTierPremiumDto[] {
-  return product.tiers.map((tier) => {
+  const tiers = insurancePremiumTiersForYear(product.tiers, product.bands, manufactureYear) ?? [];
+  return tiers.map((tier) => {
     const premium = computeValueTierPremium(insuredValue, tier.percent);
     return {
       maxDays: tier.maxDays,
@@ -455,11 +474,4 @@ function eligibleWhere(): Prisma.VehicleWhereInput {
       })),
     ],
   };
-}
-
-/** 09:00 sáng mai giờ Việt Nam — mốc mẫu khi hỏi hãng (hãng đòi giờ bắt đầu ở tương lai). */
-function nextVnMorning(now: Date = new Date()): Date {
-  const vn = new Date(now.getTime() + VN_OFFSET_MS);
-  const day = Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate() + 1, 9);
-  return new Date(day - VN_OFFSET_MS);
 }

@@ -495,7 +495,8 @@ export const INSURANCE_VALUE_TIER_LIMITS = {
 /**
  * Biểu phí VCX theo chuyến MIC (loại xe `M1.11` — xe cho thuê tự lái), đo trên sandbox ngày
  * 11/11/2026 với xe 340.000.000đ: 44.200 · 112.200 · 224.400 · 333.200 · 680.000. Chỉ là GIÁ TRỊ
- * KHỞI TẠO của seed — admin sửa ở danh mục khi MIC đổi biểu phí production.
+ * KHỞI TẠO của seed — và chỉ đúng xe đời 2018-2020: % của MIC đổi theo năm sản xuất. Môi trường cắm MIC
+ * thật đồng bộ biểu phí đầy đủ (mốc bậc + nhóm năm) từ `phi_vcx` mỗi ngày (ADR 0106).
  */
 export const MIC_VCX_TRIP_DEFAULT_TIERS: readonly InsurancePremiumTier[] = [
   { maxDays: 2, percent: '0.013' },
@@ -553,6 +554,120 @@ export function readInsurancePremiumTiers(value: unknown): InsurancePremiumTier[
     tiers.push({ maxDays, percent });
   }
   return insurancePremiumTiersProblem(tiers) === null ? tiers : null;
+}
+
+/**
+ * Biểu phí theo NĂM SẢN XUẤT (ADR 0106). Phí VCX theo chuyến của MIC = giá trị xe × % bậc, nhưng %
+ * của mỗi bậc đổi theo năm sản xuất của xe (đo sandbox 18/11/2026). Một nhóm năm liền nhau cùng một
+ * bộ %: `percents[i]` ứng với bậc thứ i của `premium_tiers_json` (cùng mốc ngày cho mọi nhóm).
+ *
+ * `yearFrom = null` = mọi năm cũ hơn `yearTo`; `yearTo = null` = mọi năm mới hơn `yearFrom` (xe đời
+ * mới ra sau lần đồng bộ cuối vẫn có giá). Năm không thuộc nhóm nào ⇒ hãng không bán cho xe đó.
+ */
+export interface InsurancePremiumYearBand {
+  yearFrom: number | null;
+  yearTo: number | null;
+  percents: string[];
+}
+
+/** Trạng thái biểu phí so với hãng (ADR 0106). `null` = chưa từng đồng bộ, nhập tay. */
+export const INSURANCE_PREMIUM_SYNC_STATUS = {
+  /** Lấy được trọn biểu phí từ hãng ⇒ biểu phí KHOÁ, admin không sửa tay. */
+  SYNCED: 'synced',
+  /** Lần đồng bộ gần nhất hỏng ⇒ giữ biểu phí cũ, admin được sửa tay tới lần đồng bộ được kế tiếp. */
+  FAILED: 'failed',
+  /**
+   * Một lượt duyệt đơn hỏi hãng ra phí KHÁC biểu phí đang lưu (hãng đổi giá) ⇒ mở sửa tay và nhắc admin
+   * đồng bộ lại. Không tốn thêm lượt hỏi: lượt duyệt vốn đã hỏi hãng (ADR 0097).
+   */
+  DRIFTED: 'drifted',
+} as const;
+
+export type InsurancePremiumSyncStatus =
+  (typeof INSURANCE_PREMIUM_SYNC_STATUS)[keyof typeof INSURANCE_PREMIUM_SYNC_STATUS];
+
+export const INSURANCE_PREMIUM_SYNC_STATUS_VALUES = Object.values(
+  INSURANCE_PREMIUM_SYNC_STATUS,
+) as InsurancePremiumSyncStatus[];
+
+const YEAR_MIN = 1900;
+const YEAR_MAX = 2200;
+const isYear = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isInteger(v) && v >= YEAR_MIN && v <= YEAR_MAX;
+
+const bandCovers = (band: InsurancePremiumYearBand, year: number) =>
+  (band.yearFrom === null || year >= band.yearFrom) &&
+  (band.yearTo === null || year <= band.yearTo);
+
+/**
+ * Nhóm năm hợp lệ không — `null` = hợp lệ. Mỗi nhóm: số % đúng bằng số bậc, bộ (mốc ngày, %) qua
+ * được `insurancePremiumTiersProblem`; các nhóm không chồng năm lên nhau.
+ */
+export function insurancePremiumYearBandsProblem(
+  bands: readonly InsurancePremiumYearBand[],
+  tiers: readonly InsurancePremiumTier[],
+): string | null {
+  if (bands.length === 0) return 'Cần ít nhất một nhóm năm';
+  for (const band of bands) {
+    if (band.yearFrom !== null && !isYear(band.yearFrom))
+      return 'Năm bắt đầu của nhóm không hợp lệ';
+    if (band.yearTo !== null && !isYear(band.yearTo)) return 'Năm kết thúc của nhóm không hợp lệ';
+    if (band.yearFrom !== null && band.yearTo !== null && band.yearFrom > band.yearTo) {
+      return 'Năm bắt đầu của nhóm không được sau năm kết thúc';
+    }
+    if (band.percents.length !== tiers.length) return 'Số tỷ lệ của nhóm phải bằng số bậc phí';
+    const problem = insurancePremiumTiersProblem(
+      tiers.map((t, i) => ({ maxDays: t.maxDays, percent: band.percents[i] ?? '' })),
+    );
+    if (problem) return problem;
+  }
+  const sorted = [...bands].sort(
+    (a, b) => (a.yearFrom ?? Number.MIN_SAFE_INTEGER) - (b.yearFrom ?? Number.MIN_SAFE_INTEGER),
+  );
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1]!;
+    const next = sorted[i]!;
+    if (prev.yearTo === null || next.yearFrom === null || next.yearFrom <= prev.yearTo) {
+      return 'Các nhóm năm không được chồng lên nhau';
+    }
+  }
+  return null;
+}
+
+/** Đọc nhóm năm từ JSON (`premium_year_bands_json`) — vắng/rỗng ⇒ `null`; hỏng hình dạng ⇒ `null`. */
+export function readInsurancePremiumYearBands(
+  value: unknown,
+  tiers: readonly InsurancePremiumTier[] | null,
+): InsurancePremiumYearBand[] | null {
+  if (!tiers || !Array.isArray(value) || value.length === 0) return null;
+  const bands: InsurancePremiumYearBand[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null;
+    const { yearFrom, yearTo, percents } = item as Record<string, unknown>;
+    if (yearFrom !== null && typeof yearFrom !== 'number') return null;
+    if (yearTo !== null && typeof yearTo !== 'number') return null;
+    if (!Array.isArray(percents) || percents.some((p) => typeof p !== 'string')) return null;
+    bands.push({ yearFrom, yearTo, percents: percents as string[] });
+  }
+  return insurancePremiumYearBandsProblem(bands, tiers) === null ? bands : null;
+}
+
+/**
+ * Biểu phí bậc áp cho MỘT xe theo năm sản xuất (ADR 0106):
+ *  - chưa có nhóm năm (chưa từng đồng bộ) ⇒ biểu phí chung `tiers`;
+ *  - xe thiếu năm sản xuất ⇒ biểu phí chung (xe đó vốn chưa đủ điều kiện bảo hiểm);
+ *  - có nhóm phủ năm đó ⇒ mốc ngày chung + % của nhóm;
+ *  - không nhóm nào phủ ⇒ `null`: hãng không bán cho xe đời đó.
+ */
+export function insurancePremiumTiersForYear(
+  tiers: readonly InsurancePremiumTier[],
+  bands: readonly InsurancePremiumYearBand[] | null,
+  manufactureYear: number | null | undefined,
+): InsurancePremiumTier[] | null {
+  if (!bands || bands.length === 0 || manufactureYear == null) return [...tiers];
+  const band = bands.find((b) => bandCovers(b, manufactureYear));
+  if (!band) return null;
+  return tiers.map((t, i) => ({ maxDays: t.maxDays, percent: band.percents[i]! }));
 }
 
 /**

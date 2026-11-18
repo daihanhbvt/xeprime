@@ -283,6 +283,11 @@ export const API_ERROR_CODE = {
    */
   TRIP_NOT_RECEIVED_WINDOW_CLOSED: 'TRIP_NOT_RECEIVED_WINDOW_CLOSED',
   /**
+   * Khách báo "Tôi chưa trả xe" (ADR 0105) ở chuyến không báo được: chưa hoàn thành, lượt trả không
+   * do chủ xe xác nhận, không sớm hơn giờ trả, hoặc đã quá `returnAt + HANDOVER_CONFIRMATION_GRACE_MINUTES`. 409.
+   */
+  TRIP_NOT_RETURNED_NOT_ALLOWED: 'TRIP_NOT_RETURNED_NOT_ALLOWED',
+  /**
    * Khách bấm "Đã nhận xe" (ADR 0081) ở chuyến không xác nhận được — chưa có đơn, đơn không còn
    * `reserved`, đã có biên bản giao xe, hoặc chuyến có tài xế. 409.
    */
@@ -871,11 +876,22 @@ export const API_ERROR_CODE = {
    */
   HANDOVER_NOT_ELIGIBLE: 'HANDOVER_NOT_ELIGIBLE',
   /**
+   * Xác nhận GIAO XE trước mốc mở `pickupAt − 60′` (ADR 0104 điều 1). `details.opensAt` (ISO) là mốc
+   * sớm nhất bấm được; giao sớm hơn là đổi giờ nhận với khách, không phải bàn giao.
+   */
+  HANDOVER_PICKUP_NOT_OPEN: 'HANDOVER_PICKUP_NOT_OPEN',
+  /**
    * Ô "Đã thu tiền" của lượt nhận lại xe nộp một số KHÁC số khách còn phải trả server vừa tính
    * (người khác vừa ghi thu / phụ phí giữa chừng). Không ghi gì; `details.collectableAmount` là số
    * mới để hộp hiện lại cho người dùng xác nhận lần nữa.
    */
   HANDOVER_COLLECT_AMOUNT_CHANGED: 'HANDOVER_COLLECT_AMOUNT_CHANGED',
+  /**
+   * Hộp "Thu tiền" ghi một khoản TIỀN THUÊ lớn hơn số khách còn phải đưa tận tay
+   * (`counterDueAmount` = công nợ − phần `D` khách đã trả trước qua XePrime). Không ghi gì;
+   * `details.counterDueAmount` là mức trần. Khách đưa thêm ngoài đơn ⇒ lập phiếu thu ở Sổ Thu-Chi.
+   */
+  PAYMENT_EXCEEDS_DUE: 'PAYMENT_EXCEEDS_DUE',
 
   // Sổ khách của gian hàng (S-01)
   /**
@@ -1320,6 +1336,17 @@ export const API_ERROR_CODE = {
   INSURANCE_VOID_REFERENCE_REQUIRED: 'INSURANCE_VOID_REFERENCE_REQUIRED',
   /** Hợp đồng đã nằm trong bảng kê trả hãng — không huỷ-hoàn được, phải đối chiếu với hãng (ADR 0093). */
   INSURANCE_POLICY_REMITTED: 'INSURANCE_POLICY_REMITTED',
+  /**
+   * Biểu phí bảo hiểm vật chất xe đang ĐỒNG BỘ từ hãng — không sửa tay (ADR 0106 điều 2). Mở lại khi
+   * một lần đồng bộ hỏng. 409.
+   */
+  INSURANCE_PREMIUM_SYNCED_LOCKED: 'INSURANCE_PREMIUM_SYNCED_LOCKED',
+  /**
+   * Giao xe sớm tới mức hợp đồng bảo hiểm (từ lúc giao tới giờ trả) vượt bậc phí khách đã trả (ADR
+   * 0106 điều 4). `details.retryAfterSeconds` = còn bao lâu mới giao được; `details.earliestAt` (ISO).
+   * 409 — giao đúng giờ hẹn hoặc chờ tới mốc đó.
+   */
+  INSURANCE_EARLY_HANDOVER: 'INSURANCE_EARLY_HANDOVER',
   /**
    * Chủ xe đặt bảo hiểm Bắt buộc mà xe chưa đủ điều kiện bảo hiểm — xe tạm không nhận đặt tự lái
    * (ADR 0091 điều 1). 409 ở bước gửi yêu cầu.

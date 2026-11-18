@@ -95,6 +95,23 @@ vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   useSyncScopeWhenInvoiceSettles: () => undefined,
 }));
 
+/** Hồ sơ gian hàng - mặc định ĐÃ có logo (ADR 0103); test bước logo tự gỡ nó. */
+const shop = vi.hoisted(() => ({
+  data: { id: 'T1', profile: { logoUrl: 'https://cdn.xeprime.test/logo.png' } } as
+    { profile: { logoUrl: string | null } } | undefined,
+  isLoading: false,
+  update: vi.fn(),
+  upload: vi.fn(),
+}));
+vi.mock('@/features/shop/hooks/use-shop', () => ({
+  useMyShop: () => ({ data: shop.data, isLoading: shop.isLoading }),
+  useUpdateShopProfile: () => ({ mutateAsync: shop.update, isPending: false }),
+}));
+vi.mock('@/services/upload', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  uploadImage: shop.upload,
+}));
+
 const PLAN = {
   id: 'PLAN1',
   name: 'Gói cơ bản',
@@ -173,6 +190,12 @@ beforeEach(() => {
   subscription.purchase.isError = false;
   subscription.checkout.mutate.mockReset();
   subscription.me.isLoading = false;
+  shop.data = { profile: { logoUrl: 'https://cdn.xeprime.test/logo.png' } };
+  shop.isLoading = false;
+  shop.update.mockReset().mockResolvedValue({});
+  shop.upload.mockReset().mockResolvedValue('https://cdn.xeprime.test/new-logo.png');
+  URL.createObjectURL = vi.fn(() => 'blob:logo-preview');
+  URL.revokeObjectURL = vi.fn();
 });
 
 afterEach(cleanup);
@@ -398,6 +421,60 @@ describe('Bước 2 - gói theo loại xe (ADR 0065)', () => {
 
     expect(screen.queryByRole('button', { name: 'Chọn lại gói' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Thêm gói/ })).toBeNull();
+  });
+});
+
+/*
+ * Lưới an toàn của ADR 0103: gian hàng tuyến gói chưa có logo (đăng ký từ app, đăng ký trước ADR,
+ * tải logo hỏng rồi rời trang) đứng lại ở bước 1 và chưa chọn gói được.
+ */
+describe('Bước 1 - gian hàng chưa có logo (ADR 0103)', () => {
+  beforeEach(() => {
+    signedIn({ onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING, billingMode: null });
+    shop.data = { profile: { logoUrl: null } };
+  });
+
+  it('đứng ở bước 1 với ô logo, KHÔNG có luồng chọn gói', () => {
+    renderPage();
+
+    expect(screen.getByRole('heading', { name: 'Thêm logo gian hàng' })).toBeTruthy();
+    expect(screen.queryByRole('radiogroup', { name: 'Xe máy' })).toBeNull();
+    const current = document.querySelector('[aria-current="step"]');
+    expect(current?.textContent).toContain('Thông tin gian hàng');
+  });
+
+  it('bấm lưu khi chưa chọn ảnh: báo lỗi, không tải gì', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Lưu logo và chọn gói/ }));
+    expect(screen.getByText('Tải logo gian hàng lên để tiếp tục')).toBeTruthy();
+    expect(shop.upload).not.toHaveBeenCalled();
+  });
+
+  it('chọn ảnh rồi lưu: tải lên và gắn logo vào hồ sơ gian hàng', async () => {
+    renderPage();
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['logo'], 'logo.png', { type: 'image/png' })] },
+    });
+    await waitFor(() => expect(screen.getByAltText('Logo gian hàng đã chọn')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Lưu logo và chọn gói/ }));
+
+    await waitFor(() =>
+      expect(shop.update).toHaveBeenCalledWith({
+        logoUrl: 'https://cdn.xeprime.test/new-logo.png',
+      }),
+    );
+  });
+
+  it('đã có mã chờ chuyển khoản: mã vẫn hiện dưới ô logo, không có lối chọn lại gói', () => {
+    subscription.pending.data = [INVOICE];
+    renderPage();
+
+    expect(screen.getByRole('heading', { name: 'Thêm logo gian hàng' })).toBeTruthy();
+    expect(screen.getByText('XPGABC1234')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Thêm gói|Chọn lại gói/ })).toBeNull();
   });
 });
 

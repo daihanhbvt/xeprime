@@ -2,8 +2,9 @@
 
 import { Alert, App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import { PAYMENT_KIND, type PaymentKind } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
@@ -49,6 +50,12 @@ interface RecordPaymentModalProps {
    * (nó là tài sản giữ hộ, sẽ trả lại khách). Chọn nhầm là ghi sai sổ ở hai chỗ cùng lúc.
    */
   kind?: PaymentKind;
+  /**
+   * `debtAmount` là phần khách còn đưa TẬN TAY (`counterDueAmount` = công nợ − `D` đã nằm ở XePrime)
+   * chứ không phải cả công nợ. Chỉ đổi nhãn dòng dẫn cho khớp khung "Còn phải thu của khách" của
+   * trang đơn; số gợi ý vẫn là `debtAmount`.
+   */
+  counterDue?: boolean;
 }
 
 /** Modal ghi nhận một lần thu tiền cho đơn — tiền thuê hoặc tiền cọc. */
@@ -58,15 +65,29 @@ export function RecordPaymentModal({
   open,
   onClose,
   kind = PAYMENT_KIND.RENTAL,
+  counterDue = false,
 }: RecordPaymentModalProps) {
+  const t = useTranslations('Bookings.payments');
   const fmt = useAppFormat();
   const isDeposit = kind === PAYMENT_KIND.DEPOSIT;
 
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
   const financeOptions = useFinanceOptions();
+  /*
+   * Tiền THUÊ không thu quá số còn phải thu — server chặn y hệt (`PAYMENT_EXCEEDS_DUE`). Ô số tiền
+   * vẫn sửa được để thu TỪNG PHẦN; khách đưa dư ngoài đơn thì lập phiếu ở Sổ Thu-Chi. Cọc là tiền
+   * giữ hộ, không có trần ở đây.
+   */
+  const schema = useMemo(() => {
+    const cap = Number(debtAmount);
+    return recordPaymentSchema(
+      t,
+      isDeposit || !Number.isFinite(cap) ? null : { amount: cap, label: fmt.money(debtAmount) },
+    );
+  }, [debtAmount, fmt, isDeposit, t]);
   const { control, handleSubmit, reset } = useForm<RecordPaymentValues>({
-    resolver: yupResolver(recordPaymentSchema),
+    resolver: yupResolver(schema),
     defaultValues: defaultsForAmount(debtAmount),
   });
   const record = useRecordPayment(bookingId);
@@ -86,7 +107,7 @@ export function RecordPaymentModal({
     };
     record.mutate(body, {
       onSuccess: () => {
-        message.success(isDeposit ? 'Đã ghi nhận thu cọc' : 'Đã ghi nhận thu tiền');
+        message.success(isDeposit ? t('recordDepositSuccess') : t('recordSuccess'));
         reset(DEFAULTS);
         onClose();
       },
@@ -96,16 +117,17 @@ export function RecordPaymentModal({
 
   return (
     <ResponsiveDialog
-      title={isDeposit ? 'Thu tiền cọc' : 'Thu tiền đơn'}
+      title={isDeposit ? t('recordDepositTitle') : t('recordTitle')}
       open={open}
       onClose={onClose}
       size="sm"
-      okText="Ghi nhận"
+      okText={t('recordOk')}
       onOk={() => void submit()}
       confirmLoading={record.isPending}
     >
       <p className={styles.lead}>
-        {isDeposit ? 'Cọc còn phải thu' : 'Còn nợ'}: <b>{fmt.money(debtAmount)}</b>
+        {isDeposit ? t('depositLead') : counterDue ? t('counterLead') : t('debtLead')}:{' '}
+        <b>{fmt.money(debtAmount)}</b>
       </p>
       {isDeposit ? (
         // Nói TRƯỚC khi ghi, không phải sau: chủ xe nhìn công nợ không đổi sau khi thu 5 triệu
@@ -114,25 +136,26 @@ export function RecordPaymentModal({
           className={styles.note}
           type="info"
           showIcon
-          title="Cọc không trừ vào công nợ"
-          description="Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến - nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ."
+          title={t('depositNoticeTitle')}
+          description={t('depositNoticeBody')}
         />
       ) : null}
       <DialogForm onSubmit={submit} labelWidth="md">
-        <NumberField control={control} name="amount" label="Số tiền nhận" money min={0} />
+        {/* Không đặt `max` cho ô: AntD kẹp số âm thầm, người dùng không biết khoản dư đi đâu. */}
+        <NumberField control={control} name="amount" label={t('amountLabel')} money min={0} />
         <SelectField
           control={control}
           name="method"
-          label="Hình thức"
+          label={t('methodLabel')}
           options={financeOptions.paymentMethod}
         />
         <TextField
           control={control}
           name="referenceCode"
-          label="Mã tra soát (tuỳ chọn)"
-          placeholder="VD: mã giao dịch CK"
+          label={t('referenceLabel')}
+          placeholder={t('referencePlaceholder')}
         />
-        <TextField control={control} name="description" label="Ghi chú (tuỳ chọn)" />
+        <TextField control={control} name="description" label={t('descriptionLabel')} />
       </DialogForm>
     </ResponsiveDialog>
   );

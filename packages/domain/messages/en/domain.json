@@ -1207,6 +1207,7 @@
       "delivery_fee_update": "Update delivery fee",
       "driver_assign": "Assign driver",
       "driver_release": "Driver released the assignment",
+      "pickup_reverted": "Revert vehicle pickup",
       "deposit_refund": {
         "record": "Record deposit refund",
         "correct": "Correct deposit refund"
@@ -1216,6 +1217,9 @@
           "create": "Create handover draft"
         },
         "cancel": "Cancel handover record",
+        "pickup": {
+          "revert": "Cancel pickup handover on revert"
+        },
         "photo": {
           "upload": "Upload handover photo",
           "remove": "Remove handover photo"

@@ -169,7 +169,9 @@ function HeaderActions() {
   const t = useTranslations('Bookings.detailPage.actions');
   const { booking, can, contractPending, openContract, openHistory, openPay } =
     useBookingDetailActions();
-  const hasDebt = !isZeroMoney(booking.debtAmount);
+  // Cùng số với hộp Thu tiền và ô "Còn phải thu của khách": phần `D` khách đã trả trước qua
+  // XePrime không còn là việc phải thu ở quầy.
+  const hasDebt = !isZeroMoney(booking.counterDueAmount);
   const contractKnown = booking.handoverPrep ? booking.handoverPrep.contractId !== null : true;
 
   return (

@@ -166,9 +166,7 @@ export function cancelTrip(
   return apiRequest<CustomerTripDetail>(`/trips/${id}/cancel`, {
     method: 'POST',
     body: { reasonCategory },
-  }).then(
-    (res) => res.data,
-  );
+  }).then((res) => res.data);
 }
 
 /**
@@ -177,6 +175,16 @@ export function cancelTrip(
  */
 export function reportTripNotReceived(id: string): Promise<CustomerTripDetail> {
   return apiRequest<CustomerTripDetail>(`/trips/${id}/report-not-received`, {
+    method: 'POST',
+  }).then((res) => res.data);
+}
+
+/**
+ * Khách báo "Tôi chưa trả xe" — ADR 0105: chủ xe xác nhận nhận lại xe sớm mà khách vẫn đang giữ xe.
+ * Server mở một tranh chấp khẩn (idempotent) và trả về chính chuyến (`notReturnedReportOpen = true`).
+ */
+export function reportTripNotReturned(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/report-not-returned`, {
     method: 'POST',
   }).then((res) => res.data);
 }

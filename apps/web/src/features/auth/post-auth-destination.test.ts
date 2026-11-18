@@ -192,7 +192,7 @@ describe('B1 - partner đăng nhập xong vào đâu', () => {
         `${M.SHOP}/branches`,
         // M.DRIVERS không còn ở đây — tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
         M.MAINTENANCE,
-        M.VEHICLE_NEW,
+        // M.VEHICLE_NEW không còn ở đây — wizard thêm xe dùng chung hai tuyến từ 18/11/2026.
       ]) {
         expect(partnerPageRedirect(user, path), path).toBe(M.ROOT);
       }
@@ -367,8 +367,10 @@ describe('trang công khai', () => {
     expect(isAdminPublicPage(ROUTES.ADMIN.ROOT)).toBe(false);
   });
 
-  it('isCommissionPage: wizard thêm xe của tuyến gói không lọt vào danh sách trắng', () => {
-    expect(isCommissionPage(M.VEHICLE_NEW)).toBe(false);
+  it('isCommissionPage: wizard thêm xe dùng chung hai tuyến, khớp đúng đường dẫn', () => {
+    // MỘT wizard cho hai tuyến từ 18/11/2026 — trang tự ẩn phần chỉ của gian hàng.
+    expect(isCommissionPage(M.VEHICLE_NEW)).toBe(true);
+    expect(isCommissionPage(`${M.VEHICLE_NEW}/x`)).toBe(false);
     // Chi tiết + màn sửa xe dùng CHUNG hai tuyến từ 03/11/2026 (sổ cái §3.6 E24).
     expect(isCommissionPage(`${M.VEHICLES}/01V/edit`)).toBe(true);
     expect(isCommissionPage(`${M.VEHICLES}/01V`)).toBe(true);

@@ -7,6 +7,7 @@ import {
   BOOKING_STATUS,
   bookingRequestRespondBy,
   CANCELLATION_PARTY,
+  CANCELLATION_STAGE,
   HANDOVER_CONFIRM_SOURCE,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
@@ -32,6 +33,7 @@ import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { SupportService } from '../src/modules/support/support.service';
+import { TaxService } from '../src/modules/tax/tax.service';
 import { TripVerdictService } from '../src/modules/trip-verdict/trip-verdict.service';
 import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintenance.service';
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
@@ -92,7 +94,16 @@ const settlement = new HoldSettlementService(
   notifications,
   new WalletService(asService),
 );
-const verdicts = new TripVerdictService(asService, audit, support, bookings, handovers, settlement);
+const tax = new TaxService(asService, audit);
+const verdicts = new TripVerdictService(
+  asService,
+  audit,
+  support,
+  bookings,
+  handovers,
+  settlement,
+  tax,
+);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -654,4 +665,117 @@ describe('Kết luận chuyến — tranh chấp trước nhận xe (ADR 0095)',
       expect(booking.status).toBe(BOOKING_STATUS.ACTIVE);
     },
   );
+});
+
+/*
+ * ADR 0104 điều 3: chủ xe đã bấm giao xe (đơn `active`) nhưng khách báo CHƯA NHẬN ĐƯỢC XE. Chỉ lời
+ * báo đó (dấu `trip_not_received`) mở kết luận chuyến cho đơn đang thuê; kết luận huỷ gỡ biên bản giao
+ * xe trước rồi đi tiếp như một đơn chưa giao.
+ */
+describe('Kết luận chuyến - đơn đang thuê, khách báo chưa nhận được xe (ADR 0104)', () => {
+  async function seedHandedOver(): Promise<{
+    bookingId: string;
+    code: string;
+    handoverId: string;
+  }> {
+    const seeded = await seedBooking({ pickupAt: pastPickup(), status: BOOKING_STATUS.ACTIVE });
+    await prisma.booking.update({
+      where: { id: seeded.bookingId },
+      data: { actualPickupAt: new Date(Date.now() - 2 * HOUR) },
+    });
+    const handoverId = newId();
+    await prisma.vehicleHandover.create({
+      data: {
+        id: handoverId,
+        tenantId,
+        bookingId: seeded.bookingId,
+        vehicleId,
+        type: HANDOVER_TYPE.PICKUP,
+        status: HANDOVER_STATUS.CONFIRMED,
+        odometerMissing: true,
+        confirmedAt: new Date(Date.now() - 2 * HOUR),
+        confirmedBy: ownerId,
+        occurredAt: new Date(Date.now() - 2 * HOUR),
+      },
+    });
+    return { ...seeded, handoverId };
+  }
+
+  /** Lời báo thật của khách - cùng đường `reportNotReceived` dùng, mang dấu audit. */
+  async function reportNotReceived(bookingId: string, code: string): Promise<string> {
+    const opened = await prisma.$transaction((tx) =>
+      support.openTripNotReceivedWithinTx(tx, customerId, {
+        id: bookingId,
+        tenantId,
+        code,
+        bookingRequestId: null,
+      }),
+    );
+    return opened.caseId;
+  }
+
+  maybe('lời báo "chưa nhận được xe" ⇒ đủ bốn kết luận; xem trước báo sẽ gỡ giao xe', async () => {
+    const { bookingId, code } = await seedHandedOver();
+    const caseId = await reportNotReceived(bookingId, code);
+
+    expect((await support.detail(caseId, ADMIN())).tripVerdicts).toEqual([
+      TRIP_VERDICT.HANDED_OVER,
+      TRIP_VERDICT.CUSTOMER_NO_SHOW,
+      TRIP_VERDICT.HOST_NOT_DELIVERED,
+      TRIP_VERDICT.PLATFORM_CANCELLED,
+    ]);
+    const preview = await verdicts.preview(caseId);
+    expect(preview.revertsHandover).toBe(true);
+    expect(preview.insuranceIssued).toBe(false);
+  });
+
+  maybe(
+    '"chủ xe không giao được" ⇒ gỡ biên bản giao xe, đơn huỷ, lượt huỷ ghi chặng trước nhận xe',
+    async () => {
+      const { bookingId, code, handoverId } = await seedHandedOver();
+      const caseId = await reportNotReceived(bookingId, code);
+
+      await verdicts.apply(caseId, adminId, {
+        verdict: TRIP_VERDICT.HOST_NOT_DELIVERED,
+        note: 'Chủ xe bấm giao nhầm, khách chờ ở điểm hẹn không thấy xe',
+      });
+
+      const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+      expect(booking.status).toBe(BOOKING_STATUS.CANCELLED);
+      expect(booking.actualPickupAt).toBeNull();
+      const handover = await prisma.vehicleHandover.findUniqueOrThrow({
+        where: { id: handoverId },
+      });
+      expect(handover.status).toBe(HANDOVER_STATUS.CANCELED);
+      // Lịch sử của lượt bấm vẫn còn.
+      expect(handover.confirmedBy).toBe(ownerId);
+      const cancellation = await prisma.bookingCancellation.findFirstOrThrow({
+        where: { bookingId },
+      });
+      expect(cancellation.stage).toBe(CANCELLATION_STAGE.BOOKING_BEFORE_PICKUP);
+      expect(cancellation.responsibleParty).toBe(CANCELLATION_PARTY.HOST);
+      expect(
+        await prisma.auditLog.count({
+          where: { targetId: bookingId, action: 'booking.pickup_reverted' },
+        }),
+      ).toBe(1);
+    },
+  );
+
+  maybe('"xe đã giao" ⇒ giữ chuyến đang thuê, biên bản giữ nguyên, case kết luận', async () => {
+    const { bookingId, code, handoverId } = await seedHandedOver();
+    const caseId = await reportNotReceived(bookingId, code);
+
+    await verdicts.apply(caseId, adminId, {
+      verdict: TRIP_VERDICT.HANDED_OVER,
+      note: 'Khách đã nhận xe, báo nhầm chuyến',
+    });
+
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(booking.status).toBe(BOOKING_STATUS.ACTIVE);
+    const handover = await prisma.vehicleHandover.findUniqueOrThrow({ where: { id: handoverId } });
+    expect(handover.status).toBe(HANDOVER_STATUS.CONFIRMED);
+    const resolved = await prisma.supportCase.findUniqueOrThrow({ where: { id: caseId } });
+    expect(resolved.status).toBe(SUPPORT_CASE_STATUS.RESOLVED);
+  });
 });

@@ -27,7 +27,7 @@ import {
   useInsuranceVehicles,
   useVehiclePremiumCheck,
 } from '../hooks';
-import { premiumConfigOf, premiumPlan } from '../premium-plan';
+import { premiumConfigForYear, premiumConfigOf, premiumPlan } from '../premium-plan';
 import type { InsuranceVehicleFilters, InsuranceVehicleRow } from '../types';
 import { PremiumPlanTable } from './PremiumPlanTable';
 import styles from './InsuranceVehiclesPanel.module.css';
@@ -261,7 +261,9 @@ function PremiumCheckDialog({
       p.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP &&
       p.premiumBasis === INSURANCE_PREMIUM_BASIS.VALUE_TIER,
   );
-  const config = product ? premiumConfigOf(product) : null;
+  // % theo NĂM SẢN XUẤT của chính xe này (ADR 0106).
+  const baseConfig = product ? premiumConfigOf(product) : null;
+  const config = baseConfig ? premiumConfigForYear(baseConfig, vehicle.manufactureYear) : null;
   const rows = config && vehicle.insuredValue ? premiumPlan(vehicle.insuredValue, config) : null;
 
   return (

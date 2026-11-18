@@ -172,3 +172,9 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Nút chữ ngay dưới lưới biểu phí (bỏ nhóm năm) — sát lề trái như một liên kết. */
+.inlineAction {
+  align-self: flex-start;
+  padding-inline: 0;
+}

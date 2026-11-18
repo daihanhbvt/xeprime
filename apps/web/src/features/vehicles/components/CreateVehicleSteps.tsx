@@ -1,6 +1,6 @@
 'use client';
 
-import { Divider, Tag } from 'antd';
+import { Col, Divider, Row, Tag } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { VEHICLE_TYPE, requiredVehicleImageTypes } from '@xeprime/types';
@@ -8,6 +8,9 @@ import type { VehicleFormValues } from '@xeprime/validators';
 import type { RegistrationCaptureState } from '../registration-capture';
 import { RegistrationFieldsBlock, RegistrationPhotoTile } from './RegistrationCapture';
 import { TypedMediaFields } from './TypedMediaFields';
+import { VehiclePickupAddressField } from './VehiclePickupAddressField';
+import { RegistrationBusyContext } from '../registration-busy';
+import type { Branch } from '@/features/branches/types';
 import {
   BasicSection,
   FeaturesDescriptionSection,
@@ -45,12 +48,18 @@ export function CreateVehicleInfoStep({
   branchOptions,
   branchLoading,
   branchDisabled,
+  branchHidden = false,
+  pickupAddress = null,
   registration,
   sourceHidden,
 }: StepProps & {
   branchOptions: readonly { value: string; label: string }[];
   branchLoading: boolean;
   branchDisabled: boolean;
+  /** Chủ xe tuyến hoa hồng: chỉ có chi nhánh mặc định - điền ngầm, không hỏi. */
+  branchHidden?: boolean;
+  /** Ô "Địa chỉ nhận xe" thay chỗ ô chi nhánh khi `branchHidden` (chủ xe một chi nhánh). */
+  pickupAddress?: { branch: Branch | null; loading: boolean } | null;
   /** `null` = không hỏi cà vẹt (xe máy, phiên hỗ trợ). */
   registration: RegistrationSlot | null;
   sourceHidden: boolean;
@@ -62,6 +71,11 @@ export function CreateVehicleInfoStep({
   // Ảnh cà vẹt TUỲ CHỌN (ADR 0100) — nhãn chỉ đếm các góc ảnh xe bắt buộc.
   const required = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length;
   const props = { control, isCar, setValue };
+  /*
+   * Máy đang đọc ảnh cà vẹt (18/11/2026): chỉ các ô SẼ được điền từ cà vẹt (biển số, màu, bộ ô
+   * cà vẹt) khoá + báo đang đọc - qua `RegistrationBusyContext`; hãng, mẫu xe… vẫn chọn được.
+   */
+  const reading = registration?.state.phase === 'working';
 
   return (
     <>
@@ -95,7 +109,36 @@ export function CreateVehicleInfoStep({
         title={t('infoTitle')}
         description={t('infoDescription')}
       >
-        <div className={styles.threeColumnFields}>
+        <RegistrationBusyContext.Provider value={reading}>
+        <div
+          className={styles.threeColumnFields}
+          aria-busy={reading || undefined}
+        >
+        {/*
+          Tiêu đề 3 nhóm theo nguồn điền (18/11/2026): CSS xếp mỗi tiêu đề trước ô của nhóm mình (`order`), nên vị
+          trí trong DOM không quan trọng.
+        */}
+        <h3 className={styles.fieldGroupTitle} data-group="model">
+          {t('groups.model')}
+        </h3>
+        {registration ? (
+          <h3 className={styles.fieldGroupTitle} data-group="registration">
+            {t('groups.registration')}
+          </h3>
+        ) : null}
+        <h3 className={styles.fieldGroupTitle} data-group="vehicle">
+          {t('groups.location')}
+        </h3>
+        {pickupAddress ? (
+          <Row gutter={24}>
+            <Col xs={24} sm={12} data-field="branchId">
+              <VehiclePickupAddressField
+                branch={pickupAddress.branch}
+                loading={pickupAddress.loading}
+              />
+            </Col>
+          </Row>
+        ) : null}
         <BasicSection
           {...props}
           creating
@@ -104,6 +147,7 @@ export function CreateVehicleInfoStep({
           branchOptions={branchOptions}
           branchLoading={branchLoading}
           branchDisabled={branchDisabled}
+          hideBranch={branchHidden}
         />
         {/* Figma: Số khung · Số máy ngay dưới chi nhánh - máy đọc ảnh cà vẹt tự điền. */}
         {registration ? (
@@ -122,6 +166,7 @@ export function CreateVehicleInfoStep({
           </>
         ) : null}
         </div>
+        </RegistrationBusyContext.Provider>
       </WizardSection>
     </>
   );

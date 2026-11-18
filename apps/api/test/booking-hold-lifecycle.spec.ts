@@ -49,6 +49,7 @@ import { WalletService } from '../src/modules/wallet/wallet.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { PlatformBookingsService } from '../src/modules/platform-admin/platform-bookings.service';
 import type { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
+import { TaxService } from '../src/modules/tax/tax.service';
 import { TripVerdictService } from '../src/modules/trip-verdict/trip-verdict.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -942,6 +943,8 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
         // Kết luận huỷ không đi qua biên bản bàn giao.
         {} as HandoversService,
         settlement,
+        // Đơn chưa giao xe - không có thuế nào để đảo.
+        {} as TaxService,
       );
       await verdicts.apply(caseId, ownerId, {
         verdict: TRIP_VERDICT.HOST_NOT_DELIVERED,
@@ -971,6 +974,8 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
         bookings,
         {} as HandoversService,
         settlement,
+        // Đơn chưa giao xe - không có thuế nào để đảo.
+        {} as TaxService,
       );
 
       const preview = await verdicts.preview(caseId);

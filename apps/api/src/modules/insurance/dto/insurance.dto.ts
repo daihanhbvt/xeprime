@@ -21,10 +21,12 @@ import {
   INSURANCE_ELIGIBILITY_GAP_VALUES,
   INSURANCE_PREMIUM_BASIS_VALUES,
   INSURANCE_PREMIUM_SOURCE_VALUES,
+  INSURANCE_PREMIUM_SYNC_STATUS_VALUES,
   INSURANCE_SERVICE_FEE_PERCENT_MAX,
   INSURANCE_REMITTANCE_LIMITS,
   INSURANCE_VALUE_TIER_LIMITS,
   type InsurancePremiumBasis,
+  type InsurancePremiumSyncStatus,
   INSURANCE_POLICY_STATUS_VALUES,
   INSURANCE_VOID_BRANCH_VALUES,
   INSURANCE_VOID_REFUND_TIMING_VALUES,
@@ -331,6 +333,38 @@ export class InsuranceProductDto {
   premiumBasis!: InsurancePremiumBasis;
   @ApiPropertyOptional({ type: () => [InsurancePremiumTierDto], nullable: true })
   premiumTiers!: InsurancePremiumTierDto[] | null;
+  @ApiPropertyOptional({
+    type: () => [InsurancePremiumYearBandDto],
+    nullable: true,
+    description:
+      'Biểu phí theo năm sản xuất (ADR 0106) - percents[i] ứng với premiumTiers[i]. null = một biểu phí cho mọi năm',
+  })
+  premiumYearBands!: InsurancePremiumYearBandDto[] | null;
+  @ApiPropertyOptional({
+    enum: INSURANCE_PREMIUM_SYNC_STATUS_VALUES,
+    nullable: true,
+    description:
+      'Biểu phí so với hãng: synced = khoá; failed = đồng bộ hỏng, drifted = lượt duyệt thấy hãng báo khác (cả hai sửa tay được); null = chưa từng đồng bộ',
+  })
+  premiumSyncStatus!: InsurancePremiumSyncStatus | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lần đồng bộ thành công gần nhất',
+  })
+  premiumSyncedAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lúc trạng thái hiện tại được ghi (đồng bộ được / hỏng / phát hiện lệch)',
+  })
+  premiumSyncStatusAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Vì sao đồng bộ hỏng / vì sao lệch với hãng',
+  })
+  premiumSyncError!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) claimHotline!: string | null;
   @ApiProperty({
     description:
@@ -359,6 +393,35 @@ export class InsurancePremiumTierDto {
   @IsString()
   @Matches(/^\d{1,2}(\.\d{1,4})?$/)
   percent!: string;
+}
+
+/**
+ * Một nhóm năm sản xuất cùng biểu phí (ADR 0106): `percents[i]` ứng với bậc thứ i. `yearFrom` null =
+ * mọi năm cũ hơn; `yearTo` null = mọi năm mới hơn.
+ */
+export class InsurancePremiumYearBandDto {
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1900, maximum: 2200 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1900)
+  @Max(2200)
+  yearFrom!: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1900, maximum: 2200 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1900)
+  @Max(2200)
+  yearTo!: number | null;
+
+  @ApiProperty({ type: [String], example: ['0.011', '0.028'] })
+  @IsArray()
+  @ArrayMaxSize(INSURANCE_VALUE_TIER_LIMITS.maxTiers)
+  @IsString({ each: true })
+  @Matches(/^\d{1,2}(\.\d{1,4})?$/, { each: true })
+  percents!: string[];
 }
 
 const MONEY_PATTERN = new RegExp(`^\\d{1,${INSURANCE_PRODUCT_LIMITS.amountMaxDigits}}$`);
@@ -493,6 +556,19 @@ export class UpdateInsuranceProductDto {
   @ValidateNested({ each: true })
   @Type(() => InsurancePremiumTierDto)
   premiumTiers?: InsurancePremiumTierDto[];
+
+  @ApiPropertyOptional({
+    type: () => [InsurancePremiumYearBandDto],
+    nullable: true,
+    description:
+      'Sửa tay biểu phí theo năm sản xuất (ADR 0106) - chỉ khi biểu phí CHƯA khoá. null = bỏ nhóm năm, một biểu phí cho mọi năm',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(60)
+  @ValidateNested({ each: true })
+  @Type(() => InsurancePremiumYearBandDto)
+  premiumYearBands?: InsurancePremiumYearBandDto[] | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()

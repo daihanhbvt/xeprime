@@ -20,6 +20,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { FeePoliciesService } from '../src/modules/fee-policies/fee-policies.service';
 import { InsuranceEligibilityService } from '../src/modules/insurance/insurance-eligibility.service';
 import type { InsuranceOfferService } from '../src/modules/insurance/insurance-offer.service';
+import { InsuranceProductsService } from '../src/modules/insurance/insurance-products.service';
 import { InsurancePremiumQuoteService } from '../src/modules/insurance/insurance-premium-quote.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
@@ -37,6 +38,7 @@ const asService = prisma as unknown as PrismaService;
 let tiers: InsurancePremiumTier[] | null = [...MIC_VCX_TRIP_DEFAULT_TIERS];
 const offer = {
   vehicleTripTiers: async () => tiers,
+  vehicleTripSchedule: async () => (tiers ? { tiers, bands: null } : null),
   offeredByKind: async () => ({ vehicleProtection: tiers !== null, tripInsurance: false }),
 } as unknown as InsuranceOfferService;
 const listings = new ListingsService(asService);
@@ -51,6 +53,7 @@ const pricing = new PricingService(
   new InsurancePremiumQuoteService(
     new MicMockInsurancePartner(),
     new InsuranceEligibilityService(asService, offer),
+    new InsuranceProductsService(asService, new AuditService(asService), offer),
   ),
 );
 
@@ -329,7 +332,11 @@ describe('Phí bảo hiểm của lượt duyệt hỏi MIC, công thức là d�
       new FeePoliciesService(asService, new AuditService(asService)),
       offer,
       eligibility,
-      new InsurancePremiumQuoteService(partner, eligibility),
+      new InsurancePremiumQuoteService(
+        partner,
+        eligibility,
+        new InsuranceProductsService(asService, new AuditService(asService), offer),
+      ),
     );
   }
   const trip = (vehicleId: string) =>

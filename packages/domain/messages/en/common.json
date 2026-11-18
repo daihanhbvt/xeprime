@@ -95,7 +95,8 @@
     "emptyValue": "-",
     "selectDate": "Select date",
     "enabled": "On",
-    "disabled": "Off"
+    "disabled": "Off",
+    "fieldNote": "About {field}"
   },
   "units": {
     "day": "{count, plural, one {# day} other {# days}}",

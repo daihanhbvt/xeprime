@@ -3,6 +3,7 @@
 import type { VehicleRegistrationReading } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { useTranslations } from 'next-intl';
+import { useRegistrationBusy } from '../registration-busy';
 import type { ReactNode } from 'react';
 import type { Control } from 'react-hook-form';
 
@@ -12,7 +13,6 @@ import {
   useRegistrationFieldLock,
   type RegistrationFilledField,
 } from '../hooks/use-registration-autofill';
-import { LockedValueField } from './LockedValueField';
 
 /**
  * Ô biển số / màu sắc nhận giá trị đọc từ cà vẹt (ADR 0102): đang mang đúng giá trị máy đọc ⇒ ô chỉ
@@ -43,30 +43,25 @@ export function RegistrationTextField({
 }) {
   const t = useTranslations('Vehicles.form.registration');
   const lock = useRegistrationFieldLock(control, name, reading);
+  // Máy đang đọc cà vẹt ⇒ ô này sắp được điền: khoá + nói đang đọc.
+  const busy = useRegistrationBusy();
 
-  if (lock.locked && !disabled) {
-    return (
-      <LockedValueField
-        id={`vehicle-${name}-locked`}
-        label={label}
-        fieldLabel={fieldLabel}
-        value={lock.value}
-        help={t('filledFromScan')}
-        required={required}
-        editLabel={t('editField', { field: fieldLabel })}
-        onUnlock={lock.unlock}
-      />
-    );
-  }
+  // Khoá là trạng thái của CHÍNH ô nhập (chỉ đọc + bút trong ô) - máy đọc xong không dựng lại ô.
+  const locked = lock.locked && !disabled && !busy;
   return (
     <TextField
       control={control}
       name={name}
       label={label}
-      placeholder={placeholder}
-      help={help}
+      placeholder={busy ? t('reading') : placeholder}
+      help={locked ? t('filledFromScan') : help}
       required={required}
-      disabled={disabled}
+      disabled={disabled || busy}
+      lock={{
+        locked,
+        editLabel: t('editField', { field: fieldLabel }),
+        onUnlock: lock.unlock,
+      }}
     />
   );
 }

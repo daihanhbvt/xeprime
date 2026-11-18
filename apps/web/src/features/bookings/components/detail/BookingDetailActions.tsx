@@ -29,6 +29,7 @@ import { RecordPaymentModal } from '@/features/payments/components/RecordPayment
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useFeature } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import type { BookingDetail } from '../../types';
 import { BookingCustomerDocumentsDialog } from '../BookingCustomerDocumentsDialog';
@@ -131,6 +132,7 @@ export function BookingDetailActionsProvider({
   const { message, notification } = App.useApp();
   const tAlert = useTranslations('Bookings.detailPage.handoverAlert');
   const errorMessage = useErrorMessage();
+  const fmt = useAppFormat();
   const { has } = usePermissions();
 
   const canViewHandover = has(PERMISSION.HANDOVER_VIEW);
@@ -183,6 +185,15 @@ export function BookingDetailActionsProvider({
     if (type === HANDOVER_TYPE.RETURN) {
       setAlert(null);
       setDialogType(type);
+      return;
+    }
+    /*
+     * Giao xe chỉ mở từ 60′ trước giờ nhận (ADR 0104 điều 1). Nói giờ mở NGAY ở cú bấm thay vì mở
+     * hộp rồi để server từ chối sau khi chủ xe đã điền xong. Server vẫn là cửa chặn thật.
+     */
+    const opensAt = handover?.pickupConfirmOpensAt;
+    if (opensAt && Date.now() < new Date(opensAt).getTime()) {
+      message.warning(t('pickupNotOpen', { time: fmt.dateTime(opensAt) }));
       return;
     }
     const prep = booking.handoverPrep
@@ -298,7 +309,10 @@ export function BookingDetailActionsProvider({
       {payOpen ? (
         <RecordPaymentModal
           bookingId={booking.id}
-          debtAmount={booking.debtAmount}
+          // Phần khách còn đưa TẬN TAY, cùng số với "Còn phải thu của khách" ở khung Thanh toán:
+          // `D` khách đã trả trước qua XePrime không đòi lại ở quầy.
+          debtAmount={booking.counterDueAmount}
+          counterDue
           open
           onClose={() => setPayOpen(false)}
         />

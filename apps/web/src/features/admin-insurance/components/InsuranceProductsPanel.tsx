@@ -12,6 +12,7 @@ import { useLocalizedText } from '@/i18n/localized';
 import { useInsuranceProducts } from '../hooks';
 import type { InsuranceProduct } from '../types';
 import { InsuranceProductFormDialog } from './InsuranceProductFormDialog';
+import { PremiumSyncCard } from './PremiumSyncCard';
 import { PremiumCalculatorCard } from './PremiumCalculatorCard';
 import { premiumConfigOf } from '../premium-plan';
 import styles from './InsuranceProductsPanel.module.css';
@@ -137,6 +138,8 @@ export function InsuranceProductsPanel() {
         error={isError && !data ? { title: t('loadError'), onRetry: () => void refetch() } : null}
         empty={{ title: t('empty.title'), description: t('empty.description') }}
       />
+      {/* Biểu phí đang áp dụng + đồng bộ từ hãng (ADR 0106). */}
+      {tierProduct && tierConfig ? <PremiumSyncCard product={tierProduct} /> : null}
       {tierConfig ? <PremiumCalculatorCard config={tierConfig} /> : null}
       <InsuranceProductFormDialog
         key={editing?.id ?? 'closed'}

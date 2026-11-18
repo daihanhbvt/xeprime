@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
   RECEIPT_SOURCE,
@@ -9,6 +10,7 @@ import {
   type PaymentKind,
   type PaymentMethod,
 } from '@xeprime/types';
+import { loadCounterDueAmount } from '../../common/booking-money';
 import { assertBookingMoneyOpenWithinTx } from '../../common/booking-money-gate';
 import { AuditService } from '../audit/audit.service';
 import { ReceiptsService } from '../finance/receipts.service';
@@ -54,6 +56,24 @@ export class BookingPaymentWriter {
     // Đơn huỷ / khách không đến không nhận tiền thuê hay cọc mới — chặn ở writer DUY NHẤT nên mọi
     // đường thu (hộp Thu tiền, Thu cọc, lượt nhận lại xe) cùng một luật.
     await assertBookingMoneyOpenWithinTx(tx, booking.id);
+
+    /*
+     * Trần tiền THUÊ = số khách còn đưa tận tay (18/11/2026). Trước đây hộp nhận mọi con số: đơn qua
+     * chợ đã có `D` trả trước qua XePrime vẫn bị gợi ý thu trọn tiền thuê, tức thu khách hai lần,
+     * và phần dư vào `paid_amount` như doanh thu của đơn. Đọc SAU `FOR UPDATE` của cổng trên nên
+     * hai lượt thu song song không cùng lọt một mức trần cũ. Cọc không có trần ở đây — nó là tiền
+     * giữ hộ, không phải công nợ.
+     */
+    if (!isDeposit) {
+      const due = (await loadCounterDueAmount(tx, tenantId, booking.id)) ?? new Prisma.Decimal(0);
+      if (amount.greaterThan(due)) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.PAYMENT_EXCEEDS_DUE,
+          message: `Số tiền vượt số khách còn phải thu (${due.toFixed(0)}đ). Khoản khách đưa thêm ngoài đơn - lập phiếu thu ở Sổ Thu-Chi`,
+          details: { counterDueAmount: due.toFixed(0) },
+        });
+      }
+    }
 
     // Id payment sinh TRƯỚC phiếu: phiếu cần nó làm `sourceRefId` (đường lần ngược từ sổ về giao
     // dịch), còn payment cần `receiptId` — hai chiều, nên một đầu phải có id trước.

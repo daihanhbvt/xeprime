@@ -21,6 +21,7 @@ import {
 } from 'react-hook-form';
 
 import { SelectField } from '@/components/form/SelectField';
+import { useHelpAsTip } from '@/components/form/help-as-tip';
 import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catalog';
 import { useCatalogModelGroups, useCatalogModels } from '@/features/catalog/use-catalog-models';
 import {
@@ -133,7 +134,7 @@ export function VehicleIdentityFields({
 
   return (
     <Row gutter={16}>
-      <Col xs={24} sm={12}>
+      <Col xs={24} sm={12} data-field="brand">
         <SelectField
           control={control}
           name="brand"
@@ -160,7 +161,7 @@ export function VehicleIdentityFields({
           }}
         />
       ) : (
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} data-field="model">
           <ModelVariantSelect
             control={control}
             vehicleType={vehicleType}
@@ -393,18 +394,19 @@ function ModelVariantSelect({
   }
 
   const error = fieldState.error?.message;
+  // Ghi chú thường (chọn hãng trước / chọn mẫu để tự điền) - vùng bật `HelpAsTip` dời nó lên nhãn thành ⓘ.
+  const note = brand ? tCatalog('modelVariantHelp') : t('modelPickBrandFirst');
+  const tip = useHelpAsTip(tCatalog('modelVariant'), note);
   const help =
     error ??
     lockedNotice ??
     (yearOutside
       ? tCatalog('yearOutsideVariant', { year: year ?? '', years: yearOutside })
-      : brand
-        ? tCatalog('modelVariantHelp')
-        : t('modelPickBrandFirst'));
+      : tip.help);
 
   return (
     <Form.Item
-      label={tCatalog('modelVariant')}
+      label={tip.label}
       htmlFor={selectId}
       required={required}
       validateStatus={error ? 'error' : yearOutside ? 'warning' : ''}
@@ -417,6 +419,9 @@ function ModelVariantSelect({
         onChange={handleChange}
         onBlur={field.onBlur}
         options={options}
+        // Danh sách đang tải lại (đổi mẫu → nạp phiên bản) thì giá trị chưa có trong options - antd sẽ
+        // in thẳng ID thô. Chỉ hiện NHÃN; chưa có nhãn thì để trống tới khi danh sách về.
+        labelRender={({ label }) => label ?? null}
         placeholder={tCatalog('modelVariantPlaceholder')}
         // Khoá tới khi có hãng: danh sách mẫu xe không kèm hãng là vài trăm dòng vô nghĩa.
         disabled={disabled || !brand}
@@ -532,7 +537,7 @@ function ManualModelFields({
 
   return (
     <>
-      <Col xs={24} sm={12}>
+      <Col xs={24} sm={12} data-field="model">
         <SelectField
           control={control}
           name="vehicleCatalogModelId"
@@ -562,7 +567,7 @@ function ManualModelFields({
           }
         />
       </Col>
-      <Col xs={24} sm={12}>
+      <Col xs={24} sm={12} data-field="variant" data-dep="model">
         <SelectField
           control={control}
           name="vehicleCatalogVariantId"

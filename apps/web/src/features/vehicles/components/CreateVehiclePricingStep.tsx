@@ -10,6 +10,7 @@ import {
   VEHICLE_TYPE,
   isVehicleServiceTypeAllowed,
   type ServiceType,
+  type VehicleType,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { ROUTES } from '@/constants/routes';
@@ -39,6 +40,11 @@ interface CreateVehiclePricingStepProps {
    * đường với luồng đăng nhanh. `undefined` = không vẽ (phiên hỗ trợ).
    */
   autoAccept?: { value: boolean; onChange: (next: boolean) => void };
+  /**
+   * Hiện khối "chính sách gian hàng" + lối tới trang Chính sách thuê. `false` cho chủ xe tuyến hoa
+   * hồng: họ không có trang đó, chính sách đặt trên từng xe ở màn sửa xe (ADR 0085 điều 3).
+   */
+  shopPolicy?: boolean;
 }
 
 /**
@@ -54,28 +60,15 @@ export function CreateVehiclePricingStep({
   pricePreview,
   setValue,
   autoAccept,
+  shopPolicy = true,
 }: CreateVehiclePricingStepProps) {
   const t = useTranslations('Vehicles.form.pricingStep');
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
-  // Chính sách kế thừa theo ĐÚNG loại xe đang tạo (17/08) - ô tô/xe máy hai bộ riêng.
-  const policy = useShopPolicy(vehicleType);
-  const values = policy.data?.policy ?? null;
 
   return (
     <WizardSection title={t('title')} description={t('subtitle')} id="create-vehicle-pricing">
       <div className={styles.stack}>
-        {policy.isLoading ? (
-          <Skeleton active paragraph={{ rows: 3 }} />
-        ) : values ? (
-          <PolicyPreview values={values} />
-        ) : (
-          <Alert
-            type="warning"
-            showIcon
-            title={t('noPolicyTitle')}
-            description={<PolicyLink>{t('noPolicyAction')}</PolicyLink>}
-          />
-        )}
+        {shopPolicy ? <ShopPolicyBlock vehicleType={vehicleType} /> : null}
 
         <Controller
           control={control}
@@ -122,12 +115,14 @@ export function CreateVehiclePricingStep({
                   <FigmaGlyph name="calendar" />,
                   <>
                     <LongTermPriceFields control={control} setValue={setValue} />
-                    <div className={styles.inheritNote}>
-                      <span>{t('longTermInherit')}</span>
-                      <PolicyLink className={styles.inheritLink}>
-                        {t('longTermInheritLink')}
-                      </PolicyLink>
-                    </div>
+                    {shopPolicy ? (
+                      <div className={styles.inheritNote}>
+                        <span>{t('longTermInherit')}</span>
+                        <PolicyLink className={styles.inheritLink}>
+                          {t('longTermInheritLink')}
+                        </PolicyLink>
+                      </div>
+                    ) : null}
                   </>,
                 )}
               </div>
@@ -192,6 +187,23 @@ function ServiceCard({
       </div>
       {checked ? <div className={styles.serviceBody}>{children}</div> : null}
     </section>
+  );
+}
+
+/** Chính sách thuê kế thừa theo ĐÚNG loại xe đang tạo (17/08) - ô tô/xe máy hai bộ riêng. */
+function ShopPolicyBlock({ vehicleType }: { vehicleType: VehicleType }) {
+  const t = useTranslations('Vehicles.form.pricingStep');
+  const policy = useShopPolicy(vehicleType);
+  const values = policy.data?.policy ?? null;
+  if (policy.isLoading) return <Skeleton active paragraph={{ rows: 3 }} />;
+  if (values) return <PolicyPreview values={values} />;
+  return (
+    <Alert
+      type="warning"
+      showIcon
+      title={t('noPolicyTitle')}
+      description={<PolicyLink>{t('noPolicyAction')}</PolicyLink>}
+    />
   );
 }
 

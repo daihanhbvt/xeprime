@@ -1,9 +1,11 @@
 'use client';
 
 import { Form, Input } from 'antd';
+import { useHelpAsTip } from './help-as-tip';
 import { sanitizePhoneInput } from '@xeprime/types';
 import { useId, type ChangeEvent, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { LOCKED_FIELD_CLASS, fieldLockSuffix, type FieldLock } from './field-lock';
 import styles from './field.module.css';
 
 interface TextFieldProps<T extends FieldValues> {
@@ -36,6 +38,11 @@ interface TextFieldProps<T extends FieldValues> {
    * `visible` = mật khẩu đang hiện chữ.
    */
   visibilityIcon?: (visible: boolean) => ReactNode;
+  /**
+   * Ô tự điền có thể KHOÁ (chỉ đọc + bút trong ô) — truyền cả khi đang mở để khung ô không đổi
+   * giữa hai trạng thái (`field-lock.tsx`).
+   */
+  lock?: FieldLock;
 }
 
 /**
@@ -59,6 +66,7 @@ export function TextField<T extends FieldValues>({
   help,
   normalize,
   visibilityIcon,
+  lock,
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // `Form.Item` chỉ tự nối label ↔ input khi nằm trong `<Form>` của AntD. Các form ở đây dùng
@@ -66,7 +74,9 @@ export function TextField<T extends FieldValues>({
   // nhập và trình đọc màn hình không đọc ra tên trường.
   const inputId = `${String(name)}-${useId()}`;
   const describedById = `${inputId}-help`;
-  const helpText = fieldState.error?.message ?? help;
+  // Vùng `HelpAsTipProvider`: ghi chú dời lên nhãn thành ⓘ, dưới ô chỉ còn lỗi.
+  const tip = useHelpAsTip(label, help);
+  const helpText = fieldState.error?.message ?? tip.help;
   // Ô SĐT (ADR 0082): chỉ giữ chữ số và một `+` đầu, lúc gõ lẫn lúc dán — `099 222 2222` vào là
   // `0992222222` ngay. Nơi gọi tự truyền `normalize` thì dùng bản đó.
   const applyNormalize = normalize ?? (type === 'tel' ? sanitizePhoneInput : undefined);
@@ -81,7 +91,9 @@ export function TextField<T extends FieldValues>({
     inputMode: type === 'tel' ? ('tel' as const) : undefined,
     autoFocus,
     prefix,
-    suffix,
+    suffix: fieldLockSuffix(lock, suffix),
+    readOnly: lock?.locked || undefined,
+    className: lock?.locked ? LOCKED_FIELD_CLASS : undefined,
     disabled,
     'aria-describedby': helpText ? describedById : undefined,
     'aria-invalid': fieldState.error ? true : undefined,
@@ -90,7 +102,7 @@ export function TextField<T extends FieldValues>({
 
   return (
     <Form.Item
-      label={label}
+      label={tip.label}
       htmlFor={inputId}
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}

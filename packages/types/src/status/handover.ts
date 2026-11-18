@@ -114,12 +114,53 @@ export function handoverGraceEndsAt(pickupAt: Date): Date {
   return new Date(pickupAt.getTime() + HANDOVER_CONFIRMATION_GRACE_MINUTES * 60_000);
 }
 
-/** Vị trí của `now` so với cửa sổ báo "Chưa nhận được xe" `[pickupAt, pickupAt + N′]`. */
+/**
+ * Mốc MỞ cửa sổ báo "Chưa nhận được xe" - ADR 0104 điều 2.
+ *
+ * Mặc định là giờ nhận `pickupAt`. Nhưng khi biên bản giao xe đã được xác nhận SỚM hơn giờ đó
+ * (`handedOverAt` = giờ nhận thực tế của đơn), khách phải phản bác được ngay từ lúc ấy: chuyến đã
+ * thành "Đang thuê" trên màn của họ, và bắt họ chờ tới giờ hẹn mới được nói "tôi chưa nhận" là để
+ * thuế, bảo hiểm và đồng hồ của chuyến chạy trên một lượt giao xe có thể không có thật.
+ */
+export function notReceivedWindowOpensAt(pickupAt: Date, handedOverAt?: Date | null): Date {
+  return handedOverAt && handedOverAt.getTime() < pickupAt.getTime() ? handedOverAt : pickupAt;
+}
+
+/** Vị trí của `now` so với cửa sổ báo "Chưa nhận được xe" `[mở, pickupAt + N′]`. */
 export type NotReceivedWindowPhase = 'before' | 'open' | 'closed';
 
-export function notReceivedWindowPhase(pickupAt: Date, now: Date): NotReceivedWindowPhase {
-  if (now.getTime() < pickupAt.getTime()) return 'before';
+export function notReceivedWindowPhase(
+  pickupAt: Date,
+  now: Date,
+  /** Giờ giao xe thực tế khi đơn đã `active` - mở cửa sổ sớm hơn giờ nhận (ADR 0104 điều 2). */
+  handedOverAt?: Date | null,
+): NotReceivedWindowPhase {
+  if (now.getTime() < notReceivedWindowOpensAt(pickupAt, handedOverAt).getTime()) return 'before';
   return now.getTime() <= handoverGraceEndsAt(pickupAt).getTime() ? 'open' : 'closed';
+}
+
+// ── Trả xe SỚM (ADR 0105) ────────────────────────────────────────────────────
+
+/**
+ * Chủ xe xác nhận đã nhận lại xe trước giờ trả theo đơn ÍT NHẤT chừng này phút ⇒ "trả sớm": hộp
+ * xác nhận cảnh báo, khách được báo riêng và có nút "Tôi chưa trả xe". Dưới mức này là khách về
+ * sớm vài phút - chuyện thường, không đáng một cảnh báo hay một nút khiếu nại.
+ */
+export const EARLY_RETURN_MIN_MINUTES = 60;
+
+/** `at` sớm hơn giờ trả theo đơn `returnAt` ít nhất `EARLY_RETURN_MIN_MINUTES`. */
+export function isEarlyReturn(returnAt: Date, at: Date): boolean {
+  return returnAt.getTime() - at.getTime() >= EARLY_RETURN_MIN_MINUTES * 60_000;
+}
+
+/**
+ * Cửa sổ báo "TÔI CHƯA TRẢ XE" của khách (ADR 0105 điều 2): mở từ lúc CHỦ XE xác nhận trả xe sớm
+ * (`confirmedAt` - mốc server ghi, chủ xe không lùi được) tới `returnAt + HANDOVER_CONFIRMATION_GRACE_MINUTES`,
+ * đối xứng với cửa sổ "Chưa nhận được xe" ở mốc giao. `null` khi lượt trả không sớm.
+ */
+export function notReturnedReportUntil(returnAt: Date, confirmedAt: Date): Date | null {
+  if (!isEarlyReturn(returnAt, confirmedAt)) return null;
+  return new Date(returnAt.getTime() + HANDOVER_CONFIRMATION_GRACE_MINUTES * 60_000);
 }
 
 /** Trạng thái đơn mà việc xác nhận bàn giao sẽ chuyển tới. `null` = giữ nguyên trạng thái. */
@@ -256,19 +297,26 @@ export const HANDOVER_EXTERIOR_SLOTS: readonly HandoverPhotoSlot[] = [
  *
  * Loại xe lạ / chưa biết ⇒ bộ ĐẦY ĐỦ của ô tô: thừa một ô trống còn hơn giấu mất một góc.
  */
-export function handoverExteriorSlotsFor(vehicleType: string | null | undefined): readonly HandoverPhotoSlot[] {
+export function handoverExteriorSlotsFor(
+  vehicleType: string | null | undefined,
+): readonly HandoverPhotoSlot[] {
   return vehicleType === VEHICLE_TYPE.MOTORBIKE
     ? [HANDOVER_PHOTO_SLOT.FRONT, HANDOVER_PHOTO_SLOT.REAR]
     : HANDOVER_EXTERIOR_SLOTS;
 }
 
 /** Toàn bộ góc chụp của một loại xe, theo thứ tự hiển thị — ngoại thất trước, Odo sau cùng. */
-export function handoverPhotoSlotsFor(vehicleType: string | null | undefined): readonly HandoverPhotoSlot[] {
+export function handoverPhotoSlotsFor(
+  vehicleType: string | null | undefined,
+): readonly HandoverPhotoSlot[] {
   return [...handoverExteriorSlotsFor(vehicleType), HANDOVER_PHOTO_SLOT.ODOMETER];
 }
 
 /** Góc này có thuộc bộ góc của loại xe không — API dùng để từ chối ảnh "trái/phải" của xe máy. */
-export function isHandoverPhotoSlotFor(vehicleType: string | null | undefined, slot: string): boolean {
+export function isHandoverPhotoSlotFor(
+  vehicleType: string | null | undefined,
+  slot: string,
+): boolean {
   return (handoverPhotoSlotsFor(vehicleType) as readonly string[]).includes(slot);
 }
 
