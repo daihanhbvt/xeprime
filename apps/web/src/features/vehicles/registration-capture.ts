@@ -112,8 +112,9 @@ export function checkRegistration(
   vehiclePlate: string | null | undefined,
 ): RegistrationCheck {
   const errors: RegistrationCheck['errors'] = {};
-  if (state.phase === 'empty' || state.phase === 'failed') errors.photo = 'photoRequired';
-  else if (state.phase === 'working' || !state.uploadId) errors.photo = 'photoNotReady';
+  // Ảnh cà vẹt TUỲ CHỌN (18/11/2026): chỉ để máy điền nhanh ba ô bên dưới. Chỉ chặn khi ảnh ĐANG
+  // tải/đọc - gửi lúc đó là bỏ mất ảnh người dùng vừa chọn.
+  if (state.phase === 'working') errors.photo = 'photoNotReady';
 
   const holderName = state.fields.holderName.trim().replace(/\s+/g, ' ');
   const chassisNumber = normalizeRegistrationCode(state.fields.chassisNumber);
@@ -142,12 +143,12 @@ export function checkRegistration(
   }
   if (holderAddress.length > LIMITS.holderAddressMax) errors.holderAddress = 'addressTooLong';
 
-  if (Object.keys(errors).length > 0 || !state.uploadId) return { ok: false, errors };
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
   return {
     ok: true,
     errors,
     input: {
-      uploadId: state.uploadId,
+      ...(state.uploadId ? { uploadId: state.uploadId } : {}),
       holderName,
       chassisNumber,
       engineNumber,
@@ -155,5 +156,22 @@ export function checkRegistration(
       // Biển in trên cà vẹt (nếu đọc được); vắng thì server lấy biển số của xe.
       plateNumber: state.reading?.plateNumber ?? vehiclePlate?.trim() ?? null,
     },
+  };
+}
+
+/**
+ * Gộp kết quả máy đọc vào các ô chủ xe ĐÃ GÕ tay (ADR 0097): ô đã có chữ giữ nguyên, ô trống lấy
+ * giá trị đọc được. Máy đọc về muộn không bao giờ ghi đè công nhập tay.
+ */
+export function mergeTypedFields(
+  typed: RegistrationFields,
+  read: RegistrationFields,
+): RegistrationFields {
+  const pick = (field: keyof RegistrationFields) => (typed[field].trim() ? typed[field] : read[field]);
+  return {
+    holderName: pick('holderName'),
+    chassisNumber: pick('chassisNumber'),
+    engineNumber: pick('engineNumber'),
+    holderAddress: pick('holderAddress'),
   };
 }

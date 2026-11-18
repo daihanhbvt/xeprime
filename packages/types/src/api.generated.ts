@@ -16546,8 +16546,8 @@ export interface components {
             registration?: components["schemas"]["CreateVehicleRegistrationDto"];
         };
         CreateVehicleRegistrationDto: {
-            /** @description Id lượt tải ảnh cà vẹt (POST /vehicle-registration-uploads/presign). */
-            uploadId: string;
+            /** @description Id lượt tải ảnh cà vẹt (POST /vehicle-registration-uploads/presign). TUỲ CHỌN (18/11/2026): ảnh chỉ để máy điền nhanh - không có ảnh thì chủ xe tự nhập, giấy tờ lưu không kèm tệp. */
+            uploadId?: string;
             holderName: string;
             chassisNumber: string;
             engineNumber: string;

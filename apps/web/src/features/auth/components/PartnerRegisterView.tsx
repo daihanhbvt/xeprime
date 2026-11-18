@@ -20,6 +20,7 @@ import {
 import { ListYourVehicleLanding } from '@/features/list-vehicle/components/ListYourVehicleLanding';
 import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
 import { PartnerSignupForm } from '@/features/shop/components/PartnerSignupForm';
+import { SIGNUP_INTRO_BACK_CLASS } from '@/features/shop/components/PartnerSignupIntro';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { ZONE, siteHref } from '@/zones';
 
@@ -33,8 +34,9 @@ import {
   type PanelAuthMode,
 } from '../post-auth-destination';
 import type { CurrentUser } from '@/services/auth.service';
-import { AuthPanel } from './AuthPanel';
-import { PORTAL_FOOT_LINK_CLASS, PortalLoginLayout } from './PortalLoginLayout';
+import { MarketAuthForms } from './MarketAuthForms';
+import { PortalAuthFrame } from './PortalAuthFrame';
+import marketStyles from './MarketAuth.module.css';
 import styles from './PartnerRegisterView.module.css';
 
 /**
@@ -92,18 +94,25 @@ export function PartnerRegisterView() {
       router.replace(inviteNext);
     };
     return (
-      <PortalLoginLayout
-        asideText={t('asideText')}
-        title={mode === AUTH_MODE.REGISTER ? t('title') : t('loginTitle')}
-        subtitle={t('subtitle')}
-        footer={
-          <a href={siteHref(ZONE.MARKET, ROUTES.HOME)} className={PORTAL_FOOT_LINK_CLASS}>
-            <ArrowLeftOutlined /> {t('backToMarket')}
-          </a>
-        }
-      >
-        <AuthPanel mode={mode} onModeChange={setMode} onAuthenticated={finishInvite} />
-      </PortalLoginLayout>
+      <PortalAuthFrame>
+        <MarketAuthForms
+          mode={mode}
+          onModeChange={setMode}
+          heading={{
+            title: mode === AUTH_MODE.REGISTER ? t('title') : t('loginTitle'),
+            sub: t('subtitle'),
+          }}
+          onForgot={() => router.push(ROUTES.MANAGE.FORGOT_PASSWORD)}
+          onAuthenticated={finishInvite}
+          forBooking={false}
+          autoFocus={false}
+          footer={
+            <a href={siteHref(ZONE.MARKET, ROUTES.HOME)} className={marketStyles.footerLink}>
+              <ArrowLeftOutlined /> {t('backToMarket')}
+            </a>
+          }
+        />
+      </PortalAuthFrame>
     );
   }
 
@@ -124,20 +133,32 @@ export function PartnerRegisterView() {
    * CÙNG một cây cho người chưa đăng nhập và người vừa được cấp phiên ở bước 1 của form — dựng hai
    * cây là tháo form đúng lúc tài khoản vừa tạo, và mọi giá trị đã gõ mất sạch.
    */
+  const signupForm = (
+    <div className={styles.wrap}>
+      <PartnerSignupForm
+        track={chosenTrack}
+        onCreated={(track) => setDoneHref(partnerTrackStartHref(track))}
+        back={
+          fromMarket ? undefined : (
+            <Link href={ROUTES.MANAGE.REGISTER} className={SIGNUP_INTRO_BACK_CLASS}>
+              <ArrowLeftOutlined /> {tSignup('changeTrack')}
+            </Link>
+          )
+        }
+      />
+      {user ? null : <LoginHint label={tSignup('hasAccount')} action={tSignup('login')} />}
+    </div>
+  );
+
+  /*
+   * Figma Partner-XePrime `24382:23516` · `24382:85032`: thẻ form đứng giữa nền xám, không có
+   * thanh trên. Người đã đăng nhập (vào bằng Google/Facebook, chưa có gian hàng) vẫn cần thanh
+   * trên để thấy mình là ai và đăng xuất. CÙNG một cây cho hai trường hợp — chỉ đổi prop — để
+   * form không bị tháo đúng lúc bước 1 vừa tạo tài khoản.
+   */
   return (
-    <PartnerFocusLayout>
-      <div className={styles.wrap}>
-        {fromMarket ? null : (
-          <Link href={ROUTES.MANAGE.REGISTER} className={styles.back}>
-            <ArrowLeftOutlined /> {tSignup('changeTrack')}
-          </Link>
-        )}
-        <PartnerSignupForm
-          track={chosenTrack}
-          onCreated={(track) => setDoneHref(partnerTrackStartHref(track))}
-        />
-        {user ? null : <LoginHint label={tSignup('hasAccount')} action={tSignup('login')} />}
-      </div>
+    <PartnerFocusLayout bare={!user} className={styles.page}>
+      {signupForm}
     </PartnerFocusLayout>
   );
 }

@@ -69,12 +69,15 @@ export class VehicleRegistrationReadResultDto {
  * phải có mặt ở đây.
  */
 export class CreateVehicleRegistrationDto {
-  @ApiProperty({
-    description: 'Id lượt tải ảnh cà vẹt (POST /vehicle-registration-uploads/presign).',
+  @ApiPropertyOptional({
+    description:
+      'Id lượt tải ảnh cà vẹt (POST /vehicle-registration-uploads/presign). TUỲ CHỌN (18/11/2026): ' +
+      'ảnh chỉ để máy điền nhanh - không có ảnh thì chủ xe tự nhập, giấy tờ lưu không kèm tệp.',
   })
+  @IsOptional()
   @IsString()
   @Length(26, 26)
-  uploadId!: string;
+  uploadId?: string;
 
   @ApiProperty({ maxLength: LIMITS.holderNameMax })
   @Transform(trim)

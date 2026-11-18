@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { SubFormSave } from '@/hooks/use-report-dirty';
+import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { CatalogRentHintFor } from '@/features/vehicles/components/CatalogSuggestions';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -422,7 +425,50 @@ function VehiclePricingForm({
     policyDirtyRef.current = policyDirty;
   }, [policyDirty]);
 
-  const leave = useLeaveGuard(formState.isDirty);
+  /*
+   * Form CON có nút Lưu riêng (thời gian giao nhận, điều khoản, tự nhận chuyến) cũng là thay đổi chưa
+   * lưu — trước 17/11/2026 chặn rời trang chỉ nhìn form giá nên sửa dở điều khoản rồi đổi tab là mất.
+   */
+  const [subDirty, setSubDirty] = useState<Readonly<Record<string, boolean>>>({});
+  const reportSubDirty = useCallback(
+    (key: string) => (dirty: boolean) =>
+      setSubDirty((prev) => (prev[key] === dirty ? prev : { ...prev, [key]: dirty })),
+    [],
+  );
+  const subReporters = useMemo(
+    () => ({
+      autoToggle: reportSubDirty('autoToggle'),
+      autoExtras: reportSubDirty('autoExtras'),
+      handover: reportSubDirty('handover'),
+      termsSelf: reportSubDirty('termsSelf'),
+      termsDriver: reportSubDirty('termsDriver'),
+    }),
+    [reportSubDirty],
+  );
+  const anySubDirty = Object.values(subDirty).some(Boolean);
+
+  /*
+   * Tab "Chính sách thuê": MỘT nút Lưu như web `PolicyPane` (người dùng chốt 17/11/2026) - form con
+   * (thời gian giao nhận, điều khoản từng dịch vụ) đăng ký hàm lưu ở đây và ẩn nút riêng.
+   */
+  const subSavers = useRef<Record<string, SubFormSave>>({});
+  const registerSubSave = useCallback(
+    (key: string) => (save: SubFormSave | null) => {
+      if (save) subSavers.current[key] = save;
+      else delete subSavers.current[key];
+    },
+    [],
+  );
+  const subRegistrars = useMemo(
+    () => ({
+      handover: registerSubSave('handover'),
+      termsSelf: registerSubSave('termsSelf'),
+      termsDriver: registerSubSave('termsDriver'),
+    }),
+    [registerSubSave],
+  );
+  const [subSaving, setSubSaving] = useState(false);
+  const leave = useLeaveGuard(formState.isDirty || anySubDirty);
   const refresh = useFormRefresh(formState.isDirty, refreshing, onRefetch);
 
   /* `useWatch` để bảng gợi ý giá gói chạy theo TỪNG phím gõ. */
@@ -494,6 +540,27 @@ function VehiclePricingForm({
     }
   });
 
+  /**
+   * Lưu cả tab: form con trước, LẦN LƯỢT (dừng ở form lỗi đầu tiên, lỗi hiện tại ô / toast của nó),
+   * không toast riêng - một toast chung. Sau đó form giá/chính sách, vốn có hộp xác nhận riêng: huỷ
+   * hộp đó thì phần form con đã lưu vẫn giữ (chúng là các bản ghi độc lập, như web `PolicyPane`).
+   */
+  async function saveAll() {
+    const pricingDirty = formState.isDirty || editMode !== overriding;
+    if (policyPane && anySubDirty) {
+      setSubSaving(true);
+      try {
+        for (const run of Object.values(subSavers.current)) {
+          if (!(await run())) return;
+        }
+      } finally {
+        setSubSaving(false);
+      }
+      if (!pricingDirty) toast.showSuccess(tPolicyEditor('savedAll'));
+    }
+    if (pricingDirty) void submit();
+  }
+
   const dialog =
     pending === null
       ? null
@@ -547,18 +614,27 @@ function VehiclePricingForm({
               variant="gradient"
               label={tActions('saveChanges')}
               icon="checkmark-outline"
-              loading={save.isPending}
+              loading={save.isPending || subSaving}
               /*
                * Chuyển nguồn kế thừa ↔ tuỳ chỉnh là thay đổi CẦN LƯU dù chưa gõ ô nào — so ý định
-               * (`editMode`) với nguồn đã lưu (`overriding`).
+               * (`editMode`) với nguồn đã lưu (`overriding`). Tab chính sách tính cả form con.
                */
-              disabled={!formState.isDirty && editMode === overriding}
-              onPress={() => void submit()}
+              disabled={
+                !formState.isDirty && editMode === overriding && !(policyPane && anySubDirty)
+              }
+              onPress={() => void saveAll()}
             />
           ) : undefined
         }
       >
         <YStack gap={layout.section}>
+          {customerScope ? null : (
+            <VehicleEditSummaryCard
+              vehicleId={vehicle.id}
+              tab={policyPane ? VEHICLE_EDIT_TAB.POLICY : VEHICLE_EDIT_TAB.PRICING}
+              guard={leave.guard}
+            />
+          )}
           {legacyMerged || policyPane ? null : (
             <VehicleServiceToggles
               vehicle={vehicle}
@@ -583,6 +659,7 @@ function VehiclePricingForm({
               serviceType={serviceTab}
               canEdit={canEdit}
               part="toggle"
+              onDirtyChange={subReporters.autoToggle}
             />
           ) : null}
           {/* Tiêu đề + phụ đề của MỤC — `SectionCard` bao quanh workspace ở `VehiclePricingSection`. */}
@@ -672,6 +749,20 @@ function VehiclePricingForm({
                   hint={t('selfDrive.weekdayHint')}
                   required
                   editable={canEdit}
+                />
+                {/* Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) - như web `ServicesPane`; bù 17/11/2026. */}
+                <CatalogRentHintFor
+                  modelId={vehicle.vehicleCatalogModelId}
+                  variantId={vehicle.vehicleCatalogVariantId}
+                  year={vehicle.manufactureYear}
+                  vehicleId={vehicle.id}
+                  field="weekdayPrice"
+                  {...(canEdit
+                    ? {
+                        onApply: (price: number) =>
+                          setValue('weekdayPrice', price, { shouldDirty: true, shouldValidate: true }),
+                      }
+                    : {})}
                 />
                 <MoneyField
                   control={control}
@@ -771,6 +862,20 @@ function VehiclePricingForm({
                   hint={t('withDriver.dailyHint')}
                   editable={canEdit}
                 />
+                {/* Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) - như web `ServicesPane`; bù 17/11/2026. */}
+                <CatalogRentHintFor
+                  modelId={vehicle.vehicleCatalogModelId}
+                  variantId={vehicle.vehicleCatalogVariantId}
+                  year={vehicle.manufactureYear}
+                  vehicleId={vehicle.id}
+                  field="withDriverDailyPrice"
+                  {...(canEdit
+                    ? {
+                        onApply: (price: number) =>
+                          setValue('withDriverDailyPrice', price, { shouldDirty: true, shouldValidate: true }),
+                      }
+                    : {})}
+                />
                 <MoneyField
                   control={control}
                   name="withDriverInterCityPrice"
@@ -801,6 +906,7 @@ function VehiclePricingForm({
               serviceType={serviceTab}
               canEdit={canEdit}
               part="extras"
+              onDirtyChange={subReporters.autoExtras}
             />
           ) : null}
 
@@ -883,7 +989,12 @@ function VehiclePricingForm({
           {/* Web `PolicyPane`: thời gian chết rồi điều kiện thuê của từng dịch vụ đang bật. */}
           {policyPane ? (
             <>
-              <HandoverBody vehicleId={vehicleId} canEdit={canEdit} />
+              <HandoverBody
+                vehicleId={vehicleId}
+                canEdit={canEdit}
+                onDirtyChange={subReporters.handover}
+                registerSave={subRegistrars.handover}
+              />
               {/* Web `TermsCards`: tự lái (gồm dài hạn) luôn có; có tài xế khi loại xe cho phép. */}
               {[SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER]
                 .filter(
@@ -918,6 +1029,16 @@ function VehiclePricingForm({
                       isManage={!customerScope}
                       // Web `TermsCards` chỉ còn giấy tờ & điều khoản - cọc/km đã ở các khối chính sách phía trên.
                       showRules={false}
+                      onDirtyChange={
+                        service === SERVICE_TYPE.SELF_DRIVE
+                          ? subReporters.termsSelf
+                          : subReporters.termsDriver
+                      }
+                      registerSave={
+                        service === SERVICE_TYPE.SELF_DRIVE
+                          ? subRegistrars.termsSelf
+                          : subRegistrars.termsDriver
+                      }
                     />
                   </YStack>
                 ))}

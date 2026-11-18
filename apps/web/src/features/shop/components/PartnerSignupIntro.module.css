@@ -1,0 +1,136 @@
+/*
+ * Cột giới thiệu tuyến của form đăng ký đối tác — Figma Partner-XePrime `24382:23516` (chủ xe) ·
+ * `24382:85032` (gian hàng): nền gradient, link "Đổi cách cho thuê", minh hoạ 218 × 177, tiêu đề
+ * 24/32 + khẩu hiệu 18/28, mô tả 16/24, ba quyền lợi (ô tích vàng 28).
+ */
+.intro {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 40px 32px;
+  overflow: hidden;
+  background: var(--xp-color-bg-container);
+}
+
+.bg {
+  z-index: 0;
+  object-fit: cover;
+}
+
+.intro > :not(.bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.back {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: #414651;
+}
+
+.back:hover {
+  color: var(--xp-color-primary);
+}
+
+.illustration {
+  width: 218px;
+  height: auto;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #0e0f12;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+.tagline {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 28px;
+}
+
+.body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: #414651;
+}
+
+.benefits {
+  display: flex;
+  margin: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  list-style: none;
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 0;
+}
+
+.check {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 14px;
+  background: #fff9e5;
+  color: var(--xp-color-primary);
+  font-size: 14px;
+}
+
+.benefitText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.benefitTitle {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: #433008;
+}
+
+.benefitSub {
+  font-size: 14px;
+  line-height: 20px;
+  color: #0e0f12;
+}
+
+@media (max-width: 899px) {
+  .intro {
+    gap: 24px;
+    padding: 24px 20px;
+  }
+
+  .illustration {
+    width: 160px;
+  }
+}

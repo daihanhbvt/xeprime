@@ -1,9 +1,11 @@
+/*
+ * Luồng đăng nhanh dùng cùng vỏ ba cột với wizard nâng cao (Figma `24352:70390`, 17/11/2026), nên
+ * form không còn bị bóp về bề rộng form hẹp - cột bước + nội dung + cột xem trước cần cả trang.
+ */
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
-  max-width: var(--xp-shell-form-max-width);
-  margin-inline: auto;
 }
 
 /* Neo focus: chuyển bước xong đưa con trỏ bàn phím về đầu nội dung, không nhìn thấy được. */
@@ -15,11 +17,20 @@
   margin-bottom: var(--xp-space-md);
 }
 
-.finalActions {
-  display: flex;
-  gap: var(--xp-space-sm);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  padding-top: var(--xp-space-md);
-  border-top: 1px solid var(--xp-color-border-subtle);
+/* "Thoát" ở bước 1 đứng riêng bên trái hàng nút. */
+.footerStart {
+  margin-right: auto;
+}
+
+/* Nhãn "N ảnh bắt buộc" - viền vàng, nền kem (cùng nhãn với wizard nâng cao). */
+.requiredBadge.requiredBadge {
+  margin: 0;
+  border-color: var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+}
+
+.registrationBlock {
+  margin-top: var(--xp-space-lg);
 }

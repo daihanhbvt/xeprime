@@ -14,7 +14,7 @@ import styles from './LegalConsentNote.module.css';
  * chủ xe — một ô tick phủ cả hai, không phải hai ô cạnh nhau.
  */
 export type LegalConsentPlace =
-  'auth' | 'marketAuth' | 'booking' | 'bookingCheck' | 'bookingCheckHost' | 'subscription' | 'shop';
+  'auth' | 'marketAuth' | 'booking' | 'bookingCheck' | 'bookingCheckHost' | 'subscription' | 'shop' | 'shopCheck';
 
 /**
  * Khoá message viết THÀNH CHỮ, không ghép từ `place` lúc chạy.
@@ -31,6 +31,7 @@ const CONSENT_KEY = {
   bookingCheckHost: 'consent.bookingCheckHost',
   subscription: 'consent.subscription',
   shop: 'consent.shop',
+  shopCheck: 'consent.shopCheck',
 } as const satisfies Record<LegalConsentPlace, string>;
 
 /**

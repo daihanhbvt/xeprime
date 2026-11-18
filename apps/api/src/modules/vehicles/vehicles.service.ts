@@ -594,14 +594,7 @@ export class VehiclesService {
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType: dto.vehicleType });
     assertVehicleProfile(dto.vehicleType, input.fuelType, input);
-    // Cà vẹt kèm lượt tạo chỉ dành cho ô tô (ADR 0089) — xe máy chưa có bảo hiểm.
-    if (dto.registration && dto.vehicleType !== VEHICLE_TYPE.CAR) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Cà vẹt kèm lượt tạo xe chỉ áp dụng cho ô tô',
-        details: { fields: [{ field: 'registration', message: 'Chỉ áp dụng cho ô tô' }] },
-      });
-    }
+    // Cà vẹt kèm lượt tạo áp cho CẢ ô tô lẫn xe máy (ADR 0097, mở rộng ADR 0089 từ 17/11/2026).
 
     await this.prisma.$transaction(async (tx) => {
       // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay

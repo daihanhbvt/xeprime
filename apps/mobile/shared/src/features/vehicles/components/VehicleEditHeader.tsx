@@ -2,7 +2,8 @@ import { memo, useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, VEHICLE_DOCUMENT_TYPE, missingVehicleImageTypes } from '@xeprime/types';
+import { useVehicleDocuments } from '@/features/vehicle-documents/hooks/use-documents';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -19,6 +20,13 @@ import { publishCompleteness } from '../publication';
 /** Figma "Chỉnh sửa xe" MB (`24228:103820`): thanh tiến độ rộng 80, cao 6, xanh dương trên nền `shape/gray-100`. */
 const PROGRESS_WIDTH = 80;
 const PROGRESS_HEIGHT = 6;
+
+/** Ba giấy tờ CỐT LÕI của số "2/3" — web `STANDARD_VEHICLE_DOCUMENT_TYPES`. */
+const CORE_DOCUMENT_TYPES = [
+  VEHICLE_DOCUMENT_TYPE.REGISTRATION,
+  VEHICLE_DOCUMENT_TYPE.INSPECTION,
+  VEHICLE_DOCUMENT_TYPE.INSURANCE,
+] as const;
 
 /**
  * Mục NÀO của dải tab sáng lên với một route sửa xe — các route con của "Dịch vụ & giá" /
@@ -82,6 +90,19 @@ export const VehicleEditHeader = memo(function VehicleEditHeader({
     [run, onBack, router, vehicleId],
   );
 
+  /*
+   * Nhãn trên tab (web `VehicleEditWorkspace`, bù 17/11/2026): góc ảnh bắt buộc còn thiếu ở "Hình
+   * ảnh", giấy tờ cốt lõi đã có / 3 ở "Giấy tờ".
+   */
+  const missingImages = vehicle.data
+    ? missingVehicleImageTypes(vehicle.data.vehicleType, vehicle.data.media ?? []).length
+    : 0;
+  const documents = useVehicleDocuments(vehicleId, can.documents);
+  const docsPresent = CORE_DOCUMENT_TYPES.filter((type) =>
+    (documents.data ?? []).some((doc) => doc.type === type && doc.hasFile),
+  ).length;
+  const hasDocuments = Boolean(documents.data);
+
   const items = useMemo(
     () =>
       vehicleEditNavGroups({
@@ -95,8 +116,32 @@ export const VehicleEditHeader = memo(function VehicleEditHeader({
         },
       })
         .flatMap((group) => group.items)
-        .map((entry) => ({ key: entry.tab, label: tEditor(`menu.items.${entry.labelKey}`) })),
-    [can.documents, can.maintenance, can.source, tEditor],
+        .map((entry) => ({
+          key: entry.tab,
+          label: tEditor(`menu.items.${entry.labelKey}`),
+          ...(entry.tab === VEHICLE_EDIT_TAB.MEDIA && missingImages > 0
+            ? {
+                badge: {
+                  text: tEditor('menu.missingBadge', { count: missingImages }),
+                  label: tEditor('menu.missingImages', { count: missingImages }),
+                  warn: true,
+                },
+              }
+            : {}),
+          ...(entry.tab === VEHICLE_EDIT_TAB.DOCUMENTS && hasDocuments
+            ? {
+                badge: {
+                  text: `${docsPresent}/${CORE_DOCUMENT_TYPES.length}`,
+                  label: tEditor('menu.documentsCount', {
+                    count: docsPresent,
+                    total: CORE_DOCUMENT_TYPES.length,
+                  }),
+                  warn: docsPresent < CORE_DOCUMENT_TYPES.length,
+                },
+              }
+            : {}),
+        })),
+    [can.documents, can.maintenance, can.source, tEditor, missingImages, docsPresent, hasDocuments],
   );
 
   const select = useCallback(

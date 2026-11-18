@@ -33,9 +33,12 @@ vi.mock('@/features/auth/hooks/use-auth-actions', () => ({
 }));
 
 // Form auth thật kéo theo cả cụm social + OTP; ở đây chỉ cần biết nó CÓ hiện hay không.
-vi.mock('@/features/auth/components/AuthPanel', () => ({
-  AuthPanel: () => <div data-testid="auth-panel" />,
+vi.mock('@/features/auth/components/MarketAuthForms', () => ({
+  MarketAuthForms: () => <div data-testid="auth-panel" />,
 }));
+// Cột ảnh thương hiệu dùng `next/image` — không liên quan tới điều hướng đang kiểm.
+vi.mock('@/features/auth/components/AuthBrandPanel', () => ({ AuthBrandPanel: () => null }));
+vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false }));
 
 /*
  * Gian hàng TUYẾN GÓI, khai tường minh (15/09/2026).

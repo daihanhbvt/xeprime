@@ -35,7 +35,8 @@
     "bookingCheckHostPlain": "Tôi đã đọc và đồng ý với điều khoản thuê của chủ xe, Điều khoản sử dụng, Chính sách huỷ & hoàn tiền và Chính sách bảo mật của XePrime.",
     "subscription": "Mua gói tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <rules>Quy chế hoạt động sàn</rules>.",
     "shop": "Tạo gian hàng tức là bạn đồng ý với <rules>Quy chế hoạt động sàn</rules> và <terms>Điều khoản sử dụng</terms>.",
-    "marketAuth": "Bằng cách tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách quyền riêng tư</privacy> của XePrime."
+    "marketAuth": "Bằng cách tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách quyền riêng tư</privacy> của XePrime.",
+    "shopCheck": "Tôi đồng ý với <rules>Quy chế hoạt động sàn</rules> và <terms>Điều khoản sử dụng</terms> của XePrime"
   },
   "docs": {
     "terms": {

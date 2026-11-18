@@ -227,16 +227,20 @@ export class VehicleRegistrationUploadsService implements OnApplicationShutdown 
   ): Promise<void> {
     const { tenantId, userId, vehicleId, registration } = input;
     const freshSince = new Date(Date.now() - VEHICLE_REGISTRATION_UPLOAD_TTL_HOURS * HOUR_MS);
+    const uploadId = registration.uploadId;
+    // Ảnh cà vẹt TUỲ CHỌN (18/11/2026): không có ảnh thì giấy tờ vẫn lưu các trường chủ xe nhập.
     // Khoá dòng: hai lượt tạo xe song song không thể cùng giành một ảnh.
-    const locked = await tx.$queryRaw<{ objectKey: string; mimeType: string; sizeBytes: number }[]>`
+    const locked = !uploadId
+      ? []
+      : await tx.$queryRaw<{ objectKey: string; mimeType: string; sizeBytes: number }[]>`
       SELECT "object_key" AS "objectKey", "mime_type" AS "mimeType", "size_bytes" AS "sizeBytes"
       FROM "vehicle_registration_uploads"
-      WHERE "id" = ${registration.uploadId} AND "tenant_id" = ${tenantId}
+      WHERE "id" = ${uploadId} AND "tenant_id" = ${tenantId}
         AND "created_by" = ${userId} AND "status" = ${VEHICLE_REGISTRATION_UPLOAD_STATUS.READ}
         AND "created_at" >= ${freshSince}
       FOR UPDATE`;
     const upload = locked[0];
-    if (!upload) throw uploadInvalid();
+    if (uploadId && !upload) throw uploadInvalid();
 
     const state = {
       type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
@@ -255,48 +259,51 @@ export class VehicleRegistrationUploadsService implements OnApplicationShutdown 
     validateDocumentMetadata(state);
 
     const now = new Date();
-    const fileId = newId();
     const documentId = newId();
-    const versionId = newId();
-    const extension = DOCUMENT_MIME_EXTENSION[upload.mimeType as ImageUploadMimeType] ?? 'jpg';
-    // Tệp riêng tư của XE trỏ cùng object đã tải — không chép, không di chuyển.
-    await tx.vehiclePrivateFile.create({
-      data: {
-        id: fileId,
-        tenantId,
-        vehicleId,
-        purpose: PRIVATE_FILE_PURPOSE.VEHICLE_DOCUMENT,
-        objectKey: upload.objectKey,
-        originalName: `ca-vet.${extension}`,
-        mimeType: upload.mimeType,
-        sizeBytes: upload.sizeBytes,
-        status: PRIVATE_FILE_STATUS.READY,
-        createdBy: userId,
-        completedAt: now,
-      },
-    });
     await tx.vehicleDocument.create({
       data: { id: documentId, tenantId, vehicleId, ...state, createdBy: userId },
     });
-    await tx.vehicleDocumentVersion.create({
-      data: {
-        id: versionId,
-        tenantId,
-        vehicleId,
-        documentId,
-        privateFileId: fileId,
-        version: 1,
-        uploadedBy: userId,
-      },
-    });
-    await tx.vehicleDocument.update({
-      where: { id: documentId },
-      data: { activeVersionId: versionId },
-    });
-    await tx.vehicleRegistrationUpload.update({
-      where: { id: registration.uploadId },
-      data: { status: VEHICLE_REGISTRATION_UPLOAD_STATUS.CONSUMED, vehicleId, consumedAt: now },
-    });
+    let fileId: string | null = null;
+    if (upload && uploadId) {
+      fileId = newId();
+      const versionId = newId();
+      const extension = DOCUMENT_MIME_EXTENSION[upload.mimeType as ImageUploadMimeType] ?? 'jpg';
+      // Tệp riêng tư của XE trỏ cùng object đã tải — không chép, không di chuyển.
+      await tx.vehiclePrivateFile.create({
+        data: {
+          id: fileId,
+          tenantId,
+          vehicleId,
+          purpose: PRIVATE_FILE_PURPOSE.VEHICLE_DOCUMENT,
+          objectKey: upload.objectKey,
+          originalName: `ca-vet.${extension}`,
+          mimeType: upload.mimeType,
+          sizeBytes: upload.sizeBytes,
+          status: PRIVATE_FILE_STATUS.READY,
+          createdBy: userId,
+          completedAt: now,
+        },
+      });
+      await tx.vehicleDocumentVersion.create({
+        data: {
+          id: versionId,
+          tenantId,
+          vehicleId,
+          documentId,
+          privateFileId: fileId,
+          version: 1,
+          uploadedBy: userId,
+        },
+      });
+      await tx.vehicleDocument.update({
+        where: { id: documentId },
+        data: { activeVersionId: versionId },
+      });
+      await tx.vehicleRegistrationUpload.update({
+        where: { id: uploadId },
+        data: { status: VEHICLE_REGISTRATION_UPLOAD_STATUS.CONSUMED, vehicleId, consumedAt: now },
+      });
+    }
     // Không ghi số khung / tên chủ xe vào audit — chỉ vết "có cà vẹt kèm lượt tạo xe".
     await this.audit.record(
       {

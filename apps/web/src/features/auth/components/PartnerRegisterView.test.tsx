@@ -61,7 +61,8 @@ vi.mock('@/features/phone-verification/api', () => ({
 }));
 
 // Lời mời vào gian hàng vẫn dùng form tài khoản thuần — thay bằng dấu hiệu.
-vi.mock('./AuthPanel', () => ({ AuthPanel: () => <div data-testid="auth-panel" /> }));
+vi.mock('./MarketAuthForms', () => ({ MarketAuthForms: () => <div data-testid="auth-panel" /> }));
+vi.mock('./AuthBrandPanel', () => ({ AuthBrandPanel: () => null }));
 
 vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({
@@ -393,7 +394,7 @@ describe('Bước 2 - một form, không ô nào hỏi hai lần', () => {
 });
 
 describe('Lời mời và gian hàng đã có', () => {
-  it('?next= là lời mời: form tạo tài khoản như cũ (AuthPanel), không OTP/email, không hồ sơ', () => {
+  it('?next= là lời mời: form tạo tài khoản như cũ (MarketAuthForms), không OTP/email, không hồ sơ', () => {
     nav.search = `next=${encodeURIComponent('/manage/invites/tok-1')}`;
     renderView();
 

@@ -12,6 +12,11 @@ export interface UnderlineTabItem<K extends string> {
   count?: number;
   /** Viên đếm tô ĐỎ khi tab chưa chọn (vd "Quá giờ"); tab đang chọn luôn vàng. */
   urgent?: boolean;
+  /**
+   * Nhãn CHỮ thay cho số (web `EditMenuBadge`: "1 thiếu" · "2/3") + câu đọc màn hình đầy đủ.
+   * Có `badge` thì không vẽ `count`.
+   */
+  badge?: { text: string; label: string; warn?: boolean };
 }
 
 /**
@@ -67,7 +72,13 @@ const UnderlineTab = memo(function UnderlineTab({
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={item.count != null ? `${item.label} (${item.count})` : item.label}
+      accessibilityLabel={
+        item.badge
+          ? `${item.label} (${item.badge.label})`
+          : item.count != null
+            ? `${item.label} (${item.count})`
+            : item.label
+      }
     >
       <XStack
         ai="center"
@@ -89,7 +100,9 @@ const UnderlineTab = memo(function UnderlineTab({
         >
           {item.label}
         </Text>
-        {item.count != null ? (
+        {item.badge ? (
+          <Pill label={item.badge.text} tone={item.badge.warn ? 'warning' : 'neutral'} />
+        ) : item.count != null ? (
           <Pill
             label={String(item.count)}
             tone={active ? 'brand' : item.urgent ? 'danger' : 'neutral'}

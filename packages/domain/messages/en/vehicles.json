@@ -146,14 +146,16 @@
     },
     "wizard": {
       "basic": {
-        "title": "Basics",
-        "shortTitle": "Basics",
-        "heading": "1. Basic vehicle information"
+        "title": "Vehicle details",
+        "shortTitle": "Details",
+        "heading": "Vehicle details",
+        "description": "Complete vehicle information"
       },
       "pricing": {
-        "title": "Pricing & policies",
-        "shortTitle": "Pricing",
-        "heading": "2. Pricing & policies"
+        "title": "Services & pricing",
+        "shortTitle": "Services",
+        "heading": "Services & pricing",
+        "description": "At least 1 service with a price"
       },
       "media": {
         "title": "Photos",
@@ -177,7 +179,17 @@
         "cancel": "Keep entering",
         "body": "Unsaved changes in the wizard will be lost."
       },
-      "publishRequired": "Complete these so the vehicle can go on the marketplace: {items}."
+      "publishRequired": "Complete these so the vehicle can go on the marketplace: {items}.",
+      "features": {
+        "title": "Features & description",
+        "shortTitle": "Features",
+        "heading": "Features & description",
+        "description": "Optional for your vehicle"
+      },
+      "submit": "Submit for review",
+      "missingTitle": "Some information is missing!",
+      "missingBody": "Please fill in all required information before submitting the vehicle for review.",
+      "requiredForPublish": "Required to list the vehicle"
     },
     "basic": {
       "name": "Vehicle name",
@@ -249,7 +261,9 @@
       "batteryCapacityHelp": "kWh - leave empty if you are unsure",
       "electricConsumption": "Electric consumption",
       "electricConsumptionPlaceholder": "15",
-      "electricConsumptionHelp": "kWh per 100 km - optional"
+      "electricConsumptionHelp": "kWh per 100 km - optional",
+      "electricOnly": "Electric vehicles only",
+      "pickFuelFirst": "Choose the fuel type first"
     },
     "specs": {
       "plateNumber": "Licence plate",
@@ -345,7 +359,25 @@
       "overtime": "Late-return fee",
       "notConfigured": "Not configured",
       "discountsLabel": "Commitment discounts (long-term rental)",
-      "packageChip": "{label} package"
+      "packageChip": "{label} package",
+      "title": "Services & pricing",
+      "subtitle": "Set up rental services and their prices.",
+      "inheritTitle": "New vehicles automatically inherit the shop deposit, delivery, overtime fee and discounts.",
+      "inheritDetail": "Details",
+      "longTermInherit": "Term discounts come from the shop policy",
+      "longTermInheritLink": "View policy",
+      "services": {
+        "toggleLabel": "Turn on {service}",
+        "self_driveDescription": "Customers drive themselves, priced per day or per hour",
+        "with_driverDescription": "Provide a driver for each trip",
+        "long_termDescription": "Rent by the month or for longer terms",
+        "notForVehicleType": "This service is not available for the selected vehicle type"
+      },
+      "autoAccept": {
+        "title": "Auto-accept trips",
+        "description": "Save response time and increase conversion.",
+        "needsSelfDrive": "Turn on self-drive rental to use this feature."
+      }
     },
     "review": {
       "editStep": "Edit",
@@ -380,7 +412,7 @@
       "submitted": "The vehicle profile has been saved and submitted for public review.",
       "draft": "The vehicle has been saved to your internal records as a draft.",
       "cardLabel": "The vehicle you just created",
-      "checklistTitle": "Complete the vehicle profile",
+      "checklistTitle": "Complete the profile for a faster review",
       "checklistBody": "A few core details are still needed before the vehicle can go public on the marketplace.",
       "checkInfo": "Check the vehicle information and specifications",
       "checkInfoLink": "Information tab →",
@@ -393,8 +425,36 @@
       "checkFuture": "Vehicle documents and maintenance",
       "checkFutureNote": "Coming in a later wave",
       "viewDetail": "View the full vehicle profile",
-      "createAnother": "Add another vehicle",
-      "submitFailed": "Vehicle created but could not be submitted for review: {reason}"
+      "createAnother": "Add new vehicle",
+      "submitFailed": "Vehicle created but could not be submitted for review: {reason}",
+      "submittedTitle": "Vehicle submitted for review",
+      "draftTitle": "Vehicle saved as draft",
+      "submittedBody": "{vehicle} is Pending review. We will let you know as soon as there is a result!",
+      "draftBody": "{vehicle} has been saved as a draft. Complete the profile and submit it when ready.",
+      "optional": "Optional",
+      "backToList": "Vehicles",
+      "completeProfile": "Complete vehicle profile",
+      "items": {
+        "documents": {
+          "title": "Vehicle documents",
+          "body": "Registration, inspection, insurance..."
+        },
+        "media": {
+          "title": "Add real photos and features",
+          "body": "Add more photos and the vehicle features."
+        },
+        "policy": {
+          "title": "Check prices, deposit and rental policy",
+          "body": "Set rental prices, deposit and conditions"
+        },
+        "maintenance": {
+          "title": "Maintenance & mileage",
+          "body": "Scheduled maintenance, current mileage"
+        }
+      },
+      "notSubmittedTitle": "Saved as draft - not submitted yet",
+      "notSubmittedReason": "Reason: {reason}",
+      "fixShopProfile": "Update shop profile"
     },
     "validation": {
       "nameRequired": "Vehicle name is required",
@@ -463,12 +523,13 @@
       "motorbikeCategoryMotorbikeOnly": "Category applies to motorbikes only",
       "priceThousandStep": "Prices must be a multiple of 1,000 VND",
       "insuredValueRange": "Car value must be between 50,000,000 and 20,000,000,000 VND, rounded to the million.",
-      "insuredValueCarOnly": "Car value applies to cars only"
+      "insuredValueCarOnly": "Car value applies to cars only",
+      "photosRequired": "{count, plural, one {# photo angle is} other {# photo angles are}} still missing - every slot needs a photo"
     },
     "registration": {
       "title": "Vehicle registration certificate",
       "tipLabel": "Why the registration certificate is needed",
-      "tip": "The side showing the owner name, chassis number and engine number. It is used to issue vehicle damage insurance for each rental trip.",
+      "tip": "Optional - a photo of the side showing the owner name, chassis number and engine number fills those three fields for you; otherwise type them in. It is used to issue vehicle damage insurance for each rental trip.",
       "choose": "Take or upload a photo of the registration",
       "chooseHint": "The side with owner name, chassis and engine numbers - straight on, well lit",
       "replace": "Retake",
@@ -507,7 +568,15 @@
         "engineRequired": "Enter the engine number",
         "engineInvalid": "Engine number is 4-25 letters and digits",
         "addressTooLong": "Address is at most 255 characters"
-      }
+      },
+      "manualEntry": "Enter manually",
+      "scanPlaceholder": "Upload the registration to scan, or type it",
+      "editField": "Edit {field}",
+      "scanOk": "Scanned: chassis {chassis} · engine {engine}",
+      "scanMissing": "Could not read the chassis and engine numbers - please check the photo or type them below.",
+      "scanFound": "Scanned: {items}",
+      "scanMissingItems": "Could not read {items} - please check the photo or type it below.",
+      "view": "View registration photo"
     },
     "catalog": {
       "variant": "Variant",
@@ -553,6 +622,64 @@
       "rentReferenceModel": "Reference price for this model: {price}",
       "rentMarket": "Same model on XePrime: {low} - {high} ({count, plural, one {# vehicle} other {# vehicles}})",
       "useRent": "Use {price}"
+    },
+    "createSteps": {
+      "photosTitle": "Vehicle photos",
+      "photosDescription": "Start with photos so customers can see your vehicle",
+      "photosRequired": "{count} required photos",
+      "infoTitle": "Vehicle details",
+      "infoDescription": "Provide the basic information and specs of the vehicle.",
+      "featuresTitle": "Features & description",
+      "featuresDescription": "Pick features and describe the vehicle in detail."
+    },
+    "createAside": {
+      "previewTitle": "Marketplace preview",
+      "discountBadge": "{percent}% off",
+      "deliveryPill": "Delivery",
+      "namePlaceholder": "Your vehicle name",
+      "newTag": "New",
+      "seats": "{count} seats",
+      "shopLabel": "Shop",
+      "perDay": "/day",
+      "noPrice": "No price yet",
+      "readyTitle": "Ready for review",
+      "readyCount": "{done}/{total}",
+      "readyPhotos": "All {count} required photos",
+      "readyInfo": "Required vehicle details",
+      "readyPricing": "Services and rental prices",
+      "readyFeatures": "Features and description",
+      "srDone": "(done)",
+      "srTodo": "(not done)",
+      "saveDraft": "Save draft",
+      "saveDraftHint": "You can save a draft at any time and come back to finish later",
+      "readyShop": "Shop profile complete (logo, address)",
+      "optional": "Optional"
+    },
+    "confirm": {
+      "title": "Confirm and submit vehicle",
+      "subtitle": "Check the information before sending it to XePrime",
+      "gallery": "Photo gallery",
+      "photoCount": "{count} photos",
+      "info": "Vehicle details",
+      "pricing": "Services & pricing",
+      "note": "After submitting, the vehicle is Pending review. You can still add details on the vehicle edit page and resubmit.",
+      "backToEdit": "Back to editing",
+      "saveDraft": "Save draft",
+      "submit": "Submit for review",
+      "vehicleType": "Vehicle type",
+      "name": "Vehicle name",
+      "plate": "Plate number",
+      "branch": "Branch",
+      "chassis": "Chassis number",
+      "engine": "Engine number",
+      "brand": "Brand",
+      "model": "Model",
+      "year": "Year",
+      "color": "Color",
+      "seats": "Seats",
+      "fuel": "Fuel",
+      "transmission": "Transmission",
+      "source": "Vehicle source"
     }
   },
   "publish": {
@@ -1731,13 +1858,16 @@
     }
   },
   "create": {
-    "title": "Add vehicle",
+    "title": "Add new vehicle",
     "savedDraft": "Vehicle saved as draft",
     "createdAndSubmitted": "Vehicle created and submitted for public review",
     "createdNotSubmitted": "Vehicle created, but it could not be submitted for review: {error}",
     "forbiddenTitle": "You cannot add vehicles",
     "forbiddenBody": "You need the permission below to add vehicles to the shop. Ask an administrator to grant it.",
-    "backToList": "Back to vehicles"
+    "backToList": "Back to vehicles",
+    "subtitle": "List a new vehicle and set up its rental details.",
+    "parentCrumb": "Vehicles",
+    "autoAcceptNotSaved": "The vehicle was created but auto-accept could not be turned on: {error}. You can turn it on again from the vehicle edit screen."
   },
   "imageSlot": {
     "front": "Front",
@@ -1849,7 +1979,8 @@
       "deliveryTitle": "Doorstep delivery",
       "rulesTitle": "Delivery, deposit & extra fees",
       "pricesInvalid": "Some prices in Services & prices are invalid (for example, the weekday price is missing) - open that section, fix them, then save again.",
-      "bufferTipLabel": "Which bookings the preparation time applies to"
+      "bufferTipLabel": "Which bookings the preparation time applies to",
+      "savedAll": "Rental policy saved"
     },
     "conditions": {
       "selfDriveTitle": "Self-drive & long-term rental",

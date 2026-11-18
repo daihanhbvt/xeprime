@@ -144,7 +144,7 @@ const PUT_TIMEOUT_MS = 120_000;
  * (`references/native-adaptations.md` của skill mobile-feature). Header duy nhất là `Content-Type`,
  * như bản `fetch` trước đây.
  */
-function putWithProgress(
+export function putWithProgress(
   url: string,
   body: Blob,
   contentType: string,

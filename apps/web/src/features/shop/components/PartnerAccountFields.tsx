@@ -5,7 +5,6 @@ import {
   LockOutlined,
   MailOutlined,
   PhoneOutlined,
-  SafetyOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Alert, Button, Form, Input } from 'antd';
@@ -201,11 +200,8 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
     phoneState.error?.message ??
     (!dialogOpen ? otpError : null) ??
     verifiedState.error?.message ??
-    (verified
-      ? null
-      : phoneValid
-        ? t('signup.fields.otpCode.help')
-        : t('signup.fields.phone.help'));
+    // Figma Partner-XePrime `24382:23516`: ô SĐT không có dòng gợi ý — chỉ hiện lỗi.
+    null;
   const phoneError = Boolean(phoneState.error || (!dialogOpen && otpError) || verifiedState.error);
 
   return (
@@ -266,14 +262,12 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
               status={phoneError ? 'error' : undefined}
             />
             <Button
-              type="primary"
               className={styles.otpSend}
-              icon={<SafetyOutlined />}
               loading={otp.sending && !dialogOpen}
               disabled={!phoneValid}
               onClick={() => void startVerify()}
             >
-              {t('signup.fields.otpCode.verify')}
+              {t('signup.fields.otpCode.sendOtp')}
             </Button>
           </div>
         )}

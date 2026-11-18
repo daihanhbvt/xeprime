@@ -1,24 +1,18 @@
 'use client';
 
 import {
-  CheckOutlined,
-  InfoCircleOutlined,
+  ArrowRightOutlined,
   MailOutlined,
   PhoneOutlined,
-  SafetyOutlined,
   ShopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Form } from 'antd';
+import { Alert, Button, Checkbox, Form } from 'antd';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  REGISTRATION_TRACK,
-  TENANT_TYPE,
-  type RegistrationTrack,
-} from '@xeprime/types';
+import { REGISTRATION_TRACK, TENANT_TYPE, type RegistrationTrack } from '@xeprime/types';
 import { partnerSignupSchema, type PartnerSignupValues } from '@xeprime/validators';
 import { AddressField } from '@/components/form/AddressField';
 import { trailingRequiredMark } from '@/components/form/required-mark';
@@ -32,6 +26,7 @@ import { fetchCurrentUser, registerWithPassword, setPassword } from '@/services/
 import { queryKeys } from '@/services/query-keys';
 import { registerShop } from '../api';
 import { PartnerAccountFields } from './PartnerAccountFields';
+import { PartnerSignupIntro } from './PartnerSignupIntro';
 import styles from './ShopRegistration.module.css';
 
 const ADDRESS_FIELD_NAMES = {
@@ -52,6 +47,8 @@ interface PartnerSignupFormProps {
   track: RegistrationTrack;
   /** Gian hàng/hồ sơ chủ xe đã tạo — nơi gọi quyết định đi đâu tiếp. */
   onCreated: (track: RegistrationTrack) => void;
+  /** Link "Đổi cách cho thuê" đặt đầu cột giới thiệu (bỏ khi đến từ site khách). */
+  back?: ReactNode;
 }
 
 /**
@@ -76,7 +73,7 @@ interface PartnerSignupFormProps {
  * khoản biến mất, giá trị đã gõ còn nguyên, bấm lại chỉ chạy bước 2. Không bao giờ tạo tài khoản
  * thứ hai; một tài khoản đối tác đã có gian hàng thì server trả 409 (ADR 0053).
  */
-export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) {
+export function PartnerSignupForm({ track, onCreated, back }: PartnerSignupFormProps) {
   const t = useTranslations('ShopOnboarding');
   const queryClient = useQueryClient();
   const { refreshAfterAuth } = useAuthCache();
@@ -85,6 +82,8 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
+  const [agreed, setAgreed] = useState(false);
+  const [consentError, setConsentError] = useState(false);
 
   const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
   /** Chưa có phiên ⇒ form tạo luôn tài khoản. Đây là DỮ LIỆU của schema (`.when`). */
@@ -151,6 +150,11 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
 
   const submit = async (values: PartnerSignupValues) => {
     if (busy.current) return;
+    // Ô "Tôi đồng ý…" của bản vẽ: chưa tích thì chưa gửi gì lên server.
+    if (!agreed) {
+      setConsentError(true);
+      return;
+    }
     /*
      * Tạo tài khoản mà SĐT CHƯA xác thực: không chặn nút — mở popup nhập mã (gửi mã như nút
      * "Xác thực"). Nhập đúng mã thì `PartnerAccountFields` gọi `continueSubmit` và form tự gửi tiếp.
@@ -260,29 +264,7 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
 
   return (
     <section className={styles.card}>
-      <aside className={styles.intro}>
-        <span className={styles.introIcon} aria-hidden="true">
-          <ShopOutlined />
-        </span>
-        <h2 className={styles.introTitle}>{t(`signup.title.${track}`)}</h2>
-        <p className={styles.introText}>{t(`signup.subtitle.${track}`)}</p>
-        <div className={styles.tips}>
-          <p className={styles.tipsTitle}>
-            <InfoCircleOutlined aria-hidden="true" />
-            {t('tips.title')}
-          </p>
-          <ul className={styles.tipsList}>
-            <li>
-              <CheckOutlined aria-hidden="true" />
-              <span>{t('tips.accuracy')}</span>
-            </li>
-            <li>
-              <CheckOutlined aria-hidden="true" />
-              <span>{t('tips.editable')}</span>
-            </li>
-          </ul>
-        </div>
-      </aside>
+      <PartnerSignupIntro track={track} back={back} />
 
       <Form
         component={false}
@@ -292,6 +274,11 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
         requiredMark={trailingRequiredMark}
       >
         <form className={styles.form} onSubmit={onSubmit} noValidate>
+          <header className={styles.formHead}>
+            <h1 className={styles.formTitle}>{t('signup.formTitle')}</h1>
+            <p className={styles.formSub}>{t('signup.formSub')}</p>
+          </header>
+
           {error ? <Alert type="error" showIcon title={error} className={styles.alert} /> : null}
 
           {withAccount || attachToAccount ? (
@@ -334,36 +321,49 @@ export function PartnerSignupForm({ track, onCreated }: PartnerSignupFormProps) 
                 required
               />
             ) : null}
-            <AddressField
-              control={control}
-              names={ADDRESS_FIELD_NAMES}
-              pin={ADDRESS_PIN_NAMES}
-              required
-              provinceRequired
-              prefillRememberedProvince
-            />
+            <div className={styles.addressGrid}>
+              <AddressField
+                control={control}
+                names={ADDRESS_FIELD_NAMES}
+                pin={ADDRESS_PIN_NAMES}
+                required
+                provinceRequired
+                prefillRememberedProvince
+              />
+            </div>
             {withAccount || attachToAccount ? null : contactFields}
           </div>
 
-          <p className={styles.privacy}>
-            <SafetyOutlined className={styles.privacyIcon} aria-hidden="true" />
-            <strong className={styles.privacyTitle}>{t('privacy.title')}</strong>
-            <span>{t('privacy.body')}</span>
-          </p>
+          <div className={styles.consentRow}>
+            <Checkbox
+              checked={agreed}
+              onChange={(event) => {
+                setAgreed(event.target.checked);
+                if (event.target.checked) setConsentError(false);
+              }}
+            >
+              <LegalConsentNote place="shopCheck" as="span" className={styles.consentText} />
+            </Checkbox>
+            {consentError ? (
+              <p className={styles.consentError} role="alert">
+                {t('signup.consentRequired')}
+              </p>
+            ) : null}
+          </div>
 
           <Button
             type="primary"
             htmlType="submit"
             block
             size="large"
-            icon={<ShopOutlined />}
+            icon={<ArrowRightOutlined />}
+            iconPlacement="end"
             className={styles.submit}
             loading={pending}
           >
             {t(`signup.submit.${track}`)}
           </Button>
-
-          <LegalConsentNote place="shop" className={styles.consent} />
+          <p className={styles.footnote}>{t('signup.footnote')}</p>
         </form>
       </Form>
     </section>

@@ -1,13 +1,19 @@
 'use client';
 
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Form } from 'antd';
+import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Form, Tag } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { trailingRequiredMark } from '@/components/form/required-mark';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { PERMISSION, PUBLISH_REQUIREMENT, type PublishRequirement } from '@xeprime/types';
+import {
+  PERMISSION,
+  PUBLISH_REQUIREMENT,
+  requiredVehicleImageTypes,
+  type PublishRequirement,
+} from '@xeprime/types';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -20,7 +26,29 @@ import {
   type VehicleRegistrationSource,
 } from '@/constants/routes';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
-import { VehicleWizard } from '@/features/vehicles/components/VehicleWizard';
+import { VehicleWizard, WizardSection } from '@/features/vehicles/components/VehicleWizard';
+import {
+  CreateVehicleAside,
+  previewShopOf,
+  type CreatePreviewValues,
+  type CreateReadiness,
+} from '@/features/vehicles/components/CreateVehicleAside';
+import {
+  CreateVehicleConfirmDialog,
+  type CreateConfirmValues,
+} from '@/features/vehicles/components/CreateVehicleConfirmDialog';
+import {
+  RegistrationFieldsBlock,
+  RegistrationPhotoTile,
+} from '@/features/vehicles/components/RegistrationCapture';
+import formStyles from '@/features/vehicles/components/VehicleForm.module.css';
+import {
+  EMPTY_REGISTRATION,
+  checkRegistration,
+  type RegistrationCaptureState,
+} from '@/features/vehicles/registration-capture';
+import { branchLabel } from '@/features/branches/branch-label';
+import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -42,6 +70,7 @@ import type { QuickVehicleValues } from '../schema';
 import { QuickVehicleInfoStep } from './steps/QuickVehicleInfoStep';
 import { QuickVehicleRentalStep } from './steps/QuickVehicleRentalStep';
 import { QuickVehicleImagesStep } from './steps/QuickVehicleImagesStep';
+import { QuickVehicleFeaturesStep } from './steps/QuickVehicleFeaturesStep';
 import { QuickVehicleOwnerStep } from './steps/QuickVehicleOwnerStep';
 import { QuickVehicleSuccess } from './QuickVehicleSuccess';
 import { useOwnerProfileDraft, useQuickVehicleDraft } from '../use-draft';
@@ -49,7 +78,10 @@ import styles from './QuickVehicleWizard.module.css';
 
 /** Trường của từng bước — dùng để validate ĐÚNG bước đang mở và để đưa lỗi API về đúng chỗ. */
 const STEP_FIELDS = {
+  // Bước 1 theo Figma 17/11/2026: ẢNH xe (+ cà vẹt, state riêng) đứng đầu, rồi thông tin xe.
   info: [
+    'images',
+    'media',
     'vehicleType',
     'plateNumber',
     'name',
@@ -67,8 +99,8 @@ const STEP_FIELDS = {
     'batteryCapacityKwh',
     'electricConsumptionKwhPer100Km',
     'engineDisplacementCc',
-    'description',
-    'features',
+    // Thiếu từ trước (lỗi phân khúc xe máy không dẫn về bước nào) - thêm cùng đợt 17/11/2026.
+    'motorbikeCategory',
   ],
   rental: [
     'weekdayPrice',
@@ -85,10 +117,10 @@ const STEP_FIELDS = {
     'excessDistanceFeePerKm',
     'termsText',
   ],
-  images: ['images', 'media'],
+  features: ['features', 'description'],
 } as const satisfies Record<string, ReadonlyArray<keyof QuickVehicleValues>>;
 
-const STEP_KEYS = ['info', 'rental', 'images'] as const;
+const STEP_KEYS = ['info', 'rental', 'features'] as const;
 
 /**
  * Điều kiện lên chợ thuộc BƯỚC nào (30/09/2026) — thiếu thì chặn đúng bước đó và đưa người dùng
@@ -99,7 +131,7 @@ const REQUIREMENT_STEP: Record<PublishRequirement, (typeof STEP_KEYS)[number]> =
   [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'rental',
   [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'rental',
   [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'rental',
-  [PUBLISH_REQUIREMENT.PHOTOS]: 'images',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'info',
   [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'info',
   [PUBLISH_REQUIREMENT.IDENTITY]: 'info',
   [PUBLISH_REQUIREMENT.ENERGY_SPEC]: 'info',
@@ -133,7 +165,11 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
   const { formGaps } = usePublicationLabels();
   const tOwner = useTranslations('ListYourVehicle.ownerProfile');
   const tCommon = useTranslations('Common.actions');
-  const { message } = App.useApp();
+  // Chữ dùng chung với wizard nâng cao (tiêu đề thẻ, thông báo thiếu, nút Gửi duyệt) - một bản dịch.
+  const tVehicleWizard = useTranslations('Vehicles.form.wizard');
+  const tSteps = useTranslations('Vehicles.form.createSteps');
+  const tBranches = useTranslations('Branches');
+  const { message, notification } = App.useApp();
   const router = useRouter();
   const errorMessage = useErrorMessage();
   const applyApiFieldErrors = useApiFieldErrors();
@@ -156,7 +192,8 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     'Vehicles.form.validation',
   );
   const { control, getValues, getFieldState, setValue, setError, trigger, formState } =
-    useForm<QuickVehicleValues>({ resolver, defaultValues: QUICK_VEHICLE_DEFAULTS });
+    // `onChange`: lỗi đỏ tự mất ngay khi ô được sửa đúng - wizard đi bước bằng `trigger`.
+    useForm<QuickVehicleValues>({ resolver, defaultValues: QUICK_VEHICLE_DEFAULTS, mode: 'onChange' });
 
   const [step, setStep] = useState<StepKey>('info');
   /** Đang quay lại sửa hồ sơ ⇒ bước sẽ trở về sau khi lưu. `null` = không sửa. */
@@ -239,6 +276,64 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     [opensShop, ownerProfile, registration],
   );
 
+  /*
+   * Cà vẹt (ADR 0097) — BẮT BUỘC khi đăng xe nhanh, mọi loại xe. Presign cà vẹt cũng tenant-scoped
+   * nên người chưa có gian hàng mở gian hàng ngay trước lượt tải, y như tấm ảnh xe đầu tiên.
+   */
+  const [regCapture, setRegCapture] = useState<RegistrationCaptureState>(EMPTY_REGISTRATION);
+  const [regShowErrors, setRegShowErrors] = useState(false);
+  const plateNumber = useWatch({ control, name: 'plateNumber' });
+  const regCheck = checkRegistration(regCapture, plateNumber);
+  const regBlocked = !regCheck.ok;
+  const regPreviewUrl = regCapture.previewUrl;
+  useEffect(
+    () => () => {
+      if (regPreviewUrl) URL.revokeObjectURL(regPreviewUrl);
+    },
+    [regPreviewUrl],
+  );
+  const ensureShopBeforeUpload = useCallback(async () => {
+    if (opensShop) await registration.ensureShop(ownerProfile);
+  }, [opensShop, ownerProfile, registration]);
+
+  /*
+   * Cột phải (Figma): xem trước trên chợ + "Sẵn sàng gửi duyệt". Đọc CÙNG luật với cổng lưu (điều
+   * kiện lên chợ, năng lượng, cà vẹt) chỉ để chủ xe thấy còn thiếu gì.
+   */
+  const watched = useWatch({ control });
+  const shopQuery = useMyShop(!pendingShop);
+  const branchItems = branches.data?.items;
+  const selectedBranch = branchItems?.find((b) => b.id === branchId) ?? null;
+  const branchText = selectedBranch ? branchLabel(selectedBranch, tBranches('labels.noProvince')) : null;
+  const readiness: CreateReadiness = useMemo(() => {
+    const values = { ...QUICK_VEHICLE_DEFAULTS, ...watched } as QuickVehicleValues;
+    const gaps = missingPublishRequirementsForForm({
+      ...values,
+      serviceTypes: QUICK_VEHICLE_FIXED.serviceTypes,
+    });
+    const media = values.media ?? [];
+    return {
+      photos:
+        requiredVehicleImageTypes(values.vehicleType).every((slot) =>
+          media.some((item) => item.type === slot),
+        ) && !regCheck.errors.photo,
+      // Ảnh cà vẹt chỉ cần CÓ (máy đọc ra hay không không tính); tên chủ xe / số khung / số máy là
+      // ô nhập của mục thông tin (18/11/2026).
+      info:
+        Boolean(values.name?.trim()) &&
+        Object.keys(regCheck.errors).every((key) => key === 'photo') &&
+        missingEnergyFields(values).length === 0 &&
+        !gaps.some((gap) => REQUIREMENT_STEP[gap] === 'info' && gap !== PUBLISH_REQUIREMENT.PHOTOS),
+      pricing: !gaps.some((gap) => REQUIREMENT_STEP[gap] === 'rental'),
+      features: (values.features ?? []).length > 0 || Boolean(values.description?.trim()),
+    };
+  }, [watched, regCheck.errors]);
+  const previewValues: CreatePreviewValues = {
+    ...watched,
+    discountPercent: watched.discountEnabled ? (watched.discountPercent ?? null) : null,
+  };
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const steps = useMemo(
     () =>
       STEP_KEYS.map((key) => ({
@@ -246,6 +341,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
         title: t(`steps.${key}.title`),
         shortTitle: t(`steps.${key}.short`),
         heading: t(`steps.${key}.heading`),
+        description: t(`steps.${key}.description`),
         /*
          * `branchId` KHÔNG được validate khi wizard này là người MỞ gian hàng: chi nhánh mặc
          * định sinh ra cùng `POST /tenants` ở bước lưu, nên trước đó không có id nào để điền —
@@ -367,8 +463,34 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     return t('errors.publishRequired', { items: formGaps(keys, getValues()) });
   }
 
-  /** Lưu — `submitForReview` quyết định có gọi `submit-public` sau khi tạo hay không. */
-  async function save(submitForReview: boolean) {
+  /** Figma `24352:69368`: thiếu thông tin khi lưu/gửi → thông báo góc phải (kèm dải lỗi đầu bước). */
+  function warnMissing() {
+    notification.warning({
+      title: tVehicleWizard('missingTitle'),
+      description: tVehicleWizard('missingBody'),
+      placement: 'topRight',
+    });
+  }
+
+  /**
+   * Cổng chung trước MỌI lượt lưu (nháp hay gửi duyệt) - đúng luật cũ, cộng cà vẹt (ADR 0097).
+   * `false` ⇒ đã đưa người dùng về đúng bước và nói lý do.
+   */
+  async function validateAll(): Promise<boolean> {
+    const ok = await validateAllInner();
+    if (!ok) {
+      setConfirmOpen(false);
+      warnMissing();
+    }
+    return ok;
+  }
+
+  /** "Gửi duyệt" ở bước cuối mở HỘP xác nhận khi mọi cổng đã qua. */
+  async function openConfirm() {
+    if (await validateAll()) setConfirmOpen(true);
+  }
+
+  async function validateAllInner(): Promise<boolean> {
     setStepError(null);
     const valid = await trigger(steps.flatMap((s) => [...s.fields]));
     const energyMissing = missingEnergyFields(getValues());
@@ -377,7 +499,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
       setStep(REQUIREMENT_STEP[publishMissing[0]!]);
       setStepError(publishError(publishMissing));
       headingRef.current?.focus();
-      return;
+      return false;
     }
     if (!valid || energyMissing.length > 0) {
       /*
@@ -399,16 +521,29 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
         if (targetGaps.length > 0) setStepError(publishError(targetGaps));
       }
       headingRef.current?.focus();
-      return;
+      return false;
     }
+    // Cà vẹt (ADR 0097): chưa có ảnh / thiếu ô bắt buộc / biển lệch ⇒ về bước 1, hiện lỗi tại ô.
+    // Xe đã tạo ở lượt trước (thử lại) thì cà vẹt đã gắn, không đòi lại.
+    if (regBlocked && !registration.createdVehicle) {
+      setRegShowErrors(true);
+      setStep('info');
+      headingRef.current?.focus();
+      return false;
+    }
+    return true;
+  }
 
+  async function persist(submitForReview: boolean) {
     try {
       const outcome = await registration.run(getValues(), {
         submitForReview,
         toMessage: errorMessage,
         // Gian hàng mở ở CHÍNH lần bấm này khi người dùng chưa có — xem `useQuickVehicleRegistration`.
         ownerProfile,
+        registration: regCheck.ok ? regCheck.input : undefined,
       });
+      setConfirmOpen(false);
       draft.clear();
       ownerDraft.clear();
       setResult(outcome);
@@ -422,6 +557,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
       }
     } catch (err) {
       if (err instanceof Error && err.message === 'busy') return;
+      setConfirmOpen(false);
       const applied = applyApiFieldErrors(err, setError, {
         fields: steps.flatMap((s) => [...s.fields]),
       });
@@ -443,13 +579,15 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     event.preventDefault();
     if (registration.pending) return;
     if (isLastStep) {
-      void save(true);
+      void openConfirm();
       return;
     }
     setStepError(null);
     const valid = await trigger([...(steps[vehicleIndex]?.fields ?? STEP_FIELDS[step])]);
     const energyMissing = step === 'info' ? missingEnergyFields(getValues()) : [];
-    if (!valid || energyMissing.length > 0) {
+    const regGap = step === 'info' && regBlocked && !registration.createdVehicle;
+    if (regGap) setRegShowErrors(true);
+    if (!valid || energyMissing.length > 0 || regGap) {
       if (energyMissing.length > 0) setStepError(publishError([PUBLISH_REQUIREMENT.ENERGY_SPEC]));
       return;
     }
@@ -462,41 +600,62 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     headingRef.current?.focus();
   }
 
-  const footer = isLastStep ? (
-    <>
-      <Button onClick={() => setStep(STEP_KEYS[vehicleIndex - 1]!)}>{tCommon('back')}</Button>
-      <div className={styles.finalActions}>
-        <Button loading={registration.pending} onClick={() => void save(false)}>
-          {t('saveDraft')}
-        </Button>
-        <Button type="primary" htmlType="submit" loading={registration.pending}>
-          {t('finish')}
-        </Button>
-      </div>
-    </>
-  ) : (
+  /** Hàng nút cuối trang (Figma): "← Quay lại" · "Tiếp tục →" · "Gửi duyệt →"; bước 1 có "Thoát". */
+  /** Nút đi tiếp của bước - vàng thương hiệu; lặp ở cuối nội dung (`endAction`). */
+  const forward = (
+    <Button
+      type="primary"
+      htmlType="submit"
+      loading={isLastStep ? registration.pending : false}
+      icon={<ArrowRightOutlined aria-hidden="true" />}
+      iconPlacement="end"
+    >
+      {isLastStep ? tVehicleWizard('submit') : tCommon('next')}
+    </Button>
+  );
+
+  const footer = (
     <>
       {vehicleIndex > 0 ? (
-        <Button onClick={() => setStep(STEP_KEYS[vehicleIndex - 1]!)}>{tCommon('back')}</Button>
+        <Button
+          onClick={() => setStep(STEP_KEYS[vehicleIndex - 1]!)}
+          icon={<ArrowLeftOutlined aria-hidden="true" />}
+        >
+          {tCommon('back')}
+        </Button>
       ) : (
-        <Link href={vehicleListPathFor(source)}>
-          <Button icon={<ArrowLeftOutlined />}>{t('exit')}</Button>
+        <Link href={vehicleListPathFor(source)} className={styles.footerStart}>
+          <Button icon={<ArrowLeftOutlined aria-hidden="true" />}>{t('exit')}</Button>
         </Link>
       )}
-      <Button type="primary" htmlType="submit">
-        {tCommon('next')}
-      </Button>
+      {forward}
     </>
   );
 
+  const confirmValues: CreateConfirmValues = {
+    ...getValues(),
+    serviceTypes: [...QUICK_VEHICLE_FIXED.serviceTypes],
+    sourceType: QUICK_VEHICLE_FIXED.sourceType,
+    discountPercent: getValues('discountEnabled') ? getValues('discountPercent') : null,
+  } as CreateConfirmValues;
+
   return (
-    <Form component={false} layout="vertical" size="large" colon={false}>
+    <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
       <form noValidate onSubmit={handleSubmit} className={styles.form}>
         <VehicleWizard
           steps={barSteps}
           current={barIndex}
-          heading={steps[vehicleIndex]!.heading}
+          plain
           footer={footer}
+          aside={
+            <CreateVehicleAside
+              preview={previewValues}
+              readiness={readiness}
+              branchLabel={branchText}
+              shop={previewShopOf(shopQuery.data)}
+              requiredPhotos={requiredVehicleImageTypes(vehicleType).length + 1}
+            />
+          }
           onStepChange={(next) => {
             const key = barSteps[next]?.key;
             /*
@@ -511,30 +670,106 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
             if (!key || key === OWNER_STEP_KEY) return;
             setStep(key as StepKey);
           }}
+          notice={
+            <>
+              <div ref={headingRef} tabIndex={-1} className={styles.focusAnchor} />
+              {stepError ? (
+                <Alert type="error" showIcon title={stepError} className={styles.alert} role="alert" />
+              ) : null}
+            </>
+          }
         >
-          <div ref={headingRef} tabIndex={-1} className={styles.focusAnchor} />
-          {stepError ? (
-            <Alert type="error" showIcon title={stepError} className={styles.alert} role="alert" />
-          ) : null}
-
           {step === 'info' ? (
-            <QuickVehicleInfoStep control={control} setValue={setValue} vehicleType={vehicleType} />
+            <>
+              <WizardSection
+                id="quick-vehicle-photos"
+                title={tSteps('photosTitle')}
+                description={tSteps('photosDescription')}
+                badge={
+                  <Tag className={styles.requiredBadge}>
+                    {tSteps('photosRequired', {
+                      count: requiredVehicleImageTypes(vehicleType).length + 1,
+                    })}
+                  </Tag>
+                }
+              >
+                <QuickVehicleImagesStep
+                  control={control}
+                  presign={presignImage}
+                  extraTiles={
+                    <RegistrationPhotoTile
+                      state={regCapture}
+                      onChange={setRegCapture}
+                      vehiclePlate={plateNumber}
+                      showErrors={regShowErrors}
+                      beforeUpload={ensureShopBeforeUpload}
+                    />
+                  }
+                />
+              </WizardSection>
+              <WizardSection
+                id="quick-vehicle-info"
+                title={tSteps('infoTitle')}
+                description={tSteps('infoDescription')}
+              >
+                <div className={formStyles.threeColumnFields}>
+                  <RegistrationFieldsBlock
+                    state={regCapture}
+                    onChange={setRegCapture}
+                    vehiclePlate={plateNumber}
+                    showErrors={regShowErrors}
+                  />
+                  <QuickVehicleInfoStep
+                    control={control}
+                    setValue={setValue}
+                    vehicleType={vehicleType}
+                  />
+                </div>
+              </WizardSection>
+            </>
           ) : null}
           {step === 'rental' ? (
-            <QuickVehicleRentalStep
-              control={control}
-              setValue={setValue}
-              vehicleType={vehicleType}
-              branches={branches}
-              pendingAddress={pendingShop ? ownerProfile : null}
-              onEditPendingAddress={() => setOwnerReturnStep('rental')}
-            />
+            <WizardSection
+              id="quick-vehicle-rental"
+              title={steps[vehicleIndex]!.title}
+              description={steps[vehicleIndex]!.description}
+            >
+              <QuickVehicleRentalStep
+                control={control}
+                setValue={setValue}
+                vehicleType={vehicleType}
+                branches={branches}
+                pendingAddress={pendingShop ? ownerProfile : null}
+                onEditPendingAddress={() => setOwnerReturnStep('rental')}
+              />
+            </WizardSection>
           ) : null}
-          {step === 'images' ? (
-            <QuickVehicleImagesStep control={control} presign={presignImage} />
+          {step === 'features' ? (
+            <WizardSection
+              id="quick-vehicle-features"
+              title={tSteps('featuresTitle')}
+              description={tSteps('featuresDescription')}
+            >
+              <QuickVehicleFeaturesStep control={control} vehicleType={vehicleType} />
+            </WizardSection>
           ) : null}
         </VehicleWizard>
       </form>
+
+      <CreateVehicleConfirmDialog
+        open={confirmOpen}
+        values={confirmValues}
+        branchLabel={branchText}
+        registration={{
+          chassisNumber: regCapture.fields.chassisNumber,
+          engineNumber: regCapture.fields.engineNumber,
+        }}
+        submitting={registration.pending}
+        onClose={() => setConfirmOpen(false)}
+        onSaveDraft={() => void persist(false)}
+        onSubmit={() => void persist(true)}
+      />
+
       {/* Xe đã tạo nhưng phần sau lỗi: nói rõ và cho lối đi tiếp, xem `QuickVehicleSuccess`. */}
       {registration.createdVehicle && !result ? (
         <Alert

@@ -1,6 +1,11 @@
 'use client';
 
-import { DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import {
   DndContext,
   PointerSensor,
@@ -12,11 +17,13 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { App, Progress, Switch, Tag, Upload } from 'antd';
+import { App, Image, Progress, Switch, Tag, Upload } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
+  IMAGE_UPLOAD_MAX_BYTES,
   IMAGE_UPLOAD_MIME_TYPES,
+  VEHICLE_IMAGE_TYPE,
   VEHICLE_GALLERY_MAX_IMAGES,
   isSingleVehicleImageSlot,
   requiredVehicleImageTypes,
@@ -58,6 +65,45 @@ interface PendingUpload {
 
 const SLOT_PREFIX = 'slot:';
 
+/**
+ * Trình xem ảnh mở bằng nút con mắt - cùng cách của ảnh giao nhận xe (`HandoverPhotoGrid`): một
+ * ảnh neo ẩn, trình xem AntD (phóng to, xoay, lật) điều khiển bằng state.
+ */
+export function ImageViewer({ url, onClose }: { url: string | null; onClose: () => void }) {
+  if (!url) return null;
+  return (
+    <Image
+      src={url}
+      alt=""
+      // `classNames.root` chỉ ẩn cái neo; `rootClassName` ẩn LUÔN cả trình xem.
+      classNames={{ root: styles.hiddenPreviewAnchor }}
+      preview={{ open: true, onOpenChange: (open) => (open ? undefined : onClose()) }}
+    />
+  );
+}
+
+/** Icon tĩnh lấy nguyên từ Figma `24352:79252` (ô ảnh của wizard thêm xe). */
+const FIGMA_ICON = {
+  delete: '/images/vehicle-upload/delete.svg',
+  edit: '/images/vehicle-upload/edit.svg',
+} as const;
+
+/**
+ * Minh hoạ ô ảnh trống - ghép đúng ba lớp của Figma (`Empty State` trong `24352:79256`): khung
+ * 120×120 cắt mép, lớp nền có dấu "+" và lớp hình ảnh ở giữa.
+ */
+export function UploadPlaceholderArt() {
+  return (
+    <span className={styles.emptyArt} aria-hidden="true">
+      {/* Lớp dưới: vòng tròn nền; lớp trên: khung ảnh + dấu "+" (đúng thứ tự Figma). */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ tĩnh của Figma */}
+      <img src="/images/vehicle-upload/empty-circle.svg" alt="" className={styles.emptyArtPhoto} />
+      {/* eslint-disable-next-line @next/next/no-img-element -- minh hoạ tĩnh của Figma */}
+      <img src="/images/vehicle-upload/empty-frame.svg" alt="" className={styles.emptyArtFrame} />
+    </span>
+  );
+}
+
 /*
  * Ô ảnh HIỆN trên bảng = đúng các góc BẮT BUỘC của loại xe (`requiredVehicleImageTypes`): ô tô 5
  * (trước · sau · trái · phải · nội thất), xe máy 2 (trước · sau).
@@ -87,6 +133,8 @@ export function VehicleImageBoard({
   canEdit,
   presign = presignVehicleImage,
   onUploadingChange,
+  variant = 'board',
+  extraTiles,
 }: {
   vehicleType: string;
   /** Tên xe cho chữ thay thế của ảnh — wizard chưa có tên thì để trống. */
@@ -98,6 +146,13 @@ export function VehicleImageBoard({
   presign?: (file: File) => Promise<UploadPresign>;
   /** Báo có ảnh ĐANG tải — nơi gọi chặn nút Lưu/Tiếp tục để không lưu thiếu ảnh. */
   onUploadingChange?: (uploading: boolean) => void;
+  /**
+   * `compact` = lưới ảnh của wizard THÊM XE (Figma `24352:79234`): 3 cột, ô trống "Click để tải
+   * ảnh lên", không thanh kéo thả. `board` = màn sửa xe như cũ.
+   */
+  variant?: 'board' | 'compact';
+  /** Ô thêm vào cuối lưới compact - wizard tạo xe đặt ô "Cà vẹt xe" ở đây. */
+  extraTiles?: ReactNode;
 }) {
   const t = useTranslations('VehicleManage.images');
   const domainLabel = useDomainLabel();
@@ -106,6 +161,8 @@ export function VehicleImageBoard({
   const { message } = App.useApp();
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [reorder, setReorder] = useState(false);
+  /** Ảnh đang mở trong trình xem (nút con mắt - như ảnh giao nhận xe). */
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const sequence = useRef(0);
 
   const uploading = pending.some((p) => p.status === 'uploading');
@@ -201,6 +258,96 @@ export function VehicleImageBoard({
   }
 
   const slotLabel = (slot: VehicleImageType) => domainLabel('vehicleImageType', slot);
+
+  if (variant === 'compact') {
+    const maxMb = Math.round(IMAGE_UPLOAD_MAX_BYTES / (1024 * 1024));
+    return (
+      <div className={styles.compactGrid}>
+        {requiredVehicleImageTypes(vehicleType).map((slot) => {
+          const item = items.find((i) => i.type === slot);
+          const slotPending = pending.filter((p) => p.slot === slot);
+          const onPick = (file: File) => handleSelect(slot, file);
+          return (
+            <section key={slot} className={styles.compactSlot} aria-label={slotLabel(slot)}>
+              {slotPending.length > 0 ? (
+                slotPending.map((p) => (
+                  <PendingTile
+                    key={p.id}
+                    item={p}
+                    onRetry={() => startUpload(p.slot, p.file, p.id)}
+                    onRemove={() => dropPending(p.id)}
+                    retryLabel={t('retry', { name: p.file.name })}
+                    removeLabel={t('dropRemove', { name: p.file.name })}
+                    uploadingLabel={t('uploading', { name: p.file.name })}
+                  />
+                ))
+              ) : item ? (
+                <div className={styles.compactPhotoWrap}>
+                  <PreviewImage
+                    src={item.url}
+                    alt={t('alt', { slot: slotLabel(slot), vehicle: vehicleName })}
+                    className={styles.compactPhoto}
+                    draggable={false}
+                  />
+                  {/* Con mắt xem ảnh ở góc ảnh (như ảnh giao nhận) - hàng nhãn giữ đúng Figma. */}
+                  <button
+                    type="button"
+                    className={styles.compactEyeBtn}
+                    aria-label={t('view', { slot: slotLabel(slot) })}
+                    onClick={() => setViewerUrl(item.url)}
+                  >
+                    <EyeOutlined />
+                  </button>
+                </div>
+              ) : (
+                <SlotPicker disabled={!canEdit} onPick={onPick}>
+                  <button type="button" className={styles.compactEmpty}>
+                    <UploadPlaceholderArt />
+                    <span>{t('clickToUpload')}</span>
+                    <span className={styles.compactEmptyHint}>
+                      {t('fileHint', { max: maxMb })}
+                    </span>
+                  </button>
+                </SlotPicker>
+              )}
+              <div className={styles.compactFoot}>
+                <span className={styles.compactLabel}>
+                  <PublishRequiredLabel label={slotLabel(slot)} />
+                </span>
+                {slot === VEHICLE_IMAGE_TYPE.FRONT && item ? (
+                  <Tag className={styles.coverTag}>{t('coverBadge')}</Tag>
+                ) : null}
+                {item ? (
+                  <span className={styles.compactActions}>
+                    {canEdit ? (
+                    <>
+                    <button
+                      type="button"
+                      aria-label={t('remove', { slot: slotLabel(slot) })}
+                      onClick={() => onItemsChange((prev) => prev.filter((i) => i.url !== item.url))}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- icon tĩnh của Figma */}
+                      <img src={FIGMA_ICON.delete} alt="" width={20} height={20} />
+                    </button>
+                    <SlotPicker disabled={!canEdit} onPick={onPick}>
+                      <button type="button" aria-label={t('replace', { slot: slotLabel(slot) })}>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- icon tĩnh của Figma */}
+                        <img src={FIGMA_ICON.edit} alt="" width={20} height={20} />
+                      </button>
+                    </SlotPicker>
+                    </>
+                    ) : null}
+                  </span>
+                ) : null}
+              </div>
+            </section>
+          );
+        })}
+        {extraTiles}
+        <ImageViewer url={viewerUrl} onClose={() => setViewerUrl(null)} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -405,5 +552,28 @@ function PendingTile({
     <div className={styles.pendingTile} aria-label={uploadingLabel}>
       <Progress type="circle" percent={item.progress} size={42} />
     </div>
+  );
+}
+
+/** Ô chọn ảnh của một góc (bản gọn) - component riêng để trình biên dịch React không coi lượt chọn
+ * ảnh (đọc `ref` đếm lượt tải) là việc chạy trong lúc render. */
+function SlotPicker({
+  disabled,
+  onPick,
+  children,
+}: {
+  disabled: boolean;
+  onPick: (file: File) => false;
+  children: ReactNode;
+}) {
+  return (
+    <Upload
+      accept={IMAGE_UPLOAD_MIME_TYPES.join(',')}
+      showUploadList={false}
+      disabled={disabled}
+      beforeUpload={onPick}
+    >
+      {children}
+    </Upload>
   );
 }

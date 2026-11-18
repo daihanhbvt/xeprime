@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@xeprime/api-client';
 import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { CATALOG_TYPE, VEHICLE_TYPE } from '@xeprime/types';
+import { CATALOG_REVIEW_STATUS, CATALOG_TYPE, VEHICLE_TYPE } from '@xeprime/types';
+import { vehicleDataApi } from '@/api/catalog';
+import { SelectControl } from '@/components/ui/SelectControl';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { SelectField } from '@/components/ui/SelectField';
 import type { SelectControlOption } from '@/components/ui/SelectControl';
@@ -148,7 +152,106 @@ export function VehicleIdentityFields({
           />
         </YStack>
       </XStack>
+      <VariantField control={control} disabled={disabled} setValue={setValue} />
     </YStack>
+  );
+}
+
+/** Giá trị giả của dòng "Thêm phiên bản …" trong tấm chọn - không bao giờ vào form. */
+const NEW_VARIANT = '__new_variant__';
+
+/**
+ * Ô "Phiên bản" (xe chuẩn của Dữ liệu xe, ADR 0090) - bản native của ô cùng tên trong
+ * `VehicleIdentityFields` web: lọc theo năm sản xuất, cái đang gắn luôn có mặt; không có thì gõ tên
+ * mới (`catalogVariantLabel`, server gắn hoặc tự ghi nhận). Đổi dòng xe ⇒ bỏ phiên bản cũ.
+ */
+function VariantField({
+  control,
+  disabled,
+  setValue,
+}: {
+  control: Control<VehicleFormValues>;
+  disabled?: boolean;
+  setValue?: UseFormSetValue<VehicleFormValues>;
+}) {
+  const t = useTranslations('Vehicles.form.catalog');
+  const modelId = useWatch({ control, name: 'vehicleCatalogModelId' });
+  const variantId = useWatch({ control, name: 'vehicleCatalogVariantId' });
+  const variantLabel = useWatch({ control, name: 'catalogVariantLabel' });
+  const year = useWatch({ control, name: 'manufactureYear' });
+  const [search, setSearch] = useState('');
+
+  const { data: variants, isLoading } = useQuery({
+    queryKey: queryKeys.catalog.variants(modelId ?? '', year ?? null, variantId ?? ''),
+    queryFn: () => vehicleDataApi.options({ modelId: modelId!, year, includeId: variantId }),
+    enabled: Boolean(modelId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const previousModel = useRef(modelId);
+  useEffect(() => {
+    // Bỏ qua null → id (form vừa nạp/điền sẵn dòng xe): chỉ ĐỔI dòng xe mới làm phiên bản cũ sai.
+    const changed = previousModel.current != null && previousModel.current !== modelId;
+    previousModel.current = modelId;
+    if (changed && setValue) {
+      setValue('vehicleCatalogVariantId', null, { shouldDirty: true });
+      setValue('catalogVariantLabel', null, { shouldDirty: true });
+    }
+  }, [modelId, setValue]);
+
+  const options = useMemo(() => {
+    const list = (variants ?? []).map((v) => {
+      const years =
+        v.yearFrom != null && v.yearTo != null && v.yearFrom !== v.yearTo
+          ? t('years', { from: v.yearFrom, to: v.yearTo })
+          : v.yearFrom != null && v.yearTo == null
+            ? t('yearsOpen', { from: v.yearFrom })
+            : v.yearTo != null && v.yearFrom == null
+              ? t('yearsUntil', { to: v.yearTo })
+              : v.yearFrom != null
+                ? String(v.yearFrom)
+                : null;
+      const base = [v.label || t('variantAny'), years].filter(Boolean).join(' · ');
+      return {
+        value: v.id,
+        label: v.reviewStatus === CATALOG_REVIEW_STATUS.PENDING ? t('newOption', { label: base }) : base,
+      };
+    });
+    const q = search.trim().toLowerCase();
+    const filtered = q ? list.filter((o) => o.label.toLowerCase().includes(q)) : list;
+    // Gõ thêm chỉ mở ở form có `setValue` (đăng/sửa xe của chủ xe).
+    return setValue && !disabled && search.trim()
+      ? [...filtered, { value: NEW_VARIANT, label: t('addVariant', { text: search.trim() }) }]
+      : filtered;
+  }, [variants, search, t, setValue, disabled]);
+
+  const onChange = (next: string) => {
+    if (!setValue) return;
+    const opts = { shouldDirty: true } as const;
+    if (next === NEW_VARIANT) {
+      setValue('vehicleCatalogVariantId', null, opts);
+      setValue('catalogVariantLabel', search.trim(), opts);
+    } else {
+      setValue('vehicleCatalogVariantId', next || null, opts);
+      setValue('catalogVariantLabel', null, opts);
+    }
+    setSearch('');
+  };
+
+  return (
+    <SelectControl
+      label={t('variant')}
+      value={variantId ?? null}
+      options={options}
+      onChange={onChange}
+      placeholder={variantLabel ? t('newVariant', { name: variantLabel }) : t('variantPlaceholder')}
+      hint={modelId ? t('variantHelp') : t('variantPickModelFirst')}
+      disabled={disabled || !modelId || !setValue}
+      onSearch={setSearch}
+      searchPlaceholder={t('variantPlaceholder')}
+      emptyText={isLoading ? undefined : t('variantEmpty')}
+      allowClear
+    />
   );
 }
 

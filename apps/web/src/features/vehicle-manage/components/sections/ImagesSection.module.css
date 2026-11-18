@@ -305,3 +305,287 @@
   color: var(--xp-color-error);
   font-size: var(--xp-font-size-body-sm);
 }
+
+/* ── Lưới ảnh của wizard THÊM XE (Figma `24352:79234`) ───────────────────── */
+.compactGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.compactSlot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+/* Upload của AntD bọc nút trong span - kéo giãn cho ô trống phủ hết bề ngang. */
+.compactSlot :global(.ant-upload-wrapper),
+.compactSlot :global(.ant-upload) {
+  display: block;
+  width: 100%;
+}
+
+.compactPhoto,
+.compactEmpty,
+.compactSlot .pendingTile {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--xp-border-radius);
+}
+
+.compactPhoto {
+  display: block;
+  object-fit: cover;
+}
+
+.compactEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--xp-space-sm);
+  border: 0;
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-align: center;
+  cursor: pointer;
+}
+
+.compactEmpty:hover,
+.compactEmpty:focus-visible {
+  border-color: var(--xp-color-primary);
+}
+
+.compactFoot {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-height: 24px;
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.compactLabel {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coverTag.coverTag {
+  margin: 0;
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active, var(--xp-color-text));
+  font-size: 11px;
+}
+
+.compactActions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* Figma: "Mặt trước [Ảnh bìa]" sát nhau, nút xoá/sửa dồn phải. */
+.compactFoot {
+  gap: 8px;
+}
+
+.compactActions button {
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+}
+
+.compactActions :global(.ant-upload-wrapper),
+.compactActions :global(.ant-upload) {
+  display: inline;
+  width: auto;
+}
+
+@media (max-width: 640px) {
+  .compactGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Figma: nhãn ô ảnh không mang chấm "cần cho duyệt"; ô đủ chỗ cho nhãn + "Ảnh bìa" + 2 nút. */
+.compactLabel {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.compactLabel :global([aria-hidden='true']) {
+  display: none;
+}
+
+.coverTag.coverTag,
+.compactActions {
+  flex: none;
+}
+
+.compactEmptyHint {
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+/* Minh hoạ ô trống - ba lớp của Figma `Empty State` (120×120, cắt mép). */
+.emptyArt {
+  position: relative;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+.emptyArtFrame {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 131.94px;
+  height: 131.96px;
+}
+
+.emptyArtPhoto {
+  position: absolute;
+  top: 21.54px;
+  left: 21.88px;
+  width: 76.05px;
+  height: 76.2px;
+}
+
+/* Figma: chữ ô trống 14/20 xám, dòng phụ 12/18 nhạt; nhãn ô 14/20 đậm vừa. */
+.compactEmpty {
+  position: relative;
+  justify-content: flex-end;
+  gap: 0;
+  padding-bottom: 12px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.compactEmptyHint {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--xp-color-text-placeholder);
+}
+
+.compactLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: 14px;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.compactSlot {
+  border-radius: 16px;
+}
+
+.compactPhoto,
+.compactEmpty {
+  aspect-ratio: 255 / 160;
+  border-radius: 12px;
+}
+
+.compactActions {
+  gap: 6px;
+}
+
+.compactActions button {
+  display: inline-flex;
+  padding: 0;
+}
+
+.coverTag.coverTag {
+  padding: 0 8px;
+  border-color: #fbdf85;
+  border-radius: 16px;
+  background: #fff9e5;
+  color: var(--xp-color-primary);
+  font-size: 12px;
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}
+
+/* Figma: vùng ảnh của ô cao 160 (`Vehicle Image` 255×160) - minh hoạ + hai dòng chữ không đè nhau. */
+.compactEmpty,
+.compactPhoto {
+  aspect-ratio: auto;
+  height: 160px;
+}
+
+/* Con mắt xem ảnh - nút tròn ở góc trên phải của ảnh. */
+.compactPhotoWrap {
+  position: relative;
+}
+
+.compactEyeBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: rgb(14 15 18 / 55%);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.compactEyeBtn:hover,
+.compactEyeBtn:focus-visible {
+  background: rgb(14 15 18 / 75%);
+}
+
+/* Ảnh neo của trình xem: không chiếm chỗ, không thấy (trình xem vẫn mở). */
+.hiddenPreviewAnchor {
+  display: none;
+}
+
+/* Hàng nhãn ô ảnh vừa "Ảnh mặt trước" + "Ảnh bìa" + 2 nút ở cột 3 ô của desktop. */
+.compactFoot {
+  gap: 4px;
+  padding-inline: 4px;
+}
+
+.coverTag.coverTag {
+  padding: 0 6px;
+}
+
+.compactActions {
+  gap: 4px;
+}
+
+.coverTag.coverTag {
+  padding: 0 5px;
+  font-size: 11px;
+}
+
+.compactLabel {
+  flex-shrink: 0;
+}
+
+/* Mọi ô của lưới ảnh thêm xe đều bắt buộc (góc ảnh + cà vẹt) - dấu * đỏ như ô nhập bắt buộc. */
+.compactLabel::after {
+  content: ' *';
+  color: #d92d20;
+}

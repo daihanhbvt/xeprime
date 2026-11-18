@@ -121,7 +121,11 @@
     "maxReached": "Tối đa {max} ảnh thư viện",
     "legacyNotice": "{count, plural, other {# ảnh}} tải lên từ trước chưa gán vị trí - đang hiện ở \"Ảnh khác\". Kéo sang ô phù hợp hoặc giữ nguyên rồi bấm lưu.",
     "saved": "Đã lưu hình ảnh xe",
-    "alt": "Ảnh {slot} của {vehicle}"
+    "alt": "Ảnh {slot} của {vehicle}",
+    "clickToUpload": "Click để tải ảnh lên",
+    "fileHint": "JPG, PNG, JPEG, WEBP (tối đa {max}MB)",
+    "replace": "Đổi ảnh {slot}",
+    "view": "Xem ảnh {slot}"
   },
   "documents": {
     "title": "Giấy tờ xe",

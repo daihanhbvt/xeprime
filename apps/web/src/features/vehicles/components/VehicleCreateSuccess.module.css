@@ -1,145 +1,231 @@
+/* Màn kết quả thêm xe - số đo Figma `24352:67918`: thẻ 620, bo 20, đệm 48/20/20, nền trang gradient. */
 .root {
-  width: min(680px, 100%);
-  margin: 40px auto;
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.card {
+  display: flex;
+  width: 100%;
+  max-width: 620px;
+  flex-direction: column;
+  gap: 40px;
+  padding: 48px 20px 20px;
+  border-radius: 20px;
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px rgb(10 13 18 / 4%);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
   text-align: center;
 }
 
-.successIcon {
-  display: grid;
-  width: 56px;
-  height: 56px;
-  place-items: center;
+.heroImage {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+
+/* Biến thể "chưa gửi duyệt được" - cùng cỡ 100 với ảnh thành công, tông cảnh báo. */
+.warnIcon {
+  display: inline-flex;
+  width: 100px;
+  height: 100px;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  margin: 0 auto var(--xp-space-md);
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
-  font-size: 28px;
+  background: radial-gradient(circle at 35% 30%, #fec84b, #f79009);
+  box-shadow: 0 0 0 10px #fffaeb;
+  color: #fff;
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.root h1 {
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
   margin: 0;
-  font-size: var(--xp-font-size-h2);
+  color: #0e0f12;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
 }
 
-.root > p,
-.checklist > p {
-  color: var(--xp-color-text-secondary);
+.lead {
+  margin: 0;
+  color: #414651;
+  font-size: 16px;
+  line-height: 24px;
 }
 
-.vehicleCard {
+/* Lý do server từ chối gửi duyệt + lối xử lý. */
+.reason {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-top: -20px;
+  border: 1px solid #fec84b;
+  border-radius: 16px;
+  background: #fffaeb;
+}
+
+.reasonText {
+  margin: 0;
+  color: #b54708;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.reasonLink {
+  color: #f0b212;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checklistTitle {
+  margin: 0;
+  color: #0e0f12;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.checklist ul {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.checklist li + li {
+  padding-top: 12px;
+  border-top: 1px solid #e9eaeb;
+}
+
+.row {
   display: flex;
   align-items: center;
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
-  margin: var(--xp-space-lg) 0;
-  background: var(--xp-color-bg-container);
-  gap: var(--xp-space-md);
-  text-align: left;
+  gap: 12px;
+  color: inherit;
 }
 
-.thumb {
-  display: grid;
-  width: 88px;
-  height: 64px;
-  flex: none;
-  place-items: center;
-  overflow: hidden;
-  border-radius: var(--xp-border-radius-md);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-tertiary);
-  font-size: 24px;
+.row:hover .rowTitle {
+  color: #f0b212;
 }
 
-.thumbImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.vehicleInfo {
+.rowText {
   display: flex;
   min-width: 0;
   flex: 1;
   flex-direction: column;
+  gap: 2px;
 }
 
-.vehicleInfo span {
-  overflow: hidden;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  text-overflow: ellipsis;
+.rowTitle {
+  color: #0e0f12;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.rowBody {
+  color: #717680;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.optional {
+  padding: 2px 8px;
+  border: 1px solid #d5d7da;
+  border-radius: 16px;
+  background: #fafafa;
+  color: #414651;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
 }
 
-.checklist {
-  padding: var(--xp-space-lg);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-bg-container);
-  text-align: left;
+.chevron {
+  flex: none;
 }
 
-.checklist h2 {
-  margin: 0;
-  font-size: var(--xp-font-size-h4);
-}
-
-.checklist ul {
-  padding: 0;
-  margin: var(--xp-space-md) 0 0;
-  list-style: none;
-}
-
-.checklist li {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--xp-space-sm) 0;
-  border-top: 1px solid var(--xp-color-border-subtle);
-  gap: var(--xp-space-md);
-}
-
-.futureItem {
-  color: var(--xp-color-text-tertiary);
-}
-
+/* Hàng nút: kẻ trên + hai nút viền + nút gradient vàng chiếm phần còn lại. */
 .actions {
-  display: grid;
-  margin-top: var(--xp-space-lg);
-  grid-template-columns: 1fr 1fr;
-  gap: var(--xp-space-sm);
+  display: flex;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid #e9eaeb;
 }
 
-.actions > *,
-.actions button {
+.secondary.secondary,
+.primary.primary {
+  display: inline-flex;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.secondary.secondary {
+  border-color: #d5d7da;
+  color: #414651;
+}
+
+.primaryLink {
+  display: flex;
+  flex: 1;
+}
+
+.primary.primary {
   width: 100%;
+  border: 0;
+  background: linear-gradient(90deg, #efc423, #f3c84a);
+  color: #0e0f12;
+}
+
+.primary.primary:hover {
+  background: linear-gradient(90deg, #f3c84a, #efc423);
+  color: #0e0f12;
 }
 
 @media (max-width: 640px) {
-  .root {
-    margin: var(--xp-space-lg) auto;
+  .card {
+    padding: 32px 16px 16px;
   }
 
-  .vehicleCard {
-    align-items: flex-start;
-  }
-
-  .thumb {
-    width: 72px;
-    height: 54px;
-  }
-
-  .checklist {
-    padding: var(--xp-space-md);
-  }
-
-  .checklist li,
   .actions {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
-  .checklist li {
-    flex-direction: column;
-    gap: var(--xp-space-xs);
+  .actions :global(a),
+  .secondary.secondary {
+    width: 100%;
   }
 }
