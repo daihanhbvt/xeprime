@@ -3,6 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ManageHeader } from './ManageHeader';
+import { useAccountMenuBack } from './account-menu-origin';
 import { ManagePageTitle } from './ManagePageTitle';
 
 /** VỎ của một màn dùng ở cả khu tài khoản (nút lui) lẫn MỤC MENU của khu quản lý (thanh menu dưới đáy). */
@@ -32,7 +33,23 @@ export function ShellPageHeader({
   backTo: Href;
 }) {
   const router = useRouter();
-
+  const { fromAccount } = useAccountMenuBack();
+  /*
+   * Mở từ "Tài khoản của tôi": dáng trang chi tiết - TÊN trang lên thanh trên (← về Tài khoản);
+   * `ManagePageTitle` khi đó chỉ còn mô tả + nút, không lặp tên.
+   */
+  if (shell === 'manage' && fromAccount) {
+    return (
+      <>
+        <ManageHeader title={title} />
+        <ManagePageTitle
+          title={title}
+          {...(subtitle ? { subtitle } : {})}
+          {...(right ? { action: right } : {})}
+        />
+      </>
+    );
+  }
   if (shell === 'manage') {
     return (
       <>

@@ -141,6 +141,12 @@ interface ScreenProps {
    * nơi gọi không truyền `scrollOffset`), để các `<ScrollReveal>` bên trong chạy trên luồng UI.
    */
   scrollReveal?: boolean;
+  /**
+   * Nền `surface` (trắng) thay cho `background` (xám) - cho màn mà nội dung là MỘT tấm trắng chạy
+   * tới đáy (đăng nhập Partner). Không có nó, dải safe-area đáy giữ nền xám và thanh vuốt Android
+   * đọc ra như một vạch kẻ lạc dưới tấm trắng.
+   */
+  surface?: boolean;
 }
 
 /**
@@ -162,6 +168,7 @@ export function Screen({
   hideFooterWhileTyping = false,
   scrollOffset: scrollOffsetProp,
   scrollReveal: scrollRevealProp,
+  surface = false,
 }: ScreenProps) {
   const scrollRevealDefault = useScrollRevealDefault();
   const scrollReveal = scroll && (scrollRevealProp ?? scrollRevealDefault);
@@ -461,7 +468,10 @@ export function Screen({
       : Math.max(insets.bottom, space.md) + space.sm - (bottomEdge ? insets.bottom : 0);
 
   return (
-    <SafeAreaView style={styles.flex} {...(safeEdges ? { edges: safeEdges } : {})}>
+    <SafeAreaView
+      style={surface ? [styles.flex, styles.surface] : styles.flex}
+      {...(safeEdges ? { edges: safeEdges } : {})}
+    >
       {/*
         CÙNG cơ chế với `BottomSheet` (`behavior="padding"` cho cả hai nền), cộng thêm thứ tấm
         trượt không cần: `keyboardVerticalOffset`.
@@ -501,6 +511,9 @@ const useStyles = makeStyles((colors) => ({
   },
   content: {
     flexGrow: 1,
+  },
+  surface: {
+    backgroundColor: colors.surface,
   },
   padded: {
     gap: space.md,

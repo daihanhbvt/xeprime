@@ -602,8 +602,7 @@ const HERO_BUTTON_SIDE = 16;
 const HERO_ICON = '#ffffff';
 const SUMMARY_PAD = 16;
 const SUMMARY_GAP = 12;
-const STATUS_GAP = 32;
-const REVIEW_DISC = 20;
+const STATUS_GAP = space.sm;
 const REVIEW_GLYPH = 10;
 const METRIC_PAD = 12;
 
@@ -805,29 +804,24 @@ function ProfileCard({
         </YStack>
 
         {/*
-          Hai trục trạng thái ĐỘC LẬP (vận hành ≠ kiểm duyệt) - Figma "Vehicle Status": kiểm duyệt
-          (đĩa biểu tượng + chữ) cách viên vận hành 32.
+          Hai trục trạng thái ĐỘC LẬP (vận hành ≠ kiểm duyệt): hai chip đứng cạnh nhau, cách 8.
+          (Bản Figma "Vehicle Status" để kiểm duyệt là đĩa biểu tượng + chữ trần - đã gộp vào chip.)
         */}
         <XStack ai="center" flexWrap="wrap" columnGap={STATUS_GAP} rowGap={space.xs}>
-          <XStack ai="center" gap={6}>
-            <YStack
-              w={REVIEW_DISC}
-              h={REVIEW_DISC}
-              br={radius.pill}
-              bg={reviewSkin.bg}
-              ai="center"
-              jc="center"
-            >
-              {publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
+          {/* Biểu tượng + chữ kiểm duyệt nằm TRONG một chip, cùng dáng chip vận hành (người dùng chốt 19/11/2026). */}
+          <Pill
+            label={tList(`review.${publicStatus}`)}
+            tone={pillToneOfStatusColor(metaColor(VEHICLE_PUBLIC_STATUS_META, publicStatus))}
+            size="caption"
+            shape="tag"
+            leading={
+              publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
                 <CheckGlyph color={reviewSkin.fg} />
               ) : (
                 <Ionicons name={REVIEW_ICON[publicStatus]} size={REVIEW_GLYPH} color={reviewSkin.fg} />
-              )}
-            </YStack>
-            <Text col={reviewSkin.fg} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-              {tList(`review.${publicStatus}`)}
-            </Text>
-          </XStack>
+              )
+            }
+          />
           <Pill
             label={tList(`operation.${operationStatus}`)}
             tone={pillToneOfStatusColor(metaColor(VEHICLE_OPERATION_STATUS_META, operationStatus))}

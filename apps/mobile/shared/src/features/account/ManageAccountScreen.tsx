@@ -131,7 +131,7 @@ function PartnerAccountScreen({ section }: { section: AccountSection | undefined
   if (profile.isLoading) {
     return (
       <>
-        <ManageHeader />
+        <ManageHeader title={tHub('title')} />
         <Screen edges={['left', 'right', 'bottom']}>
           <ProfileSkeleton />
         </Screen>
@@ -142,7 +142,7 @@ function PartnerAccountScreen({ section }: { section: AccountSection | undefined
   if (profile.isError || !profile.data) {
     return (
       <>
-        <ManageHeader />
+        <ManageHeader title={tHub('title')} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError error={profile.error} onRetry={() => void profile.refetch()} />
         </Screen>
@@ -158,7 +158,7 @@ function PartnerAccountScreen({ section }: { section: AccountSection | undefined
         nhánh — người dùng vào được rồi không có đường mở lại menu. Tiêu đề TRANG đi vào nội dung
         qua `ManagePageTitle`, đúng khuôn mọi màn gốc khác của khu quản lý.
       */}
-      <ManageHeader />
+      <ManageHeader title={tHub('title')} />
       <ManagePageTitle title={tHub('title')} subtitle={tHub('subtitle')} />
 
       <Screen

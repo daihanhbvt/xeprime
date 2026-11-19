@@ -37,6 +37,7 @@
     "system": "Hệ thống",
     "appearanceHint": "Tùy chỉnh giao diện sáng / tối",
     "localeHint": "Lựa chọn ngôn ngữ hiển thị",
+    "securityHint": "Đăng nhập, mật khẩu và xoá tài khoản",
     "needsAction": "{count} cần xử lý",
     "descriptions": {
       "bookings": "Quản lý đơn đặt xe và đơn thuê",

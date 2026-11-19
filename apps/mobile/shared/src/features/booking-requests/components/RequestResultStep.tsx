@@ -129,7 +129,7 @@ export function RequestResultStep({
                 block={false}
                 onPress={onClose}
               />
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={tTrips('unpaid.viewTrips')}
                   icon="car-sport-outline"
@@ -333,7 +333,7 @@ function DoneResult({
               />
             ) : null}
             <XStack gap={space.sm}>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={tNav('home')}
                   icon="home-outline"
@@ -341,7 +341,7 @@ function DoneResult({
                   onPress={goHome}
                 />
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   variant="gradient"
                   icon="document-text-outline"

@@ -227,7 +227,7 @@ function HandoverForm({
               />
             </YStack>
           ) : null}
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tActions('saveChanges')}
               icon="checkmark-outline"

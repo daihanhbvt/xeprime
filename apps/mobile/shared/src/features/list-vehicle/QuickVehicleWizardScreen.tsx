@@ -615,7 +615,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
                   <Button label={t('exit')} variant="ghost" block={false} onPress={exit} />
                 )}
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 {isLastStep ? (
                   <Button
                     icon="checkmark-outline"
@@ -721,7 +721,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
                 onPress={() => void save(false, true)}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 variant="gradient"
                 label={tConfirm('submit')}

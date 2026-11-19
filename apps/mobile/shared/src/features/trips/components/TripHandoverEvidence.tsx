@@ -160,7 +160,10 @@ function EvidenceBlock({ tripId, record }: { tripId: string; record: Evidence })
   const domainLabel = useDomainLabel();
   const [preview, setPreview] = useState<string | null>(null);
   const [gridWidth, setGridWidth] = useState(0);
-  const tileWidth = gridWidth > 0 ? (gridWidth - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS : '31%';
+  const tileWidth =
+    gridWidth > 0
+      ? Math.floor((gridWidth - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS) // tròn xuống: xem HandoverPhotoGrid
+      : '31%';
   const bySlot = new Map<string, (typeof record.photos)[number]>(
     record.photos.map((p) => [p.slot, p]),
   );

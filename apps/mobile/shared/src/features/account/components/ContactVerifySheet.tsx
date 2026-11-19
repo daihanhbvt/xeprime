@@ -140,7 +140,7 @@ export function ContactVerifySheet({
         "Huỷ" co vừa chữ, nút gửi lấy phần còn lại — nhãn tiếng Việt "Gửi mã xác thực" dài 15
         ký tự kèm icon, cần mọi dp còn lại của hàng.
       */}
-      <YStack f={1}>
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
         {isIdentifierStep ? (
           <Button
             label={t('sendCode')}

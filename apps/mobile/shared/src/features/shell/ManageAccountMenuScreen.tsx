@@ -10,19 +10,19 @@ import { Screen } from '@/components/layout/Screen';
 import { Avatar } from '@/components/ui/Avatar';
 import { VerifiedMark } from '@/components/ui/VerifiedMark';
 import { useAccountIdentityLabel } from '@/features/account/use-account-identity-label';
-import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { useAuthenticatedUser } from '@/features/auth/hooks/use-authenticated-user';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { ROUTES, SHOP_SECTION } from '@/navigation/routes';
+import { ROUTES } from '@/navigation/routes';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { ManageNavLeaf } from './manage-nav';
 import { drawnLeavesOf, type ResolvedSection } from './manage-menu';
+import { fromAccountMenu } from './account-menu-origin';
 import { LogoutRow } from './LogoutRow';
 import { ManageMenuRow, NeedsActionPill, menuLeafLook } from './ManageMenuRow';
-import { PARTNER_TRACK, isCommissionOwner, type PartnerTrack } from './partner-track';
+import { PARTNER_TRACK, type PartnerTrack } from './partner-track';
 import { useManageMenu } from './use-manage-menu';
 
 /*
@@ -71,22 +71,19 @@ export function ManageAccountMenuScreen() {
   const colors = useColors();
   const t = useTranslations('Navigation');
   const tMenu = useTranslations('MobileShell.manageMenu');
-  const tShell = useTranslations('ManageCommon.shell');
   const tLocale = useTranslations('Common.locale');
   const navigateOnce = useNavigateOnce();
   const rememberedBranch = useRememberedBranch();
-  const user = useAuthenticatedUser();
-  const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const { track, sections } = useManageMenu();
 
-  const ownerProfile = isCommissionOwner(user);
   const groups = sections.filter(({ section }) =>
     (ACCOUNT_SECTIONS as readonly string[]).includes(section.key),
   );
 
-  const go = (href: Href) => navigateOnce(href);
+  // Mọi mục mở từ đây mang dấu `?from=account` ⇒ thanh trên của màn đích có nút lui về đây.
+  const go = (href: Href) => navigateOnce(fromAccountMenu(href));
   const goLeaf = (leaf: ManageNavLeaf) => {
-    if (leaf.href) navigateOnce(withBranchParam(leaf.href, rememberedBranch));
+    if (leaf.href) navigateOnce(fromAccountMenu(withBranchParam(leaf.href, rememberedBranch)));
   };
 
   return (
@@ -98,16 +95,7 @@ export function ManageAccountMenuScreen() {
 
         <IdentityCard track={track} onPress={() => go(ROUTES.manage.account())} />
 
-        {/*
-          Lời mời nâng cấp lên gian hàng — chỉ CHỦ xe cá nhân và chỉ khi nền tảng bật cờ quảng bá gói
-          (app Partner không bán gói theo quy định store; cùng điều kiện với menu hồ sơ cũ).
-        */}
-        {ownerProfile && isPlanPromotionEnabled ? (
-          <UpgradeRow
-            label={tShell('upgradeToShop')}
-            onPress={() => go(ROUTES.manage.shop({ section: SHOP_SECTION.PLAN }))}
-          />
-        ) : null}
+        {/* Thẻ "Nâng cấp gian hàng" đã GỠ khỏi app (người dùng chốt 19/11/2026) - đừng thêm lại. */}
 
         {groups.map((group) => (
           <MenuGroup key={group.section.key} title={t(group.section.labelKey as never)}>
@@ -116,13 +104,21 @@ export function ManageAccountMenuScreen() {
         ))}
 
         <MenuGroup title={tMenu('system')}>
+          {/* "Bảo mật tài khoản" thành MỘT mục ở đây (người dùng chốt 19/11/2026), thay cho link cuối trang Hồ sơ chủ xe. */}
+          <ManageMenuRow
+            icon="password"
+            tone="warning"
+            title={t('manage.security')}
+            description={tMenu('securityHint')}
+            onPress={() => go(ROUTES.manage.account())}
+            first
+          />
           <ManageMenuRow
             icon="palette"
             tone="gray"
             title={t('public.appearance')}
             description={tMenu('appearanceHint')}
             trailing={<AppearanceToggle />}
-            first
           />
           <ManageMenuRow
             icon="globe"
@@ -313,36 +309,6 @@ function IdentityCard({ track, onPress }: { track: PartnerTrack; onPress: () => 
           {body}
         </YStack>
       )}
-    </Pressable>
-  );
-}
-
-/** "Nâng cấp gian hàng" — dòng vàng có mũi tên (web `AccountMenuRow accent`). */
-function UpgradeRow({ label, onPress }: { label: string; onPress: () => void }) {
-  const colors = useColors();
-  const pressStyles = usePressStyles();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="link"
-      accessibilityLabel={label}
-      style={({ pressed }) => (pressed ? pressStyles.pressed : null)}
-    >
-      <XStack
-        ai="center"
-        gap={space.sm}
-        p={CARD_PAD}
-        br={radius.card}
-        bw={1}
-        bc={colors.primaryBorder}
-        bg={colors.primarySubtle}
-      >
-        <LineIcon name="award" size={20} color={colors.accentText} />
-        <Text f={1} col={colors.accentText} fos={fontSize.body} fow={fontWeight.semibold}>
-          {label}
-        </Text>
-        <LineIcon name="arrow-right" size={20} color={colors.accentText} />
-      </XStack>
     </Pressable>
   );
 }

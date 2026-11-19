@@ -13,7 +13,10 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useSellerProfile } from '@/features/seller-profile/hooks/use-seller-profile';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useColors } from '@/theme/ThemeProvider';
+import { Image } from 'expo-image';
+import { StyleSheet } from 'react-native';
+import { images } from '@/assets';
+import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { WALLET_SCOPE, type WalletScope } from '@/api/wallet/api';
@@ -186,6 +189,9 @@ export function WalletSummaryCard({
   );
 }
 
+/** Web `.hero { gap: var(--xp-space-20) }`. */
+const HERO_GAP = 20;
+
 function HeroSummary({
   data,
   frozen,
@@ -198,20 +204,32 @@ function HeroSummary({
   onWithdraw?: () => void;
 }) {
   const colors = useColors();
+  const { scheme } = useAppScheme();
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
   const inTransit = !isZeroMoney(data.pending);
 
   return (
+    /*
+      Nền = web `.hero`: ảnh loang vàng `balance-glow` phủ kín (cover) trên `primary-light`, KHÔNG
+      viền, khe 20 giữa các khối. Chế độ tối web bỏ ảnh, chỉ giữ `primary-light`.
+    */
     <YStack
       ai="center"
-      gap={space.md}
+      gap={HERO_GAP}
       p={space.md}
       br={radius.lg}
       bg={colors.primaryLight}
-      bw={1}
-      bc={colors.primaryMuted}
+      overflow="hidden"
     >
+      {scheme === 'dark' ? null : (
+        <Image
+          source={images.walletBalanceGlow}
+          contentFit="cover"
+          style={StyleSheet.absoluteFill}
+          accessible={false}
+        />
+      )}
       {frozen ? (
         <YStack alignSelf="stretch">
           <Callout tone="warning">{t('balance.frozen')}</Callout>
@@ -251,8 +269,10 @@ function HeroSummary({
           {/*
             Nút vẫn HIỆN khi chưa đủ điều kiện rút, chỉ bị khoá — dòng ngay dưới nói rõ vì sao.
           */}
+          {/* = web `CtaButton` mặc định (`gradient`, bo 12, không icon) trải ngang thẻ. */}
           <Button
-            icon="cash-outline"
+            variant="gradient"
+            shape="square"
             label={t('withdraw.action')}
             disabled={!withdrawable}
             onPress={onWithdraw}

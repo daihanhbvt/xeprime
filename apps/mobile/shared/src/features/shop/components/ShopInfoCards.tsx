@@ -219,7 +219,7 @@ export function ShopDisplayCard({
 
         {canEdit ? (
           <XStack gap={12}>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('changeLogo')}
                 icon="storefront-outline"
@@ -230,7 +230,7 @@ export function ShopDisplayCard({
                 onPress={logoUpload.open}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('changeCover')}
                 icon="image-outline"
@@ -297,7 +297,7 @@ export function ShopDisplayCard({
               onPress={onMediaCancel}
             />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tCommon('actions.saveChanges')}
               shape="square"
@@ -450,7 +450,7 @@ function SheetFooter({
   const tCommon = useTranslations('Common');
   return (
     <XStack gap={space.sm}>
-      <YStack f={1}>
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
         <Button
           label={tCommon('actions.cancel')}
           variant="secondary"
@@ -458,7 +458,7 @@ function SheetFooter({
           onPress={onCancel}
         />
       </YStack>
-      <YStack f={1}>
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
         <Button label={tCommon('actions.update')} loading={saving} onPress={onSubmit} />
       </YStack>
     </XStack>

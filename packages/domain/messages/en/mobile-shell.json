@@ -37,6 +37,7 @@
     "system": "System",
     "appearanceHint": "Switch between light and dark mode",
     "localeHint": "Choose the display language",
+    "securityHint": "Sign-in, password and account deletion",
     "needsAction": "{count} to handle",
     "descriptions": {
       "bookings": "Manage booking requests and rentals",

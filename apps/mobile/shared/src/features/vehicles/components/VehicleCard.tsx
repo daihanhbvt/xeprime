@@ -70,9 +70,8 @@ const THUMB_GAP = 12;
 const TOGGLE = 24;
 /** Mũi tên 11.5×5.5 của Figma nằm trong khung 20 - glyph Ionicons 14 cho cùng độ lớn nét. */
 const TOGGLE_GLYPH = 14;
-const REVIEW_DISC = 20;
 const REVIEW_GLYPH = 10;
-const STATUS_GAP = 32;
+const STATUS_GAP = space.xs;
 const METRICS_PAD = 8;
 const METRICS_GAP = 6;
 const DOT = 4;
@@ -309,20 +308,21 @@ function VehicleCardImpl({
           </YStack>
         </XStack>
 
-        {/* Figma "Vehicle Status": kiểm duyệt (đĩa biểu tượng + chữ) cách viên vận hành 32. */}
+        {/* Kiểm duyệt: biểu tượng + chữ nằm TRONG một chip, cùng dáng chip vận hành (người dùng chốt 19/11/2026). */}
         <XStack ai="center" flexWrap="wrap" columnGap={STATUS_GAP} rowGap={space.xs}>
-          <XStack ai="center" gap={6}>
-            <YStack w={REVIEW_DISC} h={REVIEW_DISC} br={radius.pill} bg={reviewSkin.bg} ai="center" jc="center">
-              {review === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
+          <Pill
+            label={t(`review.${review}`)}
+            tone={pillToneOfStatusColor(VEHICLE_PUBLIC_STATUS_META[review].color)}
+            size="caption"
+            shape="tag"
+            leading={
+              review === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
                 <CheckGlyph color={reviewSkin.fg} />
               ) : (
                 <Ionicons name={REVIEW_ICON[review]} size={REVIEW_GLYPH} color={reviewSkin.fg} />
-              )}
-            </YStack>
-            <Text col={reviewSkin.fg} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
-              {t(`review.${review}`)}
-            </Text>
-          </XStack>
+              )
+            }
+          />
           <XStack ai="center" gap={space.xs}>
             <Pill label={t(`operation.${operation}`)} tone={operationTone} size="caption" shape="tag" />
             {pausedReason ? (
@@ -369,7 +369,7 @@ function VehicleCardImpl({
         {cardActions.length > 0 ? (
           <XStack gap={space.sm}>
             {cardActions.map((action) => (
-              <YStack key={action.key} f={1} minWidth={0}>
+              <YStack key={action.key} flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
                 <Button
                   label={action.label}
                   variant="gradient"

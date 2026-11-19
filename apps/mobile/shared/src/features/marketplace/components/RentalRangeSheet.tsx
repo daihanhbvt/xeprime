@@ -686,7 +686,7 @@ export function RentalRangeSheet({
                     onPress={onCancel}
                   />
                 </YStack>
-                <YStack f={1}>
+                <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                   <Button
                     label={tCommon('actions.apply')}
                     icon="checkmark-outline"

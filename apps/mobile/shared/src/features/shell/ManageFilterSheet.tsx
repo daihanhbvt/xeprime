@@ -261,10 +261,10 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
         headerDivider
         footer={
           <XStack gap={GRID_GAP}>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button label={t('clearAll')} icon="refresh-outline" variant="neutral" onPress={reset} />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button label={t('save')} icon="funnel-outline" variant="gradient" onPress={apply} />
             </YStack>
           </XStack>
@@ -359,7 +359,7 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
                 onPress={reset}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button label={tActions('apply')} icon="funnel-outline" onPress={apply} />
             </YStack>
           </XStack>

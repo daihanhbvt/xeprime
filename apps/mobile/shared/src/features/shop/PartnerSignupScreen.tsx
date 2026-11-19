@@ -11,7 +11,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
+import { FieldAppearanceProvider } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
 import { setAccountPassword, type CurrentUser } from '@/features/auth/api';
 import { AuthSwitchLink } from '@/features/auth/components/AuthSwitchLink';
@@ -19,14 +19,15 @@ import { useCurrentUser, useRegister } from '@/features/auth/hooks/use-auth';
 import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
 import { LegalConsentCheckbox } from '@/features/legal/components/LegalConsentCheckbox';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
-import { ListYourVehicleScreen } from '@/features/list-vehicle/ListYourVehicleScreen';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { queryKeys } from '@/queries/query-keys';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
+import { fontWeight, space, typeScale } from '@/theme/tokens';
 import { tenantsApi } from './api';
 import { PartnerAccountFields } from './components/PartnerAccountFields';
+import { PartnerTrackChooser } from './components/PartnerTrackChooser';
 
 const ADDRESS_FIELD_NAMES = {
   provinceCode: 'provinceCode',
@@ -85,14 +86,15 @@ export function PartnerSignupScreen({
 
   if (!track) {
     return (
-      <ListYourVehicleScreen
-        showBack={false}
+      <PartnerTrackChooser
         onChoose={setTrack}
         footer={
-          <>
-            {loginHint}
-            {footer}
-          </>
+          loginHint || footer ? (
+            <YStack gap={space.xs}>
+              {loginHint}
+              {footer}
+            </YStack>
+          ) : null
         }
       />
     );
@@ -286,98 +288,119 @@ export function PartnerSignupForm({
     </>
   );
 
+  /** Tiêu đề khối 18/28 (Figma "Vehicle Specifications Header"). */
+  const sectionTitle = (text: string) => (
+    <Text
+      col={colors.text}
+      fos={typeScale.heading.fontSize}
+      lh={typeScale.heading.lineHeight}
+      fow={fontWeight.semibold}
+      accessibilityRole="header"
+    >
+      {text}
+    </Text>
+  );
+
+  /*
+    Figma Partner-XePrime "Signup - Personal" (`24464:24953`): mũi tên lui 24 · "Tạo tài khoản đối
+    tác" 20/30 + lời dẫn 14/20 · hai khối phẳng trên nền trang ("Thông tin tài khoản", "Khu vực cho
+    thuê"/"Thông tin gian hàng") tiêu đề 18/28, khe ô 12, khe khối 24 · ô đồng ý · nút gradient cao 44
+    có mũi tên sau chữ · chú thích 14/20 căn giữa. Bộ ô `v2` cho mọi ô bên trong (kể cả địa chỉ, SĐT).
+    Nút nằm CUỐI form như bản vẽ (không còn dính đáy); dòng "Đã có tài khoản? Đăng nhập" giữ ngay dưới.
+  */
   return (
     <>
-      <AppHeader {...(onBack ? { onBack } : {})} />
-      <Screen
-        edges={['left', 'right', 'bottom']}
-        footer={
-          <YStack gap={space.xs}>
-            <Button
-              label={t(`signup.submit.${track}`)}
-              icon={isPackageTrack ? 'storefront-outline' : 'person-add-outline'}
-              onPress={submit}
-              loading={pending}
-              disabled={submitBlocked}
-            />
-            {loginHint}
-          </YStack>
-        }
-      >
-        <YStack gap={space.lg} pb={space.md}>
-          <YStack gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
-              {t(`signup.title.${track}`)}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.body}>
-              {t(`signup.subtitle.${track}`)}
-            </Text>
-          </YStack>
+      {/*
+        "Tạo tài khoản đối tác" là THANH TRÊN (← + tiêu đề) như trang chi tiết, người dùng chốt
+        19/11/2026; dòng mô tả ở ngay đầu nội dung.
+      */}
+      <AppHeader {...(onBack ? { onBack } : {})} title={t('signup.formTitle')} />
+    <Screen padded={false} edges={['left', 'right', 'bottom']}>
+      <FieldAppearanceProvider value="v2">
+        <YStack gap={space.xl} px={layout.padXLg} py={space.lg}>
+          <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+            {t('signup.formSub')}
+          </Text>
 
           {withAccount || attachToAccount ? (
-            <Card>
-              <YStack gap={space.md}>
-                <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
-                  {t('signup.accountSection')}
-                </Text>
-                <PartnerAccountFields
-                  control={control}
-                  verifyRef={verifyRef}
-                  onVerified={submit}
-                  attachToAccount={attachToAccount}
-                  askPassword={withAccount || needsPassword}
-                />
-              </YStack>
-            </Card>
+            <YStack gap={space.md}>
+              {sectionTitle(t('signup.accountSection'))}
+              <PartnerAccountFields
+                control={control}
+                verifyRef={verifyRef}
+                onVerified={submit}
+                attachToAccount={attachToAccount}
+                askPassword={withAccount || needsPassword}
+              />
+            </YStack>
           ) : (
             <Callout tone="success">{t('signup.accountReady')}</Callout>
           )}
 
-          <Card>
-            <YStack gap={space.md}>
-              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
-                {t(`signup.profileSection.${track}`)}
-              </Text>
-              {isPackageTrack || !withAccount ? (
-                <TextField
-                  control={control}
-                  name="name"
-                  required
-                  label={
-                    isPackageTrack
-                      ? t('form.fields.name.label')
-                      : t('signup.fields.ownerName.label')
-                  }
-                  placeholder={
-                    isPackageTrack
-                      ? t('form.fields.name.placeholder')
-                      : t('signup.fields.ownerName.placeholder')
-                  }
-                  icon={isPackageTrack ? 'storefront-outline' : 'person-outline'}
-                />
-              ) : null}
-              <AddressFields
+          <YStack gap={space.md}>
+            {sectionTitle(t(`signup.profileSection.${track}`))}
+            {isPackageTrack || !withAccount ? (
+              <TextField
                 control={control}
-                names={ADDRESS_FIELD_NAMES}
-                pin={ADDRESS_PIN_NAMES}
+                name="name"
                 required
-                provinceRequired
-                prefillRememberedProvince
+                label={
+                  isPackageTrack ? t('form.fields.name.label') : t('signup.fields.ownerName.label')
+                }
+                placeholder={
+                  isPackageTrack
+                    ? t('form.fields.name.placeholder')
+                    : t('signup.fields.ownerName.placeholder')
+                }
+                icon={isPackageTrack ? 'storefront-outline' : 'person-outline'}
               />
-              {withAccount || attachToAccount ? null : contactFields}
-            </YStack>
-          </Card>
+            ) : null}
+            <AddressFields
+              control={control}
+              names={ADDRESS_FIELD_NAMES}
+              pin={ADDRESS_PIN_NAMES}
+              required
+              provinceRequired
+              prefillRememberedProvince
+            />
+            {withAccount || attachToAccount ? null : contactFields}
+          </YStack>
 
           {withAccount ? (
             <LegalConsentCheckbox
+              size="md"
               checked={consented}
               onToggle={() => setConsented((agreed) => !agreed)}
             />
           ) : (
             <LegalConsentNote place="shop" />
           )}
+
+          <YStack gap={space.sm}>
+            <Button
+              label={t(`signup.submit.${track}`)}
+              variant="gradient"
+              size="lg"
+              icon="arrow-forward"
+              iconEnd
+              onPress={submit}
+              loading={pending}
+              disabled={submitBlocked}
+            />
+            <Text
+              col={colors.textPlaceholder}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              ta="center"
+            >
+              {t('signup.footnote')}
+            </Text>
+            {loginHint}
+          </YStack>
         </YStack>
-      </Screen>
+      </FieldAppearanceProvider>
+    </Screen>
     </>
   );
 }
+

@@ -592,7 +592,7 @@ function HandoverForm({
                 onPress={() => setConfirming(false)}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('confirm.ok')}
                 icon="checkmark-outline"

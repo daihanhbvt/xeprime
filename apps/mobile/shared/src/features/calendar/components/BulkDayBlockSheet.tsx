@@ -158,7 +158,7 @@ function BlockSheetInner({
                 disabled={block.isPending}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('bulkBlock.submit', { count: blockable.length })}
                 icon="lock-closed-outline"

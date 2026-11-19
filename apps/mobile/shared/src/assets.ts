@@ -5,6 +5,17 @@ import shopOnboarding from '../assets/images/shop-onboarding.png';
 import ownerPersonalCar from '../assets/images/owner-personal-car.png';
 // Minh hoạ màn "Dành cho đối tác" — Figma `21943:42616` (cắt đúng khung 358×316).
 import partnerHero from '../assets/images/partner/partner-hero.webp';
+// Dải ảnh đầu màn đăng nhập app Partner - Figma Partner-XePrime "Login" `24464:24577` (nền đường
+// hầm 390×179 đã cắt), logo "xe prime PARTNER" `24464:24578`, linh vật + xe `24464:24583`.
+import partnerLoginBanner from '../assets/images/partner/login-banner.webp';
+import partnerLoginLogo from '../assets/images/partner/login-logo.webp';
+import partnerLoginMascot from '../assets/images/partner/login-mascot.webp';
+// Thẻ chọn tuyến app Partner - Figma "Signup - Plan" `24464:25566`: minh hoạ hai tuyến, nền thẻ
+// gian hàng (mờ 30%) và ruy băng "Đề xuất" (chữ vẽ đè bằng `Text` để còn dịch được).
+import partnerTrackPersonal from '../assets/images/partner/track-personal.webp';
+import partnerTrackShop from '../assets/images/partner/track-shop.webp';
+import partnerTrackShopBg from '../assets/images/partner/track-shop-bg.webp';
+import partnerTrackRibbon from '../assets/images/partner/track-ribbon.webp';
 import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
 // Minh hoạ "chưa có bằng lái" — xuất thẳng từ Figma (Empty State, node 20043:49464).
 import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
@@ -24,6 +35,8 @@ import zaloLogo from '../assets/images/brand/zalo.png';
 import homeHeroFallback from '../assets/images/home/hero-fallback.webp';
 import homeDestCities from '../assets/images/home/dest-cities.webp';
 import homeDestBg from '../assets/images/home/dest-bg.webp';
+// Nền loang vàng thẻ "Rút được ngay" - cùng tệp web `public/illustrations/wallet/balance-glow.webp`.
+import walletBalanceGlow from '../assets/images/wallet-balance-glow.webp';
 import homeStepsSprite from '../assets/images/home/steps-sprite.webp';
 // Vùng cắt riêng của bản vẽ MB (`19771:51743`) — web dùng cùng ảnh ở ≤640px.
 import homePartnerBackdrop from '../assets/images/home/partner-bg-mobile.webp';
@@ -63,6 +76,13 @@ export const images = {
   shopOnboarding,
   ownerPersonalCar,
   partnerHero,
+  partnerLoginBanner,
+  partnerLoginLogo,
+  partnerLoginMascot,
+  partnerTrackPersonal,
+  partnerTrackShop,
+  partnerTrackShopBg,
+  partnerTrackRibbon,
   ownerShopShowroom,
   driverLicenceEmpty,
   forgotLock,
@@ -72,6 +92,7 @@ export const images = {
   homeHeroFallback,
   homeDestCities,
   homeDestBg,
+  walletBalanceGlow,
   homeStepsSprite,
   homePartnerBackdrop,
   bookingRequestSent,
@@ -94,6 +115,22 @@ export const images = {
  */
 /** Tỉ lệ ảnh `partnerHero` (358 × 316). */
 export const PARTNER_HERO_RATIO = 358 / 316;
+
+/**
+ * Khung dải ảnh đầu màn đăng nhập app Partner (Figma `24464:24574`, khung 390): nền 390×179, logo
+ * 145×65 đặt ở (27, 22), linh vật 239×191 mép phải chạm (160 + 239), đáy lấn 16 vào tấm trắng.
+ */
+export const PARTNER_LOGIN_ART = {
+  frameWidth: 390,
+  bannerHeight: 179,
+  logo: { left: 27, top: 22, width: 145.3, height: 65 },
+  mascot: { left: 160, width: 239, height: 191, overlap: 16 },
+} as const;
+
+/** Tỉ lệ (rộng ÷ cao) của hai minh hoạ thẻ chọn tuyến và ruy băng — đọc từ chính tệp đã cắt. */
+export const PARTNER_TRACK_PERSONAL_RATIO = 339 / 279;
+export const PARTNER_TRACK_SHOP_RATIO = 218 / 177;
+export const PARTNER_TRACK_RIBBON_RATIO = 117 / 38;
 export const OWNER_PERSONAL_CAR_RATIO = 640 / 420;
 export const OWNER_SHOP_SHOWROOM_RATIO = 720 / 420;
 

@@ -180,7 +180,7 @@ export function SellerTaxForm({
       <YStack gap={space.md}>
         {fieldsBlock}
         <XStack gap={space.sm}>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tCommon('actions.cancel')}
               variant="secondary"
@@ -191,7 +191,7 @@ export function SellerTaxForm({
               }}
             />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tCommon('actions.update')}
               loading={save.isPending}
@@ -248,7 +248,7 @@ export function SellerTaxForm({
               />
             </YStack>
           ) : null}
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={t('save')}
               icon="checkmark-outline"

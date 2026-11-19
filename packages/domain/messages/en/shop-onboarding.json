@@ -96,7 +96,7 @@
   "packagePage": {
     "title": "Register your shop",
     "subtitle": "Two steps: fill in your shop details, then pick a plan and pay. The shop management tools unlock as soon as XePrime receives the money.",
-    "subtitleApp": "Enter your shop details - XePrime will review and approve your account."
+    "subtitleApp": "Enter your shop details - XePrime will contact you about a plan, and your shop opens as soon as the plan is activated."
   },
   "steps": {
     "label": "Shop registration progress",
@@ -122,9 +122,7 @@
       "review": "XePrime will contact you to recommend a suitable plan for your shop.",
       "notify": "You will be notified as soon as your shop is activated.",
       "refresh": "This screen updates automatically once your shop is activated."
-    },
-    "webHint": "Choose a plan and pay by bank transfer on the XePrime Partner website. Your shop activates automatically once the payment arrives.",
-    "openWeb": "Choose a plan on the website"
+    }
   },
   "signup": {
     "title": {

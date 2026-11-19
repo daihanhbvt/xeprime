@@ -1,5 +1,6 @@
 {
   "landing": {
+    "chooseCta": "Choose this model & sign up",
     "metaTitle": "List your vehicle",
     "title": "Choose how to partner with XePrime",
     "back": "Back",
@@ -40,7 +41,8 @@
       "appOfferTitle": "Professional operating tools",
       "appOfferBody": "A shop account has its own vehicle limit and usage period. XePrime reviews and activates the account after you sign up.",
       "offerHighlight": "<big>0%</big> commission per trip",
-      "recommended": "Recommended"
+      "recommended": "Recommended",
+      "recommendedShort": "Top pick"
     },
     "upgrade": {
       "title": "Upgrade whenever you need to",

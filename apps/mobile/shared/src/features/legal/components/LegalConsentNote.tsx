@@ -6,7 +6,14 @@ import { useLegalLinkChunks } from '../use-legal-link-chunks';
 
 /** Bốn thời điểm người dùng thật sự cam kết một điều gì đó — cùng bộ với web. */
 export type LegalConsentPlace =
-  'auth' | 'booking' | 'bookingCheck' | 'bookingCheckHost' | 'subscription' | 'shop';
+  | 'auth'
+  | 'booking'
+  | 'bookingCheck'
+  | 'bookingCheckHost'
+  | 'subscription'
+  | 'shop'
+  /** Câu dưới bộ nút đăng nhập của app Partner - cùng câu web `MarketAuthForms` (Figma `24464:24614`). */
+  | 'marketAuth';
 
 /**
  * Khoá message viết THÀNH CHỮ, không ghép từ `place` lúc chạy.
@@ -24,6 +31,7 @@ const CONSENT_KEY = {
   bookingCheckHost: 'consent.bookingCheckHost',
   subscription: 'consent.subscription',
   shop: 'consent.shop',
+  marketAuth: 'consent.marketAuth',
 } as const satisfies Record<LegalConsentPlace, string>;
 
 /**
@@ -44,23 +52,30 @@ const CONSENT_KEY = {
 export function LegalConsentNote({
   place,
   align = 'left',
+  linkTone = 'accent',
 }: {
   place: LegalConsentPlace;
   /** `center` - dòng điều khoản dưới nút mạng xã hội của cột form app Partner (Figma `24382:23403`). */
   align?: 'left' | 'center';
+  /** Kiểu liên kết - xem `useLegalLinkChunks`. */
+  linkTone?: 'accent' | 'underline';
 }) {
   const colors = useColors();
   const t = useTranslations('Legal');
-  const chunks = useLegalLinkChunks();
+  const chunks = useLegalLinkChunks(linkTone);
 
   return (
     // Bản căn giữa (app Partner): chữ 14/22 `text-tertiary` như Figma; bản thường giữ 12 `text-secondary`.
     <Text
       col={align === 'center' ? colors.placeholder : colors.textMuted}
       fos={align === 'center' ? fontSize.body : fontSize.label}
+      {...(align === 'center' ? { lh: CENTER_LINE_HEIGHT } : {})}
       ta={align}
     >
       {t.rich(CONSENT_KEY[place], chunks)}
     </Text>
   );
 }
+
+/** Figma `14px/Regular` - dòng 22 của câu điều khoản căn giữa. */
+const CENTER_LINE_HEIGHT = 22;

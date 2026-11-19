@@ -117,7 +117,7 @@ export function ShopBranchRow({
       ))}
 
       <XStack gap={space.sm} pt={space.xs}>
-        <YStack f={1} minWidth={0}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
           <Button
             label={tActions('edit')}
             icon="create-outline"
@@ -127,7 +127,7 @@ export function ShopBranchRow({
             onPress={() => onEdit(branch)}
           />
         </YStack>
-        <YStack f={1} minWidth={0}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
           <Button
             label={isActive ? t('actions.deactivate') : t('actions.activate')}
             icon={isActive ? 'pause-circle-outline' : 'play-circle-outline'}

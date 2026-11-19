@@ -5,7 +5,7 @@ import { ownerAccountProfileSchema, type OwnerAccountProfileValues } from '@xepr
 import { uploadsApi } from '@/api/uploads/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
-import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { AvatarUploadField } from '@/components/ui/AvatarUploadField';
 import { TextField } from '@/components/ui/TextField';
 import { useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import type { MyShop } from '@/features/shop/api';
@@ -70,6 +70,8 @@ export function OwnerInfoForm({
   });
   // Theo dõi để nút Lưu đọc đúng trạng thái khi chỉ đổi ảnh (ô ảnh không qua bàn phím).
   useWatch({ control, name: 'avatarUrl' });
+  // Chữ cái đầu của ảnh khi chưa có ảnh đọc theo họ tên ĐANG gõ (web `fallbackName`).
+  const displayName = useWatch({ control, name: 'displayName' });
   const saving = updateMe.isPending || updateShop.isPending;
   const dirty = formState.isDirty;
 
@@ -94,14 +96,13 @@ export function OwnerInfoForm({
 
   return (
     <YStack gap={space.md}>
-      <ImageUploadField
+      {/* Ảnh TRÒN căn giữa + nút "Thay đổi" - đúng web `AvatarUploadField` (người dùng chốt 19/11/2026). */}
+      <AvatarUploadField
         control={control}
         name="avatarUrl"
-        label={tAccount('avatarUrl')}
+        fallbackName={displayName || profile.displayName}
+        title={tAccount('avatarUrl')}
         presign={uploadsApi.avatar}
-        hint={tAccount('avatarHelp')}
-        required
-        removable={false}
         disabled={saving}
       />
       <TextField
@@ -136,7 +137,7 @@ export function OwnerInfoForm({
             />
           </YStack>
         ) : null}
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={tCommon('saveChanges')}
             icon="save-outline"

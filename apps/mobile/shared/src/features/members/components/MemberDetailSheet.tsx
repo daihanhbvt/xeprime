@@ -109,7 +109,7 @@ function DetailActions({
   return (
     <XStack gap={space.sm}>
       {abilities.edit ? (
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('roster.actions.edit')}
             icon="create-outline"
@@ -119,7 +119,7 @@ function DetailActions({
         </YStack>
       ) : null}
       {abilities.remove ? (
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('roster.actions.remove')}
             icon="person-remove-outline"
@@ -129,7 +129,7 @@ function DetailActions({
         </YStack>
       ) : null}
       {abilities.revoke ? (
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('roster.actions.revoke')}
             icon="close-circle-outline"

@@ -178,7 +178,7 @@ export function SupportCenterScreen({
         />
       ) : (
         <>
-          <ManageHeader />
+          <ManageHeader title={t('support.title')} />
           <ManagePageTitle title={t('support.title')} subtitle={t('support.subtitle')} />
         </>
       )}

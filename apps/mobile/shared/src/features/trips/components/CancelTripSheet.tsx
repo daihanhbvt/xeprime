@@ -131,7 +131,7 @@ export function CancelTripSheet({
           <YStack flexShrink={0}>
             <Button label={t('keep')} variant="ghost" onPress={close} />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={t('confirm')}
               icon="close-circle-outline"

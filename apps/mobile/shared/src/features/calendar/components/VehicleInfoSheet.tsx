@@ -85,7 +85,7 @@ export function VehicleInfoSheet({
               <Button label={tCommon('close')} variant="ghost" onPress={onClose} />
             </YStack>
             {has(PERMISSION.VEHICLE_VIEW) ? (
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={t('vehicleCard.openVehicle')}
                   icon="car-sport-outline"

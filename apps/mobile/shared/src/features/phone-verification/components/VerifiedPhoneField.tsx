@@ -7,6 +7,7 @@ import { VN_MOBILE_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { FIELD_V2, FieldLabel, useFieldAppearance } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
@@ -50,7 +51,14 @@ export function VerifiedPhoneField({
   verifyRef,
   onVerified,
   attachToAccount = false,
+  sendLabel,
 }: {
+  /**
+   * Có ⇒ nút gửi mã đứng CẠNH ô SĐT (nút viền vàng mang nhãn này - "Gửi mã OTP" của web
+   * `PartnerAccountFields`, Figma `24464:25312`) thay vì nút "Xác thực" xếp dưới ô. Chỉ đổi chỗ
+   * đặt nút; bấm vẫn mở đúng lượt xác thực như cũ. Chỉ áp trong bộ ô `v2`.
+   */
+  sendLabel?: string;
   /**
    * Gắn số vào CHÍNH tài khoản đang đăng nhập (`/users/me/phone/*`) thay vì mã `purpose` — tài
    * khoản đối tác vào bằng Google/Facebook/Apple chưa có SĐT xác minh. Khi bật, `purpose` bị bỏ qua.
@@ -75,6 +83,8 @@ export function VerifiedPhoneField({
 }) {
   const colors = useColors();
   const t = useTranslations('Auth.otp');
+  const appearance = useFieldAppearance();
+  const inlineSend = sendLabel != null && appearance === 'v2';
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const purposeOtp = usePhoneVerify(purpose);
@@ -181,13 +191,33 @@ export function VerifiedPhoneField({
     };
   });
 
+  const phoneInput = (
+    <TextField
+      control={control}
+      name={phoneName}
+      required
+      label={label}
+      placeholder={placeholder}
+      // Nút "Gửi mã OTP" cạnh ô: không dòng gợi ý (web `PartnerAccountFields` + Figma chỉ hiện lỗi).
+      hint={inlineSend ? undefined : phoneValid ? t('verifyHelp') : hint}
+      icon="call-outline"
+      keyboardType="phone-pad"
+      autoComplete="tel"
+      editable={!disabled}
+    />
+  );
+
   return (
     <>
       {verified ? (
         <YStack gap={space.xs}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {label} *
-          </Text>
+          {appearance === 'v2' ? (
+            <FieldLabel label={label} required />
+          ) : (
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+              {label} *
+            </Text>
+          )}
           <XStack ai="center" gap={space.sm} minHeight={44}>
             <Ionicons name="call-outline" size={iconSize.md} color={colors.textMuted} />
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
@@ -203,31 +233,44 @@ export function VerifiedPhoneField({
         </YStack>
       ) : (
         <YStack gap={space.xs}>
-          <TextField
-            control={control}
-            name={phoneName}
-            required
-            label={label}
-            placeholder={placeholder}
-            hint={phoneValid ? t('verifyHelp') : hint}
-            icon="call-outline"
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            editable={!disabled}
-          />
+          {inlineSend ? (
+            /*
+              Nút đứng ngang ô (khe 12): đẩy xuống đúng chiều cao nhãn + khe nhãn để mép trên nút
+              thẳng mép trên khung ô, kể cả khi dưới ô có chú thích/lỗi.
+            */
+            <XStack gap={space.md} ai="flex-start">
+              <YStack f={1} minWidth={0}>
+                {phoneInput}
+              </YStack>
+              <YStack mt={FIELD_V2.labelLineHeight + FIELD_V2.labelGap}>
+                <Button
+                  label={sendLabel ?? t('verify')}
+                  variant="brandOutline"
+                  block={false}
+                  loading={otp.sending && !sheetOpen}
+                  disabled={!phoneValid || disabled}
+                  onPress={() => void startVerify()}
+                />
+              </YStack>
+            </XStack>
+          ) : (
+            phoneInput
+          )}
           {verifiedState.error?.message ? (
             <Text col={colors.danger} fos={fontSize.label}>
               {verifiedState.error.message}
             </Text>
           ) : null}
-          <Button
-            label={t('verify')}
-            icon="shield-checkmark-outline"
-            variant="secondary"
-            loading={otp.sending && !sheetOpen}
-            disabled={!phoneValid || disabled}
-            onPress={() => void startVerify()}
-          />
+          {inlineSend ? null : (
+            <Button
+              label={t('verify')}
+              icon="shield-checkmark-outline"
+              variant="secondary"
+              loading={otp.sending && !sheetOpen}
+              disabled={!phoneValid || disabled}
+              onPress={() => void startVerify()}
+            />
+          )}
         </YStack>
       )}
 

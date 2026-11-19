@@ -74,10 +74,16 @@ function labelsFitInline(actions: readonly CardAction[], barWidth: number): bool
   /* Lượt render đầu chưa đo được — dựng theo luật đếm, `onLayout` sửa lại ở khung ngay sau. */
   if (barWidth <= 0) return true;
 
-  /* Trừ các kẻ dọc 1pt giữa hai ô trước khi chia đều. */
-  const budget = (barWidth - (actions.length - 1)) / actions.length - INLINE_CHROME;
-
-  return actions.every((action) => estimateTextWidth(action.label, fontSize.label, true) <= budget);
+  /*
+   * Ô KHÔNG chia đều (xem `cell` dưới): mỗi ô rộng theo nhãn của nó rồi chia phần thừa. Nên phép
+   * kiểm là TỔNG bề rộng các ô (nhãn + hình + đệm) cộng các kẻ dọc 1pt có nằm trong thanh không -
+   * "Lịch" ngắn nhường chỗ cho "Quản lý xe", thay vì mỗi ô chỉ được đúng 1/n thanh.
+   */
+  const needed = actions.reduce(
+    (sum, action) => sum + estimateTextWidth(action.label, fontSize.label, true) + INLINE_CHROME,
+    actions.length - 1,
+  );
+  return needed <= barWidth;
 }
 
 /**
@@ -126,10 +132,16 @@ export function CardActionBar({ actions }: { actions: readonly CardAction[] }) {
  * Nền của ô đang bị nhấn — SÁNG lên, không mờ đi: thứ người dùng cần thấy là "tôi đang chạm đúng
  * ô này", không phải "ô này đang tắt". Cùng phản hồi với một hàng của `StatGrid`.
  */
+/*
+ * Ô rộng THEO NHÃN rồi chia đều phần thừa (`flexBasis: 'auto'`), không chia đều cứng (`flex: 1` =
+ * `flexBasis: 0`). Chia đều cứng làm "Lịch" thừa chỗ trong khi "Quản lý xe" bị cắt thành "Quản lý
+ * x…" - người dùng báo 19/11/2026. Nhãn ngắn ngang nhau thì các ô vẫn gần như bằng nhau.
+ */
+const CELL_FLEX = { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' } as const;
 const usePressedCell = themed(
-  (colors) => ({ flex: 1, backgroundColor: colors.surfaceMuted }) as const,
+  (colors) => ({ ...CELL_FLEX, backgroundColor: colors.surfaceMuted }) as const,
 );
-const cell = { flex: 1 } as const;
+const cell = CELL_FLEX;
 
 function ActionCell({ action, inline }: { action: CardAction; inline: boolean }) {
   const colors = useColors();

@@ -177,7 +177,13 @@ export function HandoverPhotoGrid({
     variant === 'grid'
       ? 3
       : Math.max(1, Math.floor((rowWidth + ROW_GAP) / (ROW_MIN_CELL + ROW_GAP)));
-  const rowCellWidth = rowWidth > 0 ? (rowWidth - ROW_GAP * (rowColumns - 1)) / rowColumns : 0;
+  /*
+   * Làm tròn XUỐNG: bề rộng lẻ (vd. 97,33pt × 3 + 2 khe = đúng bằng hàng) bị Android làm tròn
+   * điểm ảnh lên, tổng vượt hàng ~1px và ô cuối rớt dòng - hàng 3 ô thành 2 ô dù còn trống gần
+   * đủ một ô (người dùng báo 19/11/2026). Hụt dưới 1pt mỗi ô thì mắt không thấy.
+   */
+  const rowCellWidth =
+    rowWidth > 0 ? Math.floor((rowWidth - ROW_GAP * (rowColumns - 1)) / rowColumns) : 0;
   const canViewFiles = permissions.has(PERMISSION.HANDOVER_FILE_VIEW);
   /*
    * `useMemo` bắt buộc: `taken` là dependency của `open`, và một `Map` dựng lại mỗi lần render

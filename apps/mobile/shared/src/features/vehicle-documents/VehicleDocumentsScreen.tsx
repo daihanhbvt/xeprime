@@ -910,7 +910,7 @@ function DocumentRow({
                 onPress={onCancelUpload}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={tCommon('actions.retry')}
                 icon="refresh-outline"
@@ -1115,7 +1115,7 @@ function AddDocumentSheet({
               onPress={onClose}
             />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               variant="gradient"
               icon="cloud-upload-outline"
@@ -1432,7 +1432,7 @@ function DocumentDetailSheet({
                 onPress={onClose}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 variant="gradient"
                 icon="save-outline"
@@ -1812,7 +1812,7 @@ function OcrReviewSheet({
               onPress={onClose}
             />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={selected.size > 0 ? t('applyCount', { count: selected.size }) : t('apply')}
               disabled={selected.size === 0}

@@ -12,7 +12,8 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
 import { LoginForm } from './components/LoginForm';
-import { PARTNER_AUTH_SECTION_GAP, PartnerAuthHeading } from './components/PartnerAuthHeading';
+import { PartnerAuthHeading } from './components/PartnerAuthHeading';
+import { PartnerLoginHero } from './components/PartnerLoginHero';
 import { SocialButtons } from './components/SocialButtons';
 
 /**
@@ -66,17 +67,21 @@ export function LoginScreen({
   const tNav = useTranslations('Navigation');
 
   /*
-   * App Partner - cột form Figma Partner-XePrime "Login - Partner/Admin" (`24382:23343`), như site
-   * partner khổ hẹp (chốt 18/11/2026): KHÔNG thanh trên (đây là màn gốc của app, không có chỗ lùi),
-   * tiêu đề "ĐĂNG NHẬP" căn giữa, form, nút gradient + "Đăng ký ngay!", vạch "hoặc đăng nhập bằng",
-   * Google/Facebook nằm ngang, điều khoản căn giữa. Thẻ ảnh trái, linh vật, "Ghi nhớ tài khoản" và
-   * "Về trang thuê xe" của bản desktop KHÔNG có trên app (app không có khu thuê xe để về).
+   * App Partner - Figma Partner-XePrime "Login" (`24464:24574`): dải ảnh đường hầm + logo "xe prime
+   * PARTNER" + linh vật, tấm trắng mép lượn chứa tiêu đề "ĐĂNG NHẬP" 24/32, form, nút gradient +
+   * "Đăng ký ngay!", vạch "hoặc đăng nhập bằng", Google/Facebook nằm ngang và câu điều khoản. Không
+   * có thanh trên (màn gốc của app, không có chỗ lùi). "Ghi nhớ tài khoản" của bản vẽ KHÔNG có trên
+   * app; số phiên bản app giữ ở cuối (người kẹt ở màn này là người cần báo lỗi nhất).
    */
   if (APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER) {
     return (
-      <Screen maxWidth="form">
-        <YStack gap={PARTNER_AUTH_SECTION_GAP} pt={space.xl}>
-          <PartnerAuthHeading title={t('market.login.title')} subtitle={t('portal.subtitle')} />
+      <Screen edges={['left', 'right', 'bottom']} maxWidth="form" padded={false} surface>
+        <PartnerLoginHero>
+          <PartnerAuthHeading
+            size="md"
+            title={t('market.login.title')}
+            subtitle={t('portal.subtitle')}
+          />
           <LoginForm
             onSuccess={onSuccess}
             onForgotPassword={onForgotPassword}
@@ -93,10 +98,10 @@ export function LoginScreen({
           />
           <YStack gap={space.md}>
             <SocialButtons onSuccess={onSuccess} layout="row" dividerLabel={t('market.divider')} />
-            <LegalConsentNote place="auth" align="center" />
+            <LegalConsentNote place="marketAuth" align="center" linkTone="underline" />
           </YStack>
           <AppVersion />
-        </YStack>
+        </PartnerLoginHero>
       </Screen>
     );
   }

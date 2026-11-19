@@ -286,7 +286,7 @@ function DriverCardImpl({
         {/* Hàng nút compact tràn ngang như thẻ Đơn thuê: nút CUỐI là nút chính (dải vàng). */}
         <XStack gap={space.sm} mt="auto">
           {footerActions.map((action, index) => (
-            <YStack key={action.key} f={1} minWidth={0}>
+            <YStack key={action.key} flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
               <Button
                 label={action.label}
                 icon={action.icon}

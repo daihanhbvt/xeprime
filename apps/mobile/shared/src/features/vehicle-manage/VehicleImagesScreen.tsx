@@ -203,7 +203,7 @@ function ImagesForm({
     () =>
       canEdit ? (
         <XStack gap={space.sm}>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tEdit('revert')}
               variant="outline"
