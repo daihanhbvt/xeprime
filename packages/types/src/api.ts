@@ -835,6 +835,11 @@ export const API_ERROR_CODE = {
   DRIVER_WAGE_REQUIRED: 'DRIVER_WAGE_REQUIRED',
   /** Giá có tài xế/ngày ngoài khoảng của chính sách. `details: { field, min, max }`. */
   WITH_DRIVER_PRICE_OUT_OF_RANGE: 'WITH_DRIVER_PRICE_OUT_OF_RANGE',
+  /**
+   * Xe đăng dịch vụ có tài xế thì phải có ĐỦ ba giá: nội thành, liên tỉnh khứ hồi, liên tỉnh
+   * 1 chiều (19/11/2026). `details.fields` = các ô còn trống.
+   */
+  WITH_DRIVER_PRICE_REQUIRED: 'WITH_DRIVER_PRICE_REQUIRED',
   /** Phụ phí tài xế theo xe đã gỡ (ADR 0075 điều 7) — không cấu hình được nữa. */
   DRIVER_SURCHARGE_RETIRED: 'DRIVER_SURCHARGE_RETIRED',
   /** Danh mục phụ phí quyết toán đã gỡ (`waiting` · `long_distance` · `overnight`). */

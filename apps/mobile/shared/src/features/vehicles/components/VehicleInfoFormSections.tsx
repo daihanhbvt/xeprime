@@ -157,8 +157,8 @@ export function VehicleServiceChips({
             <YStack key={service} opacity={locked && !checked ? 0.6 : 1}>
               <Chip
                 label={domainLabel('serviceType', service)}
-                selected={checked}
-                {...(checked ? { icon: 'checkmark' as const } : {})}
+                selected={checked || toggle.showsOn(service)}
+                {...(checked || toggle.showsOn(service) ? { icon: 'checkmark' as const } : {})}
                 role="button"
                 onPress={() => {
                   if (reason) toast.showInfo(reason);

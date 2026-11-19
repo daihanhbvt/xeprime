@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { Text } from 'tamagui';
+import { useForm } from 'react-hook-form';
+import { Text, YStack } from 'tamagui';
+import { withDriverEnableSchema, type WithDriverEnableValues } from '@xeprime/validators';
 import { readServiceInUseDetails, type ServiceInUseDetails } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
 import {
@@ -10,6 +12,9 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { AlertDialog } from '@/components/ui/AlertDialog';
+import { MoneyField } from '@/components/ui/MoneyField';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { space } from '@/theme/tokens';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import type { VehicleDetail } from '@/features/vehicles/api';
@@ -21,10 +26,35 @@ import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useColors } from '@/theme/ThemeProvider';
 
+const WITH_DRIVER_PRICE_KEYS = [
+  'withDriverDailyPrice',
+  'withDriverInterCityPrice',
+  'withDriverOneWayPrice',
+] as const;
+
+/**
+ * Lỗi `WITH_DRIVER_PRICE_OUT_OF_RANGE` của server mang `{ field, min, max }` - đọc ra để đặt lỗi
+ * NGAY DƯỚI ô sai (kèm khoảng hợp lệ) thay vì một toast chung không nói ô nào.
+ */
+function readPriceRange(
+  details: unknown,
+): { field: (typeof WITH_DRIVER_PRICE_KEYS)[number]; min: string; max: string } | null {
+  if (!details || typeof details !== 'object') return null;
+  const { field, min, max } = details as Record<string, unknown>;
+  const key = WITH_DRIVER_PRICE_KEYS.find((k) => k === field);
+  if (!key || min == null || max == null) return null;
+  return { field: key, min: String(min), max: String(max) };
+}
+
 export interface ServiceToggleState {
   /** Vì sao KHÔNG bật/tắt được — `null` = được. Nhãn đã dịch để nơi gọi hiện thẳng. */
   blockedReason: (service: ServiceType, enabled: boolean) => string | null;
   toggle: (service: ServiceType, enabled: boolean) => void;
+  /**
+   * Công tắc của dịch vụ này đang hiện BẬT tạm vì hộp nhập giá có tài xế đang mở (chưa lưu gì).
+   * Đóng hộp mà không lưu ⇒ công tắc về tắt. Nơi gọi: `checked = serviceOn || showsOn(service)`.
+   */
+  showsOn: (service: ServiceType) => boolean;
   pending: boolean;
   /** Hộp xác nhận — nơi gọi đặt vào cây một lần. */
   dialog: ReactNode;
@@ -60,6 +90,27 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
   );
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
+  const tPricing = useTranslations('Vehicles.pricing');
+  /*
+   * BẬT xe có tài xế khi xe chưa đủ ba giá ⇒ hộp nhập giá (19/11/2026, gương web). Công tắc KHÔNG
+   * lưu gì cho tới khi bấm "Bật dịch vụ": dịch vụ + ba giá đi chung MỘT lượt ghi. Huỷ = về tắt.
+   */
+  const [withDriverNext, setWithDriverNext] = useState<ServiceType[] | null>(null);
+  const priceResolver = useValidationResolver<WithDriverEnableValues>(
+    withDriverEnableSchema,
+    'Vehicles.pricing.validation',
+  );
+  const priceForm = useForm<WithDriverEnableValues>({
+    resolver: priceResolver,
+    defaultValues: {
+      withDriverDailyPrice: null,
+      withDriverInterCityPrice: null,
+      withDriverOneWayPrice: null,
+    },
+  });
+  const withDriverPriced = Boolean(
+    vehicle.withDriverDailyPrice && vehicle.withDriverInterCityPrice && vehicle.withDriverOneWayPrice,
+  );
 
   // Mã lạ trong dữ liệu cũ không được kéo theo vào lệnh ghi — lọc về đúng union rồi mới gửi.
   const current = (vehicle.serviceTypes ?? []).filter(isServiceType);
@@ -87,28 +138,64 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
     return false;
   }
 
-  function commit(service: ServiceType, enabled: boolean, next: ServiceType[]) {
+  function commit(
+    service: ServiceType,
+    enabled: boolean,
+    next: ServiceType[],
+    prices?: WithDriverEnableValues,
+  ) {
     update.mutate(
-      { serviceTypes: next },
       {
-        onSuccess: () =>
+        serviceTypes: next,
+        ...(prices
+          ? {
+              withDriverDailyPrice: String(prices.withDriverDailyPrice),
+              withDriverInterCityPrice: String(prices.withDriverInterCityPrice),
+              withDriverOneWayPrice: String(prices.withDriverOneWayPrice),
+            }
+          : {}),
+      },
+      {
+        onSuccess: () => {
+          if (prices) closeWithDriver();
           toast.showSuccess(
             t(enabled ? 'serviceToggle.enabled' : 'serviceToggle.disabled', {
               service: domainLabel('serviceType', service),
             }),
-          ),
+          );
+        },
         onError: (err) => {
           const details =
             getErrorCode(err) === API_ERROR_CODE.VEHICLE_SERVICE_IN_USE
               ? readServiceInUseDetails(getErrorDetails(err))
               : null;
-          if (details) setInUse({ message: errorMessage(err), details });
+          const range =
+            prices && getErrorCode(err) === API_ERROR_CODE.WITH_DRIVER_PRICE_OUT_OF_RANGE
+              ? readPriceRange(getErrorDetails(err))
+              : null;
+          if (range) {
+            priceForm.setError(range.field, {
+              message: t('serviceToggle.withDriverPriceRange', {
+                min: fmt.money(range.min),
+                max: fmt.money(range.max),
+              }),
+            });
+          } else if (details) setInUse({ message: errorMessage(err), details });
           else toast.showError(errorMessage(err));
         },
         onSettled: () => setPendingChange(null),
       },
     );
   }
+
+  function closeWithDriver() {
+    setWithDriverNext(null);
+    priceForm.reset();
+  }
+
+  const submitWithDriver = priceForm.handleSubmit((prices) => {
+    if (withDriverNext) commit(SERVICE_TYPE.WITH_DRIVER, true, withDriverNext, prices);
+  });
 
   function toggle(service: ServiceType, enabled: boolean) {
     if (blockedReason(service, enabled)) return;
@@ -125,11 +212,50 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
       setPendingChange({ service, enabled, next });
       return;
     }
+    if (enabled && service === SERVICE_TYPE.WITH_DRIVER && !withDriverPriced) {
+      setWithDriverNext(next);
+      return;
+    }
     commit(service, enabled, next);
   }
 
   const dialog = (
     <>
+      <AlertDialog
+        open={withDriverNext !== null}
+        title={t('serviceToggle.withDriverPricesTitle')}
+        message={t('serviceToggle.withDriverPricesBody')}
+        body={
+          <YStack gap={space.sm}>
+            <MoneyField
+              control={priceForm.control}
+              name="withDriverDailyPrice"
+              unit={tPricing('unitPerDay')}
+              label={tPricing('withDriver.daily')}
+              required
+            />
+            <MoneyField
+              control={priceForm.control}
+              name="withDriverInterCityPrice"
+              unit={tPricing('unitPerDay')}
+              label={tPricing('withDriver.interCity')}
+              required
+            />
+            <MoneyField
+              control={priceForm.control}
+              name="withDriverOneWayPrice"
+              unit={tPricing('unitPerDay')}
+              label={tPricing('withDriver.oneWay')}
+              required
+            />
+          </YStack>
+        }
+        confirmLabel={t('serviceToggle.withDriverPricesOk')}
+        cancelLabel={tCommon('cancel')}
+        loading={update.isPending}
+        onCancel={closeWithDriver}
+        onConfirm={() => void submitWithDriver()}
+      />
       <AlertDialog
         open={pendingChange !== null}
         title={t('serviceToggle.priceLossTitle')}
@@ -180,5 +306,8 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
     </>
   );
 
-  return { blockedReason, toggle, pending: update.isPending, dialog };
+  const showsOn = (service: ServiceType) =>
+    service === SERVICE_TYPE.WITH_DRIVER && withDriverNext !== null;
+
+  return { blockedReason, toggle, showsOn, pending: update.isPending, dialog };
 }

@@ -2,7 +2,6 @@
 
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Form, Switch, Tooltip } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useForm, type Control } from 'react-hook-form';
@@ -21,7 +20,7 @@ import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { ROUTES, VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/constants/routes';
+import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/constants/routes';
 import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
@@ -164,6 +163,8 @@ function ServicesBody({
   const services = vehicle.serviceTypes ?? [];
   const service = serviceOfTab(tab) ?? SERVICE_TYPE.SELF_DRIVE;
   const serviceOn = services.includes(service);
+  /** Công tắc hiện bật cả lúc hộp nhập giá có tài xế đang mở - form giá chỉ theo `serviceOn`. */
+  const switchOn = serviceOn || toggle.showsOn(service);
   /*
    * Tab nào có mặt: ngoài phiên — cả ba (dịch vụ tắt vẫn bật lên được ngay tại đây). Trong phiên
    * hỗ trợ — chỉ dịch vụ có thiết lập vận hành mà phiên được sửa (dài hạn không có).
@@ -236,14 +237,14 @@ function ServicesBody({
                   <Tooltip title={toggle.blockedReason(service, !serviceOn) ?? undefined}>
                     <Switch
                       aria-label={t(`toggle.${service}.title`)}
-                      checked={serviceOn}
+                      checked={switchOn}
                       loading={toggle.pending}
                       disabled={Boolean(toggle.blockedReason(service, !serviceOn))}
                       onChange={(next) => toggle.toggle(service, next)}
                     />
                   </Tooltip>
                 ) : (
-                  <span className={styles.toggleHint}>{serviceOn ? t('on') : t('off')}</span>
+                  <span className={styles.toggleHint}>{switchOn ? t('on') : t('off')}</span>
                 )
               }
             />
@@ -520,7 +521,6 @@ function AutoAcceptRow({
   const [rulesOpen, setRulesOpen] = useState(false);
   const autoAccept = useAutoAcceptToggle({ vehicleId, setting, canEdit });
   const hidden = useSupportHides(SUPPORT_HIDDEN_AREA.AUTO_ACCEPT);
-  const capability = setting.withDriverAutoAccept;
 
   return (
     <ToggleRow
@@ -555,25 +555,9 @@ function AutoAcceptRow({
         )
       }
     >
-      {withDriver && capability ? (
-        <Alert
-          type={capability.available ? 'success' : 'warning'}
-          showIcon
-          title={
-            capability.available
-              ? t('capabilityOk', { count: capability.activeDrivers })
-              : capability.driversFeatureEnabled
-                ? t('capabilityNoDriver')
-                : t('capabilityNoFeature')
-          }
-          action={
-            capability.driversFeatureEnabled ? (
-              <Link href={ROUTES.MANAGE.DRIVERS}>
-                <Button size="small">{t('openDrivers')}</Button>
-              </Link>
-            ) : undefined
-          }
-        />
+      {withDriver ? (
+        // Có tài xế không tự nhận (19/11/2026) - nói lý do thay cho khung năng lực tài xế.
+        <Alert type="info" showIcon title={t('withDriverManualOnly')} />
       ) : null}
       {rulesOpen ? (
         <div className={styles.rules}>

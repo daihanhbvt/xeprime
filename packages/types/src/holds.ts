@@ -298,9 +298,10 @@ export interface HoldWindows {
   paymentWindowMinutes: number;
   freeCancelUntil: Date;
   /**
-   * Hạn chuyển tiền — KẸP bởi giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao là
-   * một chỗ bị khoá vô nghĩa. Caller vẫn phải từ chối cửa sổ còn lại quá ngắn
-   * (`HOLD_MIN_USABLE_WINDOW_MINUTES`).
+   * Hạn chuyển tiền = `acceptedAt + paymentWindowMinutes`, KHÔNG còn kẹp bởi giờ nhận xe (ADR 0107):
+   * chuyến được duyệt sát giờ (hoặc đã qua giờ nhận) vẫn cho khách tối thiểu 15′ để trả, xe nhận trễ
+   * và chuyến chạy bình thường. Bản trước kẹp ở `pickupAt` khiến mọi lượt duyệt khi còn < 15′ tới giờ
+   * nhận bị từ chối `HOLD_WINDOW_TOO_SHORT`.
    */
   expiresAt: Date;
 }
@@ -330,7 +331,8 @@ export function holdWindowsFor(input: {
     freeCancelMinutes,
     paymentWindowMinutes,
     freeCancelUntil: new Date(Math.min(from + freeCancelMinutes * MS_PER_MINUTE, pickupMs)),
-    expiresAt: new Date(Math.min(from + paymentWindowMinutes * MS_PER_MINUTE, pickupMs)),
+    // ADR 0107: không kẹp ở giờ nhận - sàn 15′ của `holdPaymentWindowMinutes` luôn còn nguyên.
+    expiresAt: new Date(from + paymentWindowMinutes * MS_PER_MINUTE),
   };
 }
 

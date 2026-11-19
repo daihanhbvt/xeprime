@@ -438,10 +438,17 @@ export function ListingBookingCard({
   // Mã đang áp đi theo chuyến sang luồng gửi yêu cầu — báo lên NGAY lúc nó đổi, không qua effect.
   const promo = usePromoCode(promoTrip, { onCodeChange: (code) => onChange({ promoCode: code }) });
   const quoteWithPromo = useQuoteWithPromo(quote.data, promo.applied?.fees);
+  /*
+   * Giao tận nơi theo CHÍNH SÁCH HIỆU LỰC (`deliveryAvailable` - thứ server dùng để nhận/từ chối),
+   * KHÔNG theo chip `deliveryEnabled` của hồ sơ xe (người dùng báo 19/11/2026: gian hàng tắt giao xe
+   * mà khách vẫn chọn được). Cùng luật web `ListingBookingCard` và bước Chuyến đi của luồng gửi.
+   */
+  const deliveryAvailable = Boolean(listing.deliveryAvailable);
+  const isDelivery = deliveryAvailable && !withDriver && trip.deliveryRequested;
   const cost = useCustomerCostView({
     listing,
     breakdown: quoteWithPromo?.breakdown ?? null,
-    isDelivery: !withDriver && trip.deliveryRequested,
+    isDelivery,
   });
   /** Như web: chuyến không có khoản thu online (tạm tính / dài hạn chưa chốt) thì không có ô mã. */
   const promoAvailable = quote.data?.breakdown.fees?.holdAmount != null;
@@ -766,7 +773,7 @@ export function ListingBookingCard({
                 active={!trip.deliveryRequested}
                 onPress={() => set({ deliveryRequested: false })}
               />
-              {listing.deliveryEnabled ? (
+              {deliveryAvailable ? (
                 <DeliveryToggle
                   label={t('pickup.delivery')}
                   sub={t('pickup.deliveryHint')}

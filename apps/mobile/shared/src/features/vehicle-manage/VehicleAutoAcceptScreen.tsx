@@ -26,11 +26,8 @@ import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { SelectField } from '@/components/ui/SelectField';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
 import { useAutoAcceptToggle } from './hooks/use-auto-accept-toggle';
-import { APP_SCOPE } from '@/features/shell/app-scope';
-import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import type { VehicleServiceSetting } from './api';
@@ -139,7 +136,6 @@ function AutoAcceptForm({
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
-  const { switchTo } = useShellScope();
   const patch = usePatchVehicleServiceSetting(vehicleId, serviceType);
   /*
    * `yupResolver` trần: bỏ ràng buộc "tối thiểu ≤ tối đa" cùng khoảng đặt trước (17/09/2026)
@@ -147,7 +143,6 @@ function AutoAcceptForm({
    */
   const resolver = yupResolver(schema);
   const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
-  const capability = setting.withDriverAutoAccept;
 
   const values = useMemo<FormValues>(
     () => ({
@@ -188,16 +183,10 @@ function AutoAcceptForm({
     );
   });
 
-  const capabilityCallout =
-    withDriver && capability ? (
-      <Callout tone={capability.available ? 'success' : 'warning'}>
-        {capability.available
-          ? t('autoAccept.capabilityOk', { count: capability.activeDrivers })
-          : capability.driversFeatureEnabled
-            ? t('autoAccept.capabilityNoDriver')
-            : t('autoAccept.appCapabilityNoFeature')}
-      </Callout>
-    ) : null;
+  /* Có tài xế không tự nhận (19/11/2026) - nói lý do thay cho khung năng lực tài xế (như web). */
+  const capabilityCallout = withDriver ? (
+    <Callout tone="info">{t('autoAccept.withDriverManualOnly')}</Callout>
+  ) : null;
 
   if (part === 'toggle') {
     // Web `AutoAcceptRow`: MỘT hàng công tắc, cảnh báo năng lực tài xế kèm nút "Mở tài xế", danh sách
@@ -213,16 +202,6 @@ function AutoAcceptForm({
             onToggle={() => toggleAuto.change(!enabled)}
           />
           {capabilityCallout}
-          {withDriver && capability?.driversFeatureEnabled ? (
-            <XStack>
-              <Button
-                label={t('autoAccept.openDrivers')}
-                variant="outline"
-                size="sm"
-                onPress={() => switchTo(APP_SCOPE.MANAGE, ROUTES.manage.drivers())}
-              />
-            </XStack>
-          ) : null}
           <InlineAction
             label={t('autoAccept.rulesTitle')}
             onPress={() => setRulesOpen((open) => !open)}
@@ -374,12 +353,6 @@ function AutoAcceptForm({
       </Card>
 
       {capabilityCallout}
-      {withDriver && capability?.driversFeatureEnabled ? (
-        <InlineAction
-          label={t('autoAccept.openDrivers')}
-          onPress={() => switchTo(APP_SCOPE.MANAGE, ROUTES.manage.drivers())}
-        />
-      ) : null}
 
       <Card>
         <ToggleRow

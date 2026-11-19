@@ -347,10 +347,9 @@ export class BookingHoldsService {
      * trong lượt tiền về đủ (`applyBankPaymentWithinTx`). `windows.freeCancelMinutes` chỉ còn đi
      * vào audit như mức "nếu trả ngay lúc được nhận".
      *
-     * Hạn chuyển KHÔNG vượt quá giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao là
-     * một chỗ bị khoá vô nghĩa. Phần còn lại quá ngắn để ai kịp mở app ngân hàng thì không phát QR
-     * nữa — chuyến sát giờ phải đi đường thoả thuận trực tiếp, và người vừa bấm duyệt được nói đúng
-     * câu đó qua `HOLD_WINDOW_TOO_SHORT`.
+     * Hạn chuyển KHÔNG còn kẹp bởi giờ nhận xe (ADR 0107): chuyến duyệt sát giờ hoặc đã qua giờ nhận
+     * vẫn có tối thiểu 15′ để trả, tiền về đủ thì đơn ra đời và xe giao trễ. Phép kiểm
+     * `HOLD_WINDOW_TOO_SHORT` dưới đây chỉ còn chặn chính sách phí có trần dưới ngưỡng dùng được.
      *
      * ⚠️ Ngưỡng đọc từ `HOLD_MIN_USABLE_WINDOW_MINUTES`, KHÔNG gõ tay — cùng hằng làm sàn cho cửa sổ
      * động, nên không có chuyến nào được hứa một cửa sổ mà chính bước này từ chối.
