@@ -315,7 +315,10 @@ beforeAll(async () => {
       plateNumber: `51B-${code.slice(-3)}.67`,
       weekdayPrice: '600000',
       serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+      // Xe có tài xế phải đủ ba giá (WITH_DRIVER_PRICE_REQUIRED).
       withDriverDailyPrice: '900000',
+      withDriverInterCityPrice: '1500000',
+      withDriverOneWayPrice: '1200000',
     });
   vehicleId = (await vehicle(ids.packageTenant, ids.owner, 'T2B-001')).id;
   liteVehicleId = (await vehicle(ids.liteTenant, ids.liteOwner, 'T2B-002')).id;

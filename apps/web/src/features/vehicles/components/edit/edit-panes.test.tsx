@@ -233,7 +233,13 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
   it('tab dịch vụ nói đúng bật/tắt; công tắc dịch vụ ghi đủ mảng serviceTypes', async () => {
     renderPane(
       <ServicesPane
-        vehicle={vehicle({ serviceTypes: [SERVICE_TYPE.SELF_DRIVE] })}
+        // Đủ ba giá có tài xế ⇒ bật là lưu ngay (thiếu giá thì mở hộp nhập giá - test riêng dưới).
+        vehicle={vehicle({
+          serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
+          withDriverDailyPrice: '1200000',
+          withDriverInterCityPrice: '2000000',
+          withDriverOneWayPrice: '1500000',
+        })}
         tab={VEHICLE_EDIT_TAB.WITH_DRIVER}
         canUpdate
         onTab={onTab}
@@ -331,7 +337,22 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
     expect(savePricing.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('có tài xế mà gian hàng chưa có tài xế: nói rõ lý do chưa bật được', () => {
+  it('bật có tài xế khi xe chưa đủ ba giá ⇒ hộp nhập giá, chưa lưu gì; công tắc tạm hiện bật', async () => {
+    renderPane(
+      <ServicesPane
+        vehicle={vehicle({ serviceTypes: [SERVICE_TYPE.SELF_DRIVE] })}
+        tab={VEHICLE_EDIT_TAB.WITH_DRIVER}
+        canUpdate
+        onTab={onTab}
+      />,
+    );
+    const toggle = screen.getByRole('switch', { name: 'Xe có tài xế' });
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
+    expect(updateVehicle.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('có tài xế: không tự nhận chuyến, nói rõ chủ xe duyệt tay', () => {
     serviceSettings.data = [
       setting(),
       setting({
@@ -347,7 +368,7 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
         onTab={onTab}
       />,
     );
-    expect(screen.getAllByText(/chưa có tài xế/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/không tự động nhận/i)).toBeTruthy();
   });
 
   it('tab tự lái chỉ còn giá + khuyến mãi - cọc/km/công tắc chính sách ở mục Chính sách thuê', () => {

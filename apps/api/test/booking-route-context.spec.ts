@@ -23,7 +23,9 @@ import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { customerAccountFor } from './helpers/customer-account';
+import { settleIfAwaitingHold } from './helpers/hold-payment';
 import {
+  makeBookingHoldsService,
   makeBookingRequestsService,
   makeBookingsService,
   makeCustomersService,
@@ -55,6 +57,7 @@ const bookings = makeBookingsService(asService, {
   customers: makeCustomersService(asService, audit),
 });
 const contracts = new ContractsService(asService, audit, new BankAccountsService(asService));
+const holds = makeBookingHoldsService(asService);
 
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
@@ -173,7 +176,14 @@ describe('Yêu cầu → duyệt → đơn GIỮ nguyên hành trình', () => {
       customerId,
     );
 
-    const approved = await requests.approve(tenantId, ownerId, receipt.id);
+    await requests.approve(tenantId, ownerId, receipt.id);
+    // Báo giá có tài xế nay là giá chốt (không còn "tạm tính") ⇒ duyệt thu tiền giữ chỗ; đơn ra
+    // đời khi tiền về đủ (ADR 0044 điều 2).
+    await settleIfAwaitingHold(asService, holds, receipt.id);
+    const approved = await prisma.bookingRequest.findUniqueOrThrow({
+      where: { id: receipt.id },
+      select: { status: true, bookingId: true },
+    });
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
     expect(approved.bookingId).toBeTruthy();
 

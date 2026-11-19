@@ -253,7 +253,8 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (ADR 0066
     expect(holdPaymentWindowMinutes(23 * 60, 90)).toBe(90);
   });
 
-  it('chuyến sát giờ: cả hai mốc bị kẹp về giờ nhận xe, không vượt qua nó', () => {
+  // ADR 0107: hạn TRẢ không còn kẹp bởi giờ nhận (sàn 15′ kể từ lúc duyệt); mốc huỷ miễn phí vẫn kẹp.
+  it('chuyến sát giờ: hạn trả vẫn đủ sàn 15′ (vượt giờ nhận), mốc huỷ miễn phí kẹp về giờ nhận', () => {
     const pickupAt = new Date(acceptedAt.getTime() + 10 * 60_000);
     const w = holdWindowsFor({
       acceptedAt,
@@ -263,11 +264,13 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (ADR 0066
     });
     expect(w.paymentWindowMinutes).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
     expect(w.freeCancelMinutes).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
-    expect(w.expiresAt).toEqual(pickupAt);
+    expect(w.expiresAt.getTime()).toBe(
+      acceptedAt.getTime() + HOLD_MIN_USABLE_WINDOW_MINUTES * 60_000,
+    );
     expect(w.freeCancelUntil).toEqual(pickupAt);
   });
 
-  it('giờ nhận đã qua ⇒ ΔT = 0, không có mốc nào ở tương lai của giờ nhận', () => {
+  it('giờ nhận đã qua ⇒ ΔT = 0: hạn trả là sàn 15′ từ lúc duyệt, không có mốc huỷ miễn phí sau giờ nhận', () => {
     const pickupAt = new Date(acceptedAt.getTime() - 60_000);
     const w = holdWindowsFor({
       acceptedAt,
@@ -276,7 +279,9 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (ADR 0066
       paymentWindowMinutes: 120,
     });
     expect(w.leadMinutes).toBe(0);
-    expect(w.expiresAt.getTime()).toBeLessThanOrEqual(pickupAt.getTime());
+    expect(w.expiresAt.getTime()).toBe(
+      acceptedAt.getTime() + HOLD_MIN_USABLE_WINDOW_MINUTES * 60_000,
+    );
     expect(w.freeCancelUntil.getTime()).toBeLessThanOrEqual(pickupAt.getTime());
   });
 
@@ -349,8 +354,9 @@ describe('cửa sổ động theo khoảng cách tới giờ nhận xe (ADR 0066
       freeCancelHours: 2,
       paymentWindowMinutes: 120,
     });
-    // Hạn bị kẹp về giờ nhận xe còn 10′ < 15′ ⇒ lượt duyệt sẽ nhận HOLD_WINDOW_TOO_SHORT.
-    expect(tight.tooShort).toBe(true);
+    // ADR 0107: hạn trả không còn kẹp về giờ nhận (còn 10′) ⇒ vẫn đủ sàn 15′, duyệt được.
+    expect(tight.paymentWindowMinutes).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
+    expect(tight.tooShort).toBe(false);
   });
 
   it('bốn kết quả xem trước lượt huỷ — mã đi trên dây, không trùng nhau', () => {

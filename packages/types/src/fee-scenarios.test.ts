@@ -365,9 +365,9 @@ describe('TC-CS cửa sổ thời gian', () => {
     const w = holdWindowsFor({ acceptedAt: T0, pickupAt: at(lead), freeCancelHours: 2, paymentWindowMinutes: 120 });
     expect(w.paymentWindowMinutes).toBe(expected);
   });
-  it('TC-CS-04 ΔT 10′ ⇒ hạn trả kẹp bởi giờ nhận xe', () => {
+  it('TC-CS-04 ΔT 10′ ⇒ hạn trả vẫn đủ sàn 15′, vượt giờ nhận xe (ADR 0107)', () => {
     const w = holdWindowsFor({ acceptedAt: T0, pickupAt: at(10), freeCancelHours: 2, paymentWindowMinutes: 120 });
-    expect(w.expiresAt.getTime()).toBe(at(10).getTime());
+    expect(w.expiresAt.getTime()).toBe(at(15).getTime());
   });
   it('TC-CS-05 trả đủ lúc còn 5h ⇒ huỷ miễn phí 60′ từ lúc trả', () => {
     const r = freeCancelWindowFromPayment({ paidAt: T0, pickupAt: at(300), freeCancelHours: 2 });
