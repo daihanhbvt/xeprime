@@ -246,9 +246,20 @@ export const AUTO_ACCEPT_BLOCKER = {
    * xe không có. Yêu cầu ở lại chờ duyệt tay; hộp duyệt hiện cảnh báo.
    */
   VEHICLE_STILL_OUT: 'vehicle_still_out',
+  /**
+   * Giờ nhận xe còn dưới `AUTO_ACCEPT_MIN_LEAD_MINUTES` kể từ lúc khách gửi (ADR 0107): chuyến gấp
+   * để chủ xe DUYỆT TAY - kịp xác nhận xe sẵn sàng - thay vì hệ thống tự nhận rồi phát QR ngay.
+   */
+  PICKUP_TOO_SOON: 'pickup_too_soon',
 } as const;
 
 export type AutoAcceptBlocker = (typeof AUTO_ACCEPT_BLOCKER)[keyof typeof AUTO_ACCEPT_BLOCKER];
+/**
+ * Tự nhận chuyến chỉ khi giờ nhận còn ÍT NHẤT chừng này phút kể từ lúc khách gửi (ADR 0107, người
+ * dùng chốt 19/11/2026). Dưới ngưỡng ⇒ `PICKUP_TOO_SOON`, yêu cầu chờ chủ xe duyệt tay.
+ */
+export const AUTO_ACCEPT_MIN_LEAD_MINUTES = 60;
+
 export const AUTO_ACCEPT_BLOCKER_VALUES = Object.values(AUTO_ACCEPT_BLOCKER) as AutoAcceptBlocker[];
 
 /** Ai quyết định một yêu cầu thuê — cột `booking_requests.decision_source`. */

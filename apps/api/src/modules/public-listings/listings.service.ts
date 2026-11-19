@@ -226,6 +226,49 @@ export class ListingsService {
   }
 
   /**
+   * Đồng bộ chip "Giao xe tận nơi" (`public_listings.delivery_enabled`) của các xe KẾ THỪA chính
+   * sách gian hàng — gọi từ `PricingService.saveShopPolicy` trong cùng transaction, SAU khi cờ
+   * `vehicles.delivery_enabled` của chính các xe đó đã đổi theo.
+   *
+   * Thiếu bước này thì gian hàng tắt giao xe mà chip trên chợ vẫn bật: khách thấy và chọn được giao
+   * tận nơi, tới lúc gửi mới ăn `DELIVERY_NOT_SUPPORTED` (lỗi người dùng báo 19/11/2026). Cùng
+   * khuôn `syncCollateralForPolicy`: hàng theo loại xe thắng, thiếu thì hàng legacy; xe có chính
+   * sách RIÊNG giữ cờ của nó (đã đồng bộ ở lần lưu xe).
+   */
+  async syncDeliveryForPolicy(
+    tenantId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<number> {
+    const defaults = await tx.rentalPolicy.findMany({
+      where: { tenantId, vehicleId: null },
+      select: { vehicleType: true, deliveryEnabled: true },
+    });
+    const legacy = defaults.find((d) => d.vehicleType === null);
+    const types = await tx.publicListing.findMany({
+      where: { tenantId },
+      select: { vehicleType: true },
+      distinct: ['vehicleType'],
+    });
+
+    let changed = 0;
+    for (const { vehicleType } of types) {
+      const row = defaults.find((d) => d.vehicleType === vehicleType) ?? legacy;
+      if (!row) continue;
+      const res = await tx.publicListing.updateMany({
+        where: {
+          tenantId,
+          vehicleType,
+          vehicle: { rentalPolicy: null },
+          deliveryEnabled: { not: row.deliveryEnabled },
+        },
+        data: { deliveryEnabled: row.deliveryEnabled },
+      });
+      changed += res.count;
+    }
+    return changed;
+  }
+
+  /**
    * Đồng bộ lại cờ "không nhận đặt tự lái vì thiếu bảo hiểm Bắt buộc" của MỘT xe (ADR 0091 điều 1) —
    * cho những thay đổi không đi qua `syncFromVehicle` (cà vẹt ở tab Giấy tờ). `updateMany` để no-op
    * an toàn khi xe chưa có listing.
