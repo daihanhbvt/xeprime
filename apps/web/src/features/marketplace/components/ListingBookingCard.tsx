@@ -275,9 +275,17 @@ export function ListingBookingCard({
   const noLongTermPackage =
     activeService === SERVICE_TYPE.LONG_TERM && longTermPackages.length === 0;
 
-  const isDelivery = activeService !== SERVICE_TYPE.WITH_DRIVER && deliveryMode === 'delivery';
+  /*
+   * Giao tận nơi chỉ có khi CHÍNH SÁCH HIỆU LỰC cho phép (`deliveryAvailable` - đúng thứ server dùng
+   * để nhận hay từ chối `deliveryRequested`), KHÔNG theo chip `deliveryEnabled` của hồ sơ xe: hai
+   * cờ lệch nhau được, và theo chip thì gian hàng tắt giao xe mà khách vẫn chọn được, tới nút gửi
+   * mới ăn `DELIVERY_NOT_SUPPORTED` (người dùng báo 19/11/2026).
+   */
+  const deliveryAvailable = Boolean(listing.deliveryAvailable);
+  const isDelivery =
+    deliveryAvailable && activeService !== SERVICE_TYPE.WITH_DRIVER && deliveryMode === 'delivery';
   /** Phí giao DỰ KIẾN của địa chỉ đã chọn — chủ xe chốt lúc duyệt, KHÔNG nằm trong tổng (ADR 0018). */
-  const deliveryFee = isDelivery && listing.deliveryEnabled ? (deliveryInfo?.fee ?? null) : null;
+  const deliveryFee = isDelivery ? (deliveryInfo?.fee ?? null) : null;
 
   // 5. Quản lý mã khuyến mãi
   const pickupIso = range.pickupAt ? appWallClockToIso(range.pickupAt) : (pickupAt ?? undefined);
@@ -651,7 +659,7 @@ export function ListingBookingCard({
                   <span className={styles.toggleLabel}>{t('pickup.self')}</span>
                   <span className={styles.toggleSub}>{t('pickup.selfHint')}</span>
                 </button>
-                {listing.deliveryEnabled ? (
+                {deliveryAvailable ? (
                   <button
                     type="button"
                     className={`${styles.toggleBtn} ${deliveryMode === 'delivery' ? styles.toggleBtnActive : ''}`}

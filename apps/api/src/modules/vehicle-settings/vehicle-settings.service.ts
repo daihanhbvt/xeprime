@@ -10,6 +10,7 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
+  AUTO_ACCEPT_MIN_LEAD_MINUTES,
   CUSTOMER_DOCUMENT_TYPE,
   DRIVER_DEPOSIT_MODE,
   DRIVER_DEPOSIT_MODE_SUPPORTED,
@@ -76,6 +77,8 @@ export interface AutoAcceptInput {
   holdRequired: boolean;
   /** Khách đã tích đồng ý điều khoản (chỉ có nghĩa khi chủ xe bắt buộc). */
   termsAccepted: boolean;
+  /** Mốc đo khoảng tới giờ nhận (`PICKUP_TOO_SOON`) - mặc định bây giờ; test truyền để cố định. */
+  now?: Date;
 }
 
 const SERVICE_SELECT = {
@@ -542,6 +545,15 @@ export class VehicleSettingsService {
       return AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED;
     if (!setting.autoAcceptEnabled) return AUTO_ACCEPT_BLOCKER.DISABLED;
     if (!input.pickupAt || !input.returnAt) return AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED;
+    /*
+     * Chuyến GẤP (giờ nhận còn dưới 60′ - ADR 0107) không tự nhận: chủ xe duyệt tay để kịp xác nhận
+     * xe sẵn sàng. Bản trước chỉ rơi về duyệt tay khi còn < 15′ (lỗi `HOLD_WINDOW_TOO_SHORT` lúc tạo
+     * hold), tức là ngưỡng do một lỗi quyết, không phải một luật.
+     */
+    const now = input.now ?? new Date();
+    if (input.pickupAt.getTime() - now.getTime() < AUTO_ACCEPT_MIN_LEAD_MINUTES * MS_PER_MINUTE) {
+      return AUTO_ACCEPT_BLOCKER.PICKUP_TOO_SOON;
+    }
     /*
      * KHÔNG còn mốc "đặt trước ít nhất/nhiều nhất" (17/09/2026): bật công tắc là nhận, đặt gấp
      * hay đặt xa đều vậy. Mọi điều kiện dưới đây là ràng buộc THẬT của chuyến, không phải ngưỡng

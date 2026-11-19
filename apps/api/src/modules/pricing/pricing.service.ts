@@ -655,6 +655,14 @@ export class PricingService {
        * có thể sai vô thời hạn. Cùng transaction: chính sách và snapshot không được lệch nhau.
        */
       await this.listings.syncCollateralForPolicy(tenantId, tx);
+      /*
+       * Chip "Giao xe tận nơi" của xe KẾ THỪA đi THEO chính sách gian hàng — cùng luật với lần lưu
+       * giá từng xe (`VehiclesService`, 08/09/2026). Ghi cờ của XE trước (nguồn mà `syncFromVehicle`
+       * chép lên chợ ở mọi lần đồng bộ sau), rồi chợ. Thiếu bước này: tắt giao xe ở đây mà khách
+       * vẫn chọn được giao tận nơi (người dùng báo 19/11/2026).
+       */
+      await this.syncInheritedVehicleDeliveryWithinTx(tx, tenantId);
+      await this.listings.syncDeliveryForPolicy(tenantId, tx);
       // Chế độ bảo hiểm Bắt buộc của gian hàng có thể chặn/mở tự lái cho xe kế thừa (ADR 0091).
       await this.listings.syncInsuranceBlockForTenant(tenantId, tx);
 
@@ -675,6 +683,41 @@ export class PricingService {
     });
 
     return this.getShopPolicy(tenantId, vehicleType);
+  }
+
+  /**
+   * `vehicles.delivery_enabled` của các xe KẾ THỪA (không có chính sách riêng) theo chính sách mặc
+   * định HIỆU LỰC của loại xe đó — hàng theo loại thắng, thiếu thì hàng legacy (cùng phép chọn với
+   * `getShopPolicy`). Chỉ ghi dòng đổi. Xe có chính sách riêng đã được đồng bộ ở lần lưu của nó.
+   */
+  private async syncInheritedVehicleDeliveryWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+  ): Promise<void> {
+    const defaults = await tx.rentalPolicy.findMany({
+      where: { tenantId, vehicleId: null },
+      select: { vehicleType: true, deliveryEnabled: true },
+    });
+    const legacy = defaults.find((d) => d.vehicleType === null);
+    const types = await tx.vehicle.findMany({
+      where: { tenantId, deletedAt: null },
+      select: { vehicleType: true },
+      distinct: ['vehicleType'],
+    });
+    for (const { vehicleType } of types) {
+      const row = defaults.find((d) => d.vehicleType === vehicleType) ?? legacy;
+      if (!row) continue;
+      await tx.vehicle.updateMany({
+        where: {
+          tenantId,
+          vehicleType,
+          deletedAt: null,
+          rentalPolicy: null,
+          deliveryEnabled: { not: row.deliveryEnabled },
+        },
+        data: { deliveryEnabled: row.deliveryEnabled },
+      });
+    }
   }
 
   /**
