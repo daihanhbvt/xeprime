@@ -11,7 +11,7 @@ import { NearPickupHoldNotice } from './NearPickupHoldNotice';
  *  - đủ xa (cả hai cửa sổ chạm trần — ΔT ≥ 10 giờ): không vẽ gì;
  *  - cận ngày: cả hai cửa sổ co theo ΔT (huỷ 20%, thanh toán 30%);
  *  - chính sách tắt huỷ miễn phí: nói rõ không có huỷ miễn phí — cả khi chuyến đặt xa;
- *  - quá gần (< 15 phút): không kịp thanh toán.
+ *  - quá gần (< 15 phút): vẫn có sàn 15 phút thanh toán (ADR 0107).
  */
 const NOW = Date.parse('2026-08-10T00:00:00.000Z');
 
@@ -85,8 +85,13 @@ describe('NearPickupHoldNotice', () => {
     ).toBeTruthy();
   });
 
-  it('quá gần (10 phút) ⇒ báo không kịp thanh toán', () => {
+  // ADR 0107: hạn trả không còn kẹp ở giờ nhận ⇒ chuyến sát giờ vẫn có sàn 15′ để thanh toán;
+  // mốc huỷ miễn phí vẫn kẹp ở giờ nhận (còn 10′).
+  it('quá gần (10 phút) ⇒ vẫn đặt được: 15 phút thanh toán, 10 phút huỷ miễn phí', () => {
     renderAt(10);
-    expect(screen.getByText(/Giờ nhận xe quá gần để kịp thanh toán/)).toBeTruthy();
+    expect(screen.queryByText(/Giờ nhận xe quá gần để kịp thanh toán/)).toBeNull();
+    expect(
+      screen.getByText(/khoảng 15 phút để thanh toán .* huỷ miễn phí trong khoảng 10 phút/),
+    ).toBeTruthy();
   });
 });
