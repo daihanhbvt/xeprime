@@ -14513,7 +14513,7 @@ export interface components {
             /** @description true = nếu gửi ngay bây giờ, hệ thống sẽ tự nhận (trừ khi lịch vừa bị chiếm) */
             eligible: boolean;
             /** @enum {string|null} */
-            blocker?: "disabled" | "service_not_supported" | "outside_handover_window" | "below_min_duration" | "quote_estimate" | "schedule_busy" | "no_driver" | "hold_required_with_driver" | "terms_not_accepted" | "billing_not_configured" | "vehicle_still_out" | null;
+            blocker?: "disabled" | "service_not_supported" | "outside_handover_window" | "below_min_duration" | "quote_estimate" | "schedule_busy" | "no_driver" | "hold_required_with_driver" | "terms_not_accepted" | "billing_not_configured" | "vehicle_still_out" | "pickup_too_soon" | null;
         };
         BankAccountDto: {
             id: string;
