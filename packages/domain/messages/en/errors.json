@@ -268,6 +268,7 @@
     "DRIVER_WAGE_NOT_APPLICABLE": "The driver never accepted this trip, so there is no wage for this assignment.",
     "DRIVER_WAGE_REQUIRED": "Your shop has no default driver wage yet. Enter a wage for this trip.",
     "WITH_DRIVER_PRICE_OUT_OF_RANGE": "The with-driver daily price is outside the reasonable range. Check for a missing or extra zero.",
+    "WITH_DRIVER_PRICE_REQUIRED": "A with-driver vehicle needs all three prices: in-city, inter-city round trip and inter-city one way.",
     "DRIVER_SURCHARGE_RETIRED": "Driver surcharges have been removed - the with-driver price is all-inclusive.",
     "SURCHARGE_CATEGORY_RETIRED": "This surcharge type has been removed - the with-driver price is all-inclusive.",
     "SURCHARGE_NOT_ALLOWED_WITH_DRIVER": "With-driver trips don't take overtime or excess-mileage surcharges - customers pay one all-inclusive price.",

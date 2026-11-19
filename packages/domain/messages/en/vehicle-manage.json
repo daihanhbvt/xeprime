@@ -44,6 +44,10 @@
   },
   "serviceToggle": {
     "confirmOk": "Confirm & save",
+    "withDriverPricesTitle": "Turn on with-driver rental",
+    "withDriverPricesBody": "Enter all three prices to start accepting with-driver trips. These are the daily amounts the customer pays, driver included.",
+    "withDriverPriceRange": "The price must be between {min} and {max} per day",
+    "withDriverPricesOk": "Turn on",
     "priceLossTitle": "Turning this service off clears its dedicated prices",
     "priceLossBody": "You will have to enter prices again when you re-enable it. Confirmed bookings are not affected.",
     "enabled": "{service} enabled",
@@ -156,7 +160,7 @@
     "selfDriveSubtitle": "The default price applies to any day without a custom price.",
     "withDriverTitle": "Chauffeured service price list",
     "withDriverSubtitle": "Prices include the driver's pay but exclude fuel and toll surcharges (if any).",
-    "withDriverEstimateHint": "Route types without a price are estimated from the nearest tier; you confirm the final price when approving.",
+    "withDriverEstimateHint": "A with-driver vehicle needs all three prices: in-city, inter-city round trip and inter-city one way.",
     "loadError": "Could not load pricing & policy"
   },
   "autoAccept": {
@@ -188,6 +192,7 @@
     "policyBody": "Auto-confirmed requests follow the standard Xe Prime cancellation policy. Cancelling a trip after it was auto-confirmed may lower your reliability score or limit your vehicle's visibility.",
     "capabilityNoFeature": "Your current plan does not include Drivers - chauffeured auto-acceptance cannot be enabled yet.",
     "capabilityNoDriver": "No active drivers yet. Add a driver in the management portal before enabling.",
+    "withDriverManualOnly": "With-driver trips always wait for your approval so you can confirm the car and a driver before the customer pays - they are never accepted automatically.",
     "capabilityOk": "{count, plural, one {# active driver} other {# active drivers}} - the system assigns a free driver on acceptance.",
     "openDrivers": "Manage drivers",
     "saved": "Instant booking settings saved",

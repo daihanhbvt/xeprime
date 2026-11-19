@@ -1245,12 +1245,18 @@ export class PricingService {
 
     /*
      * Giá có tài xế theo LỘ TRÌNH (17/08): nội thành ăn giá cơ bản; liên tỉnh/1 chiều ăn cột
-     * giá route riêng, CHƯA NIÊM YẾT thì rơi về bậc gần nhất (1 chiều → liên tỉnh → cơ bản)
-     * kèm `estimateNote` — tổng lúc đó là TẠM TÍNH, không được trưng như giá chốt.
+     * giá route riêng, CHƯA NIÊM YẾT thì rơi về bậc gần nhất (1 chiều → liên tỉnh → cơ bản).
+     *
+     * 19/11/2026: giá rơi về (bậc gần nhất, hay giá thuê NGÀY khi xe chưa cài giá có tài xế) là
+     * GIÁ CHỐT, không còn là "tạm tính" — chủ xe duyệt là đồng ý đúng con số khách đã thấy, và
+     * lượt duyệt thu tiền giữ chỗ như mọi chuyến (ADR 0044 điều 2). Trước đây cờ `estimateNote`
+     * làm lượt duyệt bỏ qua tiền giữ chỗ và tạo đơn ngay. Lý do rơi về đi vào CHÚ THÍCH dòng
+     * tiền thuê (`driverPriceNote`), nên nó đóng băng theo snapshot và hiện ở mọi màn đơn thuê.
      */
     let driverRate: Prisma.Decimal | null = null;
     let driverRouteLabel: string | null = null;
-    let estimateNote: string | null = null;
+    let driverPriceNote: string | null = null;
+    const estimateNote: string | null = null;
     /** Giá TỪNG ngày tính tiền, ngày 1 trước — mẫu số hoa hồng lũy tiến (luồng tiền v2). */
     let dayRates: Prisma.Decimal[];
     if (serviceType === SERVICE_TYPE.WITH_DRIVER && input.withDriverDailyPrice) {
@@ -1265,14 +1271,14 @@ export class PricingService {
       if (route === ROUTE_TYPE.INTER_CITY) {
         driverRate = interCity ?? basePrice;
         if (!interCity) {
-          estimateNote =
-            'Giá lộ trình liên tỉnh chưa niêm yết - tạm tính theo giá cơ bản, gian hàng xác nhận giá chốt khi duyệt';
+          driverPriceNote = 'giá liên tỉnh chưa niêm yết - áp giá cơ bản';
         }
       } else if (route === ROUTE_TYPE.INTER_CITY_ONE_WAY) {
         driverRate = oneWay ?? interCity ?? basePrice;
         if (!oneWay) {
-          estimateNote =
-            'Giá lộ trình 1 chiều chưa niêm yết - tạm tính theo bậc gần nhất, gian hàng xác nhận giá chốt khi duyệt';
+          driverPriceNote = interCity
+            ? 'giá 1 chiều chưa niêm yết - áp giá liên tỉnh'
+            : 'giá 1 chiều chưa niêm yết - áp giá cơ bản';
         }
       } else {
         driverRate = basePrice;
@@ -1289,12 +1295,12 @@ export class PricingService {
       dayRates = Array.from({ length: days }, () => rate);
       baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế${
         driverRouteLabel ? ` · ${driverRouteLabel}` : ''
-      }`;
+      }${driverPriceNote ? ` · ${driverPriceNote}` : ''}`;
     } else {
-      // Máy giá ngày là FALLBACK cho dịch vụ chưa niêm yết giá chuyên biệt — tổng chỉ là
-      // tạm tính, FE không được trưng như giá chốt của dịch vụ đó.
+      // Máy giá ngày là FALLBACK khi xe có tài xế chưa cài giá có tài xế: giá thuê ngày là giá
+      // chốt của chuyến, và dòng tiền thuê ghi rõ CHƯA GỒM tiền tài xế (19/11/2026).
       if (serviceType === SERVICE_TYPE.WITH_DRIVER) {
-        estimateNote = 'Chưa gồm phí tài xế - gian hàng báo giá chính thức khi duyệt';
+        driverPriceNote = 'chưa gồm tiền tài xế';
       }
       if (!input.weekdayPrice) {
         throw invalid('Xe chưa có giá thuê theo ngày - cấu hình giá trước khi báo giá');
@@ -1328,6 +1334,7 @@ export class PricingService {
         : splitRates
           ? `${weekdayDays} ngày thường × ${vnd(weekday)} · ${weekendDays} ngày cuối tuần × ${vnd(weekend)}`
           : `${days} ngày × ${vnd(weekday)}/ngày`;
+      if (driverPriceNote) baseSublabel = `${baseSublabel} · ${driverPriceNote}`;
     }
 
     const rows: PriceBreakdownRowDto[] = [
@@ -1404,8 +1411,7 @@ export class PricingService {
       depositAmount: policy ? new Prisma.Decimal(policy.depositAmount).toFixed(0) : '0',
       policySource: input.policy?.source ?? null,
       policyUpdatedAt: policy?.updatedAt ?? null,
-      // Khác null = tổng chỉ là TẠM TÍNH (giá chuyên biệt/giá route chưa niêm yết) — FE đổi
-      // nhãn tổng và hiện ghi chú, không trưng như giá chốt.
+      // Báo giá theo ngày luôn là giá chốt (19/11/2026) — giữ trường cho hợp đồng API.
       estimateNote,
       dayAmounts: spreadRentOverDays(dayRates, base, base.minus(discount)),
     };

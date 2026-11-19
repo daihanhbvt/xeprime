@@ -604,18 +604,14 @@ function AutoAcceptRow({
   showService: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
+  const tManage = useTranslations('VehicleManage.autoAccept');
   const domainLabel = useDomainLabel();
   const toggle = useAutoAcceptToggle({ vehicleId, setting, canEdit });
   const labelId = useId();
   const service = domainLabel('serviceType', setting.serviceType);
-  // Có tài xế chưa đủ năng lực (chưa có tài xế nào nhận lượt): nói lý do ở tooltip, không mờ câm.
+  // Có tài xế không tự nhận (19/11/2026): nói lý do ở tooltip, không để công tắc mờ câm.
   const blockedHint =
-    setting.serviceType === SERVICE_TYPE.WITH_DRIVER &&
-    setting.withDriverAutoAccept &&
-    !setting.withDriverAutoAccept.available &&
-    !setting.autoAcceptEnabled
-      ? t('automation.driverRequired')
-      : undefined;
+    setting.serviceType === SERVICE_TYPE.WITH_DRIVER ? tManage('withDriverManualOnly') : undefined;
 
   return (
     <div className={styles.toggleRow}>

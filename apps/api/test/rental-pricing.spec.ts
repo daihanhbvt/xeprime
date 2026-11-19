@@ -901,7 +901,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     expect(quoteFor(ROUTE_TYPE.INTER_CITY).rows[0]?.sublabel).toContain('Liên tỉnh');
   });
 
-  maybe('with_driver THIẾU giá route: rơi về bậc gần nhất + estimateNote (tạm tính)', async () => {
+  maybe('with_driver THIẾU giá route: rơi về bậc gần nhất là GIÁ CHỐT + chú thích', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
     const breakdown = pricing.buildDailyQuote({
       weekdayPrice: '800000',
@@ -916,9 +916,30 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
       withDriverInterCityPrice: null,
       withDriverOneWayPrice: null,
     });
-    // Fallback về giá cơ bản 1.3tr × 2 — nhưng tổng bị đánh dấu TẠM TÍNH, không phải giá chốt.
+    // Fallback về giá cơ bản 1.3tr × 2 là giá chốt (19/11/2026) — lý do nằm ở chú thích dòng thuê.
     expect(breakdown.totalAmount).toBe('2600000');
-    expect(breakdown.estimateNote).toMatch(/chưa niêm yết/);
+    expect(breakdown.estimateNote).toBeNull();
+    expect(breakdown.rows[0]?.sublabel).toMatch(/chưa niêm yết/);
+  });
+
+  maybe('with_driver CHƯA cài giá có tài xế: giá thuê ngày + chú thích "chưa gồm tiền tài xế"', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const breakdown = pricing.buildDailyQuote({
+      weekdayPrice: '800000',
+      weekendPrice: null,
+      pickupAt: PICKUP,
+      returnAt: day(2),
+      policy,
+      delivery: null,
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+      routeType: ROUTE_TYPE.IN_CITY,
+      withDriverDailyPrice: null,
+      withDriverInterCityPrice: null,
+      withDriverOneWayPrice: null,
+    });
+    expect(breakdown.totalAmount).toBe('1600000');
+    expect(breakdown.estimateNote).toBeNull();
+    expect(breakdown.rows[0]?.sublabel).toContain('chưa gồm tiền tài xế');
   });
 
   maybe(
@@ -992,6 +1013,42 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
 
       // Khách ngoài chợ và shop lúc duyệt nhìn CÙNG một con số — một nguồn tính giá.
       expect(booking.totalAmount.toFixed(0)).toBe(publicQuote.breakdown.totalAmount);
+    },
+  );
+
+  maybe(
+    'with_driver CHƯA cài giá có tài xế: duyệt xong vẫn CHỜ THANH TOÁN (không tạo đơn ngay)',
+    async () => {
+      await prisma.vehicle.update({
+        where: { id: vehicleId },
+        data: {
+          publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+          serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+          withDriverDailyPrice: null,
+          withDriverInterCityPrice: null,
+          withDriverOneWayPrice: null,
+        },
+      });
+      const requestId = newId();
+      await prisma.bookingRequest.create({
+        data: {
+          respondBy: bookingRequestRespondBy(new Date()),
+          id: requestId,
+          tenantId,
+          vehicleId,
+          customerName: 'Khách Có Tài',
+          customerPhone: '0905556688',
+          pickupAt: new Date('2027-06-10T02:00:00.000Z'),
+          returnAt: new Date('2027-06-12T02:00:00.000Z'),
+          serviceType: SERVICE_TYPE.WITH_DRIVER,
+          routeType: ROUTE_TYPE.IN_CITY,
+          pickupAddress: '1 Lê Duẩn, Đà Nẵng',
+        },
+      });
+      await requests.approve(tenantId, ownerId, requestId);
+      const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+      expect(row.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+      expect(row.bookingId).toBeNull();
     },
   );
 });
