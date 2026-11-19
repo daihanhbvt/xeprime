@@ -902,16 +902,14 @@ describe('Duyệt tay: nhận chuyến trước, tiền về sau', () => {
   });
 
   /**
-   * BÁO GIÁ CÒN TẠM TÍNH ⇒ duyệt tạo ĐƠN NGAY, không QR (ADR 0044 điều 4).
+   * Giá lộ trình CHƯA NIÊM YẾT ⇒ rơi về bậc gần nhất là GIÁ CHỐT (19/11/2026), duyệt vẫn CHỜ TIỀN.
    *
-   * Xe này có giá có-tài-xế theo ngày nhưng KHÔNG có giá liên tỉnh, nên máy giá rơi về bậc gần
-   * nhất và gắn `estimateNote`. CLAUDE.md cấm thu phần trăm trên một con số chưa chốt — nên
-   * không có số tiền nào để in lên QR, và một mã QR ở đây sẽ là một mã giả.
-   *
-   * `deposit_collection_mode = none` chứ không phải `direct`: `direct` nói với khách rằng gian
-   * hàng sẽ liên hệ thu một khoản, mà ở đây không ai từng tính ra khoản đó.
+   * Xe này có giá có-tài-xế theo ngày nhưng KHÔNG có giá liên tỉnh. Trước đây máy giá gắn
+   * `estimateNote` nên lượt duyệt bỏ qua tiền giữ chỗ và tạo đơn ngay — đúng lỗi người dùng báo
+   * ("duyệt xong không chờ thanh toán mà chạy luôn"). Giờ chủ xe duyệt là đồng ý con số khách đã
+   * thấy, nên chuyến đi đúng đường ADR 0044 điều 2: hold + QR, đơn chỉ ra đời khi tiền về.
    */
-  maybe('báo giá còn TẠM TÍNH: duyệt ra ĐƠN ngay, không hold, mode = none', async () => {
+  maybe('giá liên tỉnh chưa niêm yết: duyệt ra awaiting_hold (có hold), chưa có đơn', async () => {
     const receipt = await submit({
       serviceType: SERVICE_TYPE.WITH_DRIVER,
       routeType: 'inter_city',
@@ -921,12 +919,10 @@ describe('Duyệt tay: nhận chuyến trước, tiền về sau', () => {
 
     const approved = await requests.approve(tenantId, ownerId, receipt.id);
 
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-    expect(approved.bookingId).toBeTruthy();
-    expect(await prisma.bookingHold.count({ where: { tenantId } })).toBe(0);
-
-    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: approved.bookingId! } });
-    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.NONE);
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(approved.bookingId).toBeNull();
+    expect(await prisma.bookingHold.count({ where: { tenantId } })).toBe(1);
+    expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
   });
 
   /**

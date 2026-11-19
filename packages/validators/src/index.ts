@@ -200,6 +200,21 @@ const vehiclePriceSchema = yup
  * số động vào message dịch. Sửa đúng cần thêm cơ chế tham số ở cả hai hook; để lại một nợ nhỏ,
  * đã ghi rõ, còn hơn xây cơ chế đó chỉ cho một trường.
  */
+/**
+ * Một ô giá có tài xế của form xe: rỗng = null, nhưng BẮT BUỘC khi `serviceTypes` (trường anh em)
+ * có `with_driver` - thiếu giá lộ trình nào thì báo giá phải đoán (19/11/2026).
+ */
+const withDriverPriceField = () =>
+  vehiclePriceSchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null)
+    .when('serviceTypes', {
+      is: (services: readonly string[] | undefined) =>
+        !!services?.includes(SERVICE_TYPE.WITH_DRIVER),
+      then: (s) => s.test('required', 'withDriverPriceRequired', (value) => value != null && value > 0),
+    });
+
 export const vehicleFormSchema = yup.object({
   code: yup.string().trim().max(80).default(''),
   name: yup.string().trim().required('nameRequired').max(255),
@@ -370,21 +385,13 @@ export const vehicleFormSchema = yup.object({
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /** Giá/ngày đã gồm tài xế (nội thành/cơ bản) - chỉ có nghĩa khi serviceTypes chứa with_driver. */
-  withDriverDailyPrice: vehiclePriceSchema
-    .transform((v, orig) => (orig === '' || orig === null ? null : v))
-    .nullable()
-    .default(null),
-  /** Giá/ngày có tài xế lộ trình liên tỉnh (khứ hồi) - bỏ trống = rơi về giá cơ bản. */
-  withDriverInterCityPrice: vehiclePriceSchema
-    .transform((v, orig) => (orig === '' || orig === null ? null : v))
-    .nullable()
-    .default(null),
-  /** Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều - bỏ trống = fallback liên tỉnh → cơ bản. */
-  withDriverOneWayPrice: vehiclePriceSchema
-    .transform((v, orig) => (orig === '' || orig === null ? null : v))
-    .nullable()
-    .default(null),
+  /*
+   * Ba giá có tài xế (nội thành · liên tỉnh khứ hồi · liên tỉnh 1 chiều) BẮT BUỘC khi xe đăng
+   * dịch vụ có tài xế (19/11/2026) - cùng luật `WITH_DRIVER_PRICE_REQUIRED` của API.
+   */
+  withDriverDailyPrice: withDriverPriceField(),
+  withDriverInterCityPrice: withDriverPriceField(),
+  withDriverOneWayPrice: withDriverPriceField(),
   deliveryEnabled: yup.boolean().default(false),
   /** % giảm giá marketing - bỏ trống = không giảm. */
   discountPercent: yup
@@ -1800,6 +1807,14 @@ export type PolicyFormValues = yup.InferType<typeof policyFormSchema>;
  * lại là tuỳ chọn ở đây; điều kiện "đủ giá mới được gửi duyệt public" nằm ở
  * `features/vehicles/publication.ts` (đối xứng backend `missingPublicFields`).
  */
+/** Ô giá có tài xế của form giá theo xe - bắt buộc khi `$serviceTypes` có `with_driver`. */
+const withDriverPolicyPrice = () =>
+  policyMoneyStep().when('$serviceTypes', {
+    is: (services: readonly string[] | undefined) =>
+      !!services?.includes(SERVICE_TYPE.WITH_DRIVER),
+    then: (s) => s.test('required', 'withDriverPriceRequired', (value) => value != null && value > 0),
+  });
+
 export const vehiclePricingFormSchema = policyFormSchema.shape({
   weekdayPrice: policyMoneyStep().when('$serviceTypes', {
     is: (services: readonly string[] | undefined) =>
@@ -1817,10 +1832,25 @@ export const vehiclePricingFormSchema = policyFormSchema.shape({
     .min(0, 'percentNegative')
     .max(100, 'percentMax'),
   monthlyPrice: policyMoneyStep(),
-  withDriverDailyPrice: policyMoneyStep(),
-  withDriverInterCityPrice: policyMoneyStep(),
-  withDriverOneWayPrice: policyMoneyStep(),
+  withDriverDailyPrice: withDriverPolicyPrice(),
+  withDriverInterCityPrice: withDriverPolicyPrice(),
+  withDriverOneWayPrice: withDriverPolicyPrice(),
 });
 
 export type VehiclePricingFormValues = yup.InferType<typeof vehiclePricingFormSchema>;
+
+const requiredWithDriverPrice = () =>
+  policyMoneyStep().test('required', 'withDriverPriceRequired', (value) => value != null && value > 0);
+
+/**
+ * Hộp "Bật xe có tài xế" (19/11/2026): bật dịch vụ và đặt ĐỦ ba giá trong MỘT lần lưu - không
+ * còn trạng thái "đã bật mà chưa có giá" (F5 vẫn thấy bật). Mã lỗi ở `Vehicles.pricing.validation`.
+ */
+export const withDriverEnableSchema = yup.object({
+  withDriverDailyPrice: requiredWithDriverPrice(),
+  withDriverInterCityPrice: requiredWithDriverPrice(),
+  withDriverOneWayPrice: requiredWithDriverPrice(),
+});
+
+export type WithDriverEnableValues = yup.InferType<typeof withDriverEnableSchema>;
 export * from './tenant-support';

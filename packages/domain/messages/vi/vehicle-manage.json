@@ -44,6 +44,10 @@
   },
   "serviceToggle": {
     "confirmOk": "Xác nhận & lưu",
+    "withDriverPricesTitle": "Bật xe có tài xế",
+    "withDriverPricesBody": "Nhập đủ 3 giá để bắt đầu nhận chuyến có tài xế. Giá trên là tiền khách trả mỗi ngày, đã gồm tài xế.",
+    "withDriverPriceRange": "Giá phải từ {min} đến {max} mỗi ngày",
+    "withDriverPricesOk": "Bật dịch vụ",
     "priceLossTitle": "Tắt dịch vụ này sẽ xoá giá chuyên biệt của nó",
     "priceLossBody": "Bật lại về sau sẽ phải nhập giá lại. Các đơn đã chốt không bị ảnh hưởng.",
     "enabled": "Đã bật {service}",
@@ -156,7 +160,7 @@
     "selfDriveSubtitle": "Đơn giá thuê mặc định được áp dụng nếu ngày đó không có tuỳ chỉnh khác về giá.",
     "withDriverTitle": "Thiết lập bảng giá dịch vụ có tài xế",
     "withDriverSubtitle": "Đơn giá đã bao gồm lương tài xế, chưa bao gồm các phụ phí xăng dầu và phí cầu đường (nếu có).",
-    "withDriverEstimateHint": "Loại hành trình chưa có giá sẽ tạm tính theo bậc gần nhất và bạn xác nhận giá chốt khi duyệt.",
+    "withDriverEstimateHint": "Xe có tài xế cần đủ ba giá: nội thành, liên tỉnh khứ hồi và liên tỉnh 1 chiều.",
     "loadError": "Không tải được giá & chính sách"
   },
   "autoAccept": {
@@ -188,6 +192,7 @@
     "policyBody": "Yêu cầu được tự động xác nhận vẫn tuân thủ chính sách huỷ chuyến chuẩn của Xe Prime. Chủ xe chủ động huỷ chuyến sau khi đã tự động xác nhận có thể dẫn đến điểm uy tín thấp hoặc hạn chế hiển thị xe.",
     "capabilityNoFeature": "Gói hiện hành chưa có tính năng Tài xế - chưa bật được tự động nhận chuyến có tài xế.",
     "capabilityNoDriver": "Chưa có tài xế đang hoạt động. Thêm tài xế ở cổng quản lý trước khi bật.",
+    "withDriverManualOnly": "Chuyến có tài xế luôn chờ bạn duyệt để xác nhận còn xe và tài xế trước khi khách thanh toán - không tự động nhận.",
     "capabilityOk": "{count, plural, other {# tài xế}} đang hoạt động - hệ thống gán tài xế rảnh ngay khi nhận chuyến.",
     "openDrivers": "Quản lý tài xế",
     "saved": "Đã lưu thiết lập nhận chuyến",

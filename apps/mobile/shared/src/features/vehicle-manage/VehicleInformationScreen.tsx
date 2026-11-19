@@ -123,7 +123,7 @@ function InformationForm({
     'Vehicles.form.validation',
   );
   const applyApiFieldErrors = useApiFieldErrors();
-  const { control, getValues, handleSubmit, reset, setError, setValue, trigger, formState } =
+  const { control, getValues, reset, setError, setValue, trigger, formState } =
     useForm<VehicleFormValues>({ resolver, values: initialValues });
 
   const vehicleType = vehicle.vehicleType ?? '';
@@ -144,7 +144,7 @@ function InformationForm({
    * `branchId`, `serviceTypes`… — những ô không hề có mặt ở đây, tức người dùng bị chặn lưu bởi
    * một lỗi không nhìn thấy và không sửa được.
    */
-  const onSubmit = handleSubmit(async () => {
+  const onSubmit = async () => {
     if (!(await trigger([...FIELDS]))) return;
     update.mutate(manageInformationValuesToInput(getValues()), {
       onSuccess: (saved) => {
@@ -164,7 +164,7 @@ function InformationForm({
         if (applied.length === 0) toast.showError(errorMessage(error));
       },
     });
-  });
+  };
 
   return (
     <YStack gap={space.md}>

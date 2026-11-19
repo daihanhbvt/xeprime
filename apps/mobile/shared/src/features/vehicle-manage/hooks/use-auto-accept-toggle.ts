@@ -38,13 +38,21 @@ export function useAutoAcceptToggle({
     null,
   );
 
-  const enabled =
-    optimistic && optimistic.basis === (setting.updatedAt ?? null)
+  /*
+   * Chuyến CÓ TÀI XẾ không bao giờ được tự nhận (19/11/2026): mọi chuyến đều thu tiền giữ chỗ, và
+   * server chặn tự nhận chuyến có tài xế có thu tiền (`HOLD_REQUIRED_WITH_DRIVER`) để chủ xe xác
+   * nhận còn xe + tài xế trước khi khách trả. Công tắc hiện TẮT và khoá, kể cả khi cột còn `true`.
+   */
+  const manualOnly = setting.serviceType === SERVICE_TYPE.WITH_DRIVER;
+  const enabled = manualOnly
+    ? false
+    : optimistic && optimistic.basis === (setting.updatedAt ?? null)
       ? optimistic.value
       : setting.autoAcceptEnabled;
   const capability =
     setting.serviceType === SERVICE_TYPE.WITH_DRIVER ? setting.withDriverAutoAccept : null;
-  const blocked = capability ? !capability.available && !setting.autoAcceptEnabled : false;
+  const blocked =
+    manualOnly || (capability ? !capability.available && !setting.autoAcceptEnabled : false);
 
   function change(next: boolean) {
     setOptimistic({ value: next, basis: setting.updatedAt ?? null });
