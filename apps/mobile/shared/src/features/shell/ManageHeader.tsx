@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { CHAT_SIDE } from '@xeprime/types';
 import { XStack, YStack } from 'tamagui';
@@ -17,6 +17,7 @@ import { space } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 import { ManageShellNotices } from './ManageShellNotices';
 import { isCommissionOwner } from './partner-track';
+import { useAccountMenuBack } from './account-menu-origin';
 
 /** Logo thanh gốc - bằng `AppTopBar` của app khách. */
 const BRAND_LOGO = 30;
@@ -33,12 +34,37 @@ const BRAND_LOGO = 30;
  *   nhắn và thông báo là `HeaderChip` (vòng 40 viền + bóng), như `HeaderActions` app khách.
  * - Tiêu đề TRANG không nằm ở đây mà ở `ManagePageTitle` trong nội dung — cùng cách web dựng.
  */
-export function ManageHeader() {
+/**
+ * `title`: tên trang, chỉ dùng ở dáng trang chi tiết (mở từ "Tài khoản của tôi"); thanh chung không
+ * vẽ tiêu đề - trang tự có tiêu đề lớn của nó.
+ */
+export function ManageHeader({
+  title,
+  subtitle,
+  right,
+}: { title?: string; subtitle?: string; right?: ReactNode } = {}) {
   const user = useAuthenticatedUser();
   const colors = useColors();
   const { scheme } = useAppScheme();
   const t = useTranslations('ManageCommon.shell');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  /*
+   * Mở từ "Tài khoản của tôi" (`?from=account`) ⇒ thanh trên dáng TRANG CHI TIẾT: nút lui về đó +
+   * tên trang, KHÔNG logo / chat / chuông / avatar / dải thông báo chung (người dùng chốt
+   * 19/11/2026). Mở từ chỗ khác ⇒ thanh chung như cũ. Xem `account-menu-origin.ts`.
+   */
+  const { fromAccount, back } = useAccountMenuBack();
+  if (fromAccount) {
+    return (
+      <AppHeader
+        onBack={back}
+        {...(title ? { title } : {})}
+        {...(subtitle ? { subtitle } : {})}
+        {...(right ? { right } : {})}
+      />
+    );
+  }
 
   return (
     <>

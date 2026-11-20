@@ -304,6 +304,24 @@ interface AutoAcceptOutcome {
   bookingId: string | null;
 }
 
+/** Dòng giao nhận đưa vào báo giá lúc duyệt — `null` là miễn phí (không có dòng). */
+type ApprovalDelivery = { fee: string; label: string } | null;
+
+/**
+ * Phí giao xe chủ xe chốt lúc duyệt tay (biên bản họp 19/11/2026: bước xác nhận duyệt thiếu phí
+ * giao xe). Chỉ áp khi khách THẬT SỰ yêu cầu giao tận nơi; bỏ trống / `0` giữ hành vi cũ — miễn
+ * phí, chủ xe vẫn sửa sau bằng `BookingsService.updateDeliveryFee`.
+ *
+ * Nhãn phụ để trống: `sublabel` hiện nguyên chuỗi server lên màn hình nên không được mang chữ
+ * tiếng Việt cố định; tên dòng do giao diện dịch theo khoá `delivery`.
+ */
+function approvalDelivery(deliveryRequested: boolean, fee: string | undefined): ApprovalDelivery {
+  if (!deliveryRequested || fee == null) return null;
+  const amount = new Prisma.Decimal(fee);
+  if (amount.lte(0)) return null;
+  return { fee: amount.toFixed(0), label: '' };
+}
+
 @Injectable()
 export class BookingRequestsService {
   constructor(
@@ -1229,6 +1247,7 @@ export class BookingRequestsService {
     req: QuoteableRequest,
     schedule: ApprovalSchedule,
     policy: EffectivePolicy | null,
+    delivery: ApprovalDelivery = null,
   ) {
     return this.pricing.buildDailyQuote({
       weekdayPrice: req.vehicle.weekdayPrice?.toFixed(0) ?? null,
@@ -1236,8 +1255,8 @@ export class BookingRequestsService {
       pickupAt: schedule.pickupAt,
       returnAt: schedule.returnAt,
       policy,
-      // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
-      delivery: null,
+      // Mặc định miễn phí. Chủ xe chốt phí lúc duyệt tay thì có dòng giao nhận — `approvalDelivery`.
+      delivery,
       // Giá riêng theo ngày áp cả ở đây — snapshot của đơn phải khớp báo giá khách đã thấy.
       dailyOverrides: await this.pricing.dailyOverridesFor(
         req.vehicleId,
@@ -1790,9 +1809,10 @@ export class BookingRequestsService {
    * **Giao nhận KHÔNG còn là cửa chặn (Wave 9).** Trước đây yêu cầu có giao tận nơi phải qua
    * một vòng báo giá theo khoảng cách mới duyệt được (`DELIVERY_QUOTE_REQUIRED`) — thực tế chủ
    * xe và khách vẫn thống nhất phí qua điện thoại, nên vòng đó chỉ chặn việc duyệt chứ không
-   * quyết định con số. Giờ **luôn duyệt được ngay** và đơn sinh ra với `deliveryFee = 0`
-   * (`Miễn phí`); sau khi hai bên thống nhất, chủ xe cập nhật phí bằng
-   * `BookingsService.updateDeliveryFee` — có audit, không cần khách xác nhận.
+   * quyết định con số. Giờ **luôn duyệt được ngay**. Chủ xe đã thống nhất phí với khách thì nhập
+   * luôn ở hộp duyệt (`dto.deliveryFee`, biên bản họp 19/11/2026) — phí vào snapshot như dòng
+   * `delivery`, khách trả tận tay. Bỏ trống thì đơn sinh ra với `deliveryFee = 0` (`Miễn phí`) và
+   * chủ xe cập nhật sau bằng `BookingsService.updateDeliveryFee` — có audit, không cần khách xác nhận.
    *
    * Địa chỉ giao và cờ `deliveryRequested` của yêu cầu vẫn giữ nguyên để chủ xe biết phải giao
    * ở đâu; dữ liệu báo giá cũ (nếu có) vẫn đọc được nhưng không còn ảnh hưởng gì tới việc duyệt.
@@ -1829,6 +1849,7 @@ export class BookingRequestsService {
 
     const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
     const schedule = this.resolveApprovalSchedule(req, dto);
+    const delivery = approvalDelivery(req.deliveryRequested, dto.deliveryFee);
 
     /*
      * Dài hạn tính theo GÓI tháng lịch — không đi qua máy giá ngày, không đụng giá riêng theo
@@ -1841,9 +1862,9 @@ export class BookingRequestsService {
             monthlyPrice: req.vehicle.monthlyPrice?.toFixed(0) ?? null,
             packageMonths: schedule.packageMonths!,
             policy,
-            delivery: null,
+            delivery,
           })
-        : await this.quoteFor(req, schedule, policy);
+        : await this.quoteFor(req, schedule, policy, delivery);
     /*
      * PHỤ PHÍ PHÍA KHÁCH (ADR 0029) — tính bằng chính sách hiệu lực và chế độ thu phí của gian
      * hàng, rồi ĐÓNG BĂNG vào snapshot (ADR 0024). Báo giá còn tạm tính (`estimateNote`) thì

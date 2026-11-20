@@ -79,7 +79,7 @@ export function CustomerDeleteAccountScreen() {
   const footer =
     pendingQuery.isLoading || pendingQuery.isError ? null : (
       <XStack gap={space.sm}>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={tCommon('back')}
             icon="arrow-back"
@@ -88,7 +88,7 @@ export function CustomerDeleteAccountScreen() {
             onPress={back}
           />
         </YStack>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           {pending ? (
             <Button
               label={t('withdraw')}

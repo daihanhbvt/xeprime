@@ -7,6 +7,7 @@ import {
   apiRequest,
   fetchPage,
 } from '@/services/api-client';
+import { compressImageForUpload } from '@/lib/image-compression';
 import { uploadToR2 } from '@/services/upload';
 import type {
   ChatAttachmentPresign,
@@ -177,9 +178,11 @@ export interface UploadedChatAttachment {
  * thanh tiến trình giả (nhảy 0 → 100) nói dối đúng lúc người dùng cần biết còn bao lâu.
  */
 export async function uploadChatAttachment(
-  file: File,
+  rawFile: File,
   onProgress?: (percent: number) => void,
 ): Promise<UploadedChatAttachment> {
+  // Ảnh nén TRƯỚC presign (presign ký theo dung lượng); PDF đi qua nguyên trạng.
+  const file = await compressImageForUpload(rawFile, 'detail');
   const rejection = validateChatAttachment(file);
   if (rejection) {
     throw new ApiClientError({

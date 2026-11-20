@@ -138,7 +138,7 @@ function ResetForm({
             onPress={onDone}
           />
         </YStack>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('resetPassword.submit')}
             icon="key-outline"

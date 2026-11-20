@@ -470,7 +470,7 @@ export function CreateVehicleScreen() {
               </YStack>
             ) : null}
             {step < lastStep ? (
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   variant="gradient"
                   label={tCommon('next')}
@@ -479,7 +479,7 @@ export function CreateVehicleScreen() {
                 />
               </YStack>
             ) : (
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   variant="gradient"
                   label={t('wizard.submit')}
@@ -569,7 +569,7 @@ export function CreateVehicleScreen() {
                 onPress={() => submitNow(false)}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 variant="gradient"
                 label={tConfirm('submit')}

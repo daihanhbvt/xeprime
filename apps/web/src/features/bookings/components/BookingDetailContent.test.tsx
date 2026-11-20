@@ -256,6 +256,14 @@ describe('"Chuẩn bị bàn giao"', () => {
     expect(screen.queryByRole('button', { name: 'Thu tiền' })).toBeNull();
   });
 
+  it('chủ xe cá nhân (không có cờ gói nào) VẪN có dòng hợp đồng thuê xe — SR-245', () => {
+    // `useFeature` của mock trả `isVisible: false` cho MỌI cờ, kể cả `contracts`.
+    finance.visible = false;
+    renderDetail();
+    expect(screen.getByText('Chưa tạo hợp đồng cho chuyến này')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tạo' })).toBeTruthy();
+  });
+
   it('đánh dấu tay: vòng tròn của việc ngoài-tiền bấm được, việc tiền thì không', () => {
     granted.value = new Set([...granted.value, PERMISSION.HANDOVER_MANAGE]);
     prepCheck.mutate.mockClear();

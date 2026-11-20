@@ -302,7 +302,7 @@ function PolicyWorkspace({
               thay đổi (thay cho thanh "thay đổi chưa lưu" của bản cũ).
             */
             <XStack gap={space.sm}>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={tActions('cancel')}
                   variant="neutral"
@@ -310,7 +310,7 @@ function PolicyWorkspace({
                   onPress={() => reset()}
                 />
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={tActions('saveChanges')}
                   icon="save-outline"

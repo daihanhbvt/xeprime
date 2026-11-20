@@ -7,7 +7,7 @@ import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { getErrorMessage } from '@/services/api-client';
-import { presignShopMedia, uploadImage, validateImageFile } from '@/services/upload';
+import { presignShopMedia, uploadImage, validateImageSelection } from '@/services/upload';
 
 /**
  * Nút "Đổi logo" / "Đổi ảnh bìa" của thẻ Thông tin hiển thị - chọn ảnh, tải thẳng lên R2 (cùng
@@ -34,7 +34,7 @@ export function ShopMediaButton({
   const [progress, setProgress] = useState<number | null>(null);
 
   function select(file: File): false {
-    const invalid = validateImageFile(file);
+    const invalid = validateImageSelection(file);
     if (invalid) {
       message.error(rejection(invalid));
       return false;

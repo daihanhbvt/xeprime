@@ -75,6 +75,11 @@ export const SUPPORT_HIDDEN_AREA = {
   CUSTOMER_PRIVATE: 'customer_private',
   /** Nút + lời mời xác nhận bàn giao: phiên không bao giờ giao/nhận xe. */
   HANDOVER_ACTIONS: 'handover_actions',
+  /**
+   * Lập / xem hợp đồng thuê của đơn (ADR 0050 §10). Trước 20/11/2026 nó ẩn nhờ cờ gói `CONTRACTS`
+   * (`SUPPORT_HIDDEN_FEATURES`); hợp đồng thành bộ cơ bản (SR-245) nên màn không còn đọc cờ đó.
+   */
+  CONTRACTS: 'contracts',
   /** Nhắn tin khách/chủ xe: phiên không chat thay gian hàng. */
   CHAT: 'chat',
   /** Lời mời nâng cấp gói + khối chuyển khoản của hoá đơn đang chờ — đó là việc MUA gói. */

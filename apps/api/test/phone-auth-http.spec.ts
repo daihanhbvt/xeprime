@@ -309,6 +309,48 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
     });
   });
 
+  /*
+   * Lỗi thật (20/11): trình duyệt còn cookie phiên partner nhưng client tưởng chưa đăng nhập ⇒ form
+   * đăng ký đối tác xin mã `register` cho một số MỚI; `verify-otp` gắn số đó vào tài khoản của phiên
+   * (đổi số đăng nhập của người khác), và `POST /auth/register` ngay sau dừng ở `PHONE_TAKEN`.
+   */
+  describe('verify-otp chỉ gắn số vào tài khoản của phiên khi mục đích là của chính tài khoản đó', () => {
+    it.each([PHONE_VERIFICATION_PURPOSE.REGISTER, PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET])(
+      'phiên partner + mã `%s` ⇒ KHÔNG gắn vào tài khoản đang đăng nhập',
+      async (purpose) => {
+        const res = await http()
+          .post('/auth/phone/verify-otp')
+          .set(site(ACCOUNT_REALM.PARTNER))
+          .set('Cookie', await cookieOf('U_PARTNER', ACCOUNT_REALM.PARTNER))
+          .send({ phone: '0901234567', purpose, code: '123456' });
+        expect(res.status).toBe(200);
+        expect(phoneVerification.verifyOtp).toHaveBeenCalledWith(
+          '0901234567',
+          purpose,
+          '123456',
+          ACCOUNT_REALM.PARTNER,
+          null,
+        );
+      },
+    );
+
+    it('phiên khách + mã `booking` ⇒ vẫn gắn vào tài khoản đang đăng nhập', async () => {
+      const res = await http()
+        .post('/auth/phone/verify-otp')
+        .set(site(ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', await cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .send({ phone: '0901234567', purpose: PHONE_VERIFICATION_PURPOSE.BOOKING, code: '123456' });
+      expect(res.status).toBe(200);
+      expect(phoneVerification.verifyOtp).toHaveBeenCalledWith(
+        '0901234567',
+        PHONE_VERIFICATION_PURPOSE.BOOKING,
+        '123456',
+        ACCOUNT_REALM.CUSTOMER,
+        'U_CUSTOMER',
+      );
+    });
+  });
+
   describe('Quên mật khẩu bằng OTP', () => {
     const BODY = { phone: '0901234567', code: '123456', password: 'matkhaumoi1' };
 

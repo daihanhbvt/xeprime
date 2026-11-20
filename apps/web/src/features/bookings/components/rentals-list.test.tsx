@@ -440,7 +440,7 @@ describe('Thẻ yêu cầu - Cần xử lý', () => {
     expect(mutations.approve.mutate).not.toHaveBeenCalled();
     fireEvent.click(within(dialog).getByRole('button', { name: /Xác nhận yêu cầu/ }));
     expect(mutations.approve.mutate).toHaveBeenCalledWith(
-      { id: 'req-1', body: undefined },
+      { id: 'req-1', body: {} },
       expect.anything(),
     );
   });

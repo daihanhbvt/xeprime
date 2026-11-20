@@ -289,14 +289,14 @@ function EditForm({
         footer={
           canUpdate ? (
             <XStack gap={space.sm}>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={isDirty ? t('revert') : tActions('cancel')}
                   variant="outline"
                   onPress={() => (isDirty ? reset(initialValues) : onBack())}
                 />
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   variant="gradient"
                   label={tActions('saveChanges')}

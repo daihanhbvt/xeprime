@@ -160,7 +160,7 @@
     "selfDriveSubtitle": "The default price applies to any day without a custom price.",
     "withDriverTitle": "Chauffeured service price list",
     "withDriverSubtitle": "Prices include the driver's pay but exclude fuel and toll surcharges (if any).",
-    "withDriverEstimateHint": "A with-driver vehicle needs all three prices: in-city, inter-city round trip and inter-city one way.",
+    "withDriverEstimateHint": "Set all three with-driver prices (in-city, inter-city round trip, inter-city one way). Without a with-driver price, renters see the self-drive price marked as not including a driver.",
     "loadError": "Could not load pricing & policy"
   },
   "autoAccept": {

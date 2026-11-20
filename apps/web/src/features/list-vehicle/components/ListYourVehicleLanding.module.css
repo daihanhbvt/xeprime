@@ -466,3 +466,161 @@
     width: 100%;
   }
 }
+
+/*
+ * ── Điện thoại ≤640: Figma Partner-XePrime "Signup - Plan" (`24464:25566`) ─────────────────────
+ * Tiêu đề 20/30 canh trái; thẻ bo 16 đệm 16 khe 12: [nhãn + tiêu đề | hình 113×92] · mô tả 12/18 ·
+ * ba ô điểm nhấn nền vàng nhạt xếp NGANG · ô phí nền xám · nút ôm chữ canh giữa. Hai khối `cardHead`
+ * và `offer` thành `display: contents` để từng phần của chúng tự vào ô lưới của bản vẽ.
+ */
+@media (max-width: 640px) {
+  .body {
+    gap: var(--xp-space-lg);
+    padding-block: var(--xp-space-md) var(--xp-space-lg);
+  }
+
+  .intro {
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
+  }
+
+  .title {
+    font-size: 20px;
+    line-height: 30px;
+  }
+
+  .subtitle {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .card,
+  .cardShop {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'badge art'
+      'heading art'
+      'body body'
+      'features features'
+      'offer offer'
+      'cta cta';
+    gap: var(--xp-space-12) var(--xp-space-sm);
+    padding: var(--xp-space-md);
+  }
+
+  .cardHead,
+  .offer {
+    display: contents;
+  }
+
+  .badge {
+    grid-area: badge;
+    justify-self: start;
+    padding: 2px 6px;
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .cardHeading {
+    grid-area: heading;
+  }
+
+  .cardTitle {
+    font-size: var(--xp-font-size-h4);
+    line-height: var(--xp-line-height-h4);
+  }
+
+  .tagline {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .cardBody {
+    position: relative;
+    z-index: 1;
+    grid-area: body;
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+  }
+
+  .cardArt,
+  .cardShop .cardArt {
+    justify-self: end;
+    align-self: start;
+    width: 113px;
+    height: 92px;
+  }
+
+  .features {
+    flex-direction: row;
+    align-items: stretch;
+    gap: var(--xp-space-sm);
+    margin: 0;
+  }
+
+  .featureDivider {
+    display: none;
+  }
+
+  .feature,
+  .cardShop .feature {
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: var(--xp-space-sm);
+    background: var(--xp-color-primary-subtle);
+    text-align: center;
+  }
+
+  .featureIcon,
+  .cardShop .featureIcon {
+    background: var(--xp-color-primary-light);
+  }
+
+  .featureLabel {
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+  }
+
+  .offerText {
+    position: relative;
+    z-index: 1;
+    grid-area: offer;
+    padding: var(--xp-space-12) var(--xp-space-md);
+    border-radius: var(--xp-border-radius-control);
+    background: var(--xp-color-bg);
+    text-align: center;
+  }
+
+  .offerBig {
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .offerBody {
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+  }
+
+  .cta {
+    position: relative;
+    z-index: 1;
+    grid-area: cta;
+    justify-self: center;
+    width: auto;
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .ctaOutline {
+    border-color: var(--xp-color-primary-highlight);
+    background: var(--xp-color-primary-subtle);
+  }
+
+  .ribbon {
+    right: -12px;
+  }
+}

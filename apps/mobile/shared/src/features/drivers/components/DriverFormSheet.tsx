@@ -56,10 +56,10 @@ function FormActions({
   const tActions = useTranslations('Common.actions');
   return (
     <XStack gap={space.sm}>
-      <YStack f={1}>
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
         <Button label={tActions('close')} variant="outline" disabled={saving} onPress={onClose} />
       </YStack>
-      <YStack f={1}>
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
         <Button
           label={submitLabel}
           variant="gradient"

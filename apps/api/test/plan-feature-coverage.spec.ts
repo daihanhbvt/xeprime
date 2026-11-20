@@ -25,7 +25,6 @@ const GATED: Readonly<Record<string, PlanFeature>> = {
   ReceiptsController: PLAN_FEATURE.FINANCE,
   FinanceCategoriesController: PLAN_FEATURE.FINANCE,
   MembersController: PLAN_FEATURE.MEMBERS,
-  ContractsController: PLAN_FEATURE.CONTRACTS,
   VehicleMaintenanceController: PLAN_FEATURE.MAINTENANCE,
   MaintenanceBoardController: PLAN_FEATURE.MAINTENANCE,
 };
@@ -106,6 +105,8 @@ const MUST_STAY_UNGATED = [
   'ReviewController',
   // Tài xế mở cho CẢ chủ xe tuyến hoa hồng (ADR 0063) — không sau cờ gói nào nữa.
   'DriversController',
+  // Hợp đồng của từng đơn là bộ cơ bản từ 20/11/2026 (SR-245, sửa ADR 0027 điều 1).
+  'ContractsController',
 ];
 
 let app: INestApplication;

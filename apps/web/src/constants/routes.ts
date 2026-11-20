@@ -307,6 +307,8 @@ export const ROUTES = {
     HOST_GUIDE: partner('/host-guide'),
     /** Hợp đồng & chứng từ MẪU (thư viện PDF) - không phải hợp đồng theo đơn thuê. */
     CONTRACTS_DOCUMENTS: partner('/contracts-documents'),
+    /** Hợp đồng thuê THEO ĐƠN (`/contracts/<id>` - xem/in) - không có trang danh sách. */
+    CONTRACTS: partner('/contracts'),
     /** Chính sách bảo vệ dữ liệu - dẫn tới văn bản thật ở `/legal/privacy`. */
     DATA_PROTECTION: partner('/data-protection'),
   },
@@ -992,7 +994,7 @@ export const customerPath = {
 
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
-  detail: (id: string): string => `${partner('/contracts')}/${id}`,
+  detail: (id: string): string => `${ROUTES.MANAGE.CONTRACTS}/${id}`,
 };
 
 /**

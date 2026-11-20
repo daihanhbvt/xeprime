@@ -759,7 +759,7 @@ function CustomerProfile({
           {/* Hai nút một hàng, cùng màu vàng "Tạo đơn thuê" (người dùng 16/11/2026). */}
           <XStack flexWrap="wrap" gap={space.sm}>
             {actionPills.map(({ key, icon, label, disabled, onPress }) => (
-              <YStack key={key} w="48%" f={1} minWidth="45%">
+              <YStack key={key} w="48%" flexGrow={1} flexShrink={1} flexBasis="auto" minWidth="45%">
                 <Button
                   label={label}
                   icon={icon}

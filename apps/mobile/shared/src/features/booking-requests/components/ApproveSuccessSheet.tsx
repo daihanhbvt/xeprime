@@ -72,7 +72,7 @@ export function ApproveSuccessSheet({
             <YStack flexShrink={0}>
               <Button label={t('approved.close')} variant="ghost" onPress={onClose} />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 icon="document-text-outline"
                 label={t('approved.viewBooking')}

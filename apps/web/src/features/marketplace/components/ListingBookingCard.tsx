@@ -261,12 +261,18 @@ export function ListingBookingCard({
    */
   const longTermPackage = longTermPackages.find((p) => p.packageMonths === selectedMonths) ?? null;
   const bestPackageMonths = bestDiscountPackageMonths(longTermPackages);
+  /*
+   * Có tài xế mà chủ xe chưa niêm yết giá có tài xế (20/11/2026): dòng giá là giá thuê xe (tự lái) —
+   * đúng con số máy báo giá dùng — và khung giá bên dưới nói rõ giá đó CHƯA GỒM tài xế.
+   */
+  const driverPriceExcluded =
+    activeService === SERVICE_TYPE.WITH_DRIVER && !listing.withDriverDailyPrice;
   /** `null` = dịch vụ này chưa có giá công bố — dòng giá nói "liên hệ báo giá", không hiện 0đ. */
   const basePrice: string | null =
     activeService === SERVICE_TYPE.LONG_TERM
       ? (longTermPackage?.baseMonthlyPrice ?? null)
       : activeService === SERVICE_TYPE.WITH_DRIVER
-        ? (listing.withDriverDailyPrice ?? null)
+        ? (listing.withDriverDailyPrice ?? listing.weekdayPrice ?? null)
         : (listing.weekdayPrice ?? null);
   const unitLabel =
     activeService === SERVICE_TYPE.LONG_TERM ? tCard('perMonthUnit') : tCard('perDayUnit');
@@ -635,12 +641,18 @@ export function ListingBookingCard({
                 </div>
               )}
 
-              {/* Giá có tài xế là giá trọn gói (ADR 0075) — khách chỉ trả thêm phí cầu đường. */}
+              {/*
+               * Giá có tài xế là giá trọn gói (ADR 0075) — khách chỉ trả thêm phí cầu đường. Chủ xe
+               * chưa niêm yết giá có tài xế thì giá trên là giá thuê xe: nói rõ chưa gồm tài xế và
+               * mời khách nhắn chủ xe thống nhất chi phí tài xế trước khi đặt (20/11/2026).
+               */}
               <div className={styles.driverRulesBox}>
-                <span className={styles.rulesTitle}>{tDriverPrice('title')}</span>
+                <span className={styles.rulesTitle}>
+                  {tDriverPrice(driverPriceExcluded ? 'pendingTitle' : 'title')}
+                </span>
                 <ul className={styles.rulesList}>
-                  <li>{tDriverPrice('included')}</li>
-                  <li>{tDriverPrice('excluded')}</li>
+                  <li>{tDriverPrice(driverPriceExcluded ? 'pendingPrice' : 'included')}</li>
+                  <li>{tDriverPrice(driverPriceExcluded ? 'pendingNegotiate' : 'excluded')}</li>
                 </ul>
               </div>
             </div>

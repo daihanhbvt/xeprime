@@ -184,7 +184,7 @@ export function DrivingTripDetailScreen({ bookingId }: { bookingId: string }) {
                       onPress={() => setConfirmingDecline(true)}
                     />
                   </YStack>
-                  <YStack f={1}>
+                  <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                     <Button
                       label={t('accept')}
                       icon="checkmark-outline"

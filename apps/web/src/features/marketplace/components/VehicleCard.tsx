@@ -78,9 +78,19 @@ export function VehicleCard({
 
   const monthlyContext =
     activeService === SERVICE_TYPE.LONG_TERM && listing.monthlyPrice ? listing.monthlyPrice : null;
-  const driverContext =
-    activeService === SERVICE_TYPE.WITH_DRIVER && listing.withDriverDailyPrice
+  /*
+   * Có tài xế (20/11/2026): chủ xe chưa niêm yết giá có tài xế thì thẻ hiện giá thuê xe (tự lái) kèm
+   * nhãn "chưa gồm tài xế" — đúng con số máy báo giá dùng — thay vì "Liên hệ báo giá".
+   */
+  const withDriverContext = activeService === SERVICE_TYPE.WITH_DRIVER;
+  const driverContext = withDriverContext
+    ? (listing.withDriverDailyPrice ?? listing.weekdayPrice ?? null)
+    : null;
+  const driverPriceNote =
+    withDriverContext && driverContext
       ? listing.withDriverDailyPrice
+        ? t('withDriverIncluded')
+        : t('withDriverExcluded')
       : null;
   const selfDriveContext = activeService === SERVICE_TYPE.SELF_DRIVE;
   const displayPrice = selfDriveContext
@@ -199,9 +209,7 @@ export function VehicleCard({
           <div className={styles.listTopRow}>
             <div className={styles.listTitleGroup}>
               <h3 className={styles.listTitle}>{listing.name}</h3>
-              {!hasRating ? (
-                <span className={styles.badgeNewGreen}>{t('newVehicle')}</span>
-              ) : null}
+              {!hasRating ? <span className={styles.badgeNewGreen}>{t('newVehicle')}</span> : null}
               {showStrikethrough ? <DiscountTag percent={discount} variant="badge" /> : null}
             </div>
 
@@ -235,6 +243,9 @@ export function VehicleCard({
                         unit: (chunks) => <span className={styles.priceUnit}>{chunks}</span>,
                       })}
                     </span>
+                    {driverPriceNote ? (
+                      <span className={styles.priceNote}>{driverPriceNote}</span>
+                    ) : null}
                   </>
                 ) : (
                   <b className={styles.listContact}>{t('contactForQuote')}</b>
@@ -319,12 +330,7 @@ export function VehicleCard({
               </span>
               <span className={styles.shopCopy}>
                 <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
-                <span
-                  className={cx(
-                    styles.listShopName,
-                    isShopTrack && styles.shopNameShop,
-                  )}
-                >
+                <span className={cx(styles.listShopName, isShopTrack && styles.shopNameShop)}>
                   {listing.shopName}
                 </span>
               </span>
@@ -392,7 +398,6 @@ export function VehicleCard({
         )}
 
         <PhotoAmenityPills items={amenities} label={t('amenitiesLabel')} />
-
       </div>
 
       <div className={styles.body}>
@@ -492,6 +497,9 @@ export function VehicleCard({
                     unit: (chunks) => <span>{chunks}</span>,
                   })}
                 </span>
+                {driverPriceNote ? (
+                  <span className={styles.priceNote}>{driverPriceNote}</span>
+                ) : null}
               </>
             ) : preview ? null : (
               // Thẻ xem trước của wizard thêm xe: chưa nhập giá thì để trống, không "Liên hệ báo giá".
@@ -499,7 +507,6 @@ export function VehicleCard({
             )}
           </div>
         </div>
-
       </div>
     </article>
   );

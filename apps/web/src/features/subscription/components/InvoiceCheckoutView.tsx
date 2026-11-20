@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Result, Skeleton } from 'antd';
+import { Alert, App, Button, Result, Skeleton } from 'antd';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -168,6 +168,37 @@ function SubscriptionPaymentView({
    * Khoản cần trả vừa RỜI trạng thái chờ sang `paid` (đối soát xong) ⇒ hỏi lại phạm vi một lần. Chỉ
    * khi đã THẤY nó đang chờ: mở thẳng một hoá đơn đã trả từ lâu không cần làm mới gì.
    */
+  /*
+   * Tiền về ⇒ KHÔNG có màn "Thanh toán thành công" riêng (biên bản họp 19/11/2026): báo một thông
+   * báo góc phải rồi đưa người trả về trang "Gói & hạn mức" — nơi gói vừa bật hiện ngay trạng thái
+   * mới và có lối nâng / gia hạn gói. Chờ `/auth/me` làm mới xong mới chuyển: gian hàng vừa trả
+   * bước đầu còn mang phạm vi "chờ thanh toán", vào trang Cửa hàng bằng phạm vi cũ sẽ bị đẩy ngược
+   * về onboarding.
+   */
+  const { notification } = App.useApp();
+  const tPayment = useTranslations('Subscription.payment');
+  const fmt = useAppFormat();
+  const announcedPaid = useRef(false);
+  useEffect(() => {
+    if (!payable || payable.status !== SUBSCRIPTION_INVOICE_STATUS.PAID) return;
+    if (announcedPaid.current) return;
+    announcedPaid.current = true;
+    const [first] = payable.invoices;
+    notification.success({
+      key: `subscription-paid-${payable.code}`,
+      placement: 'topRight',
+      duration: 8,
+      title: payable.invoices.length > 1 ? t('paidTitleMany') : t('paidTitle'),
+      description: first
+        ? tPayment('period', { from: fmt.date(first.periodFrom), to: fmt.date(first.periodTo) })
+        : undefined,
+    });
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.subscription.all }),
+    ]).finally(() => router.replace(shopSectionPath(SHOP_SECTION.PLAN)));
+  }, [payable, notification, queryClient, router, t, tPayment, fmt]);
+
   const status = payable?.status;
   const seenAwaiting = useRef(false);
   useEffect(() => {
@@ -207,7 +238,7 @@ function SubscriptionPaymentView({
       />
     );
   } else {
-    body = <PaymentBody payable={payable} orderId={orderId} homeHref={homeHref} shell={shell} />;
+    body = <PaymentBody payable={payable} orderId={orderId} shell={shell} />;
   }
 
   const notice = orderId ? (
@@ -253,12 +284,10 @@ function SubscriptionPaymentView({
 function PaymentBody({
   payable,
   orderId,
-  homeHref,
   shell,
 }: {
   payable: Payable;
   orderId: string | null;
-  homeHref: string;
   shell: boolean;
 }) {
   const t = useTranslations('Subscription.checkout');
@@ -278,24 +307,8 @@ function PaymentBody({
   const [first] = payable.invoices;
 
   if (payable.status === SUBSCRIPTION_INVOICE_STATUS.PAID) {
-    return (
-      <Result
-        status="success"
-        title={payable.invoices.length > 1 ? t('paidTitleMany') : t('paidTitle')}
-        subTitle={
-          first
-            ? tPayment('period', { from: fmt.date(first.periodFrom), to: fmt.date(first.periodTo) })
-            : undefined
-        }
-        extra={
-          <Link href={homeHref}>
-            <Button type="primary" size="large">
-              {shell ? t('backToShop') : t('enterManage')}
-            </Button>
-          </Link>
-        }
-      />
-    );
+    // Đang chuyển về trang gói — thông báo đã bật nằm ở góc phải (xem `SubscriptionPaymentView`).
+    return <Skeleton active paragraph={{ rows: 4 }} />;
   }
 
   if (!awaiting) {

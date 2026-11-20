@@ -296,14 +296,68 @@
   color: var(--xp-color-text-tertiary);
 }
 
+/*
+ * Điện thoại ≤640 — Figma Partner-XePrime "Signup - Personal" (`24464:24953`, cùng bản vẽ với app
+ * XePrime Partner): form phẳng trên nền trang (không thẻ, không bóng), đệm 16; tiêu đề 20/30 + phụ đề
+ * 14/20; tiêu đề khối 18/28; nhãn ô 14/20 `text-secondary`; nút "Gửi mã OTP" nền `primary-subtle`
+ * chữ vàng; chú thích cuối `text-placeholder`.
+ */
 @media (max-width: 640px) {
+  .card {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .form {
+    padding: var(--xp-space-md);
+  }
+
+  .formHead {
+    gap: 2px;
+    margin-bottom: var(--xp-space-lg);
+  }
+
   .formTitle {
-    font-size: 24px;
-    line-height: 32px;
+    font-size: 20px;
+    line-height: 30px;
   }
 
   .formSub {
-    font-size: 16px;
-    line-height: 24px;
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .sectionTitle {
+    margin: var(--xp-space-sm) 0 var(--xp-space-12);
+    font-size: var(--xp-font-size-h3);
+    line-height: var(--xp-line-height-h3);
+  }
+
+  .form.form :global(.ant-form-item-label > label) {
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .otpRow {
+    gap: var(--xp-space-12);
+  }
+
+  .otpSend.otpSend,
+  .otpSend.otpSend:disabled {
+    min-width: 113px;
+    color: var(--xp-color-primary);
+  }
+
+  .consentText {
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-body);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .footnote {
+    color: var(--xp-color-text-placeholder);
   }
 }

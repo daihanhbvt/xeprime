@@ -1,5 +1,6 @@
 {
   "landing": {
+    "chooseCta": "Chọn mô hình & đăng ký",
     "metaTitle": "Đăng xe cho thuê",
     "title": "Chọn mô hình hợp tác cùng XePrime",
     "back": "Quay lại",
@@ -40,7 +41,8 @@
       "appOfferTitle": "Công cụ vận hành chuyên nghiệp",
       "appOfferBody": "Tài khoản gian hàng có hạn mức xe và thời hạn sử dụng riêng. XePrime xem xét và kích hoạt tài khoản sau khi bạn đăng ký.",
       "offerHighlight": "<big>0%</big> phí hoa hồng/chuyến",
-      "recommended": "Gói đề xuất"
+      "recommended": "Gói đề xuất",
+      "recommendedShort": "Đề xuất"
     },
     "upgrade": {
       "title": "Linh hoạt nâng cấp khi cần",

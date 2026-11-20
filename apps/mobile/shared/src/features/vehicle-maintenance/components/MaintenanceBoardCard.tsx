@@ -195,7 +195,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
         {canCorrectOdometer || canManage ? (
           <XStack gap={space.sm} pt={space.xs}>
             {canCorrectOdometer ? (
-              <YStack f={1} minWidth={0}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
                 <Button
                   label={t('actions.updateOdometer')}
                   icon="speedometer-outline"
@@ -207,7 +207,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
               </YStack>
             ) : null}
             {canManage ? (
-              <YStack f={1} minWidth={0}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
                 <Button
                   label={
                     record

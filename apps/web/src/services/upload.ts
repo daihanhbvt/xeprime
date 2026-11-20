@@ -5,6 +5,7 @@ import {
   IMAGE_UPLOAD_MIME_TYPES,
   type components,
 } from '@xeprime/types';
+import { compressImageForUpload, type ImageCompressionProfile } from '@/lib/image-compression';
 import { ApiClientError, apiPost } from '@/services/api-client';
 
 /**
@@ -96,6 +97,36 @@ export function validateImageFile(file: File): UploadRejection | null {
   return null;
 }
 
+/**
+ * Trần dung lượng LÚC CHỌN ảnh — rộng hơn trần tải lên vì ảnh còn được NÉN trước presign
+ * (`compressImageForUpload`): ảnh điện thoại 48–50MP nặng 10–15MB nén xong chỉ còn vài trăm KB.
+ * Trần thật (`IMAGE_UPLOAD_MAX_BYTES`) vẫn kiểm trên bản đã nén, và ở backend.
+ */
+export const IMAGE_SELECTION_MAX_BYTES = 40 * 1024 * 1024;
+
+/** Kiểm ảnh NGƯỜI DÙNG VỪA CHỌN (trước khi nén) — cùng luật MIME, trần dung lượng nới cho ảnh gốc. */
+export function validateImageSelection(file: File): UploadRejection | null {
+  if (!(IMAGE_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
+    return { reason: 'imageType' };
+  }
+  if (file.size > IMAGE_SELECTION_MAX_BYTES) {
+    return { reason: 'imageTooLarge', maxMb: toMb(IMAGE_SELECTION_MAX_BYTES) };
+  }
+  return null;
+}
+
+/** Như `validateImageSelection` cho ô nhận cả PDF: PDF không nén được nên giữ trần tải lên. */
+export function validateDocumentSelection(file: File): UploadRejection | null {
+  if (file.type === 'application/pdf') return validateDocumentFile(file);
+  if (!(DOCUMENT_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
+    return { reason: 'documentType' };
+  }
+  if (file.size > IMAGE_SELECTION_MAX_BYTES) {
+    return { reason: 'documentTooLarge', maxMb: toMb(IMAGE_SELECTION_MAX_BYTES) };
+  }
+  return null;
+}
+
 /** Tài liệu hợp đồng (ảnh chụp hoặc PDF scan) — cùng trần dung lượng với ảnh. */
 export function validateDocumentFile(file: File): UploadRejection | null {
   if (!(DOCUMENT_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
@@ -150,12 +181,19 @@ export const presignBannerImage = (file: File): Promise<UploadPresign> =>
 export const presignCatalogImage = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/platform/catalog/presign', presignBody(file));
 
-/** Presign 1 file ảnh rồi PUT lên R2, trả URL công khai để lưu vào form/API. */
+/**
+ * Presign 1 file ảnh rồi PUT lên R2, trả URL công khai để lưu vào form/API.
+ *
+ * Ảnh được NÉN trước presign (`compressImageForUpload`) — presign ký theo dung lượng của tệp nên
+ * phải nén xong mới xin URL; kiểm MIME/dung lượng chạy trên bản đã nén.
+ */
 export async function uploadImage(
-  file: File,
+  rawFile: File,
   presign: (file: File) => Promise<UploadPresign>,
   onProgress?: (percent: number) => void,
+  profile: ImageCompressionProfile = 'photo',
 ): Promise<string> {
+  const file = await compressImageForUpload(rawFile, profile);
   const invalid = validateImageFile(file);
   if (invalid)
     throw new ApiClientError({

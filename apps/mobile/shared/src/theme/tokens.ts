@@ -188,6 +188,15 @@ const FIGMA_V2_TOKENS = {
     infoLow: '#ebf6ff',
     /** `status/purple-high` #5925dc — chữ viên "Thuê xe dài hạn" của thẻ đơn (Rental Request MB). */
     purpleStrong: '#5925dc',
+    /**
+     * `bg/primary-25` #fffdf5 — nền nút viền vàng "Gửi mã OTP" / "Chọn mô hình & đăng ký" và ô điểm
+     * nhấn của thẻ chọn tuyến (Figma Partner-XePrime `24464:24953` · `24464:25566`).
+     */
+    brandWash: '#fffdf5',
+    /** `bg/primary-100` #fff5d2 — ô tròn biểu tượng trong ô điểm nhấn của thẻ chọn tuyến. */
+    brandIconBg: '#fff5d2',
+    /** `stroke/primary-400` #f9d260 — viền nút viền vàng (`Button variant="brandOutline"`). */
+    brandBorderStrong: '#f9d260',
   },
   dark: {
     brandLink: '#f5c33b',
@@ -202,6 +211,9 @@ const FIGMA_V2_TOKENS = {
     successVivid: '#32d583',
     infoLow: 'rgba(21, 112, 239, 0.16)',
     purpleStrong: '#bdb4fe',
+    brandWash: 'rgba(245, 195, 59, 0.08)',
+    brandIconBg: 'rgba(245, 195, 59, 0.18)',
+    brandBorderStrong: 'rgba(249, 210, 96, 0.55)',
   },
 } as const;
 

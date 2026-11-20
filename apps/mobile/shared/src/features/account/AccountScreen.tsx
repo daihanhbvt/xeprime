@@ -49,7 +49,7 @@ export { ACCOUNT_DOCUMENTS_SECTION } from './AccountProfileScreen';
  *
  * Giao diện sáng/tối + ngôn ngữ nằm TRONG thẻ hồ sơ (`AccountProfileCard`) và trong menu avatar
  * trên thanh (`AccountMenuSheet`) — người dùng chốt 27/10/2026, cùng một bộ hàng
- * (`PreferenceToggleRows`). Khối `PreferenceRows` rời ở cuối tab đã bỏ.
+ * (`PreferenceToggleRows`).
  *
  * Hồ sơ đọc từ `GET /users/me`, KHÔNG từ `/auth/me`: hai endpoint trả hai thứ khác nhau, và chỉ
  * cái đầu có `phone` + `phoneVerified` — hai trường màn này phải hiện.

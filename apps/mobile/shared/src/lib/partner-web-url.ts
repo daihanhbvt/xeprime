@@ -20,25 +20,5 @@ export function resolvePartnerLoginUrl(): string | null {
   return base ? `${base}/login` : null;
 }
 
-/**
- * Bước "Chọn gói và thanh toán" của onboarding tuyến GÓI trên site partner (web `/onboarding` ở chế
- * độ host). Gian hàng `package_pending` chỉ vào được đúng trang này ở web (ADR 0040 điều 3), nên lối
- * "mua gói" của màn chờ kích hoạt trong app mở đây chứ không mở trang Cửa hàng.
- */
-export function resolvePartnerOnboardingUrl(): string | null {
-  const base = resolvePartnerWebBaseUrl();
-  return base ? `${base}/onboarding?track=package` : null;
-}
-
-/**
- * Trang "Gói & hạn mức" trên site partner - app Partner KHÔNG bán gói (quy định store), mọi lối mua
- * / gia hạn / nâng cấp mở trang này. `lane` + `purchase=1` là đúng hai tham số web đọc để cuộn tới
- * làn và mở sẵn hộp mua (`ShopPlanSection`).
- */
-export function resolvePartnerPlanUrl(lane?: string | null): string | null {
-  const base = resolvePartnerWebBaseUrl();
-  if (!base) return null;
-  const params = new URLSearchParams({ section: 'plan', purchase: '1' });
-  if (lane) params.set('lane', lane);
-  return `${base}/shop?${params.toString()}`;
-}
+// Lối mở trang mua gói / onboarding thanh toán trên web ĐÃ GỠ (19/11/2026): app không dẫn ra
+// ngoài để mua gói (Apple 3.1.1/3.1.3, chính sách Thanh toán Google Play).

@@ -48,7 +48,8 @@ type Variant =
   | 'success'
   | 'primarySubtle'
   | 'dangerSoft'
-  | 'text';
+  | 'text'
+  | 'brandOutline';
 /**
  * Chiều cao VẼ RA khớp web (`buttonHeight`): `sm` 32 · `md` 40 (mặc định) · `lg` 44. Vùng
  * CHẠM vẫn ≥ `sizing.touchTarget` nhờ `hitSlop` dọc — không thổi phồng nút cho vừa ngón tay.
@@ -97,6 +98,11 @@ const useVariant = themed<Record<Variant, { bg: string; fg: string; border: stri
     dangerSoft: { bg: colors.dangerSurface, fg: colors.danger, border: colors.dangerSurface },
     /** AntD `Button type="text"` cấp ba (web `BookingStatusActions .tertiary`): không nền, không viền, chữ phụ. */
     text: { bg: 'transparent', fg: colors.textMuted, border: 'transparent' },
+    /**
+     * Nút viền vàng của Figma Partner-XePrime ("Gửi mã OTP" `24464:25314`, "Chọn mô hình & đăng ký"
+     * thẻ cá nhân `24464:26329`): nền `bg/primary-25`, viền `stroke/primary-400`, chữ `text/brand/primary-2`.
+     */
+    brandOutline: { bg: colors.brandWash, fg: colors.brandLink, border: colors.brandBorderStrong },
   }),
 );
 
@@ -138,7 +144,7 @@ interface ButtonProps {
    *       <YStack flexShrink={0}>   ← lối thoát: CO VỪA CHỮ
    *         <Button label="Huỷ" variant="ghost" … />
    *       </YStack>
-   *       <YStack f={1}>            ← hành động chính: LẤY PHẦN CÒN LẠI
+   *       <YStack flexGrow={1} flexShrink={1} flexBasis="auto">  ← hành động chính: LẤY PHẦN CÒN LẠI
    *         <Button label="Lưu thay đổi" icon="checkmark-outline" … />
    *       </YStack>
    *     </XStack>
@@ -150,8 +156,11 @@ interface ButtonProps {
    *
    * Thứ tự: lối thoát bên TRÁI, hành động chính bên PHẢI.
    *
-   * Hai hành động NGANG HÀNG (Chụp ảnh/Thư viện, Nhắn shop/Chọn thuê, ô Từ/Đến) thì khác: chúng
-   * chia ĐỀU `f={1}`/`f={1}`, vì không có bên nào là phụ để phải nhường chỗ.
+   * Hai hành động NGANG HÀNG (Sửa/Ngừng hoạt động, Chụp ảnh/Thư viện, Nhắn shop/Chọn thuê) mỗi ô
+   * `flexGrow={1} flexShrink={1} flexBasis="auto"`: mỗi nút bắt đầu từ ĐÚNG bề rộng chữ của nó rồi
+   * chia đều phần thừa - nhãn ngắn thì gần như bằng nhau, nhãn dài thì tự rộng hơn thay vì bị cắt
+   * thành "Ngừng hoạt đ…". KHÔNG dùng `f={1}` cho ô chứa nút: `f={1}` là `flexBasis: 0`, chia đôi
+   * bất kể chữ dài ngắn - đúng lỗi người dùng báo 19/11/2026.
    *
    * Nút thoát KHÔNG mang icon — nó đã hẹp sẵn, và chữ luôn thắng hình khi chật.
    */
@@ -180,6 +189,11 @@ interface ButtonProps {
    * là rối mắt). Truyền `false` để tắt ở một nút chính cụ thể.
    */
   shine?: boolean;
+  /**
+   * Biểu tượng đứng SAU chữ (mũi tên "đi tiếp" của Figma Partner-XePrime: "Chọn mô hình & đăng ký →",
+   * "Đăng ký & đăng xe đầu tiên →"). Mặc định biểu tượng đứng trước chữ.
+   */
+  iconEnd?: boolean;
 }
 
 export function Button({
@@ -196,6 +210,7 @@ export function Button({
   accessibilityLabel,
   tight = false,
   shine,
+  iconEnd = false,
 }: ButtonProps) {
   const colors = useColors();
   const VARIANT = useVariant();
@@ -294,7 +309,7 @@ export function Button({
           <ActivityIndicator color={fg} size="small" />
         ) : (
           <>
-            {icon ? (
+            {icon && !iconEnd ? (
               // `flexShrink={0}`: hết chỗ thì CHỮ co, không phải biểu tượng méo đi.
               <XStack flexShrink={0}>
                 <Ionicons name={icon} size={size === 'sm' || compact ? iconSize.sm : iconSize.md} color={fg} />
@@ -319,6 +334,11 @@ export function Button({
             >
               {label}
             </Text>
+            {icon && iconEnd ? (
+              <XStack flexShrink={0}>
+                <Ionicons name={icon} size={size === 'sm' || compact ? iconSize.sm : iconSize.lg} color={fg} />
+              </XStack>
+            ) : null}
           </>
         )}
       </XStack>

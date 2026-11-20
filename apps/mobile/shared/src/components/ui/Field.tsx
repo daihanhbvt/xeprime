@@ -1,5 +1,5 @@
 import { Ionicons } from '@/components/icons/Ionicons';
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack } from 'tamagui';
@@ -7,10 +7,56 @@ import { useFieldFeedback } from '@/components/motion/use-field-feedback';
 import { useTranslations } from 'use-intl';
 import { InfoHint } from './InfoHint';
 import { useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import {
+  buttonHeight,
+  fieldFontSize,
+  fontWeight,
+  iconSize,
+  radius,
+  sizing,
+  space,
+  typeScale,
+} from '@/theme/tokens';
 
 /** Gợi ý dài hơn mức này thì gọn vào dấu ⓘ. */
 const HINT_INLINE_MAX = 60;
+
+/**
+ * Hình dạng của bộ ô nhập (nhãn + khung + chữ trong ô):
+ * - `default` - bộ ô chung của app (nhãn 12 đậm, khung bo 10, viền `border`, cao 48).
+ * - `v2` - "_Select input base" của Figma Partner-XePrime (`24464:24574` · `24464:24953`): nhãn
+ *   14/20 đậm vừa màu `text/gray/medium`, khung bo 12 viền `stroke/gray-low300`, đệm ngang 14,
+ *   chữ 14, biểu tượng 20, placeholder `text/gray/very-low`.
+ *
+ * Đi qua CONTEXT chứ không qua prop: một form bọc `<FieldAppearanceProvider value="v2">` là mọi ô
+ * bên trong (kể cả ô nằm sâu trong `AddressFields`, `VerifiedPhoneField`) đổi theo, không phải
+ * luồn một prop qua từng tầng. Màn không bọc giữ nguyên bộ ô chung.
+ */
+export type FieldAppearance = 'default' | 'v2';
+
+const FieldAppearanceContext = createContext<FieldAppearance>('default');
+
+export const FieldAppearanceProvider = FieldAppearanceContext.Provider;
+
+export function useFieldAppearance(): FieldAppearance {
+  return useContext(FieldAppearanceContext);
+}
+
+/**
+ * Số đo của bộ ô `v2`. Khung cao 44 (= nút `md`) thay vì 40 của bản vẽ: nút "Gửi mã OTP" đứng
+ * cạnh ô SĐT phải bằng đúng chiều cao ô, và 44 là sàn chạm của nút.
+ */
+export const FIELD_V2 = {
+  /** Khe nhãn ↔ khung (Figma 6). */
+  labelGap: 6,
+  /** Dòng của nhãn 14/20. */
+  labelLineHeight: typeScale.body.lineHeight,
+  /** Đệm ngang trong khung. */
+  padX: 14,
+  height: buttonHeight.md,
+  icon: iconSize.lg,
+  fontSize: typeScale.body.fontSize,
+} as const;
 
 export function FieldLabel({
   label,
@@ -33,6 +79,7 @@ export function FieldLabel({
 }) {
   const colors = useColors();
   const tMark = useTranslations('Vehicles.completeness');
+  const v2 = useFieldAppearance() === 'v2';
 
   /*
     Nhãn dùng màu CHỮ CHÍNH, không phải `textMuted`.
@@ -42,7 +89,12 @@ export function FieldLabel({
     gợi ý ở `FieldMessage` mới là phần được phép mờ.
   */
   return (
-    <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
+    <Text
+      col={v2 ? colors.textMuted : colors.text}
+      fos={v2 ? FIELD_V2.fontSize : fieldFontSize.label}
+      {...(v2 ? { lh: FIELD_V2.labelLineHeight } : {})}
+      fow={v2 ? fontWeight.medium : fontWeight.semibold}
+    >
       {label}
       {required ? <Text col={colors.danger}> *</Text> : null}
       {publishRequired ? (
@@ -122,12 +174,15 @@ export function FieldShell({
   accessibilityLabel?: string;
 }) {
   const colors = useColors();
+  const v2 = useFieldAppearance() === 'v2';
+  const shellRadius = v2 ? radius.control : radius.md;
+  const restColor = v2 ? colors.borderInput : colors.border;
   const active = invalid ? colors.danger : colors.primary;
   // Lắc khi vừa lỗi + viền đổi màu mượt: lớp viền phủ animate màu, khung trong giữ viền nghỉ.
   const feedback = useFieldFeedback({
     invalid,
     highlighted: focused || invalid,
-    restColor: colors.border,
+    restColor,
     activeColor: active,
   });
 
@@ -152,11 +207,11 @@ export function FieldShell({
       ai={align}
       gap={space.sm}
       bg={disabled ? colors.surfaceMuted : colors.surface}
-      br={radius.md}
+      br={shellRadius}
       bw={1}
-      bc={colors.border}
-      px={space.sm}
-      minHeight={sizing.touchTarget}
+      bc={restColor}
+      px={v2 ? FIELD_V2.padX : space.sm}
+      minHeight={v2 ? FIELD_V2.height : sizing.touchTarget}
       {...(onPress ? { onPress } : {})}
       {...(accessibilityRole ? { accessibilityRole } : {})}
       {...(accessibilityLabel ? { accessibilityLabel } : {})}
@@ -165,7 +220,7 @@ export function FieldShell({
     </XStack>
     <Animated.View
       pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { borderWidth: 1, borderRadius: radius.md }, feedback.border]}
+      style={[StyleSheet.absoluteFill, { borderWidth: 1, borderRadius: shellRadius }, feedback.border]}
     />
     </Animated.View>
   );

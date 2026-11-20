@@ -327,7 +327,7 @@ describe('ListingDetailView - điều kiện thuê công bố', () => {
     const { unmount } = renderWithIntl(
       await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }),
     );
-    expect(screen.queryByText('Giá thuê có tài xế')).toBeNull();
+    expect(screen.queryByText('Giá trọn gói có tài xế')).toBeNull();
     unmount();
 
     renderWithIntl(
@@ -340,11 +340,25 @@ describe('ListingDetailView - điều kiện thuê công bố', () => {
     expect(screen.queryByText('Phụ phí có thể phát sinh')).toBeNull();
     // Cùng một câu ở thẻ đặt xe và tab "Quy định chung" — soát trong khối điều khoản.
     const policies = within(screen.getByRole('region', { name: 'Quy định thuê xe' }));
-    expect(policies.getByText('Giá thuê có tài xế')).toBeTruthy();
+    expect(policies.getByText('Giá trọn gói có tài xế')).toBeTruthy();
     expect(policies.getByText(/Chưa gồm phí cầu đường/)).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Tài sản thế chấp' }));
     // Cọc giữ chuyến có tài xế đã gỡ (29/10/2026): tiền giữ chỗ do nền tảng thu, không còn câu riêng.
     expect(screen.queryByText(/cọc giữ chuyến/i)).toBeNull();
+  });
+
+  it('chủ xe chưa niêm yết giá có tài xế: nói rõ giá thuê xe CHƯA GỒM tài xế, mời thoả thuận với chủ xe', async () => {
+    renderWithIntl(
+      await ListingDetailView({
+        listing: { ...WITH_TERMS, withDriverDailyPrice: null },
+        catalog: EMPTY_CATALOG,
+        serviceType: 'with_driver',
+      }),
+    );
+    const policies = within(screen.getByRole('region', { name: 'Quy định thuê xe' }));
+    expect(policies.getByText('Giá thuê xe - chưa gồm tài xế')).toBeTruthy();
+    expect(policies.getByText(/thống nhất trực tiếp với chủ xe/)).toBeTruthy();
+    expect(policies.queryByText('Giá trọn gói có tài xế')).toBeNull();
   });
 
   it('API cũ chưa trả ba khối này: trang vẫn dựng, chỉ thiếu mục thông tin', async () => {

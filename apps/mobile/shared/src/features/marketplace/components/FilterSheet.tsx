@@ -803,7 +803,7 @@ export function FilterSheet({
             bg={colors.surface}
           >
             {/* Bề ngang điện thoại: hai nút chia đều (web @768px `flex: 1`). */}
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('clear')}
                 icon="refresh-outline"
@@ -811,7 +811,7 @@ export function FilterSheet({
                 onPress={handleClear}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               {/* Figma: "Áp dụng" là nút dải vàng (gradient), "Xóa bộ lọc" viền trắng. */}
               <Button
                 label={t('apply')}

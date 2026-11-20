@@ -608,10 +608,6 @@ export class VehiclesService {
     // thì PLAN_SCOPE_REQUIRED. Thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
     await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType);
     await this.pricing.assertWithDriverPrices(dto);
-    // Phiên hỗ trợ tạo xe NHÁP không có giá (guard đã gỡ trường giá) — chủ xe điền sau.
-    if (!support) {
-      assertWithDriverPricesComplete(dto.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE], dto);
-    }
     assertSingleVariantChoice(dto);
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
@@ -843,21 +839,10 @@ export class VehiclesService {
       await assertRemovedServicesNotInUse(tx, { tenantId, vehicleId: current.id, removed });
     }
     /*
-     * BẬT dịch vụ có tài xế, hoặc lưu có gửi giá có tài xế ⇒ trạng thái SAU lần lưu phải đủ ba
-     * giá (19/11/2026). Bật dịch vụ đi kèm ba giá trong cùng một lượt (hộp "Bật xe có tài xế"),
-     * nên không còn xe "đã bật mà chưa có giá". Lượt chỉ bật/tắt dịch vụ KHÁC hay sửa phần khác của
-     * một xe cũ còn thiếu giá thì không bị chặn - máy giá có lưới an toàn cho chúng.
+     * Giá có tài xế KHÔNG bắt buộc (20/11/2026, người dùng chốt — thay luật 19/11): chủ xe được
+     * khuyến khích nhập đủ ba giá; chưa nhập thì báo giá dùng giá thuê ngày và ghi rõ "chưa gồm
+     * tài xế" (`PricingService.buildDailyQuote`). Bật dịch vụ không cần đi kèm giá.
      */
-    const enablingWithDriver =
-      dto.serviceTypes?.includes(SERVICE_TYPE.WITH_DRIVER) === true &&
-      !current.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER);
-    if (!this.supportStore.current() && (enablingWithDriver || touchesWithDriver(dto))) {
-      assertWithDriverPricesComplete(dto.serviceTypes ?? current.serviceTypes, {
-        withDriverDailyPrice: pick(dto.withDriverDailyPrice, current.withDriverDailyPrice),
-        withDriverInterCityPrice: pick(dto.withDriverInterCityPrice, current.withDriverInterCityPrice),
-        withDriverOneWayPrice: pick(dto.withDriverOneWayPrice, current.withDriverOneWayPrice),
-      });
-    }
 
     /*
      * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050): guard đã lọc TÊN trường; ở đây — sau khi khoá
@@ -1106,13 +1091,6 @@ export class VehiclesService {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
         message: 'Xe không đăng dịch vụ có tài xế - bổ sung dịch vụ trước khi đặt giá có tài xế',
-      });
-    }
-    if (touchesWithDriver(dto)) {
-      assertWithDriverPricesComplete(current.serviceTypes, {
-        withDriverDailyPrice: pick(dto.withDriverDailyPrice, current.withDriverDailyPrice),
-        withDriverInterCityPrice: pick(dto.withDriverInterCityPrice, current.withDriverInterCityPrice),
-        withDriverOneWayPrice: pick(dto.withDriverOneWayPrice, current.withDriverOneWayPrice),
       });
     }
 
@@ -2178,44 +2156,6 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
  * giá ẩn/stale — bỏ "thuê dài hạn" thì giá tháng đi cùng, thêm lại dịch vụ thì nhập giá lại.
  * FE cảnh báo trước khi lưu; đây là lớp thực thi.
  */
-type WithDriverPrices = {
-  withDriverDailyPrice?: string | null;
-  withDriverInterCityPrice?: string | null;
-  withDriverOneWayPrice?: string | null;
-};
-
-const WITH_DRIVER_PRICE_FIELDS = [
-  'withDriverDailyPrice',
-  'withDriverInterCityPrice',
-  'withDriverOneWayPrice',
-] as const;
-
-/** Lượt ghi có gửi một trong ba giá có tài xế không. */
-function touchesWithDriver(dto: WithDriverPrices): boolean {
-  return WITH_DRIVER_PRICE_FIELDS.some((f) => dto[f] !== undefined);
-}
-
-/** Giá sau lần lưu: trường có gửi thì lấy bản gửi (kể cả `null` = xoá), không gửi thì giữ bản cũ. */
-function pick(next: string | null | undefined, current: Prisma.Decimal | null): string | null {
-  if (next !== undefined) return next;
-  return current ? current.toFixed(0) : null;
-}
-
-/**
- * Xe đăng dịch vụ CÓ TÀI XẾ phải có ĐỦ ba giá (19/11/2026). Thiếu giá lộ trình nào thì báo giá
- * phải rơi về một bậc khác - trước đây là "tạm tính" và làm lượt duyệt bỏ qua tiền giữ chỗ.
- */
-function assertWithDriverPricesComplete(serviceTypes: string[], prices: WithDriverPrices): void {
-  if (!serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)) return;
-  const missing = WITH_DRIVER_PRICE_FIELDS.filter((f) => !(Number(prices[f] ?? 0) > 0));
-  if (missing.length === 0) return;
-  throw new BadRequestException({
-    code: API_ERROR_CODE.WITH_DRIVER_PRICE_REQUIRED,
-    message: 'Xe có tài xế cần đủ ba giá: nội thành, liên tỉnh khứ hồi và liên tỉnh 1 chiều',
-    details: { fields: missing },
-  });
-}
-
 function orphanPriceClears(serviceTypes: string[]): Partial<VehicleWritableFields> {
   return {
     ...(serviceTypes.includes(SERVICE_TYPE.LONG_TERM) ? {} : { monthlyPrice: null }),

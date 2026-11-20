@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert, Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { LineIcon } from '@/components/icons/LineIcon';
@@ -18,7 +19,12 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { toAppTz } from '@/lib/datetime';
 import { queryKeys } from '@/services/query-keys';
 import { fetchBookingRequest } from '../api';
-import type { BookingRequestDecisionTarget, BookingRequestItem } from '../types';
+import type {
+  ApproveBookingRequestInput,
+  BookingRequestDecisionTarget,
+  BookingRequestItem,
+} from '../types';
+import { ApprovalDeliveryFeeField, deliveryFeeBody } from './ApprovalDeliveryFeeField';
 import { ApprovalWindowNotes } from './ApprovalPreviewSummary';
 import { RequestPaymentFacts } from './BookingRequestCard';
 import { RespondDeadline } from './RespondDeadline';
@@ -31,7 +37,8 @@ interface Props {
   /** Lỗi lần duyệt vừa rồi (vd trùng lịch 409) — hộp thoại ở lại để đọc và quyết định tiếp. */
   error: string | null;
   onCancel: () => void;
-  onConfirm: () => void;
+  /** `body` mang phí giao xe chủ xe vừa nhập (nếu có) — xem `ApprovalDeliveryFeeField`. */
+  onConfirm: (body: ApproveBookingRequestInput) => void;
 }
 
 /**
@@ -59,6 +66,7 @@ function ApproveForm({
   const domainLabel = useDomainLabel();
   const { has } = usePermissions();
   const branchCrumb = useBranchCrumb();
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
 
   /*
    * Đọc LẠI yêu cầu mỗi lần mở: hai cửa sổ của khách được server ước theo "duyệt NGAY" lúc trả dòng
@@ -121,7 +129,8 @@ function ApproveForm({
               icon={<LineIcon name="tick" className={styles.buttonIcon} />}
               loading={submitting}
               onClick={() => {
-                if (!submitting) onConfirm();
+                if (submitting) return;
+                onConfirm(current.deliveryRequested ? deliveryFeeBody(deliveryFee) : {});
               }}
             >
               {t('approve.confirm')}
@@ -217,6 +226,17 @@ function ApproveForm({
               </section>
             ) : null}
 
+            {current.deliveryRequested ? (
+              <section className={styles.card}>
+                <ApprovalDeliveryFeeField
+                  id={`approve-${current.id}-delivery-fee`}
+                  value={deliveryFee}
+                  onChange={setDeliveryFee}
+                  disabled={submitting}
+                />
+              </section>
+            ) : null}
+
             {approvalPreview ? (
               <section className={styles.card} aria-labelledby={`approve-${current.id}-profit`}>
                 <div className={styles.cardHead}>
@@ -243,10 +263,6 @@ function ApproveForm({
         ) : null}
 
         <VehicleStillOutAlert stillOut={current.vehicleStillOut ?? null} />
-
-        {current.deliveryRequested ? (
-          <Alert type="info" showIcon title={t('approve.deliveryNote')} />
-        ) : null}
 
         {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}
       </div>

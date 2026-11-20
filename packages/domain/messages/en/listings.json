@@ -35,7 +35,9 @@
       "semi_automatic": "Semi-auto",
       "manual_clutch": "Manual clutch",
       "other": "Other"
-    }
+    },
+    "withDriverIncluded": "Driver included",
+    "withDriverExcluded": "Driver not included"
   },
   "detail": {
     "specs": {
@@ -286,9 +288,12 @@
       "host": "Host"
     },
     "withDriverPrice": {
-      "title": "With-driver price",
+      "title": "All-inclusive price with driver",
       "included": "Includes the driver, fuel, the driver's overnight costs and service at your destination.",
-      "excluded": "Excludes road tolls - paid directly during the trip."
+      "excluded": "Excludes road tolls - paid directly during the trip.",
+      "pendingTitle": "Vehicle-only price - driver not included",
+      "pendingPrice": "The owner hasn't listed an all-inclusive with-driver price yet, so the price above is for the vehicle only and does not include a driver.",
+      "pendingNegotiate": "Agree the driver's fee and related costs (fuel, overnight stays…) directly with the owner - message them before booking to get an all-inclusive quote."
     }
   },
   "reviews": {

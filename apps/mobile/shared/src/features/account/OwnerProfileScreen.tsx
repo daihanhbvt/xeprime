@@ -28,8 +28,6 @@ import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { ManageHeader } from '@/features/shell/ManageHeader';
-import { InlineAction } from '@/components/ui/InlineAction';
-import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import type { MyShop } from '@/features/shop/api';
 import { ShopProfileChecklist } from '@/features/shop/components/ShopProfileChecklist';
 import { ShopLegalCard, ShopLegalSheet } from '@/features/shop/components/ShopInfoCards';
@@ -42,7 +40,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { metaColor } from '@/lib/status-meta';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { ROUTES, SHOP_SECTION, type ShopSection } from '@/navigation/routes';
+import { SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { VatInvoiceSection } from '@/features/shop/components/VatInvoiceSection';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
@@ -75,6 +73,7 @@ import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
  */
 export function OwnerProfileScreen({ section }: { section?: ShopSection }) {
   const t = useTranslations('Account.ownerHub');
+  const tNav = useTranslations('Navigation');
   const permissions = usePermissions();
   const profile = useMyProfile();
   // Màn này chỉ dựng khi có `tenant.view` (xem route `/manage/shop`).
@@ -101,7 +100,7 @@ export function OwnerProfileScreen({ section }: { section?: ShopSection }) {
   const failed = profile.isError || shop.isError;
   return (
     <>
-      <ManageHeader />
+      <ManageHeader title={tNav('account.ownerProfile')} />
       <Screen edges={['left', 'right', 'bottom']} scroll={!failed}>
         {failed ? (
           <ScreenError
@@ -144,7 +143,6 @@ function OwnerProfileSections({
   const errorMessage = useErrorMessage();
   const permissions = usePermissions();
   const updateShop = useUpdateShopProfile();
-  const navigateOnce = useNavigateOnce();
 
   /*
    * Hai section đi theo đúng quyền mà API của chúng gác — thiếu quyền thì vắng khỏi trang:
@@ -264,7 +262,7 @@ function OwnerProfileSections({
 
   return (
     <>
-      <ManageHeader />
+      <ManageHeader title={tNav('account.ownerProfile')} />
       <Screen
         edges={['left', 'right', 'bottom']}
         scrollRef={scrollRef}
@@ -379,14 +377,7 @@ function OwnerProfileSections({
             </YStack>
           ) : null}
 
-          {/*
-            Đăng nhập · mật khẩu · xoá tài khoản rời trang này (ADR 0085 điều 2) — dòng dẫn sang
-            "Tài khoản & bảo mật", đúng web `ShopWorkspace` (`onOpenSecurity`).
-          */}
-          <InlineAction
-            label={tNav('manage.security')}
-            onPress={() => navigateOnce(ROUTES.manage.account())}
-          />
+          {/* "Bảo mật tài khoản" đã thành một mục ở màn Tài khoản của tôi (người dùng chốt 19/11/2026). */}
         </YStack>
       </Screen>
 

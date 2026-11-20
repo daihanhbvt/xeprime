@@ -4,7 +4,7 @@ import { InfoCircleOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Form, Switch, Tooltip } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState, type ReactNode } from 'react';
-import { useForm, type Control } from 'react-hook-form';
+import { useForm, useWatch, type Control } from 'react-hook-form';
 import {
   LONG_TERM_PACKAGE_MONTHS,
   MIN_RENTAL_MINUTES_RANGE,
@@ -54,6 +54,7 @@ import { useServiceToggle } from '@/features/vehicle-manage/hooks/use-service-to
 import type { VehicleServiceSetting } from '@/features/vehicle-manage/types';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
 
@@ -163,8 +164,6 @@ function ServicesBody({
   const services = vehicle.serviceTypes ?? [];
   const service = serviceOfTab(tab) ?? SERVICE_TYPE.SELF_DRIVE;
   const serviceOn = services.includes(service);
-  /** Công tắc hiện bật cả lúc hộp nhập giá có tài xế đang mở - form giá chỉ theo `serviceOn`. */
-  const switchOn = serviceOn || toggle.showsOn(service);
   /*
    * Tab nào có mặt: ngoài phiên — cả ba (dịch vụ tắt vẫn bật lên được ngay tại đây). Trong phiên
    * hỗ trợ — chỉ dịch vụ có thiết lập vận hành mà phiên được sửa (dài hạn không có).
@@ -237,14 +236,14 @@ function ServicesBody({
                   <Tooltip title={toggle.blockedReason(service, !serviceOn) ?? undefined}>
                     <Switch
                       aria-label={t(`toggle.${service}.title`)}
-                      checked={switchOn}
+                      checked={serviceOn}
                       loading={toggle.pending}
                       disabled={Boolean(toggle.blockedReason(service, !serviceOn))}
                       onChange={(next) => toggle.toggle(service, next)}
                     />
                   </Tooltip>
                 ) : (
-                  <span className={styles.toggleHint}>{switchOn ? t('on') : t('off')}</span>
+                  <span className={styles.toggleHint}>{serviceOn ? t('on') : t('off')}</span>
                 )
               }
             />
@@ -314,13 +313,7 @@ function ServicesBody({
               <>
                 {control ? (
                   <EditCard title={t('price.title')}>
-                    {!isManage ? (
-                      <Alert
-                        type="warning"
-                        showIcon
-                        title={tManage('pricing.withDriverEstimateHint')}
-                      />
-                    ) : null}
+                    <WithDriverPriceReminder control={control} />
                     <CatalogRentHintFor
                       modelId={vehicle.vehicleCatalogModelId}
                       variantId={vehicle.vehicleCatalogVariantId}
@@ -462,6 +455,47 @@ const PRICE_COPY = {
 } as const;
 
 /** Ô giá có đơn vị + icon giải thích — một khuôn cho bảy ô giá của ba dịch vụ. */
+/**
+ * Nhắc chủ xe khách đang thấy GIÁ NÀO ở dịch vụ có tài xế (20/11/2026 — giá có tài xế không bắt
+ * buộc, chỉ khuyến khích nhập). Đọc giá trị ĐANG GÕ nên câu đổi ngay khi chủ xe nhập giá:
+ *  - chưa có giá nội thành ⇒ khách thấy giá thuê xe (tự lái) kèm "chưa gồm tài xế";
+ *  - có giá nội thành, thiếu lộ trình ⇒ lộ trình đó tính theo mức gần nhất;
+ *  - đủ ba giá ⇒ khách thấy giá trọn gói đã gồm tài xế.
+ */
+function WithDriverPriceReminder({ control }: { control: Control<VehiclePricingFormValues> }) {
+  const t = useTranslations('Vehicles.pricing.withDriver.reminder');
+  const fmt = useAppFormat();
+  const [daily, interCity, oneWay, weekday] = useWatch({
+    control,
+    name: [
+      'withDriverDailyPrice',
+      'withDriverInterCityPrice',
+      'withDriverOneWayPrice',
+      'weekdayPrice',
+    ],
+  });
+  const has = (value: number | null | undefined) => value != null && value > 0;
+
+  if (!has(daily)) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        title={t('missingTitle')}
+        description={
+          has(weekday)
+            ? t('missingBody', { price: fmt.money(String(weekday)) })
+            : t('missingNoPriceBody')
+        }
+      />
+    );
+  }
+  if (!has(interCity) || !has(oneWay)) {
+    return <Alert type="info" showIcon title={t('partial')} />;
+  }
+  return <Alert type="success" showIcon title={t('complete')} />;
+}
+
 function PriceField({
   control,
   name,

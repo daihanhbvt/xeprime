@@ -260,7 +260,8 @@
         "modeOptional": "Renters choose whether to buy it when booking. Cars with incomplete insurance details still take bookings, without insurance.",
         "modeRequired": "Every self-drive trip includes it. Cars with incomplete insurance details stop taking self-drive bookings until they are completed.",
         "impactTitle": "{count, plural, one {# car} other {# cars}} with incomplete insurance details will stop taking self-drive bookings",
-        "impactNamesMore": "{names} and {count, plural, one {# other car} other {# other cars}}"
+        "impactNamesMore": "{names} and {count, plural, one {# other car} other {# other cars}}",
+        "vehicleBlockedTitle": "This car stays closed to self-drive bookings until its insurance details are complete:"
       }
     }
   },

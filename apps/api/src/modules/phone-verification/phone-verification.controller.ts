@@ -28,6 +28,19 @@ import {
 import { PhoneVerificationService } from './phone-verification.service';
 
 /**
+ * Mục đích mà mã chứng minh số cho một tài khoản KHÁC tài khoản của phiên đang có — `verify-otp`
+ * KHÔNG gắn số vào tài khoản của phiên:
+ *  - `password_reset`: số của tài khoản ĐANG ĐẶT LẠI (hộp quên mật khẩu mở được cả khi có phiên).
+ *  - `register`: số của tài khoản SẮP TẠO. Form đăng ký đối tác hiện cả khi trình duyệt còn cookie
+ *    phiên mà client tưởng đã hết (cache `/auth/me` cũ); gắn vào phiên thì số bị đổi âm thầm trên
+ *    tài khoản cũ, và lượt `POST /auth/register` ngay sau đó dừng ở `PHONE_TAKEN`.
+ */
+const NOT_FOR_SESSION_ACCOUNT: ReadonlySet<PhoneVerificationPurpose> = new Set([
+  PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET,
+  PHONE_VERIFICATION_PURPOSE.REGISTER,
+]);
+
+/**
  * Xác thực SĐT bằng OTP (Phase 4) — công khai. Provider mock (dev, log mã) hoặc eSMS (thật),
  * chọn qua OTP_MODE. `@Throttle` siết riêng để hãm brute-force mã 6 số (ngoài rate-limit trong
  * service tính theo SĐT). Best-effort gắn userId để stamp `phone_verified_at` khi đã đăng nhập.
@@ -108,9 +121,7 @@ export class PhoneVerificationController {
       purpose,
       dto.code,
       realm,
-      // Mã quên mật khẩu chứng minh số của tài khoản ĐANG ĐẶT LẠI, không phải của người đang đăng
-      // nhập (hộp quên mật khẩu mở được cả khi có phiên) — không gắn số đó vào tài khoản của phiên.
-      purpose === PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET ? null : (current?.userId ?? null),
+      NOT_FOR_SESSION_ACCOUNT.has(purpose) ? null : (current?.userId ?? null),
     );
     return { verified: true };
   }

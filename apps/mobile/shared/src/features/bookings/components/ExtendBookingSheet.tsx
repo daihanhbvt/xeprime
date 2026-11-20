@@ -208,10 +208,10 @@ function ChooseStep({
       ) : null}
 
       <XStack gap={space.sm}>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button label={t('close')} variant="neutral" block onPress={onClose} />
         </YStack>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('submit')}
             icon="arrow-forward"
@@ -312,7 +312,7 @@ function PaymentStep({
 
       <XStack gap={space.sm}>
         {awaiting ? (
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={t('cancelExtension')}
               variant="dangerOutline"
@@ -322,7 +322,7 @@ function PaymentStep({
             />
           </YStack>
         ) : null}
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button label={t('done')} block onPress={onClose} />
         </YStack>
       </XStack>

@@ -290,7 +290,7 @@ function StaffAccountForm({
             onPress={onDone}
           />
         </YStack>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('staff.submit')}
             icon="person-add-outline"

@@ -27,7 +27,7 @@ export const PUBLISH_REQUIREMENT = {
   SELF_DRIVE_PRICE: 'selfDrivePrice',
   /** Giá tháng — chỉ khi xe đăng dịch vụ thuê dài hạn (ADR 0011: giá gói, không nhân 30 ngày). */
   LONG_TERM_PRICE: 'longTermPrice',
-  /** Giá/ngày có tài xế — chỉ khi xe đăng dịch vụ có tài xế. */
+  /** Có giá để báo cho chuyến có tài xế (giá có tài xế, hoặc giá thuê ngày) — chỉ khi xe đăng có tài xế. */
   WITH_DRIVER_PRICE: 'withDriverPrice',
   /*
    * `MAIN_IMAGE: 'mainImage'` ĐÃ BỊ BỎ (07/10/2026) — ảnh bìa không còn là một tấm ảnh RIÊNG để
@@ -181,9 +181,13 @@ export const PUBLISH_REQUIREMENTS: readonly {
     present: (v) => hasValue(v.monthlyPrice),
   },
   {
+    /*
+     * Có tài xế (20/11/2026): giá có tài xế khuyến khích chứ không bắt buộc — chưa có thì báo giá
+     * dùng giá thuê ngày, ghi "chưa gồm tài xế". Chỉ thiếu cả HAI mới không có gì để báo giá.
+     */
     key: PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE,
     applies: (v) => serves(v, SERVICE_TYPE.WITH_DRIVER),
-    present: (v) => hasValue(v.withDriverDailyPrice),
+    present: (v) => hasValue(v.withDriverDailyPrice) || hasValue(v.weekdayPrice),
   },
   {
     key: PUBLISH_REQUIREMENT.PHOTOS,

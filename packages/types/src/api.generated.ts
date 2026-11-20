@@ -14387,6 +14387,11 @@ export interface components {
             scheduledPickupAt?: string;
             /** @enum {number} */
             longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
+            /**
+             * @description Phí giao xe tận nơi VND (chuỗi - ADR 0007), chỉ áp khi khách yêu cầu giao tận nơi. Bỏ trống/`0` = miễn phí.
+             * @example 120000
+             */
+            deliveryFee?: string;
         };
         ApproveVehicleDataDto: {
             note?: string;
@@ -23953,8 +23958,8 @@ export interface components {
             category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
             /** @description VND, không âm (chuỗi - ADR 0007) */
             amount: string;
-            /** @description Lý do - bắt buộc, đây là khoản trừ vào tiền của khách */
-            reason: string;
+            /** @description Lý do - không bắt buộc; bỏ trống lưu chuỗi rỗng */
+            reason?: string;
         };
         SaveVehicleDataDto: {
             /** @description Dòng xe đã có. Gửi `modelId` HOẶC (`brandKey` + `newModelLabel`) */
@@ -35293,7 +35298,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -35443,7 +35448,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44693,7 +44698,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {

@@ -202,10 +202,10 @@ export function MomentPickerSheet({
       title={title}
       footer={
         <XStack gap={space.sm}>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button label={t('now')} icon="time-outline" variant="secondary" onPress={jumpToNow} />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={t('done')}
               icon="checkmark-outline"

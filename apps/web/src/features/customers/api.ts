@@ -8,6 +8,7 @@ import {
   type Paged,
   type QueryParams,
 } from '@/services/api-client';
+import { compressImageForUpload } from '@/lib/image-compression';
 import { uploadToR2, validateDocumentFile } from '@/services/upload';
 import type {
   CreateCustomerNoteInput,
@@ -239,7 +240,9 @@ export async function uploadCustomerDocument(
   input: UploadCustomerDocumentInput,
   onProgress?: (percent: number) => void,
 ): Promise<CustomerDocument> {
-  const invalid = validateDocumentFile(input.file);
+  // Ảnh giấy tờ nén TRƯỚC presign (presign ký theo dung lượng); PDF đi qua nguyên trạng.
+  const file = await compressImageForUpload(input.file, 'detail');
+  const invalid = validateDocumentFile(file);
   // Hàm thuần: ném LÝ DO có mã, nơi gọi (component) mới dịch — xem `useUploadRejectionMessage`.
   if (invalid) {
     throw new ApiClientError({
@@ -258,10 +261,10 @@ export async function uploadCustomerDocument(
     expiresAt: input.expiresAt ?? null,
     holderName: input.holderName ?? null,
     documentNumber: input.documentNumber ?? null,
-    fileName: input.file.name,
-    contentType: input.file.type as PresignCustomerDocumentInput['contentType'],
-    fileSize: input.file.size,
+    fileName: file.name,
+    contentType: file.type as PresignCustomerDocumentInput['contentType'],
+    fileSize: file.size,
   });
-  await uploadToR2(ticket.uploadUrl, input.file, onProgress);
+  await uploadToR2(ticket.uploadUrl, file, onProgress);
   return completeCustomerDocument(id, ticket.documentId);
 }

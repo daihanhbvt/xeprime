@@ -234,7 +234,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
             ) : null}
             {/* Huỷ + Lưu giá chung một hàng (người dùng 16/11/2026). */}
             <XStack gap={space.sm}>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={tCommon('cancel')}
                   icon="close-outline"
@@ -243,7 +243,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
                   disabled={save.isPending}
                 />
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={t('dailyPrice.submit')}
                   icon="save-outline"

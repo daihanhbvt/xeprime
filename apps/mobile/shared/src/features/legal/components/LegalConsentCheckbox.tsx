@@ -3,7 +3,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CheckMark } from '@/components/ui/CheckMark';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, sizing, space } from '@/theme/tokens';
+import { fontSize, fontWeight, sizing, space, typeScale } from '@/theme/tokens';
 import { useLegalLinkChunks } from '../use-legal-link-chunks';
 
 /**
@@ -23,13 +23,20 @@ import { useLegalLinkChunks } from '../use-legal-link-chunks';
 export function LegalConsentCheckbox({
   checked,
   onToggle,
+  size = 'sm',
 }: {
   checked: boolean;
   onToggle: () => void;
+  /**
+   * `sm` (mặc định) - chữ 12, ô 20, liên kết vàng. `md` - ô đồng ý của form đăng ký đối tác app
+   * Partner (Figma `24464:25550`): ô 16, chữ 14/20 đậm vừa, liên kết gạch chân cùng màu chữ.
+   */
+  size?: 'sm' | 'md';
 }) {
   const colors = useColors();
   const t = useTranslations('Legal');
-  const chunks = useLegalLinkChunks();
+  const md = size === 'md';
+  const chunks = useLegalLinkChunks(md ? 'underline' : 'accent');
 
   return (
     <Pressable
@@ -41,9 +48,14 @@ export function LegalConsentCheckbox({
       <XStack ai="flex-start" gap={space.sm} minHeight={sizing.touchTarget} py={space.xs}>
         {/* `pt` nhỏ để ô thẳng hàng với DÒNG ĐẦU của câu, không phải với giữa cả khối. */}
         <YStack pt={2}>
-          <CheckMark checked={checked} />
+          <CheckMark checked={checked} size={md ? 'sm' : 'md'} />
         </YStack>
-        <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
+        <Text
+          f={1}
+          col={colors.textMuted}
+          fos={md ? typeScale.body.fontSize : fontSize.bodySm}
+          {...(md ? { lh: typeScale.body.lineHeight, fow: fontWeight.medium } : {})}
+        >
           {t.rich('consent.authCheck', chunks)}
         </Text>
       </XStack>

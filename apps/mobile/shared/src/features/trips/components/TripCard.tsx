@@ -289,7 +289,7 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
               />
             ) : (
               <XStack gap={space.sm}>
-                <YStack f={1}>
+                <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                   <Button
                     label={t('card.reject')}
                     variant="secondary"
@@ -300,7 +300,7 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                     onPress={() => decisions.onReject(trip)}
                   />
                 </YStack>
-                <YStack f={1}>
+                <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                   <Button
                     label={t('card.approve')}
                     size="sm"

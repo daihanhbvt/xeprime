@@ -229,7 +229,7 @@ function ProfileEditSheet({
       dismissable={!saving}
       footer={
         <XStack gap={space.sm}>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tCommon('cancel')}
               variant="secondary"
@@ -237,7 +237,7 @@ function ProfileEditSheet({
               onPress={close}
             />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tCommon('confirm')}
               variant="gradient"

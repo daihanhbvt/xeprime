@@ -23,6 +23,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
 import { usePermissions } from '@/hooks/use-permissions';
+import { compressImageForUpload } from '@/lib/image-compression';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadToR2 } from '@/services/upload';
 import { completeSourceContract, fetchSourceContractDownload, presignSourceContract } from '../api';
@@ -201,8 +202,10 @@ function VehicleSourceForm({
     file: File,
     onProgress: (percent: number) => void,
   ): Promise<UploadedFileItem> {
-    const ticket = await presignSourceContract(vehicle.id, file);
-    await uploadToR2(ticket.uploadUrl, file, onProgress);
+    // Ảnh hợp đồng chụp nén TRƯỚC presign (presign ký theo dung lượng); PDF đi qua nguyên trạng.
+    const upload = await compressImageForUpload(file, 'detail');
+    const ticket = await presignSourceContract(vehicle.id, upload);
+    await uploadToR2(ticket.uploadUrl, upload, onProgress);
     const completed = await completeSourceContract(vehicle.id, ticket.fileId);
     return {
       id: completed.id ?? ticket.fileId,

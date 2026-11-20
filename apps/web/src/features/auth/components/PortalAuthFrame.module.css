@@ -193,4 +193,53 @@
   .column.column > :last-child {
     padding: 64px 16px calc(24px + env(safe-area-inset-bottom));
   }
+
+  /*
+   * Đăng nhập khổ điện thoại — Figma Partner-XePrime "Login" (`24464:24574`, khung 390), cùng bản vẽ
+   * với app XePrime Partner: dải ảnh đường hầm 390×179 + logo "xe prime PARTNER" (27, 22), tấm trắng
+   * bo trên đè 19 lên đáy dải ảnh, linh vật + xe 239×191 đứng trên mép tấm (lấn 16 vào trong).
+   * Chỉ trang KHÔNG có link đầu cột (đăng nhập, đăng ký theo lời mời) - quên mật khẩu có bản vẽ riêng.
+   * Mọi số đo = số Figma × 100vw / 390 (khổ này cột form rộng hết màn).
+   */
+  .content:not(:has(.topLink)) {
+    flex-direction: column;
+    justify-content: flex-start;
+    background: var(--xp-color-bg-container);
+  }
+
+  .content:not(:has(.topLink))::before {
+    display: block;
+    width: 100%;
+    flex: none;
+    aspect-ratio: 390 / 179;
+    background:
+      url('/auth/partner-login-mobile-logo.webp') calc(100vw * 27 / 390) calc(100vw * 22 / 390) /
+        calc(100vw * 145.3 / 390) auto no-repeat,
+      url('/auth/partner-login-mobile-banner.webp') center / cover no-repeat;
+    content: '';
+  }
+
+  .content:not(:has(.topLink))::after {
+    position: absolute;
+    top: calc(100vw * 4 / 390);
+    left: calc(100vw * 160 / 390);
+    z-index: 1;
+    width: calc(100vw * 239 / 390);
+    aspect-ratio: 239 / 191;
+    background: url('/auth/partner-login-mobile-mascot.webp') center / contain no-repeat;
+    content: '';
+    pointer-events: none;
+  }
+
+  .content:not(:has(.topLink)) .column {
+    position: relative;
+    margin-top: calc(100vw * -19 / 390);
+    border-radius: 20px 20px 0 0;
+    background: var(--xp-color-bg-container);
+  }
+
+  /* Tiêu đề bắt đầu 16 dưới mép tấm (19 phần lượn + 16). */
+  .content:not(:has(.topLink)) .column.column > :last-child {
+    padding-top: calc(100vw * 35 / 390);
+  }
 }

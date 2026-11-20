@@ -226,7 +226,7 @@ function CustomerForm({
         <YStack flexShrink={0}>
           <Button label={tCommon('close')} variant="ghost" disabled={saving} onPress={onDone} />
         </YStack>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={customer ? t('submitEdit') : t('submitAdd')}
             icon="checkmark-outline"

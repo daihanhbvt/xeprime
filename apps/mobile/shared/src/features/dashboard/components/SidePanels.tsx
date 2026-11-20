@@ -5,7 +5,7 @@ import type { FleetSummary } from '@/features/vehicles/api';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
-import { ImageBackground, Linking, Pressable, StyleSheet } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -49,7 +49,6 @@ import { useWalletStatement, useWalletSummary } from '@/features/wallet/hooks/us
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { resolvePartnerPlanUrl } from '@/lib/partner-web-url';
 import { elevation } from '@/theme/elevation';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import {
@@ -200,7 +199,6 @@ function PlanSection({ href }: { href: Href }) {
   const t = useTranslations('Dashboard.plan');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
-  const { has } = usePermissions();
   const { data: user } = useCurrentUser();
   const { data, isPending, isError } = useMySubscription();
   const onOpen = useCallback(() => navigateOnce(href), [navigateOnce, href]);
@@ -218,7 +216,6 @@ function PlanSection({ href }: { href: Href }) {
   const used = quota?.totalUsed ?? 0;
   const atCapacity = limit !== null && used >= limit;
   const graceEndsAt = user?.tenant?.graceEndsAt;
-  const renewUrl = has(PERMISSION.SUBSCRIPTION_PURCHASE) ? resolvePartnerPlanUrl() : null;
   const sub =
     inGrace && graceEndsAt
       ? t('grace', { date: fmt.date(graceEndsAt) })
@@ -311,11 +308,7 @@ function PlanSection({ href }: { href: Href }) {
         ) : null}
         {atCapacity ? <Note text={t('atCapacity')} warn /> : null}
       </YStack>
-      {expiring && renewUrl ? (
-        <XStack jc="flex-end">
-          <Button label={t('renew')} onPress={() => void Linking.openURL(renewUrl)} />
-        </XStack>
-      ) : null}
+      {/* KHÔNG có nút "Gia hạn" mở web: app không dẫn ra ngoài để mua gói (người dùng chốt 19/11/2026). */}
     </YStack>
   );
 }

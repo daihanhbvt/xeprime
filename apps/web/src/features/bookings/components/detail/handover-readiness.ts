@@ -36,8 +36,8 @@ export function depositOutstanding(
  * Trạng thái từng việc chuẩn bị bàn giao — MỘT nguồn cho cả khối checklist lẫn bước cảnh báo
  * "còn thiếu" khi bấm giao xe, để hai nơi không bao giờ đếm khác nhau.
  *
- * Dòng tiền chỉ có khi gian hàng ghi sổ thu (cùng cổng nút "Thu tiền"); hợp đồng chỉ khi có
- * năng lực hợp đồng; tài xế chỉ ở đơn có tài.
+ * Dòng tiền chỉ có khi gian hàng ghi sổ thu (cùng cổng nút "Thu tiền"); hợp đồng khi người dùng
+ * có quyền lập hợp đồng — cả chủ xe cá nhân lẫn gian hàng (SR-245); tài xế chỉ ở đơn có tài.
  */
 export function prepRowStates(
   prep: BookingHandoverPrep,

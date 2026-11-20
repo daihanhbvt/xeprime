@@ -17,7 +17,7 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { DOCUMENT_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { formatFileSize } from '@/lib/file-size';
-import { validateDocumentFile } from '@/services/upload';
+import { validateDocumentSelection } from '@/services/upload';
 import styles from './FileListField.module.css';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
@@ -142,7 +142,7 @@ export function FileListField<T extends FieldValues>({
       message.warning(t('maxReached', { count: max }));
       return false;
     }
-    const invalid = validateDocumentFile(file);
+    const invalid = validateDocumentSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return false;

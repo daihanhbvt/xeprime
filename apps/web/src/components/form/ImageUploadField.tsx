@@ -8,10 +8,11 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
-import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
+import { uploadImage, validateImageSelection, type UploadPresign } from '@/services/upload';
 import fieldStyles from './field.module.css';
 import styles from './ImageUploadField.module.css';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
+import type { ImageCompressionProfile } from '@/lib/image-compression';
 
 interface ImageUploadFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -25,6 +26,8 @@ interface ImageUploadFieldProps<T extends FieldValues> {
    * null. Async vì có nơi phải decode ảnh để đọc kích thước thật (vd banner ép đúng tỉ lệ).
    */
   validate?: (file: File) => Promise<string | null>;
+  /** Hồ sơ nén trước khi tải (`IMAGE_COMPRESSION_PROFILES`) — mặc định `photo`, banner dùng `banner`. */
+  compression?: ImageCompressionProfile;
   /** Gợi ý dưới ô upload khi không có lỗi (vd cỡ ảnh chuẩn). */
   help?: ReactNode;
   /** Preview full-width và hàng action nằm ngang, phù hợp cho card media. */
@@ -62,6 +65,7 @@ export function ImageUploadField<T extends FieldValues>({
   label,
   presign,
   validate,
+  compression = 'photo',
   help,
   variant = 'default',
   previewAspectRatio,
@@ -88,7 +92,7 @@ export function ImageUploadField<T extends FieldValues>({
     (validate ? validate(file) : Promise.resolve(null))
       .then((extraError) => {
         if (extraError) throw new Error(extraError);
-        return uploadImage(file, presign, setProgress);
+        return uploadImage(file, presign, setProgress, compression);
       })
       .then((publicUrl) => field.onChange(publicUrl))
       .catch((err: unknown) => {
@@ -100,7 +104,7 @@ export function ImageUploadField<T extends FieldValues>({
   }
 
   function handleSelect(file: File): false {
-    const invalid = validateImageFile(file);
+    const invalid = validateImageSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return false;

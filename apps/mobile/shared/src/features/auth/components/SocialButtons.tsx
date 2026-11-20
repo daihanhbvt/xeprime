@@ -154,12 +154,13 @@ export function SocialButtons({
   }
 
   return (
-    <YStack gap={space.md}>
-      <XStack ai="center" gap={space.sm}>
+    <YStack gap={row ? ROW_SECTION_GAP : space.md}>
+      <XStack ai="center" gap={row ? space.md : space.sm}>
         <YStack f={1} h={1} bg={row ? colors.surfaceMuted : colors.border} />
         <Text
-          col={row ? colors.textDisabled : colors.textMuted}
+          col={row ? colors.textPlaceholder : colors.textMuted}
           fos={row ? fontSize.body : fontSize.label}
+          {...(row ? { lh: ROW_DIVIDER_LINE_HEIGHT } : {})}
         >
           {dividerLabel ?? t('social.divider')}
         </Text>
@@ -170,7 +171,7 @@ export function SocialButtons({
         MỖI PROVIDER MỘT HÀNG ĐẦY ĐỦ (chốt 06/11/2026): cùng bề ngang, cùng chiều cao, cùng bo
         góc và cùng câu "Đăng nhập với …". Apple cũng đi qua `ProviderButton` — xem docblock trên.
       */}
-      <XStack gap={row ? space.md : space.sm} flexDirection={row ? 'row' : 'column'}>
+      <XStack gap={row ? space.lg : space.sm} flexDirection={row ? 'row' : 'column'}>
         {PROVIDERS.map((provider) => {
           const label = labelFor(AUTH_PROVIDER_LABEL[provider]);
           return (
@@ -225,9 +226,15 @@ export function SocialButtons({
   );
 }
 
-/** Kiểu `row` (Figma `24382:23393`): nút cao 48, bo 12, icon 22 trong ô 26, nhãn 16 đậm vừa. */
-const ROW_BUTTON_HEIGHT = 48;
-const ROW_ICON_SIZE = 22;
+/**
+ * Kiểu `row` (Figma Partner-XePrime "Login" `24464:24602`): nút cao 44, bo 12, viền
+ * `stroke/gray-low300`, biểu tượng 26, nhãn 14/20 đậm vừa `text/gray/medium`; vạch "hoặc đăng nhập
+ * bằng" chữ 14/22 `text/gray/very-low`, cách hàng nút 24.
+ */
+const ROW_BUTTON_HEIGHT = 44;
+const ROW_ICON_SIZE = 26;
+const ROW_SECTION_GAP = 24;
+const ROW_DIVIDER_LINE_HEIGHT = 22;
 
 const useStyles = makeStyles((colors) => ({
   button: {
@@ -258,7 +265,7 @@ const useStyles = makeStyles((colors) => ({
    */
   blocked: { borderColor: colors.border, opacity: DISABLED_OPACITY },
   rowButton: { flex: 1, height: ROW_BUTTON_HEIGHT, borderRadius: radius.control },
-  rowLabel: { color: colors.textMuted, fontSize: fontSize.bodyLg, fontWeight: '600' },
+  rowLabel: { color: colors.textMuted, fontSize: fontSize.body, fontWeight: '500' },
 }));
 
 /** Một nút provider — Google, Facebook, Apple dùng chung để trông như MỘT bộ. */
@@ -304,7 +311,7 @@ function ProviderButton({
         blocked ? styles.blocked : null,
       ]}
     >
-      <XStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
+      <XStack w={row ? ROW_ICON_SIZE : ICON_BOX} h={row ? ROW_ICON_SIZE : ICON_BOX} ai="center" jc="center">
         {busy ? <ActivityIndicator size="small" color={spinnerColor} /> : icon}
       </XStack>
       <RNText

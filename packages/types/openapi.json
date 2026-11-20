@@ -7733,7 +7733,7 @@
             }
           },
           "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`",
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
             "content": {
               "application/json": {
                 "schema": {
@@ -7888,7 +7888,7 @@
             }
           },
           "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`",
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
             "content": {
               "application/json": {
                 "schema": {
@@ -17174,7 +17174,7 @@
             }
           },
           "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`",
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
             "content": {
               "application/json": {
                 "schema": {
@@ -91518,6 +91518,11 @@
               9,
               12
             ]
+          },
+          "deliveryFee": {
+            "type": "string",
+            "description": "Phí giao xe tận nơi VND (chuỗi - ADR 0007), chỉ áp khi khách yêu cầu giao tận nơi. Bỏ trống/`0` = miễn phí.",
+            "example": "120000"
           }
         }
       },
@@ -121691,13 +121696,12 @@
           },
           "reason": {
             "type": "string",
-            "description": "Lý do - bắt buộc, đây là khoản trừ vào tiền của khách"
+            "description": "Lý do - không bắt buộc; bỏ trống lưu chuỗi rỗng"
           }
         },
         "required": [
           "category",
-          "amount",
-          "reason"
+          "amount"
         ]
       },
       "SaveVehicleDataDto": {

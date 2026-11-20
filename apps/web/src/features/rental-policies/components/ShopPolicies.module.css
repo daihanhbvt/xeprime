@@ -604,3 +604,9 @@
     grid-column: 1 / 3;
   }
 }
+
+/* Những thứ xe còn thiếu để bán kèm bảo hiểm — mỗi mục dẫn tới chỗ bổ sung. */
+.gapList {
+  margin: 0;
+  padding-inline-start: 20px;
+}

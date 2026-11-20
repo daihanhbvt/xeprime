@@ -47,6 +47,14 @@ describe('PlanFeatureList', () => {
     expect(screen.queryByText('Sổ thu chi và báo cáo')).toBeNull();
   });
 
+  it('hợp đồng thuê là bộ cơ bản (SR-245) ⇒ không mời mua gói để mở, kể cả khi cờ hidden', () => {
+    features.states = { contracts: FEATURE_STATE.HIDDEN, drivers: FEATURE_STATE.HIDDEN };
+    renderWithIntl(<PlanFeatureList onUpgrade={vi.fn()} />);
+
+    expect(screen.getByText('Quản lý tài xế')).toBeTruthy();
+    expect(screen.queryByText('Hợp đồng thuê xe')).toBeNull();
+  });
+
   it('read_only nằm ở cột nâng cấp NHƯNG có ghi chú "đang chỉ xem"', () => {
     features.states = { finance: FEATURE_STATE.READ_ONLY, drivers: FEATURE_STATE.HIDDEN };
     renderWithIntl(<PlanFeatureList onUpgrade={vi.fn()} />);

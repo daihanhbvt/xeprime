@@ -260,7 +260,8 @@
         "modeOptional": "Khách tự chọn mua khi đặt xe. Xe chưa đủ dữ liệu bảo hiểm vẫn nhận đặt, không kèm bảo hiểm.",
         "modeRequired": "Mọi chuyến tự lái phải mua kèm. Xe chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái cho tới khi bổ sung.",
         "impactTitle": "{count, plural, other {# xe}} chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái",
-        "impactNamesMore": "{names} và {count, plural, other {# xe}} khác"
+        "impactNamesMore": "{names} và {count, plural, other {# xe}} khác",
+        "vehicleBlockedTitle": "Xe này chưa đủ dữ liệu bảo hiểm nên không nhận đặt tự lái cho tới khi bổ sung:"
       }
     }
   },

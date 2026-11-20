@@ -18,9 +18,13 @@ type Chunk = (chunks: ReactNode) => ReactNode;
  * chúng phải mở văn bản y hệt nhau: hai bản sao là hai cơ hội để một chỗ còn mở trình duyệt
  * ngoài trong khi chỗ kia đã chuyển sang WebView.
  */
-export function useLegalLinkChunks(): Readonly<
-  Record<'terms' | 'privacy' | 'rules' | 'cancellation', Chunk>
-> {
+export function useLegalLinkChunks(
+  /**
+   * `accent` (mặc định) - liên kết vàng đậm, chữ đậm. `underline` - cùng màu và cỡ với câu, gạch
+   * chân (Figma Partner-XePrime: dòng điều khoản màn đăng nhập `24464:24614`, ô đồng ý `24464:25550`).
+   */
+  tone: 'accent' | 'underline' = 'accent',
+): Readonly<Record<'terms' | 'privacy' | 'rules' | 'cancellation', Chunk>> {
   const colors = useColors();
   const openDoc = useOpenLegalDoc();
 
@@ -33,8 +37,9 @@ export function useLegalLinkChunks(): Readonly<
           mảnh xếp so le.
         */
         <Text
-          col={colors.primaryActive}
-          fow={fontWeight.semibold}
+          {...(tone === 'underline'
+            ? { textDecorationLine: 'underline' as const }
+            : { col: colors.primaryActive, fow: fontWeight.semibold })}
           onPress={() => openDoc(doc)}
           accessibilityRole="link"
         >

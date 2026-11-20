@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Alert, Button } from 'antd';
+import { App, Alert, Button, Form } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -170,13 +170,7 @@ export function ContactVerifyModal({
         </Button>
       )}
       {isIdentifierStep ? (
-        <Button
-          size="large"
-          type="primary"
-          htmlType="submit"
-          form={formId}
-          loading={flow.sending}
-        >
+        <Button size="large" type="primary" htmlType="submit" form={formId} loading={flow.sending}>
           {t('sendCode')}
         </Button>
       ) : (
@@ -214,28 +208,38 @@ export function ContactVerifyModal({
       <div className={styles.body}>
         {isIdentifierStep ? (
           <form id={formId} onSubmit={sendCode} noValidate className={styles.step}>
-            <TextField
-              control={control}
-              name="identifier"
-              type={isPhone ? 'tel' : 'email'}
-              label={isPhone ? t('phoneLabel') : t('emailLabel')}
-              placeholder={isPhone ? t('phonePlaceholder') : t('emailPlaceholder')}
-              prefix={<LineIcon name={isPhone ? 'calling' : 'mail'} className={styles.inputIcon} />}
-              autoComplete={isPhone ? 'tel' : 'email'}
-              help={
-                isChange && current
-                  ? t.rich(isPhone ? 'currentPhone' : 'currentEmail', {
-                      value: current,
-                      strong: (chunks) => <strong className={styles.strong}>{chunks}</strong>,
-                    })
-                  : isPhone
-                    ? t('phoneHint')
-                    : t('emailHint')
-              }
-              autoFocus
-              required
-              disabled={flow.sending}
-            />
+            {/*
+              Hộp tự cấp layout dọc cho `Form.Item`, không trông vào nơi gọi: trang tài khoản partner
+              có bọc `<Form layout="vertical">` (context đi xuyên portal) nhưng trang `/account` của
+              khách thì không - thiếu nó, AntD dựng layout NGANG: nhãn căn phải kèm `*` và `:`, cột ô
+              nhập co về 0 nên dòng "Số đang dùng" tràn đè lên khối "được bảo mật".
+            */}
+            <Form component={false} layout="vertical" colon={false} requiredMark={false}>
+              <TextField
+                control={control}
+                name="identifier"
+                type={isPhone ? 'tel' : 'email'}
+                label={isPhone ? t('phoneLabel') : t('emailLabel')}
+                placeholder={isPhone ? t('phonePlaceholder') : t('emailPlaceholder')}
+                prefix={
+                  <LineIcon name={isPhone ? 'calling' : 'mail'} className={styles.inputIcon} />
+                }
+                autoComplete={isPhone ? 'tel' : 'email'}
+                help={
+                  isChange && current
+                    ? t.rich(isPhone ? 'currentPhone' : 'currentEmail', {
+                        value: current,
+                        strong: (chunks) => <strong className={styles.strong}>{chunks}</strong>,
+                      })
+                    : isPhone
+                      ? t('phoneHint')
+                      : t('emailHint')
+                }
+                autoFocus
+                required
+                disabled={flow.sending}
+              />
+            </Form>
 
             {/*
               Nói rõ nền tảng dùng số/email này vào việc gì - câu trả lời cho nỗi ngần ngại giao
