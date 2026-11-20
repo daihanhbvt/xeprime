@@ -25,7 +25,8 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
-import { uploadToR2, validateImageFile } from '@/services/upload';
+import { compressImageForUpload } from '@/lib/image-compression';
+import { uploadToR2, validateImageSelection } from '@/services/upload';
 import {
   attachHandoverPhoto,
   fetchHandoverPhotoUrl,
@@ -134,7 +135,7 @@ export function HandoverPhotoGrid({
   }
 
   async function startUpload(slot: HandoverPhotoSlot, file: File) {
-    const invalid = validateImageFile(file);
+    const invalid = validateImageSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return;
@@ -142,14 +143,17 @@ export function HandoverPhotoGrid({
     setPendingFor(slot, { file, progress: 0, status: 'uploading' });
     try {
       await ensureHandover?.();
-      const ticket = await presignHandoverPhoto(bookingId, type, slot, file);
-      await uploadToR2(ticket.uploadUrl, file, (progress) =>
+      // Nén TRƯỚC presign (presign ký theo dung lượng). Hồ sơ `detail`: ảnh giao nhận là bằng
+      // chứng vết xước, cần giữ chi tiết hơn ảnh hiển thị.
+      const upload = await compressImageForUpload(file, 'detail');
+      const ticket = await presignHandoverPhoto(bookingId, type, slot, upload);
+      await uploadToR2(ticket.uploadUrl, upload, (progress) =>
         setPendingFor(slot, { file, progress, status: 'uploading' }),
       );
       const updated = await attachHandoverPhoto(bookingId, type, ticket.fileId, slot);
       setPreviews((current) => {
         if (current[slot]) URL.revokeObjectURL(current[slot]);
-        return { ...current, [slot]: URL.createObjectURL(file) };
+        return { ...current, [slot]: URL.createObjectURL(upload) };
       });
       setPendingFor(slot, null);
       onChanged(updated);

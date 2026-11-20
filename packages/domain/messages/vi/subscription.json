@@ -233,7 +233,6 @@
     "backHome": "Về trang quản lý",
     "amountLabel": "Số tiền cần thanh toán",
     "paidTitle": "Gói đã được kích hoạt",
-    "enterManage": "Vào trang quản lý",
     "voidTitle": "Hoá đơn này không còn nhận thanh toán",
     "voidBody": "Hoá đơn {code} đã hết hạn hoặc đã được thay bằng hoá đơn mới. Vui lòng chọn gói lại.",
     "pickAgain": "Chọn gói",

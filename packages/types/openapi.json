@@ -91518,6 +91518,11 @@
               9,
               12
             ]
+          },
+          "deliveryFee": {
+            "type": "string",
+            "description": "Phí giao xe tận nơi VND (chuỗi - ADR 0007), chỉ áp khi khách yêu cầu giao tận nơi. Bỏ trống/`0` = miễn phí.",
+            "example": "120000"
           }
         }
       },
@@ -121691,13 +121696,12 @@
           },
           "reason": {
             "type": "string",
-            "description": "Lý do - bắt buộc, đây là khoản trừ vào tiền của khách"
+            "description": "Lý do - không bắt buộc; bỏ trống lưu chuỗi rỗng"
           }
         },
         "required": [
           "category",
-          "amount",
-          "reason"
+          "amount"
         ]
       },
       "SaveVehicleDataDto": {

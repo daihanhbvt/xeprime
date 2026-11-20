@@ -18,6 +18,7 @@ vi.mock('@/hooks/use-media-query', () => ({
 }));
 vi.mock('@/services/upload', () => ({
   validateDocumentFile: () => null,
+  validateDocumentSelection: () => null,
   uploadToR2: vi.fn(),
 }));
 vi.mock('../api', async (importOriginal) => ({

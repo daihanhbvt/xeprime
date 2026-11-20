@@ -1,0 +1,24 @@
+/** Ô phí giao xe tận nơi ở hộp duyệt — nhãn, ô tiền, một dòng giải thích ngắn. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.label {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Lặp lớp để thắng độ ưu tiên của `.ant-input-number` (cùng cách `field.module.css` `.control`). */
+.input.input,
+.input.input :global(.ant-input-number) {
+  width: 100%;
+}
+
+.hint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 20px;
+}

@@ -83,7 +83,6 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
       ? activeTerms.requiredDocuments
       : requiredIdentityDocuments(activeService);
 
-
   const collateralMode = (() => {
     const collateral = listing.collateral;
     if (!collateral) return null;
@@ -171,16 +170,24 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
            * Không còn phụ phí tài xế nào để công bố; khách chỉ trả thêm phí cầu đường.
            */}
           {activeService === SERVICE_TYPE.WITH_DRIVER ? (
+            // Chưa niêm yết giá có tài xế ⇒ giá đang hiện là giá thuê xe, chưa gồm tài xế (20/11/2026).
             <div className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>{t('withDriverPrice.title')}</h3>
-              <div className={styles.ruleItem}>
-                <span className={styles.bullet} />
-                <span>{t('withDriverPrice.included')}</span>
-              </div>
-              <div className={styles.ruleItem}>
-                <span className={styles.bullet} />
-                <span>{t('withDriverPrice.excluded')}</span>
-              </div>
+              <h3 className={styles.subSectionTitle}>
+                {t(
+                  listing.withDriverDailyPrice
+                    ? 'withDriverPrice.title'
+                    : 'withDriverPrice.pendingTitle',
+                )}
+              </h3>
+              {(listing.withDriverDailyPrice
+                ? (['included', 'excluded'] as const)
+                : (['pendingPrice', 'pendingNegotiate'] as const)
+              ).map((key) => (
+                <div key={key} className={styles.ruleItem}>
+                  <span className={styles.bullet} />
+                  <span>{t(`withDriverPrice.${key}`)}</span>
+                </div>
+              ))}
             </div>
           ) : null}
 

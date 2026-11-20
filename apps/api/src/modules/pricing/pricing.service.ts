@@ -1271,14 +1271,14 @@ export class PricingService {
       if (route === ROUTE_TYPE.INTER_CITY) {
         driverRate = interCity ?? basePrice;
         if (!interCity) {
-          driverPriceNote = 'giá liên tỉnh chưa niêm yết - áp giá cơ bản';
+          driverPriceNote = 'chưa có giá liên tỉnh riêng - áp giá nội thành';
         }
       } else if (route === ROUTE_TYPE.INTER_CITY_ONE_WAY) {
         driverRate = oneWay ?? interCity ?? basePrice;
         if (!oneWay) {
           driverPriceNote = interCity
-            ? 'giá 1 chiều chưa niêm yết - áp giá liên tỉnh'
-            : 'giá 1 chiều chưa niêm yết - áp giá cơ bản';
+            ? 'chưa có giá 1 chiều riêng - áp giá liên tỉnh khứ hồi'
+            : 'chưa có giá 1 chiều riêng - áp giá nội thành';
         }
       } else {
         driverRate = basePrice;
@@ -1297,10 +1297,11 @@ export class PricingService {
         driverRouteLabel ? ` · ${driverRouteLabel}` : ''
       }${driverPriceNote ? ` · ${driverPriceNote}` : ''}`;
     } else {
-      // Máy giá ngày là FALLBACK khi xe có tài xế chưa cài giá có tài xế: giá thuê ngày là giá
-      // chốt của chuyến, và dòng tiền thuê ghi rõ CHƯA GỒM tiền tài xế (19/11/2026).
+      // Máy giá ngày là FALLBACK khi xe có tài xế chưa cài giá có tài xế: giá thuê xe (tự lái) là
+      // giá chốt của phần xe, CHƯA GỒM tài xế — chi phí tài xế khách thoả thuận riêng với chủ xe
+      // (20/11/2026, người dùng chốt; giá có tài xế không bắt buộc, chỉ khuyến khích nhập).
       if (serviceType === SERVICE_TYPE.WITH_DRIVER) {
-        driverPriceNote = 'chưa gồm tiền tài xế';
+        driverPriceNote = 'giá thuê xe, chưa gồm tài xế - chi phí tài xế thoả thuận với chủ xe';
       }
       if (!input.weekdayPrice) {
         throw invalid('Xe chưa có giá thuê theo ngày - cấu hình giá trước khi báo giá');

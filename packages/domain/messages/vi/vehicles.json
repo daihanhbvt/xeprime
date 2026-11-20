@@ -313,13 +313,13 @@
       "monthlyHelp": "Ước tính cho khách = số ngày × giá tháng ÷ 30. Cần có trước khi gửi duyệt.",
       "withDriverDaily": "Giá/ngày có tài xế - nội thành",
       "withDriverDailyPlaceholder": "VD: 1.500.000",
-      "withDriverDailyHelp": "Đã gồm tài xế (giá cơ bản). Cần có trước khi gửi duyệt.",
+      "withDriverDailyHelp": "Giá/ngày đã gồm tài xế cho chuyến nội thành. Để trống thì khách thấy giá thuê tự lái, ghi rõ chưa gồm tài xế.",
       "withDriverInterCity": "Giá/ngày có tài xế - liên tỉnh",
       "withDriverInterCityPlaceholder": "VD: 1.800.000",
-      "withDriverInterCityHelp": "Liên tỉnh khứ hồi - bắt buộc khi xe có tài xế",
+      "withDriverInterCityHelp": "Liên tỉnh khứ hồi - để trống thì tính theo giá nội thành",
       "withDriverOneWay": "Giá/ngày có tài xế - 1 chiều",
       "withDriverOneWayPlaceholder": "VD: 2.200.000",
-      "withDriverOneWayHelp": "Liên tỉnh một chiều - bắt buộc khi xe có tài xế",
+      "withDriverOneWayHelp": "Liên tỉnh một chiều - để trống thì tính theo giá liên tỉnh khứ hồi",
       "hourlyHelp": "Bỏ trống nếu không cho thuê theo giờ."
     },
     "marketPrice": {
@@ -1338,16 +1338,23 @@
     "withDriver": {
       "title": "Xe có tài xế",
       "daily": "Nội thành (giá cơ bản)",
-      "dailyHint": "Mức giá bắt buộc để công khai dịch vụ có tài xế.",
+      "dailyHint": "Giá/ngày đã gồm tài xế cho chuyến trong thành phố, cũng là mức cơ sở cho các lộ trình khác. Chưa nhập thì khách thấy giá thuê tự lái kèm ghi chú chưa gồm tài xế.",
       "interCity": "Liên tỉnh - khứ hồi",
-      "interCityHint": "Giá/ngày cho chuyến đi tỉnh khác rồi quay về điểm đón. Bắt buộc khi xe có tài xế.",
+      "interCityHint": "Giá/ngày cho chuyến đi tỉnh khác rồi quay về điểm đón. Để trống thì tính theo giá nội thành.",
       "oneWay": "Liên tỉnh - 1 chiều",
-      "oneWayHint": "Giá/ngày cho chuyến đi tỉnh khác, không quay về. Bắt buộc khi xe có tài xế.",
+      "oneWayHint": "Giá/ngày cho chuyến đi tỉnh khác, không quay về. Để trống thì tính theo giá liên tỉnh khứ hồi (hoặc giá nội thành).",
       "tipLabel": "Giải thích giá xe có tài xế",
       "info": "Các mức dưới đây đã gồm tài xế; giá nội thành là mức cơ sở để hệ thống dự phòng khi thiếu giá khác.",
       "dailyTipLabel": "Giải thích giá nội thành có tài xế",
       "interCityTipLabel": "Giải thích giá liên tỉnh khứ hồi",
-      "oneWayTipLabel": "Giải thích giá liên tỉnh một chiều"
+      "oneWayTipLabel": "Giải thích giá liên tỉnh một chiều",
+      "reminder": {
+        "missingTitle": "Khách chưa thấy giá trọn gói có tài xế",
+        "missingBody": "Lúc này khách thấy giá thuê tự lái {price}/ngày kèm ghi chú \"chưa gồm tài xế\" và phải tự thoả thuận chi phí tài xế với bạn. Nhập giá đã gồm tài xế để khách yên tâm đặt ngay, không phải hỏi lại.",
+        "missingNoPriceBody": "Xe chưa có giá nào để báo cho chuyến có tài xế. Nhập giá đã gồm tài xế để khách thấy giá và đặt được xe.",
+        "partial": "Lộ trình chưa có giá riêng sẽ tính theo mức gần nhất bạn đã nhập (1 chiều → liên tỉnh khứ hồi → nội thành). Nhập đủ ba giá để báo đúng từng lộ trình.",
+        "complete": "Khách thấy giá trọn gói đã gồm tài xế, xăng xe và chi phí qua đêm của tài xế - chỉ trả thêm phí cầu đường."
+      }
     },
     "deposit": {
       "title": "Yêu cầu bảo đảm (thế chấp)",
@@ -2010,7 +2017,8 @@
       "inheritedElsewhere": "Đang theo <policies>chính sách gian hàng</policies>. Muốn sửa riêng cho xe này, tắt công tắc ở đầu mục <switch>Chính sách thuê</switch>.",
       "deliveryTitle": "Giao xe tận nơi",
       "rulesTitle": "Giao xe, cọc & phụ phí",
-      "pricesInvalid": "Mục Dịch vụ & giá còn ô giá chưa hợp lệ (ví dụ chưa có giá ngày thường) - mở mục đó để sửa rồi lưu lại.",
+      "pricesInvalid": "Mục Dịch vụ & giá còn ô giá chưa hợp lệ - mở mục đó để sửa rồi lưu lại.",
+      "pricesInvalidFields": "Mục Dịch vụ & giá còn ô chưa hợp lệ: {fields} - mở mục đó để sửa rồi lưu lại.",
       "bufferTipLabel": "Thời gian chuẩn bị áp cho lịch nào",
       "savedAll": "Đã lưu chính sách thuê"
     },

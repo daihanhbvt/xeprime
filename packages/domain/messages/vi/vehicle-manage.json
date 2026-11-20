@@ -160,7 +160,7 @@
     "selfDriveSubtitle": "Đơn giá thuê mặc định được áp dụng nếu ngày đó không có tuỳ chỉnh khác về giá.",
     "withDriverTitle": "Thiết lập bảng giá dịch vụ có tài xế",
     "withDriverSubtitle": "Đơn giá đã bao gồm lương tài xế, chưa bao gồm các phụ phí xăng dầu và phí cầu đường (nếu có).",
-    "withDriverEstimateHint": "Xe có tài xế cần đủ ba giá: nội thành, liên tỉnh khứ hồi và liên tỉnh 1 chiều.",
+    "withDriverEstimateHint": "Nên nhập đủ ba giá có tài xế (nội thành, liên tỉnh khứ hồi, liên tỉnh 1 chiều). Chưa có giá có tài xế thì khách thấy giá thuê tự lái, ghi rõ chưa gồm tài xế.",
     "loadError": "Không tải được giá & chính sách"
   },
   "autoAccept": {

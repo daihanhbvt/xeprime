@@ -179,7 +179,7 @@ export function SettlementCard({
                       SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory] ?? row.category,
                     )}
                   </span>
-                  <span className={styles.itemReason}>{row.reason}</span>
+                  {row.reason ? <span className={styles.itemReason}>{row.reason}</span> : null}
                 </span>
                 <b className={styles.money}>{fmt.money(row.amount)}</b>
               </li>

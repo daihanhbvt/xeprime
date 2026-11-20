@@ -153,10 +153,7 @@ export function SurchargeDialog({
       setError(t('surcharges.amountRequired'));
       return;
     }
-    if (!reason.trim()) {
-      setError(t('surcharges.reasonRequired'));
-      return;
-    }
+    // Lý do KHÔNG bắt buộc (biên bản họp 19/11/2026) — trống thì danh mục đã nói khoản này là gì.
     add.mutate(
       { category, amount: String(amount), reason: reason.trim() },
       {
@@ -199,7 +196,7 @@ export function SurchargeDialog({
                     <b>{categoryLabel(row.category as SurchargeCategory)}</b>
                     <b className={styles.money}>{fmt.money(row.amount)}</b>
                   </span>
-                  <span className={styles.itemReason}>{row.reason}</span>
+                  {row.reason ? <span className={styles.itemReason}>{row.reason}</span> : null}
                 </span>
                 <Button
                   type="text"

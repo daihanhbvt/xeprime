@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
-import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
+import { uploadImage, validateImageSelection, type UploadPresign } from '@/services/upload';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import fieldStyles from './field.module.css';
 import styles from './ImageGalleryField.module.css';
@@ -115,7 +115,7 @@ export function ImageGalleryField<T extends FieldValues>({
       message.warning(`Tối đa ${max} ảnh`);
       return false;
     }
-    const invalid = validateImageFile(file);
+    const invalid = validateImageSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return false;

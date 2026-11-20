@@ -10,7 +10,7 @@ import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { initialOf } from '@/lib/initials';
 import { getErrorMessage } from '@/services/api-client';
-import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
+import { uploadImage, validateImageSelection, type UploadPresign } from '@/services/upload';
 
 import styles from './AvatarUploadField.module.css';
 
@@ -32,7 +32,7 @@ interface AvatarUploadFieldProps<T extends FieldValues> {
  * cách nói luật đó bằng giao diện; schema của form vẫn là nơi chặn thật (`avatarRequired`).
  *
  * Luồng tải giống hệt `ImageUploadField` (presign → PUT thẳng R2 → field nhận URL công khai), dùng
- * chung `uploadImage`/`validateImageFile` — không có bản thứ hai của luật MIME/dung lượng.
+ * chung `uploadImage`/`validateImageSelection` — không có bản thứ hai của luật MIME/dung lượng.
  */
 export function AvatarUploadField<T extends FieldValues>({
   control,
@@ -52,7 +52,7 @@ export function AvatarUploadField<T extends FieldValues>({
   const url = (field.value as string | null | undefined) || null;
 
   function handleSelect(file: File): false {
-    const invalid = validateImageFile(file);
+    const invalid = validateImageSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return false;

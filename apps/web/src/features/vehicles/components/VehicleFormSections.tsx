@@ -1258,7 +1258,6 @@ export function WithDriverPriceFields({
           control={control}
           name="withDriverDailyPrice"
           label={t('withDriverDaily')}
-          required
           placeholder={t('withDriverDailyPlaceholder')}
           min={0}
           money

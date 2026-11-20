@@ -233,7 +233,6 @@
     "backHome": "Back to management",
     "amountLabel": "Amount due",
     "paidTitle": "Your plan is active",
-    "enterManage": "Go to management",
     "voidTitle": "This invoice no longer accepts payment",
     "voidBody": "Invoice {code} has expired or was replaced by a newer one. Please choose a plan again.",
     "pickAgain": "Choose a plan",

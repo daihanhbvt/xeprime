@@ -63,6 +63,13 @@ const POLICY_FIELDS = new Set([
   'insuranceMode',
 ]);
 
+/** Ô ưu đãi dài hạn — nằm ở tab Dài hạn của mục "Dịch vụ & giá", gọi chung một tên. */
+const LONG_TERM_DISCOUNT_FIELDS = new Set([
+  'discountEnabled',
+  'discountTiers',
+  'legacyDiscountTiers',
+]);
+
 /**
  * Mục "Chính sách thuê" (03/11/2026, gộp "Điều kiện" + "Giao nhận" của design — sổ cái §3.6): mọi thứ
  * áp cho CẢ XE, không theo từng dịch vụ.
@@ -93,8 +100,25 @@ export function PolicyPane({
   scrollTo: ServiceType | null;
 }) {
   const t = useTranslations('Vehicles.editor.policy');
+  const tField = useTranslations('Vehicles.publish.sensitive.fields');
+  const tServices = useTranslations('Vehicles.editor.services');
   const { message } = App.useApp();
   const support = useSupportSession();
+
+  /** Tên các ô lỗi nằm ở mục khác — nói đúng ô nào, không đoán ví dụ. */
+  function pricesInvalidLabels(fields: string[]): string {
+    const labels = fields
+      .filter((field) => !POLICY_FIELDS.has(field))
+      .map((field) =>
+        LONG_TERM_DISCOUNT_FIELDS.has(field)
+          ? tServices('policy.longTermTitle')
+          : tField.has(field as never)
+            ? tField(field as never)
+            : null,
+      )
+      .filter((label): label is string => label != null);
+    return [...new Set(labels)].join(', ');
+  }
   const pricingAllowed = supportAllowsVehicleTab(support, VEHICLE_EDIT_TAB.PRICING);
   const termsAllowed = supportAllowsVehicleTab(support, VEHICLE_EDIT_TAB.CONDITIONS);
 
@@ -105,7 +129,10 @@ export function PolicyPane({
           vehicle={vehicle}
           onInvalid={(fields) => {
             if (fields.some((field) => !POLICY_FIELDS.has(field))) {
-              message.warning(t('pricesInvalid'));
+              const labels = pricesInvalidLabels(fields);
+              message.warning(
+                labels ? t('pricesInvalidFields', { fields: labels }) : t('pricesInvalid'),
+              );
             }
           }}
         >
@@ -165,7 +192,13 @@ function PolicyCards({
               blocks={RULE_BLOCKS}
               disabled={disabled}
             />
-            {insuranceApplies ? <InsuranceModeBlock control={control} disabled={disabled} /> : null}
+            {insuranceApplies ? (
+              <InsuranceModeBlock
+                control={control}
+                disabled={disabled}
+                vehicle={{ vehicleId: vehicle.id, gaps: insurance.data?.gaps ?? [] }}
+              />
+            ) : null}
           </div>
         </PolicyFlatLayout>
       </EditCard>

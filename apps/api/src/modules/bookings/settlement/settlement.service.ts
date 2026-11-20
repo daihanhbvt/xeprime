@@ -130,7 +130,7 @@ export class SettlementService {
             bookingId,
             category: dto.category,
             amount: new Prisma.Decimal(dto.amount),
-            reason: dto.reason.trim(),
+            reason: (dto.reason ?? '').trim(),
             createdBy: userId,
             updatedBy: userId,
           },
@@ -190,7 +190,7 @@ export class SettlementService {
         data: {
           category: dto.category,
           amount: new Prisma.Decimal(dto.amount),
-          reason: dto.reason.trim(),
+          reason: (dto.reason ?? '').trim(),
           updatedBy: userId,
         },
       });

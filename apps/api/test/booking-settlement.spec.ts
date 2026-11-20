@@ -334,6 +334,21 @@ describe('Cọc đã CẤU HÌNH khác cọc đã THU', () => {
  * lại (thêm, sửa số, gỡ đi) và khách không duyệt gì, nên không được bắn thông báo. Hoàn cọc thì
  * ngược lại: tiền rời tay chủ xe, khách phải đi đối chiếu.
  */
+/** Biên bản họp 19/11/2026 — lý do của khoản phát sinh KHÔNG bắt buộc. */
+describe('Phát sinh không kèm lý do', () => {
+  maybe('bỏ trống lý do vẫn ghi được, lưu chuỗi rỗng', async () => {
+    const { bookingId } = await createBookingWithCustomer({ deposit: '1000000' });
+
+    const added = await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.CLEANING,
+      amount: '80000',
+    });
+
+    expect(added.surcharges).toHaveLength(1);
+    expect(added.surcharges[0]!.reason).toBe('');
+  });
+});
+
 describe('Thông báo: phát sinh im lặng, hoàn cọc thì không', () => {
   maybe('thêm / sửa / gỡ phát sinh KHÔNG tạo thông báo nào cho khách', async () => {
     const { bookingId, customerUserId } = await createBookingWithCustomer({ deposit: '1000000' });

@@ -15,8 +15,11 @@
   gap: var(--xp-space-md);
 }
 
-/* Một field duy nhất - khoảng chừa dưới `Form.Item` đẩy khung "được bảo mật" rơi khỏi nhịp. */
-.step :global(.ant-form-item) {
+/*
+ * Một field duy nhất - khoảng chừa dưới `Form.Item` đẩy khung "được bảo mật" rơi khỏi nhịp.
+ * Nhân đôi class: `.item.item` của `field.module.css` cũng (0,2,0), hoà thì thứ tự nạp sheet quyết.
+ */
+.step.step :global(.ant-form-item) {
   margin-bottom: 0;
 }
 
@@ -202,57 +205,48 @@
 /*
  * Khung hộp theo design `24131:71845`: header (tiêu đề + mô tả) và hàng nút đều có vạch kẻ
  * full-width ngăn với thân; mỗi vùng đệm 20. Chỉ áp cho Modal desktop - sheet mobile giữ khung chung.
+ *
+ * Nhân đôi class (bẫy D19, xem `field.module.css`): rule AntD `.ant-modal .ant-modal-header` cũng
+ * (0,2,0) và tiêm `<style>` lúc chạy - SAU sheet CSS Module - nên hoà là AntD thắng, vạch kẻ và
+ * đệm 20 từng không hề được áp.
  */
-.dialog :global(.ant-modal-container) {
+.dialog.dialog :global(.ant-modal-container) {
   padding: 0;
   overflow: hidden;
   border-radius: 20px;
 }
 
-.dialog :global(.ant-modal-header) {
+.dialog.dialog :global(.ant-modal-header) {
   margin: 0;
   padding: 20px 56px 16px 20px;
   border-bottom: 1px solid var(--xp-color-border-secondary);
 }
 
-.dialog :global(.ant-modal-close) {
+.dialog.dialog :global(.ant-modal-close) {
   top: 20px;
   inset-inline-end: 20px;
 }
 
-.dialog :global(.ant-modal-body) {
+.dialog.dialog :global(.ant-modal-body) {
   padding: 20px;
 }
 
-.dialog :global(.ant-modal-footer) {
+.dialog.dialog :global(.ant-modal-footer) {
   margin: 0;
   padding: 20px;
   border-top: 1px solid var(--xp-color-border-secondary);
 }
 
-/* Nhãn nằm TRÊN ô nhập (design), không cùng hàng; bỏ dấu * và dấu hai chấm. */
-.step :global(.ant-form-item-row) {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.step :global(.ant-form-item-label) {
+/*
+ * Nhãn nằm TRÊN ô nhập, không `*` không `:` - lo bởi `<Form layout="vertical" colon={false}
+ * requiredMark={false}>` trong TSX. Ở đây chỉ chỉnh nhịp và màu nhãn (nhân đôi class như trên).
+ */
+.step.step :global(.ant-form-item-label) {
   padding: 0 0 6px;
-  text-align: start;
 }
 
-.step :global(.ant-form-item-label > label) {
+.step.step :global(.ant-form-item-label > label) {
   height: auto;
   color: var(--xp-color-text-secondary);
   font-weight: var(--xp-font-weight-medium);
-}
-
-.step :global(.ant-form-item-label > label::before),
-.step :global(.ant-form-item-label > label::after) {
-  display: none;
-}
-
-.step :global(.ant-form-item-control) {
-  flex: 1 1 auto;
-  max-width: 100%;
 }

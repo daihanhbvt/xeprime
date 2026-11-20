@@ -232,7 +232,7 @@ export function useBookingRequestDecisions(): BookingRequestDecisions {
           setApproveTarget(null);
           setApproveError(null);
         }}
-        onConfirm={() => approveTarget && confirmApprove(approveTarget)}
+        onConfirm={(body) => approveTarget && confirmApprove(approveTarget, body)}
       />
 
       <ApproveLongTermDialog

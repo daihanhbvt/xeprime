@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/services/upload', () => ({
   uploadImage: mocks.uploadImage,
-  validateImageFile: mocks.validateImageFile,
+  validateImageSelection: mocks.validateImageFile,
 }));
 
 afterEach(() => {

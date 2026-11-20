@@ -201,19 +201,14 @@ const vehiclePriceSchema = yup
  * đã ghi rõ, còn hơn xây cơ chế đó chỉ cho một trường.
  */
 /**
- * Một ô giá có tài xế của form xe: rỗng = null, nhưng BẮT BUỘC khi `serviceTypes` (trường anh em)
- * có `with_driver` - thiếu giá lộ trình nào thì báo giá phải đoán (19/11/2026).
+ * Một ô giá có tài xế của form xe: rỗng = null. KHÔNG bắt buộc (20/11/2026, thay luật 19/11) —
+ * chủ xe được khuyến khích nhập; chưa nhập thì báo giá dùng giá thuê ngày, ghi "chưa gồm tài xế".
  */
 const withDriverPriceField = () =>
   vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
-    .default(null)
-    .when('serviceTypes', {
-      is: (services: readonly string[] | undefined) =>
-        !!services?.includes(SERVICE_TYPE.WITH_DRIVER),
-      then: (s) => s.test('required', 'withDriverPriceRequired', (value) => value != null && value > 0),
-    });
+    .default(null);
 
 export const vehicleFormSchema = yup.object({
   code: yup.string().trim().max(80).default(''),
@@ -385,10 +380,7 @@ export const vehicleFormSchema = yup.object({
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /*
-   * Ba giá có tài xế (nội thành · liên tỉnh khứ hồi · liên tỉnh 1 chiều) BẮT BUỘC khi xe đăng
-   * dịch vụ có tài xế (19/11/2026) - cùng luật `WITH_DRIVER_PRICE_REQUIRED` của API.
-   */
+  /** Ba giá có tài xế (nội thành · liên tỉnh khứ hồi · liên tỉnh 1 chiều) — tuỳ chọn. */
   withDriverDailyPrice: withDriverPriceField(),
   withDriverInterCityPrice: withDriverPriceField(),
   withDriverOneWayPrice: withDriverPriceField(),
@@ -1807,14 +1799,6 @@ export type PolicyFormValues = yup.InferType<typeof policyFormSchema>;
  * lại là tuỳ chọn ở đây; điều kiện "đủ giá mới được gửi duyệt public" nằm ở
  * `features/vehicles/publication.ts` (đối xứng backend `missingPublicFields`).
  */
-/** Ô giá có tài xế của form giá theo xe - bắt buộc khi `$serviceTypes` có `with_driver`. */
-const withDriverPolicyPrice = () =>
-  policyMoneyStep().when('$serviceTypes', {
-    is: (services: readonly string[] | undefined) =>
-      !!services?.includes(SERVICE_TYPE.WITH_DRIVER),
-    then: (s) => s.test('required', 'withDriverPriceRequired', (value) => value != null && value > 0),
-  });
-
 export const vehiclePricingFormSchema = policyFormSchema.shape({
   weekdayPrice: policyMoneyStep().when('$serviceTypes', {
     is: (services: readonly string[] | undefined) =>
@@ -1832,19 +1816,25 @@ export const vehiclePricingFormSchema = policyFormSchema.shape({
     .min(0, 'percentNegative')
     .max(100, 'percentMax'),
   monthlyPrice: policyMoneyStep(),
-  withDriverDailyPrice: withDriverPolicyPrice(),
-  withDriverInterCityPrice: withDriverPolicyPrice(),
-  withDriverOneWayPrice: withDriverPolicyPrice(),
+  // Giá có tài xế tuỳ chọn (20/11/2026) — màn sửa xe nhắc chủ xe khách đang thấy giá nào.
+  withDriverDailyPrice: policyMoneyStep(),
+  withDriverInterCityPrice: policyMoneyStep(),
+  withDriverOneWayPrice: policyMoneyStep(),
 });
 
 export type VehiclePricingFormValues = yup.InferType<typeof vehiclePricingFormSchema>;
 
 const requiredWithDriverPrice = () =>
-  policyMoneyStep().test('required', 'withDriverPriceRequired', (value) => value != null && value > 0);
+  policyMoneyStep().test(
+    'required',
+    'withDriverPriceRequired',
+    (value) => value != null && value > 0,
+  );
 
 /**
- * Hộp "Bật xe có tài xế" (19/11/2026): bật dịch vụ và đặt ĐỦ ba giá trong MỘT lần lưu - không
- * còn trạng thái "đã bật mà chưa có giá" (F5 vẫn thấy bật). Mã lỗi ở `Vehicles.pricing.validation`.
+ * Hộp "Bật xe có tài xế" của app mobile (19/11/2026): bật dịch vụ kèm ba giá trong một lần lưu.
+ * Web đã bỏ hộp này (20/11/2026 — giá có tài xế không bắt buộc, nhập ở tab Có tài xế); giữ schema
+ * cho tới khi app mobile đổi theo. Mã lỗi ở `Vehicles.pricing.validation`.
  */
 export const withDriverEnableSchema = yup.object({
   withDriverDailyPrice: requiredWithDriverPrice(),

@@ -11,7 +11,8 @@ import fieldStyles from '@/components/form/field.module.css';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { formatFileSize } from '@/lib/file-size';
 import { getErrorMessage } from '@/services/api-client';
-import { presignReceiptAttachment, uploadToR2, validateDocumentFile } from '@/services/upload';
+import { compressImageForUpload } from '@/lib/image-compression';
+import { presignReceiptAttachment, uploadToR2, validateDocumentSelection } from '@/services/upload';
 import styles from './ReceiptAttachmentsField.module.css';
 
 /** Trần tệp — khớp `ArrayMaxSize(10)` của `CreateReceiptDto`. */
@@ -103,18 +104,21 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
     if (existingId) patchPending(id, item);
     else commitPending([...pendingRef.current, item]);
 
-    presignReceiptAttachment(file)
-      .then(async (ticket) => {
-        await uploadToR2(ticket.uploadUrl, file, (progress) => patchPending(id, { progress }));
-        return ticket.publicUrl;
+    // Ảnh chứng từ nén TRƯỚC presign (presign ký theo dung lượng); PDF đi qua nguyên trạng. Ô chờ
+    // giữ tệp GỐC để "Thử lại" nén lại từ đầu.
+    compressImageForUpload(file, 'detail')
+      .then(async (upload) => {
+        const ticket = await presignReceiptAttachment(upload);
+        await uploadToR2(ticket.uploadUrl, upload, (progress) => patchPending(id, { progress }));
+        return { publicUrl: ticket.publicUrl, upload };
       })
-      .then((publicUrl) => {
+      .then(({ publicUrl, upload }) => {
         const next = [...urlsRef.current, publicUrl];
         urlsRef.current = next;
         field.onChange(next);
         setDocs((current) => [
           ...current,
-          { url: publicUrl, name: file.name, size: file.size, type: file.type },
+          { url: publicUrl, name: upload.name, size: upload.size, type: upload.type },
         ]);
         commitPending(pendingRef.current.filter((candidate) => candidate.id !== id));
       })
@@ -130,7 +134,7 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
       message.warning(t('tooMany', { max: MAX_FILES }));
       return false; // chặn upload mặc định của AntD — mình tự PUT lên R2
     }
-    const invalid = validateDocumentFile(file);
+    const invalid = validateDocumentSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return false;
