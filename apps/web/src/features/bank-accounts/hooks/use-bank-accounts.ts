@@ -2,8 +2,19 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { createBankAccount, fetchBankAccounts } from '../api';
-import type { BankAccount, BankAccountScope, SaveBankAccountInput } from '../types';
+import {
+  cancelChangeRequest,
+  createBankAccount,
+  createChangeRequest,
+  fetchBankAccounts,
+  fetchCurrentChangeRequest,
+} from '../api';
+import type {
+  BankAccount,
+  BankAccountScope,
+  CreateBankAccountChangeRequestInput,
+  SaveBankAccountInput,
+} from '../types';
 
 /**
  * Tài khoản nhận tiền của chủ — mảng 0 hoặc 1 phần tử (mỗi chủ một tài khoản, database bảo đảm).
@@ -30,6 +41,41 @@ export function useCreateBankAccount(scope: BankAccountScope) {
     onSuccess: (account) => {
       queryClient.setQueryData<BankAccount[]>(key, [account]);
       void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/**
+ * Yêu cầu đổi tài khoản đang chờ xác minh — `null` khi không có. Key con dưới `bankAccounts.list`
+ * để mọi lượt làm mới tài khoản cũng làm mới nó (duyệt xong là tài khoản đổi cùng lúc).
+ */
+const changeRequestKey = (scope: BankAccountScope) =>
+  [...queryKeys.bankAccounts.list(scope), 'change-request'] as const;
+
+export function useCurrentChangeRequest(scope: BankAccountScope, enabled = true) {
+  return useQuery({
+    queryKey: changeRequestKey(scope),
+    queryFn: () => fetchCurrentChangeRequest(scope),
+    enabled,
+  });
+}
+
+export function useCreateChangeRequest(scope: BankAccountScope) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateBankAccountChangeRequestInput) => createChangeRequest(scope, body),
+    onSuccess: (request) => {
+      queryClient.setQueryData(changeRequestKey(scope), request);
+    },
+  });
+}
+
+export function useCancelChangeRequest(scope: BankAccountScope) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelChangeRequest(scope, id),
+    onSuccess: () => {
+      queryClient.setQueryData(changeRequestKey(scope), null);
     },
   });
 }

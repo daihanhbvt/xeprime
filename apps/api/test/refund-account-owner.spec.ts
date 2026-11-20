@@ -18,12 +18,10 @@ import { InsuranceCertificateService } from '../src/modules/insurance/insurance-
 import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
-import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
-import { WalletService } from '../src/modules/wallet/wallet.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -33,6 +31,7 @@ import {
   makeNotificationService,
   makePricingService,
   makeSupportService,
+  makeHoldSettlementService,
 } from './helpers/service-factory';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 import { giveTenantPlan } from './helpers/billing-fixture';
@@ -84,7 +83,7 @@ const trips = new CustomerTripsService(
   bookings,
   makeBookingHoldsService(asService),
   new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit),
-  new HoldSettlementService(asService, audit, notifications, new WalletService(asService)),
+  makeHoldSettlementService(asService, audit, notifications),
   bankAccounts,
   notifications,
   audit,
@@ -343,8 +342,17 @@ describe('Tài khoản KHÁCH của một chủ xe khai tài khoản nhận hoà
     ).rejects.toThrow();
   });
 
+  /**
+   * Khai MỚI: khoản hoàn nhận đúng đích vừa khai. Sổ USER chỉ lưu nó khi CHƯA có tài khoản nào — đã
+   * có thì tài khoản đó KHOÁ (biên bản họp 19/11/2026), đổi phải qua yêu cầu có xác minh. Không bao
+   * giờ chạm sổ gian hàng.
+   */
   maybe('khai MỚI lưu vào sổ USER của tài khoản khách, không chạm sổ gian hàng', async () => {
     const { requestId } = await seedPendingRefund(minhCustomerId);
+    const before = await bankAccounts.list({
+      type: WALLET_OWNER_TYPE.USER,
+      userId: minhCustomerId,
+    });
 
     await trips.provideRefundAccount(minhCustomerId, requestId, {
       bankCode: 'ACB',
@@ -356,7 +364,8 @@ describe('Tài khoản KHÁCH của một chủ xe khai tài khoản nhận hoà
       type: WALLET_OWNER_TYPE.USER,
       userId: minhCustomerId,
     });
-    expect(userBook.some((a) => a.bankCode === 'ACB')).toBe(true);
+    if (before.length === 0) expect(userBook.some((a) => a.bankCode === 'ACB')).toBe(true);
+    else expect(userBook.map((a) => a.id)).toEqual(before.map((a) => a.id));
 
     const tenantBook = await bankAccounts.list({
       type: WALLET_OWNER_TYPE.TENANT,
@@ -382,16 +391,23 @@ describe('BẢO TOÀN — khách thuê thuần vẫn dùng sổ USER', () => {
     expect((await refundOf(requestId)).bankAccountNumber).toBe('0909090909');
   });
 
-  maybe('khai MỚI lưu vào sổ USER của họ', async () => {
-    const { requestId } = await seedPendingRefund(renterId);
+  maybe(
+    'khai MỚI: khoản hoàn nhận đích mới; tài khoản đã lưu KHÔNG bị thay (đã khoá)',
+    async () => {
+      const { requestId } = await seedPendingRefund(renterId);
+      const before = await bankAccounts.list({ type: WALLET_OWNER_TYPE.USER, userId: renterId });
 
-    await trips.provideRefundAccount(renterId, requestId, {
-      bankCode: 'BIDV',
-      accountNumber: '31010001234',
-      accountName: 'Tran Thi Lan',
-    });
+      await trips.provideRefundAccount(renterId, requestId, {
+        bankCode: 'BIDV',
+        accountNumber: '31010001234',
+        accountName: 'Tran Thi Lan',
+      });
 
-    const userBook = await bankAccounts.list({ type: WALLET_OWNER_TYPE.USER, userId: renterId });
-    expect(userBook.some((a) => a.bankCode === 'BIDV')).toBe(true);
-  });
+      expect((await refundOf(requestId)).bankAccountNumber).toBe('31010001234');
+      const userBook = await bankAccounts.list({ type: WALLET_OWNER_TYPE.USER, userId: renterId });
+      // Test trước đã lưu tài khoản MB cho người này ⇒ sổ giữ nguyên MB, không âm thầm đổi sang BIDV.
+      expect(before.length).toBeGreaterThan(0);
+      expect(userBook.map((a) => a.id)).toEqual(before.map((a) => a.id));
+    },
+  );
 });

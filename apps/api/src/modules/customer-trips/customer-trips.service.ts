@@ -30,6 +30,7 @@ import {
   CUSTOMER_TRIP_FILTER,
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_STATUS,
+  HOLD_REFUND_REASON,
   hasFreeCancelWindow,
   type CustomerCancelPreviewKind,
   WALLET_OWNER_TYPE,
@@ -584,6 +585,7 @@ export class CustomerTripsService {
           : true,
       deferred: false,
       driverIncident: false,
+      refundDelayHours: 0,
     };
     const result = (
       kind: CustomerCancelPreviewKind,
@@ -623,6 +625,7 @@ export class CustomerTripsService {
           freeCancelUntil: preview.freeCancelUntil?.toISOString() ?? null,
           deferred: preview.deferred,
           driverIncident: driverFault,
+          refundDelayHours: await this.holdSettlement.refundDelayHours(preview.refundReason),
         },
       );
     }
@@ -634,7 +637,14 @@ export class CustomerTripsService {
         ? hold.paidAmount.toFixed(0)
         : '0';
     return Number(paid) > 0
-      ? result(CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND, { paidAmount: paid, refundAmount: paid })
+      ? result(CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND, {
+          paidAmount: paid,
+          refundAmount: paid,
+          // Cùng lý do `cancelForRequestWithinTx` ghi cho khoản hoàn này.
+          refundDelayHours: await this.holdSettlement.refundDelayHours(
+            HOLD_REFUND_REASON.EARLY_CANCEL,
+          ),
+        })
       : result(CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE);
   }
 

@@ -871,11 +871,22 @@ export class PublicListingsService {
   /**
    * Hồ sơ công khai của một gian hàng theo slug - chỉ shop đang `active`. 404 nếu không có/đã
    * khoá. Không lộ dữ liệu nội bộ (id, email, mã số thuế…), chỉ thứ marketplace cần.
+   *
+   * Nhận cả slug CŨ (`tenant_slug_aliases` — link `/shops/<tên>-<mã>` đã chia sẻ trước khi rút gọn):
+   * DTO luôn mang slug HIỆN TẠI, trang web so với slug trên URL và chuyển hẳn (301) sang link mới.
    */
   async getShopBySlug(slug: string): Promise<PublicShopDto> {
     const now = new Date();
+    const alias = await this.prisma.tenantSlugAlias.findUnique({
+      where: { slug },
+      select: { tenantId: true },
+    });
     const t = await this.prisma.tenant.findFirst({
-      where: { slug, status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      where: {
+        ...(alias ? { id: alias.tenantId } : { slug }),
+        status: TENANT_STATUS.ACTIVE,
+        deletedAt: null,
+      },
       select: {
         /*
          * Tên, ảnh và tuyến thu tiền HIỆU LỰC, đọc trên cùng một hàng tenant. Tuyến quyết định

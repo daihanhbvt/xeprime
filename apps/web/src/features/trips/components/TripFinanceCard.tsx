@@ -210,6 +210,9 @@ function refundPill(refund: HoldRefund): { key: RefundPillKey; tone: TripRequest
       return { key: 'refundPaid', tone: 'success' };
     case HOLD_REFUND_STATUS.CREDITED:
       return { key: 'refundCredited', tone: 'success' };
+    // Chờ hoàn vào ví (biên bản họp 19/11/2026) — giờ dự kiến nằm ở dòng ghi chú bên dưới.
+    case HOLD_REFUND_STATUS.SCHEDULED:
+      return { key: 'refundScheduled', tone: 'warning' };
     case HOLD_REFUND_STATUS.REJECTED:
       return { key: 'noRefund', tone: 'danger' };
     default:
@@ -223,6 +226,7 @@ type RefundPillKey =
   | 'paid'
   | 'refundPaid'
   | 'refundCredited'
+  | 'refundScheduled'
   | 'refundProcessing'
   | 'refundNeedsAccount'
   | 'noRefund';
@@ -420,6 +424,11 @@ function ClosedInvoice({
         <p className={styles.invoiceNote}>
           {[
             refund.paidAt ? tInv('refundPaidAt', { date: fmt.dateTime(refund.paidAt) }) : null,
+            refund.status === HOLD_REFUND_STATUS.SCHEDULED
+              ? refund.releaseAt
+                ? tInv('refundScheduledAt', { date: fmt.dateTime(refund.releaseAt) })
+                : tInv('refundScheduledReview')
+              : null,
             refund.bankReference ? tInv('refundRef', { reference: refund.bankReference }) : null,
             refund.accountHint ? tInv('refundAccount', { hint: refund.accountHint }) : null,
             needsAccount ? tInv('refundNeedsAccount') : null,

@@ -1,14 +1,19 @@
 'use client';
 
-import { Alert, Button, Skeleton } from 'antd';
+import { Alert, App, Button, Skeleton } from 'antd';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PlusOutlined, SwapOutlined } from '@ant-design/icons';
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { cx } from '@/lib/cx';
-import { currentBankAccount } from '../current-account';
-import { useBankAccounts } from '../hooks/use-bank-accounts';
+import { bankAccountTitle, currentBankAccount } from '../current-account';
+import {
+  useBankAccounts,
+  useCancelChangeRequest,
+  useCurrentChangeRequest,
+} from '../hooks/use-bank-accounts';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import type { BankAccountScope } from '../types';
 import { BankAccountCard } from './BankAccountCard';
 import { BankAccountForm } from './BankAccountForm';
@@ -66,9 +71,19 @@ export function BankAccountList({
   const t = useTranslations('BankAccounts');
   const [formOpen, setFormOpen] = useState(false);
 
+  const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
   const { data, isPending, isError } = useBankAccounts(scope);
   const account = currentBankAccount(data);
-  const settled = !isPending && !isError;
+  /*
+   * Tài khoản KHOÁ từ lần khai đầu (biên bản họp 19/11/2026): đã có tài khoản thì nút là "Yêu cầu đổi"
+   * — XePrime gọi xác minh rồi mới đổi. Đang có yêu cầu chờ ⇒ ẩn nút, hiện yêu cầu đó kèm lối huỷ.
+   */
+  const changeRequest = useCurrentChangeRequest(scope, Boolean(account));
+  const pendingRequest = account ? (changeRequest.data ?? null) : null;
+  const cancelRequest = useCancelChangeRequest(scope);
+  const settled = !isPending && !isError && (!account || !changeRequest.isPending);
+  const canChange = Boolean(account) && !pendingRequest;
   const isAccount = appearance === 'account';
   const isPartner = appearance === 'partner';
   const openForm = () => setFormOpen(true);
@@ -98,7 +113,7 @@ export function BankAccountList({
             <p className={styles.subtitle}>{subtitle ?? t('subtitle')}</p>
           )}
         </div>
-        {!settled ? null : isPartner ? (
+        {!settled || (account && !canChange) ? null : isPartner ? (
           account ? (
             <Button
               type="link"
@@ -106,13 +121,13 @@ export function BankAccountList({
               icon={<SwapOutlined />}
               onClick={openForm}
             >
-              {t('actions.change')}
+              {t('actions.requestChange')}
             </Button>
           ) : null
         ) : isAccount ? (
           account ? (
             <CtaButton variant="neutral" onClick={openForm}>
-              {t('actions.change')}
+              {t('actions.requestChange')}
             </CtaButton>
           ) : (
             <CtaButton iconStart={<PlusOutlined />} onClick={openForm}>
@@ -121,7 +136,7 @@ export function BankAccountList({
           )
         ) : account ? (
           <Button icon={<SwapOutlined />} onClick={openForm}>
-            {t('actions.change')}
+            {t('actions.requestChange')}
           </Button>
         ) : (
           <Button type="primary" icon={<PlusOutlined />} onClick={openForm}>
@@ -153,6 +168,31 @@ export function BankAccountList({
         <BankAccountCard
           account={account}
           variant={isAccount ? 'detail' : isPartner ? 'compact' : 'row'}
+        />
+      ) : null}
+
+      {pendingRequest ? (
+        <Alert
+          type="info"
+          showIcon
+          title={t('pendingRequest.title', {
+            account: `${bankAccountTitle(pendingRequest)} · ${pendingRequest.accountNumberMasked}`,
+          })}
+          description={t('pendingRequest.body')}
+          action={
+            <Button
+              size="small"
+              loading={cancelRequest.isPending}
+              onClick={() =>
+                cancelRequest.mutate(pendingRequest.id, {
+                  onSuccess: () => message.success(t('pendingRequest.cancelled')),
+                  onError: (err) => message.error(errorMessage(err)),
+                })
+              }
+            >
+              {t('pendingRequest.cancel')}
+            </Button>
+          }
         />
       ) : null}
 

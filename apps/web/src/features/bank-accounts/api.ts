@@ -1,5 +1,11 @@
 import { apiGet, apiPost } from '@/services/api-client';
-import type { BankAccount, BankAccountScope, SaveBankAccountInput } from './types';
+import type {
+  BankAccount,
+  BankAccountChangeRequest,
+  BankAccountScope,
+  CreateBankAccountChangeRequestInput,
+  SaveBankAccountInput,
+} from './types';
 
 /**
  * Hai bề mặt — cá nhân và gian hàng — khác nhau đúng ở tiền tố đường dẫn, nên chúng đi qua cùng
@@ -21,3 +27,19 @@ export const createBankAccount = (
   scope: BankAccountScope,
   body: SaveBankAccountInput,
 ): Promise<BankAccount> => apiPost<BankAccount>(base(scope), body);
+
+// ── Yêu cầu đổi tài khoản (biên bản họp 19/11/2026) ─────────────────────────────────────────────
+
+export const fetchCurrentChangeRequest = (
+  scope: BankAccountScope,
+): Promise<BankAccountChangeRequest | null> =>
+  apiGet<BankAccountChangeRequest | null>(`${base(scope)}/change-requests/current`);
+
+export const createChangeRequest = (
+  scope: BankAccountScope,
+  body: CreateBankAccountChangeRequestInput,
+): Promise<BankAccountChangeRequest> =>
+  apiPost<BankAccountChangeRequest>(`${base(scope)}/change-requests`, body);
+
+export const cancelChangeRequest = (scope: BankAccountScope, id: string): Promise<void> =>
+  apiPost<void>(`${base(scope)}/change-requests/${id}/cancel`, {});

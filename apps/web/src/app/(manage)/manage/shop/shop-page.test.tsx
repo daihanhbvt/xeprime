@@ -669,7 +669,7 @@ describe('Trang Thông tin cửa hàng - tiêu đề và quyền', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Việt Car Hà Nội');
     expect(screen.getByText('Chủ gian hàng', { selector: 'span' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Xem gian hàng/ }).getAttribute('href')).toBe(
-      '/shops/viet-car-ha-noi',
+      '/viet-car-ha-noi',
     );
   });
 

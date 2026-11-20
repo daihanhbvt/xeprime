@@ -49,10 +49,11 @@ export class ShopBankAccountsController {
 
   @Post()
   @ApiOperation({
-    summary: 'Thêm hoặc ĐỔI tài khoản nhận tiền của gian hàng',
+    summary: 'Thêm tài khoản nhận tiền của gian hàng',
     description:
-      'Mỗi chủ một tài khoản: đã có thì tài khoản mới THAY cái cũ (cái cũ lưu trữ, lệnh rút đang ' +
-      'chờ giữ đích đã chụp). Khai lại đúng tài khoản đang dùng thì không tạo dòng mới.',
+      'Khai LẦN ĐẦU. Đã có tài khoản thì KHOÁ (biên bản họp 19/11/2026): khai tài khoản khác trả ' +
+      '409 BANK_ACCOUNT_LOCKED - đổi phải gửi yêu cầu (change-requests) để XePrime gọi xác minh. ' +
+      'Khai lại đúng tài khoản đang dùng (đổi tên gợi nhớ) vẫn được.',
   })
   @ApiOkResponse({ type: BankAccountDto })
   create(
@@ -86,17 +87,13 @@ export class ShopBankAccountsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Bỏ dùng tài khoản nhận tiền của gian hàng (lưu trữ, không xoá)' })
+  @ApiOperation({
+    summary: 'Bỏ dùng tài khoản nhận tiền của gian hàng - ĐÃ KHOÁ',
+    description:
+      'Luôn trả 409 BANK_ACCOUNT_LOCKED (biên bản họp 19/11/2026) - đổi phải qua yêu cầu có xác minh.',
+  })
   @ApiNoContentResponse()
-  archive(
-    @CurrentTenant() tenant: TenantContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ): Promise<void> {
-    return this.accounts.archive(
-      { type: WALLET_OWNER_TYPE.TENANT, tenantId: tenant.tenantId },
-      id,
-      user.id,
-    );
+  archive(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<void> {
+    return this.accounts.archive({ type: WALLET_OWNER_TYPE.TENANT, tenantId: tenant.tenantId }, id);
   }
 }

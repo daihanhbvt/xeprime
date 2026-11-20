@@ -223,7 +223,7 @@ describe('AdminVehicleDetailDrawer - hình dạng panel làm việc', () => {
       'tenant=t1',
     );
     expect(within(shop).getByRole('link', { name: /Trang gian hàng/ }).getAttribute('href')).toContain(
-      '/shops/demo',
+      '/demo',
     );
   });
 

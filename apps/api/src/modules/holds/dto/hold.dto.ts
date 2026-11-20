@@ -46,6 +46,12 @@ export class CustomerHoldRefundDto {
   accountHint!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bankReference!: string | null;
+  /**
+   * `scheduled` (chờ hoàn — biên bản họp 19/11/2026): lúc tiền DỰ KIẾN vào ví. `null` khi không chờ,
+   * hoặc khi XePrime đang tạm giữ để xác minh (khách thấy "đang xác minh", không có giờ cụ thể).
+   */
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO - dự kiến vào ví' })
+  releaseAt!: string | null;
 }
 
 /** Tài khoản nhận tiền của nền tảng — cùng nguồn với màn mua gói (ADR 0016 điều 5). */

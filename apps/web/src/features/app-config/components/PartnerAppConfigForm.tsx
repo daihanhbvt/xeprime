@@ -6,9 +6,14 @@ import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
-import { APP_CONFIG_CONTACT_PHONE_MAX, APP_CONFIG_CONTACT_PHONE_PATTERN } from '@xeprime/types';
+import {
+  APP_CONFIG_CONTACT_PHONE_MAX,
+  APP_CONFIG_CONTACT_PHONE_PATTERN,
+  CANCEL_CREDIT_DELAY_BOUNDS,
+} from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { NumberField } from '@/components/form/NumberField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -25,6 +30,8 @@ interface FormValues {
   otpSmsEnabled: boolean;
   supportHotline: string;
   supportZalo: string;
+  cancelRefundDelayHours: number;
+  cancelOwnerPayoutDelayHours: number;
 }
 
 function toFormValues(config: PartnerAppConfigAdmin): FormValues {
@@ -33,6 +40,8 @@ function toFormValues(config: PartnerAppConfigAdmin): FormValues {
     otpSmsEnabled: config.otpSmsEnabled,
     supportHotline: config.supportHotline ?? '',
     supportZalo: config.supportZalo ?? '',
+    cancelRefundDelayHours: config.cancelRefundDelayHours,
+    cancelOwnerPayoutDelayHours: config.cancelOwnerPayoutDelayHours,
   };
 }
 
@@ -63,17 +72,34 @@ export function PartnerAppConfigForm() {
       .max(APP_CONFIG_CONTACT_PHONE_MAX, t('config.contactTooLong', { max: APP_CONFIG_CONTACT_PHONE_MAX }))
       // Ô trống hợp lệ (xoá kênh); có giá trị thì đúng luật của DTO API.
       .test('phone', t('config.contactInvalid'), (v) => !v || APP_CONFIG_CONTACT_PHONE_PATTERN.test(v));
+    const { min, max } = CANCEL_CREDIT_DELAY_BOUNDS;
+    const delayHours = yup
+      .number()
+      .typeError(t('config.cancelDelay.invalid', { min, max }))
+      .required(t('config.cancelDelay.invalid', { min, max }))
+      .integer(t('config.cancelDelay.invalid', { min, max }))
+      .min(min, t('config.cancelDelay.invalid', { min, max }))
+      .max(max, t('config.cancelDelay.invalid', { min, max }));
     return yup.object({
       isPlanPromotionEnabled: yup.boolean().defined(),
       otpSmsEnabled: yup.boolean().defined(),
       supportHotline: contact,
       supportZalo: contact,
+      cancelRefundDelayHours: delayHours,
+      cancelOwnerPayoutDelayHours: delayHours,
     });
   }, [t]);
 
   const { control, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: yupResolver(schema),
-    defaultValues: { isPlanPromotionEnabled: false, otpSmsEnabled: true, supportHotline: '', supportZalo: '' },
+    defaultValues: {
+      isPlanPromotionEnabled: false,
+      otpSmsEnabled: true,
+      supportHotline: '',
+      supportZalo: '',
+      cancelRefundDelayHours: CANCEL_CREDIT_DELAY_BOUNDS.default,
+      cancelOwnerPayoutDelayHours: CANCEL_CREDIT_DELAY_BOUNDS.default,
+    },
   });
 
   // Đồng bộ form với bản server mỗi khi bản đó đổi (tải xong, lưu xong, đồng nghiệp vừa đổi).
@@ -103,6 +129,8 @@ export function PartnerAppConfigForm() {
         ...(data.otpSmsLocked ? {} : { otpSmsEnabled: values.otpSmsEnabled }),
         supportHotline: blankToNull(values.supportHotline),
         supportZalo: blankToNull(values.supportZalo),
+        cancelRefundDelayHours: values.cancelRefundDelayHours,
+        cancelOwnerPayoutDelayHours: values.cancelOwnerPayoutDelayHours,
       },
       {
         onSuccess: () => message.success(t('config.saved')),
@@ -134,6 +162,33 @@ export function PartnerAppConfigForm() {
               }
               disabled={update.isPending || data.otpSmsLocked}
             />
+          </Card>
+
+          {/* Khách huỷ / không đến: tiền chờ vài giờ trước khi vào ví (biên bản họp 19/11/2026). */}
+          <Card className={styles.card} title={t('config.cancelDelay.title')}>
+            <p className={styles.hint}>{t('config.cancelDelay.hint')}</p>
+            <div className={styles.contactGrid}>
+              <NumberField
+                control={control}
+                name="cancelRefundDelayHours"
+                label={t('config.cancelDelay.refund')}
+                min={CANCEL_CREDIT_DELAY_BOUNDS.min}
+                max={CANCEL_CREDIT_DELAY_BOUNDS.max}
+                precision={0}
+                addonAfter={t('config.cancelDelay.unit')}
+                disabled={update.isPending}
+              />
+              <NumberField
+                control={control}
+                name="cancelOwnerPayoutDelayHours"
+                label={t('config.cancelDelay.ownerPayout')}
+                min={CANCEL_CREDIT_DELAY_BOUNDS.min}
+                max={CANCEL_CREDIT_DELAY_BOUNDS.max}
+                precision={0}
+                addonAfter={t('config.cancelDelay.unit')}
+                disabled={update.isPending}
+              />
+            </div>
           </Card>
         </section>
 

@@ -1138,9 +1138,12 @@ export const listingPath = {
   detail: (id: string): string => `/listings/${id}`,
 };
 
-/** Đường dẫn trang gian hàng công khai `/shops/[slug]`. */
+/**
+ * Đường dẫn trang gian hàng công khai — `xeprime.vn/<slug>` (biên bản họp 19/11/2026, bỏ `/shops`).
+ * Slug không bao giờ trùng một route gốc: `RESERVED_SHOP_SLUGS` ở `@xeprime/types`.
+ */
 export const shopPath = {
-  detail: (slug: string): string => `/shops/${slug}`,
+  detail: (slug: string): string => `/${slug}`,
 };
 
 /**

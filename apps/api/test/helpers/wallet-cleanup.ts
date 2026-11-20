@@ -37,6 +37,11 @@ export async function releaseWalletObligations(
   const userIds = [...(owners.userIds ?? [])];
   if (tenantIds.length === 0 && userIds.length === 0) return;
 
+  // Khoản cộng ví hẹn giờ (biên bản 19/11/2026) không có FK tới chủ — dọn theo id chủ.
+  await prisma.scheduledWalletCredit.deleteMany({
+    where: { ownerId: { in: [...tenantIds, ...userIds] } },
+  });
+
   const wallets = await prisma.wallet.findMany({
     where: {
       OR: [

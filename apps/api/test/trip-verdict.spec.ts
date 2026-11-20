@@ -27,8 +27,6 @@ import {
 import { sweepReturnOverdue } from '../../worker/src/jobs/return-overdue';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
-import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
-import { WalletService } from '../src/modules/wallet/wallet.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
@@ -45,6 +43,7 @@ import {
   makeHandoverMoneyServices,
   makeNotificationService,
   makeSupportService,
+  makeHoldSettlementService,
 } from './helpers/service-factory';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
@@ -88,12 +87,7 @@ const handovers = new HandoversService(
   ...makeHandoverMoneyServices(asService, audit),
 );
 const support: SupportService = makeSupportService(asService, notifications);
-const settlement = new HoldSettlementService(
-  asService,
-  audit,
-  notifications,
-  new WalletService(asService),
-);
+const settlement = makeHoldSettlementService(asService, audit, notifications);
 const tax = new TaxService(asService, audit);
 const verdicts = new TripVerdictService(
   asService,

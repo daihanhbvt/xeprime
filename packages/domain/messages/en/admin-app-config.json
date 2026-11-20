@@ -43,6 +43,14 @@
         "title": "XePrime Partner app",
         "scope": "Applies only to the Partner app and plan-guide emails sent to partners."
       }
+    },
+    "cancelDelay": {
+      "title": "Money when a guest cancels",
+      "hint": "When a guest cancels or does not show up, the guest refund and the owner share wait this many hours before reaching the wallet, so disputes can be handled first. 0 = credit immediately. Owner cancellations and driver incidents are still refunded immediately.",
+      "refund": "Guest refund waits",
+      "ownerPayout": "Owner share waits",
+      "unit": "hours",
+      "invalid": "Enter whole hours from {min} to {max}."
     }
   },
   "templates": {

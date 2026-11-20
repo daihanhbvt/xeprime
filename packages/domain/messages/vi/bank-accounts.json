@@ -20,7 +20,8 @@
     "setDefault": "Đặt làm mặc định",
     "archive": "Bỏ dùng",
     "archiveConfirm": "Bỏ dùng tài khoản này?",
-    "archiveHint": "Lệnh chuyển tiền đã thực hiện vẫn giữ nguyên thông tin cũ."
+    "archiveHint": "Lệnh chuyển tiền đã thực hiện vẫn giữ nguyên thông tin cũ.",
+    "requestChange": "Yêu cầu đổi tài khoản"
   },
   "form": {
     "title": "Thêm tài khoản nhận tiền",
@@ -55,7 +56,14 @@
       "changedDetail": "Cập nhật tài khoản nhận tiền thành công! Các khoản thanh toán tiếp theo sẽ được chuyển vào tài khoản mới của bạn.",
       "createdDetail": "Đã thêm tài khoản nhận tiền. Các lệnh rút của bạn sẽ được chuyển vào tài khoản này."
     },
-    "addSubmit": "Thêm tài khoản"
+    "addSubmit": "Thêm tài khoản",
+    "requestTitle": "Yêu cầu đổi tài khoản nhận tiền",
+    "requestIntro": "Tài khoản {account} đã được khoá để bảo vệ tiền của bạn. Gửi tài khoản mới, XePrime sẽ gọi điện xác minh chính chủ rồi mới đổi.",
+    "requestSubmit": "Gửi yêu cầu",
+    "requestSentTitle": "Đã gửi yêu cầu",
+    "requestSent": "Đã gửi yêu cầu đổi tài khoản - XePrime sẽ gọi cho bạn để xác minh.",
+    "requestNote": "Lý do đổi",
+    "requestNotePlaceholder": "Ví dụ: đổi sang tài khoản công ty"
   },
   "refund": {
     "title": "Tài khoản nhận tiền hoàn",
@@ -65,5 +73,11 @@
     "submit": "Xác nhận tài khoản nhận",
     "saved": "Đã ghi nhận tài khoản. XePrime sẽ chuyển trong thời gian cam kết."
   },
-  "emptyHint": "Vui lòng thêm tài khoản ngân hàng để nhận thanh toán từ các đơn thuê xe & rút tiền"
+  "emptyHint": "Vui lòng thêm tài khoản ngân hàng để nhận thanh toán từ các đơn thuê xe & rút tiền",
+  "pendingRequest": {
+    "title": "Đang chờ xác minh đổi sang {account}",
+    "body": "XePrime sẽ gọi điện cho bạn để xác minh chính chủ trước khi đổi. Trong lúc chờ, tiền vẫn về tài khoản hiện tại.",
+    "cancel": "Huỷ yêu cầu",
+    "cancelled": "Đã huỷ yêu cầu đổi tài khoản"
+  }
 }

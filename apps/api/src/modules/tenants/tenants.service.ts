@@ -24,7 +24,9 @@ import {
   PERMISSION,
   REGISTRATION_TRACK,
   registrationTrackOf,
+  isReservedShopSlug,
   resolveShopVerification,
+  slugifyShopName,
   shopOnboardingStateForTrack,
   SHOP_VERIFICATION,
   TENANT_ROLE,
@@ -816,33 +818,34 @@ export class TenantsService {
     return this.getVatInvoiceSetting(tenantId);
   }
 
+  /**
+   * Slug của trang gian hàng `xeprime.vn/<slug>` — GỌN trước (biên bản họp 19/11/2026: "Hạnh Huế" ⇒
+   * `hanh-hue`), chỉ thêm hậu tố id khi tên gọn đã có chủ: một gian hàng khác, một slug cũ còn giữ
+   * làm bí danh (`tenant_slug_aliases` — link đã chia sẻ của người khác), hoặc một đường dẫn hệ thống
+   * (`RESERVED_SHOP_SLUGS`). Unique ở DB vẫn là chốt cuối.
+   */
   private async uniqueSlug(
     tx: Prisma.TransactionClient,
     name: string,
     id: string,
   ): Promise<string> {
-    const base = slugify(name).slice(0, 100) || 'shop';
-    const suffix = id.slice(-6).toLowerCase();
+    const base = slugifyShopName(name) || 'shop';
+    const taken = async (slug: string): Promise<boolean> => {
+      if (isReservedShopSlug(slug)) return true;
+      const [tenant, alias] = await Promise.all([
+        tx.tenant.findUnique({ where: { slug }, select: { id: true } }),
+        tx.tenantSlugAlias.findUnique({ where: { slug }, select: { slug: true } }),
+      ]);
+      return tenant != null || alias != null;
+    };
+    if (!(await taken(base))) return base;
     // ULID suffix gần như chắc chắn không trùng; vẫn kiểm tra để không bao giờ vỡ unique.
-    let slug = `${base}-${suffix}`;
     for (let i = 0; i < 5; i += 1) {
-      const clash = await tx.tenant.findUnique({ where: { slug }, select: { id: true } });
-      if (!clash) return slug;
-      slug = `${base}-${id.slice(-6 - i - 1).toLowerCase()}`;
+      const slug = `${base}-${id.slice(-6 - i).toLowerCase()}`;
+      if (!(await taken(slug))) return slug;
     }
     return `${base}-${id.toLowerCase()}`;
   }
-}
-
-/** Slug không dấu, chữ thường, gạch nối. */
-function slugify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // bỏ dấu tổ hợp (đã tách nhờ NFD)
-    .replace(/[đĐ]/g, 'd')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
 
 /**

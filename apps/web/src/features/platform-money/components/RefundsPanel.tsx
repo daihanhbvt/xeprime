@@ -23,6 +23,7 @@ import { useRefunds, useRejectRefund } from '../hooks/use-platform-money';
 import type { PlatformHoldRefund } from '../types';
 import { QueueViewSwitch } from './QueueViewSwitch';
 import { RefundPaidModal } from './RefundPaidModal';
+import { ScheduledCreditsSection } from './ScheduledCreditsSection';
 import styles from './MoneyQueue.module.css';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 
@@ -163,6 +164,8 @@ export function RefundsPanel() {
 
   return (
     <>
+      <ScheduledCreditsSection />
+
       <QueueViewSwitch<HoldRefundStatus>
         label={t('filters.status')}
         value={status}

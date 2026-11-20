@@ -19,6 +19,7 @@ import {
   HOLD_PAYMENT_CHANNEL,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
+  SCHEDULED_CREDIT_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
@@ -141,6 +142,13 @@ const CUSTOMER_SELECT = {
       bankAccountNumber: true,
       paidAt: true,
       bankReference: true,
+      // Khoản cộng ví hẹn giờ còn chờ (không tạm giữ) — giờ dự kiến vào ví cho khách xem.
+      scheduledCredits: {
+        where: { status: SCHEDULED_CREDIT_STATUS.SCHEDULED },
+        select: { releaseAt: true },
+        orderBy: { releaseAt: 'desc' },
+        take: 1,
+      },
     },
   },
 } satisfies Prisma.BookingHoldSelect;
@@ -1176,6 +1184,10 @@ export class BookingHoldsService {
             accountHint: maskAccountNumber(row.refund.bankAccountNumber),
             paidAt: row.refund.paidAt?.toISOString() ?? null,
             bankReference: row.refund.bankReference,
+            releaseAt:
+              row.refund.status === HOLD_REFUND_STATUS.SCHEDULED
+                ? (row.refund.scheduledCredits[0]?.releaseAt.toISOString() ?? null)
+                : null,
           }
         : null,
     };

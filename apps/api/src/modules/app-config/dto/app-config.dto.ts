@@ -4,13 +4,20 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
+  IsInt,
+  Max,
+  Min,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { APP_CONFIG_CONTACT_PHONE_PATTERN, SUPPORTED_LOCALES } from '@xeprime/types';
+import {
+  APP_CONFIG_CONTACT_PHONE_PATTERN,
+  CANCEL_CREDIT_DELAY_BOUNDS,
+  SUPPORTED_LOCALES,
+} from '@xeprime/types';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 /** Chuỗi rỗng ⇒ `null` (xoá dòng hotline/Zalo khỏi email). */
@@ -53,6 +60,20 @@ export class PartnerAppConfigAdminDto extends PartnerAppConfigDto {
   })
   otpSmsLocked!: boolean;
 
+  @ApiProperty({
+    example: 4,
+    description:
+      'Số giờ tiền hoàn do LỖI PHÍA KHÁCH (khách huỷ / không đến) chờ trước khi vào ví khách. 0 = cộng ngay.',
+  })
+  cancelRefundDelayHours!: number;
+
+  @ApiProperty({
+    example: 4,
+    description:
+      'Số giờ phần của CHỦ XE khi khách huỷ / không đến chờ trước khi vào ví chủ xe. 0 = cộng ngay.',
+  })
+  cancelOwnerPayoutDelayHours!: number;
+
   @ApiProperty({ example: '2026-10-12T03:00:00.000Z' })
   updatedAt!: string;
 
@@ -85,6 +106,28 @@ export class UpdatePartnerAppConfigDto {
   @Transform(trimToNull)
   @Matches(CONTACT_PHONE)
   supportZalo?: string | null;
+
+  @ApiPropertyOptional({
+    example: 4,
+    minimum: CANCEL_CREDIT_DELAY_BOUNDS.min,
+    maximum: CANCEL_CREDIT_DELAY_BOUNDS.max,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(CANCEL_CREDIT_DELAY_BOUNDS.min)
+  @Max(CANCEL_CREDIT_DELAY_BOUNDS.max)
+  cancelRefundDelayHours?: number;
+
+  @ApiPropertyOptional({
+    example: 4,
+    minimum: CANCEL_CREDIT_DELAY_BOUNDS.min,
+    maximum: CANCEL_CREDIT_DELAY_BOUNDS.max,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(CANCEL_CREDIT_DELAY_BOUNDS.min)
+  @Max(CANCEL_CREDIT_DELAY_BOUNDS.max)
+  cancelOwnerPayoutDelayHours?: number;
 }
 
 /** Yêu cầu tư vấn gói từ app Partner. */

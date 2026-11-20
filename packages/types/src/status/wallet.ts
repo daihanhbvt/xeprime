@@ -245,6 +245,27 @@ export function isBankAccountStatus(value: unknown): value is BankAccountStatus 
   return typeof value === 'string' && (BANK_ACCOUNT_STATUS_VALUES as string[]).includes(value);
 }
 
+/**
+ * Yêu cầu ĐỔI tài khoản nhận tiền (biên bản họp 19/11/2026): tài khoản khoá từ lần khai đầu; đổi phải
+ * qua yêu cầu, admin/CSKH gọi điện xác minh chính chủ rồi mới duyệt.
+ */
+export const BANK_ACCOUNT_CHANGE_REQUEST_STATUS = {
+  /** Chờ CSKH gọi xác minh. */
+  PENDING: 'pending',
+  /** Đã xác minh — tài khoản mới đã thay tài khoản cũ. */
+  APPROVED: 'approved',
+  /** Không xác minh được chính chủ / nghi giả mạo — tài khoản giữ nguyên. */
+  REJECTED: 'rejected',
+  /** Chủ ví tự huỷ trước khi được duyệt. */
+  CANCELLED: 'cancelled',
+} as const;
+
+export type BankAccountChangeRequestStatus =
+  (typeof BANK_ACCOUNT_CHANGE_REQUEST_STATUS)[keyof typeof BANK_ACCOUNT_CHANGE_REQUEST_STATUS];
+export const BANK_ACCOUNT_CHANGE_REQUEST_STATUS_VALUES = Object.values(
+  BANK_ACCOUNT_CHANGE_REQUEST_STATUS,
+) as BankAccountChangeRequestStatus[];
+
 // ── Bảng tổng hợp giao dịch của gian hàng (16/09/2026) ──────────────────────
 
 /**
