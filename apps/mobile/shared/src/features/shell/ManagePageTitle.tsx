@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
+import { useAccountMenuBack } from './account-menu-origin';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
@@ -39,13 +40,21 @@ export function ManagePageTitle({
   action?: ReactNode;
 }) {
   const colors = useColors();
+  /*
+   * Mở từ "Tài khoản của tôi": TÊN trang đã lên thanh trên dáng chi tiết (`ManageHeader`) nên không
+   * lặp lại; mô tả / tổng / nút vẫn ở đây, đủ chữ (thanh trên chỉ có một dòng, sẽ cắt "…").
+   */
+  const { fromAccount } = useAccountMenuBack();
+  if (fromAccount && !subtitle && !total && !action) return null;
   return (
     <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.md} pb={space.xs}>
       {/* Web `ManagePageHeader`: tiêu đề h2 đậm vừa, tự xuống dòng; mô tả 12 cách 4 (`--xp-space-xs`). */}
       <YStack f={1} gap={space.xs}>
-        <Text col={colors.text} fos={fontSize.pageTitle} fow={fontWeight.semibold}>
-          {title}
-        </Text>
+        {fromAccount ? null : (
+          <Text col={colors.text} fos={fontSize.pageTitle} fow={fontWeight.semibold}>
+            {title}
+          </Text>
+        )}
         {subtitle ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {subtitle}

@@ -121,7 +121,7 @@ export function QuickVehicleSuccess({
                   onPress={onAddAnother}
                 />
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button label={t('manageCta')} onPress={() => leaveTo(manageHref)} />
               </YStack>
             </XStack>

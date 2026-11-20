@@ -2,12 +2,11 @@ import BankOutlined from '@ant-design/icons-svg/es/asn/BankOutlined';
 import CarOutlined from '@ant-design/icons-svg/es/asn/CarOutlined';
 import CheckCircleFilled from '@ant-design/icons-svg/es/asn/CheckCircleFilled';
 import { useState } from 'react';
-import { Linking, Pressable, type LayoutChangeEvent } from 'react-native';
+import { type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   BILLING_PHASE,
-  PERMISSION,
   PLAN_VEHICLE_SCOPE,
   VEHICLE_QUOTA_KIND,
   planVehicleScopeOf,
@@ -23,10 +22,8 @@ import { InfoCard } from '@/components/ui/InfoCard';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { PlanConsultationSheet } from '@/features/app-config/PlanConsultationSheet';
 import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useMySubscription } from '@/features/subscription/hooks/use-subscription';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { resolvePartnerPlanUrl } from '@/lib/partner-web-url';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
@@ -66,25 +63,19 @@ function daysLeftOf(endsAt: string): number {
  * xe đã kích hoạt / trần kèm thanh suất, câu tình trạng suất, một lối mua), hoặc khối gói doanh
  * nghiệp đang dùng.
  *
- * App Partner KHÔNG bán gói (quy định store): "Nâng cấp / Đổi gói", "Gia hạn", "Nâng cấp ngay",
- * "Mua gói" đều MỞ trang gói trên site partner (`resolvePartnerPlanUrl` - đúng `?lane=&purchase=1`
- * web đọc để mở sẵn hộp mua). Thiếu `subscription.purchase` hay chưa cấu hình URL site partner thì
- * không có lối nào - thẻ chỉ đọc. Nơi gọi gác cờ khuyến mãi gói + `subscription.view`.
+ * App Partner KHÔNG bán gói và KHÔNG dẫn ra web để mua (Apple 3.1.1/3.1.3, chính sách Thanh toán
+ * Google Play - người dùng chốt 19/11/2026): thẻ chỉ CHO XEM gói đang dùng + hạn mức, và lối duy
+ * nhất là "Liên hệ tư vấn" (Zalo/hotline, không giá, không link mua). Các nút "Nâng cấp / Đổi gói",
+ * "Gia hạn", "Mua gói" mở site partner đã GỠ - đừng thêm lại. Nơi gọi gác cờ khuyến mãi gói +
+ * `subscription.view`.
  */
 export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEvent) => void }) {
   const t = useTranslations('Subscription');
   const tShop = useTranslations('Subscription.shopPlan');
   const tCommon = useTranslations('Common');
-  const { has } = usePermissions();
+  const tPlan = useTranslations('Subscription.mobilePlan');
   const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const me = useMySubscription();
-
-  const canBuy =
-    isPlanPromotionEnabled && has(PERMISSION.SUBSCRIPTION_PURCHASE) && resolvePartnerPlanUrl() !== null;
-  const openPlan = (lane: LaneScope | null) => {
-    const url = resolvePartnerPlanUrl(lane);
-    if (url) void Linking.openURL(url);
-  };
 
   const [consultOpen, setConsultOpen] = useState(false);
   const data = me.data;
@@ -96,13 +87,14 @@ export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEven
       hint={tShop('hint')}
       {...(onLayout ? { onLayout } : {})}
       extra={
-        canBuy && data && !enterprise ? (
+        isPlanPromotionEnabled && data && !enterprise ? (
           <Button
-            label={tShop('change')}
-            icon="trophy-outline"
+            label={tPlan('contactButton')}
+            icon="chatbubbles-outline"
+            variant="secondary"
             shape="square"
             block={false}
-            onPress={() => openPlan(null)}
+            onPress={() => setConsultOpen(true)}
           />
         ) : undefined
       }
@@ -136,7 +128,6 @@ export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEven
               scope={scope}
               current={currentPlanForScope(data.currentPlans, scope)}
               quota={scope === PLAN_VEHICLE_SCOPE.CAR ? data.vehicleQuotas.car : data.vehicleQuotas.motorbike}
-              {...(canBuy ? { onPurchase: () => openPlan(scope) } : {})}
             />
           ))}
         </YStack>
@@ -151,12 +142,10 @@ function LaneCard({
   scope,
   current,
   quota,
-  onPurchase,
 }: {
   scope: LaneScope;
   current: CurrentPlan | null;
   quota: VehicleTypeQuota;
-  onPurchase?: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Subscription.shopPlan');
@@ -173,7 +162,6 @@ function LaneCard({
   const free = limited ? Math.max(0, (quota.limit ?? 0) - quota.used) : null;
   const percent = limited && quota.limit ? Math.min(100, (quota.used / quota.limit) * 100) : 0;
   const marketText = quota.onMarketplace > 0 ? tLanes('onMarketplace', { count: quota.onMarketplace }) : t('noneOnMarket');
-  const action = !onPurchase ? null : full ? t('upgradeNow') : current ? t('renew') : t('buy');
 
   return (
     <YStack
@@ -261,13 +249,6 @@ function LaneCard({
               ? t('free', { free, market: marketText })
               : marketText}
         </Text>
-        {action && onPurchase ? (
-          <Pressable onPress={onPurchase} accessibilityRole="link" accessibilityLabel={action} hitSlop={8}>
-            <Text col={colors.primary} fos={fontSize.body} lineHeight={20} fow={fontWeight.semibold}>
-              {action}
-            </Text>
-          </Pressable>
-        ) : null}
       </XStack>
     </YStack>
   );

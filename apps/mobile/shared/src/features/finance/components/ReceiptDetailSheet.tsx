@@ -193,7 +193,7 @@ export function ReceiptDetailSheet({
         showFooter ? (
           <XStack gap={space.sm}>
             {actions?.cancel ? (
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={t('cancelAction')}
                   variant="danger"
@@ -211,7 +211,7 @@ export function ReceiptDetailSheet({
               </YStack>
             ) : null}
             {actions?.approve ? (
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={t('approveAction')}
                   icon="checkmark-circle-outline"

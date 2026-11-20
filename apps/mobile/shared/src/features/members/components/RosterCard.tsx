@@ -163,7 +163,7 @@ function RosterCardImpl({
         {actions.length > 0 ? (
           <XStack gap={space.sm} pt={space.xs}>
             {actions.map((action) => (
-              <YStack key={action.key} f={1} minWidth={0}>
+              <YStack key={action.key} flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
                 <Button
                   label={action.label}
                   icon={action.icon}

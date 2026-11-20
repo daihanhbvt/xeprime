@@ -4,11 +4,11 @@ import { Pressable, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from './BottomSheet';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, useFieldAppearance } from './Field';
 import { MenuOption, MenuOptionList } from './MenuOption';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { fieldFontSize, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
 /**
@@ -116,9 +116,11 @@ export function SelectControl({
   const [search, setSearch] = useState('');
 
   const current = options.find((option) => option.value === value);
+  /** Bộ ô `v2` (Figma Partner-XePrime): chữ trong ô 16, mũi tên 20, placeholder `text/gray/very-low`. */
+  const v2 = useFieldAppearance() === 'v2';
 
   return (
-    <YStack gap={space.xs}>
+    <YStack gap={v2 ? FIELD_V2.labelGap : space.xs}>
       {hideLabel ? null : (
         <FieldLabel label={label} required={required} publishRequired={publishRequired} />
       )}
@@ -139,8 +141,8 @@ export function SelectControl({
         <FieldShell focused={false} invalid={Boolean(error)} disabled={disabled} align="center">
           <Text
             f={1}
-            col={current ? colors.text : colors.placeholder}
-            fos={fieldFontSize.value}
+            col={current ? colors.text : v2 ? colors.textPlaceholder : colors.placeholder}
+            fos={v2 ? typeScale.title.fontSize : fieldFontSize.value}
             numberOfLines={1}
           >
             {current?.label ?? placeholder ?? t('choose')}
@@ -162,8 +164,8 @@ export function SelectControl({
           ) : null}
           <Ionicons
             name="chevron-down"
-            size={iconSize.sm}
-            color={disabled ? colors.textDisabled : colors.textMuted}
+            size={v2 ? FIELD_V2.icon : iconSize.sm}
+            color={disabled ? colors.textDisabled : v2 ? colors.placeholder : colors.textMuted}
           />
         </FieldShell>
       </Pressable>

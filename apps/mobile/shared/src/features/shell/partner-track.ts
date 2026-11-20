@@ -82,6 +82,8 @@ export const PARTNER_PATH = {
   DATA_PROTECTION: '/manage/data-protection',
   SUPPORT: '/manage/support',
   HELP: '/manage/help',
+  /** "Tài khoản của tôi" - đích ô Tài khoản trên thanh menu dưới đáy (`ManageAccountMenuScreen`). Chỉ có ở app. */
+  MORE: '/manage/more',
   ACCOUNT: '/manage/account',
   SHOP: '/manage/shop',
   /** Các khối của trang Cửa hàng — cùng `?section=` với web `shopSectionPath`. */
@@ -132,6 +134,8 @@ const COMMISSION_PAGES: readonly PageRule[] = [
   { href: PARTNER_PATH.SUPPORT },
   { href: PARTNER_PATH.HELP },
   { href: PARTNER_PATH.ACCOUNT },
+  // Ô Tài khoản của thanh menu dưới đáy - thiếu dòng này thì chủ xe bấm Tài khoản bị đá về Tổng quan.
+  { href: PARTNER_PATH.MORE },
 ];
 
 /** Trang mà tài khoản CHƯA có gian hàng được ở: chọn cách cho thuê và bước đầu tuyến gói. */

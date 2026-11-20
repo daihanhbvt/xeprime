@@ -97,7 +97,7 @@ export function ListYourVehicleScreen({
   );
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
-  const openLegalDoc = useOpenLegalDoc();
+  const startSteps = useStartSteps();
   // Tuyến nền tảng gợi ý trước là đăng xe cá nhân — giống thẻ `featured` của web.
   const [track, setTrack] = useState<RegistrationTrack>(REGISTRATION_TRACK.COMMISSION);
   const isPersonal = track === REGISTRATION_TRACK.COMMISSION;
@@ -147,11 +147,7 @@ export function ListYourVehicleScreen({
             title={t('title')}
             subtitle={t('appSubtitle')}
             stepsTitle={t('how.title')}
-            steps={[
-              { key: 'account', title: t('how.account.title'), desc: t('how.account.desc') },
-              { key: 'choose', title: t('how.choose.title'), desc: t('how.choose.desc') },
-              { key: 'publish', title: t('how.publish.title'), desc: t('how.publish.desc') },
-            ]}
+            steps={startSteps}
           />
 
           <YStack gap={space.sm}>
@@ -228,45 +224,109 @@ export function ListYourVehicleScreen({
             />
           )}
 
-          <Card tone="muted" lift="flat">
-            <XStack ai="flex-start" gap={space.sm}>
-              <Ionicons name="sync-outline" size={iconSize.md} color={colors.primaryActive} />
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {t('upgrade.appTitle')}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('upgrade.appBody')}
-                </Text>
-              </YStack>
-            </XStack>
-          </Card>
-
-          {/*
-            Liên kết chính sách trỏ tới TÀI LIỆU CÓ THẬT (quy chế sàn) — không hứa điều nền tảng
-            chưa có văn bản.
-          */}
-          <XStack ai="center" jc="center" gap={space.xs}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={iconSize.sm}
-              color={colors.primaryActive}
-            />
-            <InlineAction
-              label={t('policyLink')}
-              onPress={() => openLegalDoc(LEGAL_DOC.MARKETPLACE_RULES)}
-            />
-          </XStack>
+          <ListYourVehicleNotes />
         </YStack>
       </Screen>
     </>
   );
 }
 
-interface HeroStep {
+export interface HeroStep {
   key: string;
   title: string;
   desc: string;
+}
+
+/**
+ * Dải "Bắt đầu trong 3 bước" - dùng ở khối mở đầu màn này và ở màn chọn tuyến của app Partner
+ * (`PartnerTrackChooser`), để hai nơi không lệch nhau.
+ */
+export function StartSteps({ title, steps }: { title: string; steps: HeroStep[] }) {
+  const colors = useColors();
+  return (
+    <YStack gap={space.sm} p={space.sm} br={radius.md} bg={colors.surface}>
+      <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+        {title}
+      </Text>
+      {steps.map((step, index) => (
+        <XStack key={step.key} ai="flex-start" gap={space.sm}>
+          <YStack
+            w={STEP_DOT}
+            h={STEP_DOT}
+            br={STEP_DOT / 2}
+            ai="center"
+            jc="center"
+            bg={colors.primaryLight}
+          >
+            <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.bold}>
+              {index + 1}
+            </Text>
+          </YStack>
+          <YStack f={1} minWidth={0}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {step.title}
+            </Text>
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {step.desc}
+            </Text>
+          </YStack>
+        </XStack>
+      ))}
+    </YStack>
+  );
+}
+
+/** Ba bước của dải "Bắt đầu trong 3 bước" - nội dung chung của hai nơi dùng `StartSteps`. */
+export function useStartSteps(): HeroStep[] {
+  const t = useTranslations('ListYourVehicle.landing');
+  return [
+    { key: 'account', title: t('how.account.title'), desc: t('how.account.desc') },
+    { key: 'choose', title: t('how.choose.title'), desc: t('how.choose.desc') },
+    { key: 'publish', title: t('how.publish.title'), desc: t('how.publish.desc') },
+  ];
+}
+
+/**
+ * Hai dòng chân màn chọn tuyến: "Linh hoạt chuyển đổi khi cần" và liên kết quy định chợ xe. Dùng
+ * chung với màn chọn tuyến của app Partner.
+ */
+export function ListYourVehicleNotes() {
+  const colors = useColors();
+  const t = useTranslations('ListYourVehicle.landing');
+  const openLegalDoc = useOpenLegalDoc();
+  return (
+    <>
+      <Card tone="muted" lift="flat">
+        <XStack ai="flex-start" gap={space.sm}>
+          <Ionicons name="sync-outline" size={iconSize.md} color={colors.primaryActive} />
+          <YStack f={1} minWidth={0} gap={2}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {t('upgrade.appTitle')}
+            </Text>
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {t('upgrade.appBody')}
+            </Text>
+          </YStack>
+        </XStack>
+      </Card>
+
+      {/*
+        Liên kết chính sách trỏ tới TÀI LIỆU CÓ THẬT (quy chế sàn) — không hứa điều nền tảng
+        chưa có văn bản.
+      */}
+      <XStack ai="center" jc="center" gap={space.xs}>
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={iconSize.sm}
+          color={colors.primaryActive}
+        />
+        <InlineAction
+          label={t('policyLink')}
+          onPress={() => openLegalDoc(LEGAL_DOC.MARKETPLACE_RULES)}
+        />
+      </XStack>
+    </>
+  );
 }
 
 /** Khối mở đầu: nhãn, tiêu đề, mô tả và dải "3 bước" để người mới biết đường đi trước khi chọn. */
@@ -310,35 +370,7 @@ function Hero({
           </Text>
         </YStack>
 
-        <YStack gap={space.sm} p={space.sm} br={radius.md} bg={colors.surface}>
-          <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-            {stepsTitle}
-          </Text>
-          {steps.map((step, index) => (
-            <XStack key={step.key} ai="flex-start" gap={space.sm}>
-              <YStack
-                w={STEP_DOT}
-                h={STEP_DOT}
-                br={STEP_DOT / 2}
-                ai="center"
-                jc="center"
-                bg={colors.primaryLight}
-              >
-                <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.bold}>
-                  {index + 1}
-                </Text>
-              </YStack>
-              <YStack f={1} minWidth={0}>
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {step.title}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {step.desc}
-                </Text>
-              </YStack>
-            </XStack>
-          ))}
-        </YStack>
+        <StartSteps title={stepsTitle} steps={steps} />
       </YStack>
     </Card>
   );

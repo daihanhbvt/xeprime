@@ -80,6 +80,8 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
         verifyRef={verifyRef}
         onVerified={onVerified}
         attachToAccount={attachToAccount}
+        // Bộ ô `v2` (form đăng ký đối tác): nút "Gửi mã OTP" đứng cạnh ô như web + Figma `24464:25312`.
+        sendLabel={t('signup.fields.otpCode.sendOtp')}
       />
       {askPassword ? (
         <>

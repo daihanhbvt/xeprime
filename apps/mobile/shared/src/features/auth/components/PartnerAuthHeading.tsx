@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
 
 /**
  * Khối tiêu đề các màn tài khoản của app Partner — cột form Figma Partner-XePrime "Login -
@@ -14,20 +14,27 @@ export const PartnerAuthHeading = memo(function PartnerAuthHeading({
   title,
   subtitle,
   art,
+  size = 'lg',
 }: {
   title: string;
   subtitle?: ReactNode;
   /** Minh hoạ trên tiêu đề (ổ khoá, khiên… của màn quên mật khẩu). */
   art?: ReactNode;
+  /**
+   * `lg` - tiêu đề 30/38 · lời dẫn 18/28, khe 8 (màn quên mật khẩu).
+   * `md` - tiêu đề 24/32 · lời dẫn 14/20, khe 4 (màn đăng nhập app Partner, Figma `24464:24584`).
+   */
+  size?: 'lg' | 'md';
 }) {
   const colors = useColors();
+  const md = size === 'md';
   return (
-    <YStack ai="center" gap={space.sm}>
+    <YStack ai="center" gap={md ? space.xs : space.sm}>
       {art ? <YStack mb={space.sm}>{art}</YStack> : null}
       <Text
         col={colors.text}
-        fos={fontSize.h1}
-        lh={HEADING_LINE_HEIGHT}
+        fos={md ? typeScale.display.fontSize : fontSize.h1}
+        lh={md ? typeScale.display.lineHeight : HEADING_LINE_HEIGHT}
         fow={fontWeight.bold}
         ta="center"
         textTransform="uppercase"
@@ -36,7 +43,12 @@ export const PartnerAuthHeading = memo(function PartnerAuthHeading({
         {title}
       </Text>
       {subtitle ? (
-        <Text col={colors.placeholder} fos={fontSize.h3} lh={SUBTITLE_LINE_HEIGHT} ta="center">
+        <Text
+          col={colors.placeholder}
+          fos={md ? typeScale.body.fontSize : fontSize.h3}
+          lh={md ? typeScale.body.lineHeight : SUBTITLE_LINE_HEIGHT}
+          ta="center"
+        >
           {subtitle}
         </Text>
       ) : null}

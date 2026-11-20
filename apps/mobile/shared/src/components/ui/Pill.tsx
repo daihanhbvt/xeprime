@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Text, YStack } from 'tamagui';
+import { memo, type ReactNode } from 'react';
+import { Text, XStack, YStack } from 'tamagui';
 import { STATUS_COLOR, type StatusColor } from '@xeprime/types';
 import { themed } from '@/theme/ThemeProvider';
 import { fontWeight, radius, typeScale } from '@/theme/tokens';
@@ -73,12 +73,15 @@ export const Pill = memo(function Pill({
   size = 'md',
   shape = 'round',
   borderless = false,
+  leading,
 }: {
   label: string;
   tone?: PillTone;
   size?: PillSize;
   shape?: PillShape;
   borderless?: boolean;
+  /** Biểu tượng đứng TRƯỚC chữ, cùng trong viên (vd. ✓ "Đã kiểm duyệt"). Nơi gọi tô màu theo tông. */
+  leading?: ReactNode;
 }) {
   const skin = usePillSkin()[tone];
   const type = size === 'sm' || size === 'caption' ? typeScale.caption : size === 'lg' ? typeScale.body : typeScale.label;
@@ -95,9 +98,12 @@ export const Pill = memo(function Pill({
       ai="center"
       jc="center"
     >
-      <Text col={skin.fg} fos={type.fontSize} lh={type.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
-        {label}
-      </Text>
+      <XStack ai="center" gap={LEADING_GAP}>
+        {leading}
+        <Text col={skin.fg} fos={type.fontSize} lh={type.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
+          {label}
+        </Text>
+      </XStack>
     </YStack>
   );
 });
@@ -107,3 +113,5 @@ const PAD_X_MD = 8;
 const PAD_X_SM = 4;
 const PAD_Y = 2;
 const TAG_RADIUS = 6;
+/** Khe giữa biểu tượng `leading` và chữ. */
+const LEADING_GAP = 4;

@@ -175,7 +175,7 @@ export function BookingStatusSheet({
           <YStack flexShrink={0}>
             <Button label={t('back')} variant="ghost" onPress={onClose} />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={cancelling ? t('cancelOk') : t('noShowOk')}
               icon="close-circle-outline"

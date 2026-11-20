@@ -128,7 +128,7 @@ export function QuickVehicleOwnerStep({
             <YStack flexShrink={0}>
               <Button label={tCommon('cancel')} variant="ghost" block={false} onPress={onCancel} />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={submitLabel ?? tCommon('next')}
                 disabled={!phoneVerified}

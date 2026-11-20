@@ -222,7 +222,7 @@ function BlockForm({
                 disabled={pending}
               />
             </YStack>
-            <YStack f={1}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t(editing ? 'block.submitEdit' : 'block.submitCreate')}
                 icon={editing ? 'save-outline' : 'lock-closed-outline'}

@@ -159,7 +159,7 @@ function LinkActions({
   const tel = telHref(link.employer.phone);
 
   const contact = tel ? (
-    <YStack f={1} key="contact">
+    <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="contact">
       <Button
         label={t('contact')}
         // Hàng BA nút (lời mời): bỏ icon để nhãn không bị "…" (người dùng chốt 28/10/2026).
@@ -175,7 +175,7 @@ function LinkActions({
   if (invited) {
     buttons = [
       contact,
-      <YStack f={1} key="decline">
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="decline">
         <Button
           label={t('decline')}
           tight
@@ -185,7 +185,7 @@ function LinkActions({
           onPress={() => onIntent(link, 'decline')}
         />
       </YStack>,
-      <YStack f={1} key="accept">
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="accept">
         <Button
           label={t('acceptShort')}
           accessibilityLabel={t('accept')}
@@ -199,7 +199,7 @@ function LinkActions({
   } else {
     buttons = [
       working ? (
-        <YStack f={1} key="leave">
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="leave">
           <Button
             label={t('leave')}
             variant="dangerOutline"

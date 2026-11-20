@@ -3,7 +3,11 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { Href } from 'expo-router';
-import { PreferenceRows } from '@/components/layout/PreferenceRows';
+import {
+  AppearanceToggleRow,
+  LocaleToggleRow,
+  THEME_SWITCH_DELAY_MS,
+} from '@/components/layout/PreferenceToggleRows';
 import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -35,7 +39,8 @@ import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-a
  * chân drawer thì hoặc tràn ra ngoài, hoặc đè lên chính thẻ vừa bấm — nên native mở từ đáy, đúng
  * cử chỉ mà mọi tấm chọn khác trong app đang dùng.
  *
- * Giao diện sáng/tối + NGÔN NGỮ (`PreferenceRows`, dùng chung với tab Tài khoản app khách) đi kèm ở cuối: nó vốn nằm ở ngăn "Thêm", mà ngăn đó chỉ còn mỗi nó (đổi khu đã
+ * Giao diện sáng/tối + NGÔN NGỮ (`PreferenceToggleRows` - CÙNG hai hàng nút gạt ☀|☾ · VI|EN của menu
+ * avatar app khách, người dùng chốt 19/11/2026) đi kèm ở cuối: nó vốn nằm ở ngăn "Thêm", mà ngăn đó chỉ còn mỗi nó (đổi khu đã
  * có nút riêng trên thanh trên). Gom vào đây thì mọi thứ thuộc về CON NGƯỜI đang đăng nhập nằm
  * chung một chỗ, thay vì rải ra hai màn.
  */
@@ -118,7 +123,17 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
 
           <Divider />
 
-          <PreferenceRows />
+          {/* Cùng hai hàng của menu avatar app khách (`AccountMenuSheet`). */}
+          <YStack px={space.md}>
+            <AppearanceToggleRow
+              onBeforeChange={(apply) => {
+                // Đóng tấm trước, đổi theme khi tấm đã rời màn (Modal + đổi theme = màn trắng).
+                onClose();
+                setTimeout(apply, THEME_SWITCH_DELAY_MS);
+              }}
+            />
+            <LocaleToggleRow />
+          </YStack>
 
           <Divider />
 

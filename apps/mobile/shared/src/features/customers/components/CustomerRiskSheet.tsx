@@ -138,7 +138,7 @@ export function CustomerRiskSheet({
               onPress={onClose}
             />
           </YStack>
-          <YStack f={1}>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tCommon('save')}
               icon="checkmark-outline"

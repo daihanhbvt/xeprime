@@ -174,7 +174,7 @@ export function WithdrawSheet({
           <YStack gap={space.sm}>
             {/* Hai nút một hàng: Huỷ (trái) · Gửi yêu cầu rút vàng (phải) - người dùng 17/11/2026. */}
             <XStack gap={space.sm}>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={tCommon('cancel')}
                   icon="close-outline"
@@ -183,7 +183,7 @@ export function WithdrawSheet({
                   onPress={close}
                 />
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   icon="send-outline"
                   label={t('submit')}

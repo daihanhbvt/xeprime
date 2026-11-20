@@ -63,7 +63,7 @@ export function VehicleCreateSuccess({
               }
             />
             <XStack gap={space.sm}>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={t('backToList')}
                   variant="outline"
@@ -71,7 +71,7 @@ export function VehicleCreateSuccess({
                   onPress={() => router.replace(ROUTES.manage.vehicles())}
                 />
               </YStack>
-              <YStack f={1}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={t('createAnother')}
                   variant="outline"

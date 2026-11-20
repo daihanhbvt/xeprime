@@ -898,10 +898,10 @@ function StaffBookingTrip({
         ) : null}
       </XStack>
       <XStack gap={space.sm}>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button label={tFlow('actions.cancel')} variant="secondary" onPress={onBack} />
         </YStack>
-        <YStack f={1}>
+        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={checkConflict.isPending ? tFlow('actions.checking') : tFlow('actions.continue')}
             loading={checkConflict.isPending}

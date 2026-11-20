@@ -475,7 +475,7 @@ export function CustomerDocumentsPanel({
                   {document && editable ? (
                     // Nút biểu tượng (chữ dài bị cắt "Sửa thông…"): Xoá · Sửa · Thay/Xác nhận, đều nhau.
                     <XStack gap={space.sm}>
-                      <YStack f={1}>
+                      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                         <Button
                           label={tDocs('remove')}
                           icon="trash-outline"
@@ -484,7 +484,7 @@ export function CustomerDocumentsPanel({
                           onPress={() => setRemoving(document)}
                         />
                       </YStack>
-                      <YStack f={1}>
+                      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                         <Button
                           label={tDocs('edit')}
                           icon="create-outline"
@@ -493,7 +493,7 @@ export function CustomerDocumentsPanel({
                           onPress={() => setEditing(document)}
                         />
                       </YStack>
-                      <YStack f={1}>
+                      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                         {document.verifiedAt ? (
                           <Button
                             label={tDocs('replaceShort')}

@@ -106,7 +106,7 @@ function DrivingTripCardImpl({
   const actions: ReactNode[] = [];
   if (isOpen && callHref) {
     actions.push(
-      <YStack f={1} key="call">
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="call">
         <Button
           label={t('callCustomer')}
           icon="call-outline"
@@ -118,7 +118,7 @@ function DrivingTripCardImpl({
   }
   if (pending) {
     actions.push(
-      <YStack f={1} key="decline">
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="decline">
         <Button
           label={t('decline')}
           icon="close"
@@ -128,7 +128,7 @@ function DrivingTripCardImpl({
           onPress={() => setConfirmingDecline(true)}
         />
       </YStack>,
-      <YStack f={1} key="accept">
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="accept">
         <Button
           label={t('accept')}
           icon="checkmark"
@@ -146,7 +146,7 @@ function DrivingTripCardImpl({
   }
   if (trip.canDrop) {
     actions.push(
-      <YStack f={1} key="drop">
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="drop">
         <Button
           label={t('drop')}
           icon="warning-outline"
@@ -159,7 +159,7 @@ function DrivingTripCardImpl({
   }
   if (!isOpen) {
     actions.push(
-      <YStack f={1} key="support">
+      <YStack flexGrow={1} flexShrink={1} flexBasis="auto" key="support">
         <Button
           label={t('support')}
           icon="chatbubble-ellipses-outline"

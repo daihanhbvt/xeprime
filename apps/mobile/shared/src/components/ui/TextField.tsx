@@ -5,7 +5,7 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, useFieldAppearance } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
@@ -125,6 +125,8 @@ export function TextField<T extends FieldValues>({
    * chỉ ô này lệch, nên form nào nhiều `TextField` thì xám hơn hẳn form bên cạnh.
    */
   const readOnly = inputProps.editable === false;
+  /** Bộ ô `v2` (Figma Partner-XePrime) — xem `FieldAppearance`. */
+  const v2 = useFieldAppearance() === 'v2';
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
   const revealOnFocus = useRevealOnFocus();
@@ -141,17 +143,17 @@ export function TextField<T extends FieldValues>({
     () => ({
       flex: 1,
       color: colors.text,
-      fontSize: fieldFontSize.value,
+      fontSize: v2 ? FIELD_V2.fontSize : fieldFontSize.value,
       fontFamily: FONT_FAMILY.body,
-      minHeight: multiline ? rows * LINE_HEIGHT : sizing.touchTarget,
+      minHeight: multiline ? rows * LINE_HEIGHT : v2 ? FIELD_V2.height - 2 : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
     }),
-    [colors, multiline, rows],
+    [colors, multiline, rows, v2],
   );
   const error = fieldState.error?.message;
 
   return (
-    <YStack gap={space.xs}>
+    <YStack gap={v2 ? FIELD_V2.labelGap : space.xs}>
       {hideLabel ? null : (
         <FieldLabel label={label} required={required} publishRequired={publishRequired} />
       )}
@@ -171,7 +173,13 @@ export function TextField<T extends FieldValues>({
         align={multiline ? 'flex-start' : 'center'}
         onPress={() => inputRef.current?.focus()}
       >
-        {icon ? <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} /> : null}
+        {icon ? (
+          <Ionicons
+            name={icon}
+            size={v2 ? FIELD_V2.icon : iconSize.sm}
+            color={v2 ? colors.placeholder : colors.textMuted}
+          />
+        ) : null}
 
         <TextInput
           // A11Y-LABEL: nhãn nằm ở `FieldLabel` BÊN CẠNH ô, không nằm trong ô — trình đọc
@@ -200,7 +208,7 @@ export function TextField<T extends FieldValues>({
           multiline={multiline}
           {...(maxLength === undefined ? {} : { maxLength })}
           textAlignVertical={multiline ? 'top' : 'center'}
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={v2 ? colors.textPlaceholder : colors.placeholder}
           style={inputStyle}
           {...inputProps}
         />
@@ -217,8 +225,8 @@ export function TextField<T extends FieldValues>({
           >
             <Ionicons
               name={revealed ? 'eye-off-outline' : 'eye-outline'}
-              size={iconSize.sm}
-              color={colors.textMuted}
+              size={v2 ? FIELD_V2.icon : iconSize.sm}
+              color={v2 ? colors.placeholder : colors.textMuted}
             />
           </Pressable>
         ) : null}
