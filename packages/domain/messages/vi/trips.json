@@ -229,6 +229,7 @@
       "lateBody": "Tiền bảo hiểm {insurance} được hoàn đủ vì bảo hiểm chưa được phát hành. Phần còn lại của tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
       "lateBodyNoInsurance": "Tiền giữ chỗ (phí đặt xe và phần tiền thuê trả trước) không được hoàn: chủ xe được đền vì đã giữ xe cho bạn, phần còn lại thuộc XePrime.",
       "deferred": "Chuyến đang có khiếu nại chưa xử lý xong - XePrime sẽ chốt khoản này sau khi có kết luận.",
+      "refundDelay": "Tiền hoàn vào Ví điểm sau khoảng {hours} giờ để XePrime kịp xử lý nếu có khiếu nại.",
       "notAllowedTitle": "Chuyến này không huỷ được nữa",
       "notAllowedBody": "Chuyến đã bắt đầu hoặc đã kết thúc. Nếu muốn trả xe sớm, hãy liên hệ chủ xe để bàn giao và quyết toán.",
       "driverIncident": "Huỷ do sự cố tài xế: bạn được hoàn 100% tiền giữ chỗ, không mất phí huỷ."
@@ -289,11 +290,14 @@
         "unpaid": "Chưa thanh toán",
         "refundPaid": "Đã hoàn tiền",
         "refundCredited": "Đã hoàn vào Ví điểm",
+        "refundScheduled": "Chờ hoàn vào Ví điểm",
         "refundProcessing": "Đang xử lý",
         "refundNeedsAccount": "Chờ khai tài khoản",
         "noRefund": "Không hoàn tiền"
       },
       "refundPaidAt": "Hoàn lúc {date}.",
+      "refundScheduledAt": "Tiền hoàn dự kiến vào Ví điểm lúc {date}.",
+      "refundScheduledReview": "XePrime đang xác minh khoản hoàn này trước khi chuyển vào Ví điểm.",
       "refundRef": "Mã giao dịch: {reference}.",
       "refundAccount": "Tài khoản nhận đuôi {hint}.",
       "refundNeedsAccount": "Khai tài khoản nhận để XePrime chuyển trả khoản này."

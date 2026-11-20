@@ -120,6 +120,7 @@ model User {
   supportCaseEvents            SupportCaseEvent[]
   badgeSignal                  UserBadgeSignal?          @relation("badge_signal_user")
   bankAccounts                 BankAccount[]             @relation("bank_account_user")
+  bankAccountChangeRequests    BankAccountChangeRequest[] @relation("bank_account_change_requester")
   wallet                       Wallet?                   @relation("wallet_user")
   requestedWithdrawals         WithdrawalRequest[]       @relation("withdrawal_requester")
   updatedTenantPaymentSettings TenantPaymentSettings[]   @relation("tenant_payment_settings_updated_by")
@@ -335,12 +336,27 @@ model Tenant {
   taxWithholdings               TaxWithholding[]
   supportCases                  SupportCase[]
   supportContexts               TenantSupportContext[]
+  slugAliases                   TenantSlugAlias[]
 
   @@index([status])
   @@index([ownerUserId])
   @@index([tenantType])
   @@index([searchName(ops: raw("gin_trgm_ops"))], map: "tenants_search_name_trgm_idx", type: Gin)
   @@map("tenants")
+}
+
+/// Slug CŨ của một gian hàng — link trang gian hàng đã chia sẻ trước khi rút gọn (biên bản họp
+/// 19/11/2026: `xeprime.vn/<slug>` thay cho `/shops/<slug>-<mã>`) vẫn mở được và chuyển hẳn (301)
+/// sang slug hiện tại. Một chuỗi chỉ thuộc về MỘT nơi: không trùng `tenants.slug` nào (service
+/// kiểm cả hai bảng khi cấp slug mới).
+model TenantSlugAlias {
+  slug      String   @id @db.VarChar(120)
+  tenantId  String   @map("tenant_id") @db.Char(26)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("tenant_slug_aliases")
 }
 
 /// ADR 0053: chỉ tài khoản realm `partner` có membership gian hàng — trigger
@@ -5819,10 +5835,50 @@ model HoldRefund {
   tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer User?       @relation("refund_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
   payer    User?       @relation("refund_payer", fields: [paidBy], references: [id], onDelete: SetNull)
+  scheduledCredits ScheduledWalletCredit[]
 
   @@index([status, createdAt])
   @@index([customerUserId], map: "hold_refunds_customer_user_id_idx")
   @@map("hold_refunds")
+}
+
+/// KHOẢN CỘNG VÍ HẸN GIỜ (biên bản họp 19/11/2026): tiền đã chốt thuộc về một chủ ví nhưng CHƯA vào ví
+/// cho tới `release_at` — để kịp xử lý tranh chấp khi khách huỷ. Vòng quét `ScheduledCreditSweeper`
+/// cộng vào ví bằng đúng `WalletService.creditWithinTx` (cùng unique chống cộng đôi của sổ ví).
+/// Admin tạm giữ (`frozen`) thì vòng quét bỏ qua. Writer duy nhất: `ScheduledCreditService`.
+model ScheduledWalletCredit {
+  id            String    @id @db.Char(26)
+  /// @xeprime/types → WalletOwnerType (`user` | `tenant`).
+  ownerType     String    @map("owner_type") @db.VarChar(20)
+  /// Id người dùng (`user`) hoặc id gian hàng (`tenant`) — KHÔNG NULL để unique chống trùng có tác dụng.
+  ownerId       String    @map("owner_id") @db.Char(26)
+  /// Bút toán sẽ ghi — giữ nguyên để lượt cộng ví khớp unique `(wallet, kind, source_type, source_ref)`.
+  kind          String    @db.VarChar(40)
+  sourceType    String    @map("source_type") @db.VarChar(40)
+  sourceRefId   String    @map("source_ref_id") @db.Char(26)
+  amount        Decimal   @db.Decimal(14, 2)
+  bookingId     String?   @map("booking_id") @db.Char(26)
+  holdId        String?   @map("hold_id") @db.Char(26)
+  note          String?   @db.Text
+  /// Khoản hoàn của khách gắn với lượt cộng này — tới hạn thì nó sang `credited`.
+  holdRefundId  String?   @map("hold_refund_id") @db.Char(26)
+  /// @xeprime/types → ScheduledCreditStatus
+  status        String    @default("scheduled") @db.VarChar(20)
+  releaseAt     DateTime  @map("release_at") @db.Timestamptz(3)
+  frozenAt      DateTime? @map("frozen_at") @db.Timestamptz(3)
+  frozenBy      String?   @map("frozen_by") @db.Char(26)
+  freezeNote    String?   @map("freeze_note") @db.Text
+  releasedAt    DateTime? @map("released_at") @db.Timestamptz(3)
+  walletEntryId String?   @unique @map("wallet_entry_id") @db.Char(26)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  holdRefund HoldRefund? @relation(fields: [holdRefundId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerType, ownerId, kind, sourceType, sourceRefId], map: "scheduled_wallet_credits_source_key")
+  @@index([status, releaseAt])
+  @@index([holdRefundId])
+  @@map("scheduled_wallet_credits")
 }
 
 /// SỔ CÔNG NỢ PHẢI TRẢ — hiển thị là "Ví điểm", 1 điểm = 1đ (ADR 0033 điều 1).
@@ -6045,6 +6101,41 @@ model BankAccount {
   @@map("bank_accounts")
 }
 
+/// YÊU CẦU ĐỔI tài khoản nhận tiền (biên bản họp 19/11/2026, việc #19): tài khoản ngân hàng được KHOÁ
+/// từ lần khai đầu — chủ ví không tự đổi được nữa (phòng kẻ chiếm tài khoản đổi chỗ tiền về). Muốn đổi
+/// thì gửi yêu cầu; admin/CSKH GỌI ĐIỆN xác minh chính chủ rồi mới duyệt, và chỉ lượt duyệt mới thay
+/// tài khoản (`BankAccountsService`, cùng transaction). Mỗi chủ tối đa MỘT yêu cầu `pending` (partial
+/// unique ở migration). Writer duy nhất: `BankAccountChangeRequestsService`.
+model BankAccountChangeRequest {
+  id            String    @id @db.Char(26)
+  /// @xeprime/types → WalletOwnerType (`user` | `tenant`).
+  ownerType     String    @map("owner_type") @db.VarChar(20)
+  /// Id người dùng (`user`) hoặc id gian hàng (`tenant`).
+  ownerId       String    @map("owner_id") @db.Char(26)
+  /// Người bấm "Gửi yêu cầu" — người CSKH gọi lại để xác minh.
+  requestedBy   String    @map("requested_by") @db.Char(26)
+  bankCode      String    @map("bank_code") @db.VarChar(20)
+  accountNumber String    @map("account_number") @db.VarChar(40)
+  accountName   String    @map("account_name") @db.VarChar(160)
+  label         String?   @db.VarChar(60)
+  /// Lời nhắn của người yêu cầu (vì sao đổi).
+  note          String?   @db.Text
+  /// @xeprime/types → BankAccountChangeRequestStatus (pending | approved | rejected | cancelled).
+  status        String    @default("pending") @db.VarChar(20)
+  reviewedBy    String?   @map("reviewed_by") @db.Char(26)
+  reviewedAt    DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  /// Ghi chú của người duyệt (đã gọi số nào, xác minh gì) — bắt buộc khi từ chối.
+  reviewNote    String?   @map("review_note") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  requester User @relation("bank_account_change_requester", fields: [requestedBy], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([ownerType, ownerId, createdAt])
+  @@map("bank_account_change_requests")
+}
+
 /// Hồ sơ NGƯỜI BÁN — ADR 0028 release gate 1 (R3).
 ///
 /// `tenants.tenant_type` vẫn là nhãn hiển thị (ADR 0014 điều 2); `entity_type` ở đây mới là dữ
@@ -6180,6 +6271,11 @@ model PlatformAppConfig {
   /// Gửi SMS OTP thật (mặc định BẬT). TẮT chỉ có hiệu lực ở dev/staging: không gọi nhà mạng, mã cố
   /// định 123456. Production luôn gửi thật dù cột này là false — xem `PhoneVerificationService.sendOtp`.
   otpSmsEnabled          Boolean  @default(true) @map("otp_sms_enabled")
+  /// Số giờ khoản hoàn do LỖI PHÍA KHÁCH (khách huỷ / không đến) chờ trước khi vào ví khách
+  /// (biên bản họp 19/11/2026). 0 = cộng ngay. Xem `CUSTOMER_FAULT_REFUND_REASONS`.
+  cancelRefundDelayHours      Int @default(4) @map("cancel_refund_delay_hours")
+  /// Số giờ phần của CHỦ XE trong cùng kết cục đó chờ trước khi vào ví chủ xe. 0 = cộng ngay.
+  cancelOwnerPayoutDelayHours Int @default(4) @map("cancel_owner_payout_delay_hours")
   updatedBy              String?  @map("updated_by") @db.Char(26)
   createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

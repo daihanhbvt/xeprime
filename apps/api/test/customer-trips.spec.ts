@@ -43,8 +43,6 @@ import { CustomerTripsService } from '../src/modules/customer-trips/customer-tri
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
-import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
-import { WalletService } from '../src/modules/wallet/wallet.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -55,6 +53,7 @@ import {
   makeNotificationService,
   makePricingService,
   makeSupportService,
+  makeHoldSettlementService,
 } from './helpers/service-factory';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
@@ -103,7 +102,7 @@ const trips = new CustomerTripsService(
   bookings,
   makeBookingHoldsService(asService),
   files,
-  new HoldSettlementService(asService, audit, notifications, new WalletService(asService)),
+  makeHoldSettlementService(asService, audit, notifications),
   new BankAccountsService(asService),
   notifications,
   audit,

@@ -19,6 +19,13 @@ import {
   saveBankBalance,
   settleHold,
   withdrawalFiltersToParams,
+  fetchScheduledCredits,
+  freezeScheduledCredit,
+  releaseScheduledCredit,
+  unfreezeScheduledCredit,
+  approveBankAccountChangeRequest,
+  fetchBankAccountChangeRequests,
+  rejectBankAccountChangeRequest,
 } from '../api';
 import type {
   HoldFilters,
@@ -194,6 +201,60 @@ export function useReverseWithdrawal() {
     // `rowVersion` của bản ghi đang nhìn: bấm hai lần thì lần sau nhận 409, không đảo đôi.
     mutationFn: ({ id, reason, rowVersion }: { id: string; reason: string; rowVersion: number }) =>
       reverseWithdrawal(id, { reason, rowVersion }),
+    onSuccess: invalidate,
+  });
+}
+
+/** Khoản đang chờ / tạm giữ cộng ví — cùng nhánh `platformMoney.all` để mọi thao tác tiền làm mới nó. */
+const scheduledCreditsKey = [...queryKeys.platformMoney.all, 'scheduled-credits'] as const;
+
+export function useScheduledCredits() {
+  return useQuery({ queryKey: scheduledCreditsKey, queryFn: fetchScheduledCredits });
+}
+
+export type ScheduledCreditAction =
+  | { kind: 'freeze'; id: string; note: string }
+  | { kind: 'unfreeze'; id: string }
+  | { kind: 'release'; id: string };
+
+export function useScheduledCreditAction() {
+  const invalidate = useInvalidateMoney();
+  return useMutation({
+    mutationFn: (action: ScheduledCreditAction) => {
+      switch (action.kind) {
+        case 'freeze':
+          return freezeScheduledCredit(action.id, action.note);
+        case 'unfreeze':
+          return unfreezeScheduledCredit(action.id);
+        case 'release':
+          return releaseScheduledCredit(action.id);
+      }
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Yêu cầu đổi tài khoản nhận tiền chờ gọi xác minh — cùng nhánh `platformMoney.all`. */
+const bankChangeRequestsKey = [
+  ...queryKeys.platformMoney.all,
+  'bank-account-change-requests',
+] as const;
+
+export function useBankAccountChangeRequests() {
+  return useQuery({ queryKey: bankChangeRequestsKey, queryFn: fetchBankAccountChangeRequests });
+}
+
+export type BankAccountChangeDecision =
+  | { kind: 'approve'; id: string; note: string | null }
+  | { kind: 'reject'; id: string; note: string };
+
+export function useDecideBankAccountChange() {
+  const invalidate = useInvalidateMoney();
+  return useMutation({
+    mutationFn: (decision: BankAccountChangeDecision) =>
+      decision.kind === 'approve'
+        ? approveBankAccountChangeRequest(decision.id, decision.note)
+        : rejectBankAccountChangeRequest(decision.id, decision.note),
     onSuccess: invalidate,
   });
 }

@@ -119,7 +119,7 @@ describe('KeywordSearch', () => {
     expect(option).not.toBeNull();
     fireEvent.click(option as Element);
 
-    expect(nav.push).toHaveBeenCalledWith('/shops/tuan-xe');
+    expect(nav.push).toHaveBeenCalledWith('/tuan-xe');
     // Nhịp gõ còn treo tới hạn SAU khi đã chọn — không được ghi từ khoá kéo khách về /search.
     act(() => vi.advanceTimersByTime(1000));
     fireEvent.blur(input());

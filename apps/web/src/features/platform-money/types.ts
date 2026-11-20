@@ -61,3 +61,9 @@ export interface GatewayOrderFilters {
   page?: number;
   limit?: number;
 }
+
+/** Khoản cộng ví HẸN GIỜ — tiền hoàn/chủ xe khi khách huỷ chờ vài giờ (biên bản họp 19/11/2026). */
+export type ScheduledCredit = Schemas['ScheduledCreditDto'];
+
+/** Yêu cầu đổi tài khoản nhận tiền chờ CSKH gọi xác minh (biên bản họp 19/11/2026). */
+export type PlatformBankAccountChangeRequest = Schemas['PlatformBankAccountChangeRequestDto'];

@@ -44,8 +44,8 @@ import {
 } from '@xeprime/types';
 import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
 import { SepayService } from '../src/modules/sepay/sepay.service';
-import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
+import { ScheduledCreditService } from '../src/modules/wallet/scheduled-credit.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { PlatformBookingsService } from '../src/modules/platform-admin/platform-bookings.service';
 import type { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
@@ -60,8 +60,7 @@ import {
   makeBookingsService,
   makeBookingRequestsService,
   makeBookingExtensionsService,
-  makeBankTransactionsService,
-} from './helpers/service-factory';
+  makeBankTransactionsService, makeHoldSettlementService } from './helpers/service-factory';
 import { FEE_POLICY_V2_OFF } from './helpers/fee-snapshot';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
@@ -88,12 +87,7 @@ const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const holds = makeBookingHoldsService(asService);
 const bookings = makeBookingsService(asService);
-const settlement = new HoldSettlementService(
-  asService,
-  audit,
-  notifications,
-  new WalletService(asService),
-);
+const settlement = makeHoldSettlementService(asService, audit, notifications);
 const sepay = new SepayService(asService, makeBillingService(asService), holds, {
   get: (key: string) => (key === 'SEPAY_API_KEY' ? 'test-key-0123456789abcdef' : undefined),
 } as unknown as ConfigService, makeBookingExtensionsService(asService));
@@ -2310,5 +2304,98 @@ describe('Tiền vào ngoại lệ - khớp tay hold còn hạn, ghi có ví ti�
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BANK_TX_TARGET_STILL_OPEN } });
     const still = await prisma.bankTransaction.findUniqueOrThrow({ where: { id: tx.id } });
     expect(still.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
+  });
+});
+
+/**
+ * Biên bản họp 19/11/2026 (#4) — khách huỷ / không đến (lỗi phía khách) thì tiền hoàn KHÔNG vào ví
+ * ngay mà CHỜ số giờ cấu hình (mặc định 4h) để kịp xử lý tranh chấp; admin tạm giữ được. Ca khách
+ * không có lỗi (chủ xe huỷ…) vẫn vào ví ngay.
+ */
+describe('Chờ hoàn khi lỗi phía khách', () => {
+  const HOUR = 3_600_000;
+  /** Cấu hình cố định 4 giờ — không phụ thuộc dòng cấu hình nền tảng trong DB test. */
+  class FourHourDelay extends ScheduledCreditService {
+    override async delaysWithinTx() {
+      return { refundHours: 4, ownerPayoutHours: 4 };
+    }
+  }
+  const scheduled = new FourHourDelay(asService, new WalletService(asService), audit);
+  const delayed = makeHoldSettlementService(asService, audit, notifications, scheduled);
+
+  async function refundFor(reason: (typeof HOLD_REFUND_REASON)[keyof typeof HOLD_REFUND_REASON]) {
+    const { holdId } = await makeHold();
+    const result = await prisma.$transaction((tx) =>
+      delayed.upsertRefundWithinTx(tx, {
+        holdId,
+        tenantId,
+        customerUserId: customerId,
+        amount: new Prisma.Decimal(50_000),
+        reason,
+        note: null,
+      }),
+    );
+    return { holdId, refundId: result.id };
+  }
+
+  const entryCount = (holdId: string) =>
+    prisma.walletEntry.count({ where: { sourceRefId: holdId, kind: 'hold_refund' } });
+
+  maybe('khách huỷ ⇒ chờ hoàn, chưa vào ví; tới hạn ⇒ vào ví và `credited`', async () => {
+    const before = Date.now();
+    const { holdId, refundId } = await refundFor(HOLD_REFUND_REASON.EARLY_CANCEL);
+
+    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(refund.status).toBe(HOLD_REFUND_STATUS.SCHEDULED);
+    expect(refund.walletEntryId).toBeNull();
+    const credit = await prisma.scheduledWalletCredit.findFirstOrThrow({
+      where: { holdRefundId: refundId },
+    });
+    expect(credit.status).toBe('scheduled');
+    expect(credit.releaseAt.getTime()).toBeGreaterThanOrEqual(before + 4 * HOUR - 1000);
+    expect(await entryCount(holdId)).toBe(0);
+
+    // Chưa tới hạn: vòng quét không đụng.
+    await scheduled.releaseDue(new Date(before + 3 * HOUR));
+    expect(await entryCount(holdId)).toBe(0);
+
+    await scheduled.releaseDue(new Date(before + 5 * HOUR));
+    expect(await entryCount(holdId)).toBe(1);
+    const after = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(after.status).toBe(HOLD_REFUND_STATUS.CREDITED);
+    expect(after.walletEntryId).not.toBeNull();
+
+    // Quét lại không cộng đôi.
+    await scheduled.releaseDue(new Date(before + 6 * HOUR));
+    expect(await entryCount(holdId)).toBe(1);
+  });
+
+  maybe('chủ xe huỷ (khách không có lỗi) ⇒ vẫn vào ví ngay', async () => {
+    const { holdId, refundId } = await refundFor(HOLD_REFUND_REASON.OWNER_CANCEL);
+    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(refund.status).toBe(HOLD_REFUND_STATUS.CREDITED);
+    expect(await entryCount(holdId)).toBe(1);
+  });
+
+  maybe('admin tạm giữ ⇒ tới hạn vẫn không cộng; cho cộng ngay ⇒ vào ví', async () => {
+    const before = Date.now();
+    const { holdId, refundId } = await refundFor(HOLD_REFUND_REASON.NO_SHOW);
+    const credit = await prisma.scheduledWalletCredit.findFirstOrThrow({
+      where: { holdRefundId: refundId },
+    });
+
+    await scheduled.freeze(credit.id, ownerId, 'Khách khiếu nại, chờ xác minh');
+    await scheduled.releaseDue(new Date(before + 5 * HOUR));
+    expect(await entryCount(holdId)).toBe(0);
+    expect(
+      (await prisma.scheduledWalletCredit.findUniqueOrThrow({ where: { id: credit.id } })).status,
+    ).toBe('frozen');
+
+    await scheduled.releaseNow(credit.id, ownerId);
+    expect(await entryCount(holdId)).toBe(1);
+    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(refund.status).toBe(HOLD_REFUND_STATUS.CREDITED);
+    // Đã cộng rồi thì không thao tác được nữa.
+    await expect(scheduled.releaseNow(credit.id, ownerId)).rejects.toThrow();
   });
 });

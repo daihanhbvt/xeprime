@@ -58,6 +58,7 @@ function preview(overrides: Partial<CustomerTripCancelPreview>): CustomerTripCan
     freeCancelAvailable: true,
     deferred: false,
     driverIncident: false,
+    refundDelayHours: 0,
     ...overrides,
   };
 }
@@ -126,6 +127,18 @@ describe('CancelTripDialog - huỷ muộn', () => {
     state.preview.data = preview({ deferred: true });
     renderDialog();
     expect(screen.getByText(/XePrime sẽ chốt khoản này sau khi có kết luận/)).toBeTruthy();
+  });
+
+  /** Biên bản họp 19/11/2026 — khách huỷ thì tiền hoàn chờ vài giờ; nói trước khi bấm. */
+  it('tiền hoàn có chờ ⇒ nói trước số giờ; không có tiền hoàn thì không nói', () => {
+    state.preview.data = preview({ refundDelayHours: 4 });
+    renderDialog();
+    expect(screen.getByText(/Tiền hoàn vào Ví điểm sau khoảng 4 giờ/)).toBeTruthy();
+    cleanup();
+
+    state.preview.data = preview({ refundDelayHours: 4, refundAmount: '0' });
+    renderDialog();
+    expect(screen.queryByText(/sau khoảng 4 giờ/)).toBeNull();
   });
 });
 

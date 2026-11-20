@@ -25,6 +25,12 @@ export const HOLD_REFUND_STATUS = {
   CREDITED: 'credited',
   /** Admin từ chối (vd tranh chấp kết luận khách sai) — có lý do, có audit. */
   REJECTED: 'rejected',
+  /**
+   * CHỜ HOÀN vào ví điểm (biên bản họp 19/11/2026): khoản hoàn do lỗi phía khách (`CUSTOMER_FAULT_REFUND_REASONS`)
+   * không vào ví ngay mà chờ `cancel_refund_delay_hours` để kịp xử lý tranh chấp. Tiền nằm ở một khoản
+   * cộng ví hẹn giờ (`scheduled_wallet_credits`); tới hạn ⇒ `credited`. Admin tạm giữ được.
+   */
+  SCHEDULED: 'scheduled',
 } as const;
 
 export type HoldRefundStatus = (typeof HOLD_REFUND_STATUS)[keyof typeof HOLD_REFUND_STATUS];
@@ -39,6 +45,7 @@ export const HOLD_REFUND_STATUS_META: Readonly<Record<HoldRefundStatus, StatusMe
   [HOLD_REFUND_STATUS.PAID]: { label: 'Đã chuyển trả', color: STATUS_COLOR.SUCCESS },
   [HOLD_REFUND_STATUS.CREDITED]: { label: 'Đã vào ví điểm', color: STATUS_COLOR.SUCCESS },
   [HOLD_REFUND_STATUS.REJECTED]: { label: 'Từ chối hoàn', color: STATUS_COLOR.DANGER },
+  [HOLD_REFUND_STATUS.SCHEDULED]: { label: 'Chờ hoàn vào ví', color: STATUS_COLOR.WAITING },
 };
 
 /**
@@ -115,3 +122,34 @@ export const HOLD_REFUND_SLA = {
   TARGET_MINUTES: 10,
   MAX_BUSINESS_DAYS: 2,
 } as const;
+
+/**
+ * Lý do hoàn mà LỖI THUỘC PHÍA KHÁCH — biên bản họp 19/11/2026: tiền không vào ví ngay mà CHỜ
+ * `cancel_refund_delay_hours` (cấu hình nền tảng, mặc định 4 giờ) để kịp xử lý tranh chấp, và phần
+ * của chủ xe trong cùng kết cục cũng chờ `cancel_owner_payout_delay_hours`. Ca khách không có lỗi
+ * (chủ xe huỷ, tài xế rút, chuyển thừa, hết hạn giữ chỗ, quyết định của XePrime) vẫn hoàn ngay.
+ */
+export const CUSTOMER_FAULT_REFUND_REASONS: ReadonlySet<HoldRefundReason> = new Set([
+  HOLD_REFUND_REASON.EARLY_CANCEL,
+  HOLD_REFUND_REASON.LATE_CANCEL,
+  HOLD_REFUND_REASON.NO_SHOW,
+]);
+
+/** Biên cấu hình số giờ chờ (0 = cộng ngay, như trước). Tối đa 7 ngày. */
+export const CANCEL_CREDIT_DELAY_BOUNDS = { min: 0, max: 168, default: 4 } as const;
+
+/** Trạng thái một khoản CỘNG VÍ HẸN GIỜ (`scheduled_wallet_credits`). */
+export const SCHEDULED_CREDIT_STATUS = {
+  /** Chờ tới `release_at` — vòng quét sẽ cộng vào ví. */
+  SCHEDULED: 'scheduled',
+  /** Admin tạm giữ (tranh chấp) — vòng quét bỏ qua cho tới khi bỏ tạm giữ. */
+  FROZEN: 'frozen',
+  /** Đã cộng vào ví — có `wallet_entry_id`. */
+  RELEASED: 'released',
+} as const;
+
+export type ScheduledCreditStatus =
+  (typeof SCHEDULED_CREDIT_STATUS)[keyof typeof SCHEDULED_CREDIT_STATUS];
+export const SCHEDULED_CREDIT_STATUS_VALUES = Object.values(
+  SCHEDULED_CREDIT_STATUS,
+) as ScheduledCreditStatus[];

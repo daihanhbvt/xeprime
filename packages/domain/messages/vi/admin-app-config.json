@@ -43,6 +43,14 @@
         "title": "Ứng dụng XePrime Partner",
         "scope": "Chỉ áp dụng cho app Partner và email hướng dẫn gói gửi đối tác."
       }
+    },
+    "cancelDelay": {
+      "title": "Tiền khi khách huỷ chuyến",
+      "hint": "Khách huỷ hoặc không đến nhận xe: tiền hoàn cho khách và phần của chủ xe chờ số giờ dưới đây rồi mới vào ví, để kịp xử lý khiếu nại. 0 = vào ví ngay. Chủ xe huỷ hoặc sự cố tài xế vẫn hoàn ngay.",
+      "refund": "Tiền hoàn cho khách chờ",
+      "ownerPayout": "Phần của chủ xe chờ",
+      "unit": "giờ",
+      "invalid": "Nhập số giờ nguyên từ {min} đến {max}."
     }
   },
   "templates": {

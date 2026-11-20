@@ -854,7 +854,8 @@
     "pending": "Chờ chuyển trả",
     "paid": "Đã chuyển trả",
     "credited": "Đã vào ví điểm",
-    "rejected": "Từ chối hoàn"
+    "rejected": "Từ chối hoàn",
+    "scheduled": "Chờ hoàn vào ví"
   },
   "holdRefundReason": {
     "early_cancel": "Khách huỷ trước mốc miễn phí",

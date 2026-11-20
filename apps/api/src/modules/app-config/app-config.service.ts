@@ -30,6 +30,8 @@ const ADMIN_SELECT = {
   supportHotline: true,
   supportZalo: true,
   otpSmsEnabled: true,
+  cancelRefundDelayHours: true,
+  cancelOwnerPayoutDelayHours: true,
   updatedAt: true,
   updater: { select: { displayName: true } },
 } satisfies Prisma.PlatformAppConfigSelect;
@@ -99,6 +101,19 @@ export class AppConfigService {
       if (dto.supportZalo !== undefined && dto.supportZalo !== before.supportZalo) {
         data.supportZalo = dto.supportZalo;
       }
+      // Số giờ chờ khi khách huỷ (biên bản họp 19/11/2026) — áp cho các lượt chốt SAU khi lưu.
+      if (
+        dto.cancelRefundDelayHours !== undefined &&
+        dto.cancelRefundDelayHours !== before.cancelRefundDelayHours
+      ) {
+        data.cancelRefundDelayHours = dto.cancelRefundDelayHours;
+      }
+      if (
+        dto.cancelOwnerPayoutDelayHours !== undefined &&
+        dto.cancelOwnerPayoutDelayHours !== before.cancelOwnerPayoutDelayHours
+      ) {
+        data.cancelOwnerPayoutDelayHours = dto.cancelOwnerPayoutDelayHours;
+      }
       // Không đổi gì ⇒ không bump, không audit, không chiếu lại.
       if (Object.keys(data).length === 0) return before;
 
@@ -167,6 +182,8 @@ function snapshot(row: AdminRow) {
     supportHotline: row.supportHotline,
     supportZalo: row.supportZalo,
     otpSmsEnabled: row.otpSmsEnabled,
+    cancelRefundDelayHours: row.cancelRefundDelayHours,
+    cancelOwnerPayoutDelayHours: row.cancelOwnerPayoutDelayHours,
   };
 }
 
@@ -179,6 +196,8 @@ function toAdmin(row: AdminRow, production: boolean): PartnerAppConfigAdminDto {
     // Production: luôn gửi thật dù cột nói gì — hiện đúng hành vi đang chạy.
     otpSmsEnabled: production ? true : row.otpSmsEnabled,
     otpSmsLocked: production,
+    cancelRefundDelayHours: row.cancelRefundDelayHours,
+    cancelOwnerPayoutDelayHours: row.cancelOwnerPayoutDelayHours,
     updatedAt: row.updatedAt.toISOString(),
     updatedByName: row.updater?.displayName ?? null,
   };

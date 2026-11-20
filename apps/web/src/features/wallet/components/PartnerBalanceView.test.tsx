@@ -65,6 +65,10 @@ const bankAccounts = vi.hoisted(() => ({
 vi.mock('@/features/bank-accounts/hooks/use-bank-accounts', () => ({
   useBankAccounts: () => bankAccounts,
   useCreateBankAccount: () => ({ mutate: vi.fn(), isPending: false }),
+  // Tài khoản khoá từ lần khai đầu — đổi qua yêu cầu (biên bản 19/11/2026); không có yêu cầu chờ.
+  useCreateChangeRequest: () => ({ mutate: vi.fn(), isPending: false }),
+  useCurrentChangeRequest: () => ({ data: null, isPending: false }),
+  useCancelChangeRequest: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 function setUser(opts: { track?: 'commission' | 'package'; role?: string } = {}) {

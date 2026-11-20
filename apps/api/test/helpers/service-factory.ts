@@ -28,6 +28,7 @@ import { DriversService } from '../../src/modules/drivers/drivers.service';
 import { FeePoliciesService } from '../../src/modules/fee-policies/fee-policies.service';
 import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.service';
 import { WalletService } from '../../src/modules/wallet/wallet.service';
+import { ScheduledCreditService } from '../../src/modules/wallet/scheduled-credit.service';
 import { FirebaseAppService } from '../../src/modules/firebase/firebase-app.service';
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
@@ -96,6 +97,34 @@ export function makeDriversService(
     overrides.notifications ?? makeNotificationService(prisma),
     // Giới hạn tiền công tài xế (ADR 0075) đọc từ chính sách phí hiện hành.
     new FeePoliciesService(prisma, new AuditService(prisma)),
+  );
+}
+
+/**
+ * Khoản cộng ví hẹn giờ với thời gian chờ 0 — tiền hoàn/chủ xe vào ví NGAY như trước biên bản họp
+ * 19/11/2026, để các spec dòng tiền cũ giữ nguyên ngữ nghĩa. Spec của chính cơ chế chờ dùng bản thật
+ * (`new ScheduledCreditService`) cùng cấu hình số giờ trong DB.
+ */
+export class ImmediateScheduledCreditService extends ScheduledCreditService {
+  override async delaysWithinTx(): Promise<{ refundHours: number; ownerPayoutHours: number }> {
+    return { refundHours: 0, ownerPayoutHours: 0 };
+  }
+}
+
+/** `HoldSettlementService` cho spec — mặc định cộng ví ngay (xem `ImmediateScheduledCreditService`). */
+export function makeHoldSettlementService(
+  prisma: PrismaService,
+  audit: AuditService = new AuditService(prisma),
+  notifications: NotificationService = makeNotificationService(prisma),
+  scheduled?: ScheduledCreditService,
+): HoldSettlementService {
+  const wallet = new WalletService(prisma);
+  return new HoldSettlementService(
+    prisma,
+    audit,
+    notifications,
+    wallet,
+    scheduled ?? new ImmediateScheduledCreditService(prisma, wallet, audit),
   );
 }
 
@@ -194,7 +223,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     makeBookingsService(prisma),
     new OccupancyService(prisma),
     makeVehicleSettingsService(prisma),
-    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
+    makeHoldSettlementService(prisma, audit, notifications),
     makeBillingService(prisma),
     audit,
     notifications,
@@ -369,7 +398,7 @@ export function makeBookingsService(
     notifications,
     makeDriversService(prisma, { audit, notifications }),
     overrides.customers ?? makeCustomersService(prisma, audit),
-    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
+    makeHoldSettlementService(prisma, audit, notifications),
     overrides.settings ?? makeVehicleSettingsService(prisma),
     overrides.insurance ?? makeInsuranceService(prisma),
     makeAddressService(prisma),

@@ -10,6 +10,8 @@ import type {
   PlatformMoneySummary,
   RefundFilters,
   RejectRefundInput,
+  ScheduledCredit,
+  PlatformBankAccountChangeRequest,
   SaveBankBalanceInput,
   SettleHoldInput,
   MarkWithdrawalPaidInput,
@@ -171,3 +173,28 @@ export const requeryGatewayOrder = (id: string): Promise<PlatformPaymentOrderReq
     `/platform/payment-orders/${encodeURIComponent(id)}/requery`,
     {},
   );
+
+// ── Khoản cộng ví hẹn giờ (biên bản họp 19/11/2026 — khách huỷ) ──────────────────────────────────
+
+export const fetchScheduledCredits = (): Promise<ScheduledCredit[]> =>
+  apiGet<ScheduledCredit[]>('/platform/money/scheduled-credits');
+
+export const freezeScheduledCredit = (id: string, note: string): Promise<void> =>
+  apiPost<void>(`/platform/money/scheduled-credits/${id}/freeze`, { note });
+
+export const unfreezeScheduledCredit = (id: string): Promise<void> =>
+  apiPost<void>(`/platform/money/scheduled-credits/${id}/unfreeze`, {});
+
+export const releaseScheduledCredit = (id: string): Promise<void> =>
+  apiPost<void>(`/platform/money/scheduled-credits/${id}/release`, {});
+
+// ── Yêu cầu đổi tài khoản nhận tiền (biên bản họp 19/11/2026) ───────────────────────────────────
+
+export const fetchBankAccountChangeRequests = (): Promise<PlatformBankAccountChangeRequest[]> =>
+  apiGet<PlatformBankAccountChangeRequest[]>('/platform/money/bank-account-change-requests');
+
+export const approveBankAccountChangeRequest = (id: string, note: string | null): Promise<void> =>
+  apiPost<void>(`/platform/money/bank-account-change-requests/${id}/approve`, note ? { note } : {});
+
+export const rejectBankAccountChangeRequest = (id: string, note: string): Promise<void> =>
+  apiPost<void>(`/platform/money/bank-account-change-requests/${id}/reject`, { note });

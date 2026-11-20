@@ -803,4 +803,9 @@ export class CustomerTripCancelPreviewDto {
       'true = huỷ do SỰ CỐ TÀI XẾ (ADR 0074): hoàn 100% dù đã qua mốc huỷ miễn phí, lỗi ghi cho phía cho thuê',
   })
   driverIncident!: boolean;
+  @ApiProperty({
+    description:
+      'Số giờ tiền hoàn chờ trước khi vào ví điểm (biên bản họp 19/11/2026 - khách huỷ). 0 = vào ngay.',
+  })
+  refundDelayHours!: number;
 }

@@ -225,7 +225,15 @@ function CancelMoneyPreview({ preview }: { preview: CustomerTripCancelPreview })
   const t = useTranslations('Trips.cancel.preview');
   const fmt = useAppFormat();
 
-  const deferred = preview.deferred ? <p className={styles.note}>{t('deferred')}</p> : null;
+  /*
+   * Tiền hoàn CHỜ vài giờ trước khi vào ví (biên bản họp 19/11/2026 - khách huỷ) — nói trước khi bấm,
+   * kể cả ca hoàn đủ, để khách không tưởng tiền "mất" khi chưa thấy trong ví.
+   */
+  const delayed =
+    preview.refundDelayHours > 0 && !isZeroMoney(preview.refundAmount) && !preview.deferred ? (
+      <p className={styles.note}>{t('refundDelay', { hours: preview.refundDelayHours })}</p>
+    ) : null;
+  const deferred = preview.deferred ? <p className={styles.note}>{t('deferred')}</p> : delayed;
 
   /*
    * Huỷ do SỰ CỐ TÀI XẾ (ADR 0074): server đã chốt hoàn 100% dù qua mốc miễn phí — nói rõ vì sao,

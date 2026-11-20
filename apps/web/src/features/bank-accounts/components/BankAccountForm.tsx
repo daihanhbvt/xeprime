@@ -17,7 +17,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { bankAccountTitle } from '../current-account';
-import { useCreateBankAccount } from '../hooks/use-bank-accounts';
+import { useCreateBankAccount, useCreateChangeRequest } from '../hooks/use-bank-accounts';
 import type { BankAccount, BankAccountScope } from '../types';
 import styles from './BankAccountForm.module.css';
 import { BankAccountSavedDialog } from './BankAccountSavedDialog';
@@ -78,15 +78,19 @@ export function BankAccountForm({
   const { message, notification } = App.useApp();
   const errorMessage = useErrorMessage();
   const create = useCreateBankAccount(scope);
+  /*
+   * Đã có tài khoản ⇒ KHÔNG đổi thẳng nữa (biên bản họp 19/11/2026: tài khoản khoá từ lần khai đầu).
+   * Hộp thoại thành "Yêu cầu đổi tài khoản": gửi yêu cầu, XePrime gọi điện xác minh chính chủ rồi mới
+   * đổi — trong lúc chờ, tiền vẫn về tài khoản hiện tại.
+   */
+  const requesting = replacing != null;
+  const request = useCreateChangeRequest(scope);
+  const pending = create.isPending || request.isPending;
   const isAccount = appearance === 'account';
   const isPartner = appearance === 'partner';
   /** Bố cục v2 (nhãn trên ô, biểu tượng, nút của bảng nút v2) — cả khu khách lẫn site partner. */
   const v2 = isAccount || isPartner;
-  const submitText = isPartner
-    ? replacing
-      ? tCommon('actions.confirm')
-      : t('addSubmit')
-    : t('submit');
+  const submitText = requesting ? t('requestSubmit') : isPartner ? t('addSubmit') : t('submit');
   /** Câu của hộp "Thành công" (dáng `account`) — `null` là hộp đang đóng. */
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
 
@@ -117,6 +121,7 @@ export function BankAccountForm({
           .matches(/^[0-9\s]+$/, t('validation.numberDigits'))
           .max(40),
         label: yup.string().trim().max(60).default(''),
+        note: yup.string().trim().max(500).default(''),
       }),
     [t],
   );
@@ -128,6 +133,7 @@ export function BankAccountForm({
       accountName: '',
       accountNumber: '',
       label: '',
+      note: '',
     },
   });
 
@@ -138,7 +144,31 @@ export function BankAccountForm({
 
   const onSubmit = handleSubmit((values) => {
     // Enter vẫn gửi form khi nút OK đang quay — không cho lượt thứ hai thay luôn lượt thứ nhất.
-    if (create.isPending) return;
+    if (pending) return;
+    if (requesting) {
+      request.mutate(
+        {
+          bankCode: values.bankCode,
+          accountNumber: values.accountNumber,
+          accountName: values.accountName,
+          ...(values.label ? { label: values.label } : {}),
+          ...(values.note ? { note: values.note } : {}),
+        },
+        {
+          onSuccess: () => {
+            if (isPartner) {
+              notification.success({
+                title: t('requestSentTitle'),
+                description: t('requestSent'),
+              });
+            } else message.success(t('requestSent'));
+            close();
+          },
+          onError: (err: unknown) => message.error(errorMessage(err)),
+        },
+      );
+      return;
+    }
     create.mutate(
       {
         bankCode: values.bankCode,
@@ -147,16 +177,14 @@ export function BankAccountForm({
         ...(values.label ? { label: values.label } : {}),
       },
       {
-        onSuccess: (account) => {
-          // Khai lại đúng tài khoản đang dùng: server không đổi gì, và nói "đã đổi" là nói sai.
-          const unchanged = replacing?.id === account.id;
-          let toast = t('created');
-          if (replacing) toast = unchanged ? t('unchanged') : t('changed');
-          if (isAccount && !unchanged) setSavedNotice(toast);
-          else if (isPartner && !unchanged)
+        // Chỉ còn nhánh THÊM tài khoản đầu tiên — đổi đi qua yêu cầu ở trên (tài khoản đã khoá).
+        onSuccess: () => {
+          const toast = t('created');
+          if (isAccount) setSavedNotice(toast);
+          else if (isPartner)
             notification.success({
               title: t('saved.toastTitle'),
-              description: replacing ? t('saved.changedDetail') : t('saved.createdDetail'),
+              description: t('saved.createdDetail'),
             });
           else message.success(toast);
           close();
@@ -169,21 +197,21 @@ export function BankAccountForm({
   return (
     <>
       <ResponsiveDialog
-        title={replacing ? t('changeTitle') : t('title')}
+        title={requesting ? t('requestTitle') : t('title')}
         open={open}
         onClose={close}
         okText={submitText}
         onOk={() => void onSubmit()}
-        confirmLoading={create.isPending}
+        confirmLoading={pending}
         size="sm"
         className={cx(v2 && styles.dialog)}
         footer={
           v2 ? (
             <div className={styles.footer}>
-              <CtaButton variant="neutral" onClick={close} disabled={create.isPending}>
+              <CtaButton variant="neutral" onClick={close} disabled={pending}>
                 {tCommon('actions.cancel')}
               </CtaButton>
-              <CtaButton onClick={() => void onSubmit()} loading={create.isPending}>
+              <CtaButton onClick={() => void onSubmit()} loading={pending}>
                 {submitText}
               </CtaButton>
             </div>
@@ -195,7 +223,7 @@ export function BankAccountForm({
             type={v2 ? 'warning' : 'info'}
             showIcon={!v2}
             className={styles.replaces}
-            title={t('replaces', {
+            title={t('requestIntro', {
               account: `${bankAccountTitle(replacing)} · ${replacing.accountNumberMasked}`,
             })}
           />
@@ -246,6 +274,14 @@ export function BankAccountForm({
             placeholder={t('labelPlaceholder')}
             prefix={v2 ? <TagOutlined aria-hidden="true" /> : undefined}
           />
+          {requesting ? (
+            <TextField
+              control={control}
+              name="note"
+              label={t('requestNote')}
+              placeholder={t('requestNotePlaceholder')}
+            />
+          ) : null}
         </DialogForm>
       </ResponsiveDialog>
 

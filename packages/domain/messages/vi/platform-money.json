@@ -441,5 +441,74 @@
         "duplicate_provider_tx": "mã giao dịch trùng lượt khác"
       }
     }
+  },
+  "scheduledCredits": {
+    "title": "Khoản chờ cộng ví ({count})",
+    "hint": "Khách huỷ hoặc không đến nhận xe: tiền hoàn của khách và phần của chủ xe chờ theo Cấu hình ứng dụng rồi mới vào ví. Tạm giữ khoản đang có khiếu nại; cộng ngay khi đã xác minh xong.",
+    "owner": {
+      "customer": "Khách - hoàn tiền",
+      "shop": "Chủ xe - tiền đền"
+    },
+    "columns": {
+      "payee": "Người nhận",
+      "amount": "Số tiền",
+      "releaseAt": "Vào ví lúc",
+      "status": "Trạng thái"
+    },
+    "status": {
+      "scheduled": "Đang chờ",
+      "frozen": "Tạm giữ"
+    },
+    "actions": {
+      "freeze": "Tạm giữ",
+      "unfreeze": "Bỏ tạm giữ",
+      "release": "Cộng ngay",
+      "freezeSuccess": "Đã tạm giữ khoản này",
+      "unfreezeSuccess": "Đã bỏ tạm giữ - khoản chờ tiếp tới giờ cũ",
+      "releaseSuccess": "Đã cộng vào ví",
+      "releaseConfirmTitle": "Cộng ngay vào ví?",
+      "releaseConfirmBody": "{amount} sẽ vào ví của {payee} ngay bây giờ. Không hoàn tác được."
+    },
+    "freeze": {
+      "title": "Tạm giữ khoản chờ cộng ví",
+      "noteLabel": "Lý do tạm giữ",
+      "notePlaceholder": "Ví dụ: chủ xe báo khách huỷ rồi thuê lại trực tiếp, chờ xác minh",
+      "noteRequired": "Nhập lý do (tối thiểu 5 ký tự)."
+    }
+  },
+  "bankChangeRequests": {
+    "title": "Yêu cầu đổi tài khoản nhận tiền ({count})",
+    "hint": "Tài khoản nhận tiền đã khoá từ lần khai đầu. Gọi điện cho người yêu cầu, đọc số tài khoản mới cho họ xác nhận chính chủ, rồi mới duyệt - chỉ lượt duyệt mới đổi tài khoản.",
+    "owner": {
+      "shop": "Gian hàng",
+      "personal": "Ví cá nhân"
+    },
+    "noPhone": "Chưa có số điện thoại - liên hệ qua email",
+    "noCurrent": "Chưa có tài khoản",
+    "columns": {
+      "requester": "Người yêu cầu",
+      "current": "Tài khoản đang dùng",
+      "next": "Tài khoản mới",
+      "createdAt": "Gửi lúc"
+    },
+    "actions": {
+      "approve": "Duyệt đổi",
+      "reject": "Từ chối"
+    },
+    "approve": {
+      "title": "Duyệt đổi tài khoản nhận tiền",
+      "hint": "Tài khoản mới: {account} - {name}. Chỉ duyệt khi đã gọi điện và người nghe xác nhận đúng chính chủ.",
+      "noteLabel": "Đã xác minh thế nào",
+      "notePlaceholder": "Ví dụ: đã gọi số đăng ký, khớp họ tên và 4 số cuối CCCD",
+      "noteRequired": "Ghi lại cách đã xác minh (tối thiểu 5 ký tự).",
+      "success": "Đã đổi tài khoản nhận tiền"
+    },
+    "reject": {
+      "title": "Từ chối đổi tài khoản",
+      "noteLabel": "Lý do từ chối",
+      "notePlaceholder": "Ví dụ: người nghe máy không phải chủ tài khoản",
+      "noteRequired": "Nhập lý do (tối thiểu 5 ký tự).",
+      "success": "Đã từ chối - tài khoản giữ nguyên"
+    }
   }
 }

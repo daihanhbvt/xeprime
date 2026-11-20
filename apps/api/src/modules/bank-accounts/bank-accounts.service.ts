@@ -109,12 +109,33 @@ export class BankAccountsService {
     dto: SaveBankAccountDto,
     actorUserId: string | null = null,
   ): Promise<BankAccountDto> {
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, owner, dto, actorUserId));
+  }
+
+  /**
+   * Phần ghi của `create`, chạy trong transaction của người gọi.
+   *
+   * ## KHOÁ từ lần khai đầu (biên bản họp 19/11/2026)
+   *
+   * Đã có tài khoản nhận tiền thì chủ ví KHÔNG tự đổi được nữa (`BANK_ACCOUNT_LOCKED`): đổi chỗ tiền
+   * về là việc đầu tiên kẻ chiếm được tài khoản sẽ làm. Đổi phải qua yêu cầu — admin/CSKH gọi điện
+   * xác minh chính chủ rồi duyệt, và CHỈ lượt duyệt đó gọi hàm này với `allowReplace`
+   * (`BankAccountChangeRequestsService.approve`). Khai lại đúng tài khoản đang dùng (đổi tên gợi nhớ)
+   * vẫn được.
+   */
+  async createWithinTx(
+    tx: Prisma.TransactionClient,
+    owner: BankAccountOwner,
+    dto: SaveBankAccountDto,
+    actorUserId: string | null,
+    opts: { allowReplace?: boolean } = {},
+  ): Promise<BankAccountDto> {
     const bankCode = dto.bankCode.trim().toUpperCase();
     const accountNumber = normalizeNumber(dto.accountNumber);
     const accountName = dto.accountName.trim();
     const label = dto.label?.trim() || null;
 
-    return this.prisma.$transaction(async (tx) => {
+    {
       await lockOwnerWithinTx(tx, owner);
 
       const current = await tx.bankAccount.findFirst({
@@ -136,6 +157,8 @@ export class BankAccountsService {
         });
         return toDto(row);
       }
+
+      if (current && !opts.allowReplace) throw bankAccountLocked();
 
       if (current && dto.isDefault === false) {
         throw new ConflictException({
@@ -182,7 +205,7 @@ export class BankAccountsService {
         tx,
       );
       return toDto(row);
-    });
+    }
   }
 
   /**
@@ -199,35 +222,19 @@ export class BankAccountsService {
   }
 
   /**
-   * Bỏ dùng tài khoản — LƯU TRỮ, không xoá (ADR 0033): lệnh rút cũ còn trỏ về nó, và xoá là mất
-   * khả năng trả lời "khoản đó đã chuyển vào đâu". Sau đó chủ này không còn tài khoản nhận tiền
-   * cho tới khi khai cái mới.
+   * Bỏ dùng tài khoản — ĐÃ KHOÁ (biên bản họp 19/11/2026). Chủ ví không tự gỡ tài khoản nhận tiền:
+   * gỡ rồi khai cái mới là một đường vòng qua yêu cầu đổi có xác minh chính chủ. Endpoint còn lại để
+   * app native cũ nhận một câu lỗi có mã (`BANK_ACCOUNT_LOCKED`) thay vì 404.
    *
-   * Điều kiện chủ sở hữu nằm trong CHÍNH câu cập nhật: biết id không cho quyền đụng vào nó.
+   * Điều kiện chủ sở hữu vẫn kiểm trước: biết id của người khác không cho biết thêm điều gì.
    */
-  async archive(
-    owner: BankAccountOwner,
-    id: string,
-    actorUserId: string | null = null,
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.bankAccount.updateMany({
-        where: { id, ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
-        data: { status: BANK_ACCOUNT_STATUS.ARCHIVED, isDefault: false },
-      });
-      if (count === 0) throw notFound();
-
-      await this.audit.record(
-        {
-          ...auditScope(owner),
-          actorUserId,
-          action: 'bank_account.archived',
-          targetType: 'bank_account',
-          targetId: id,
-        },
-        tx,
-      );
+  async archive(owner: BankAccountOwner, id: string): Promise<void> {
+    const exists = await this.prisma.bankAccount.findFirst({
+      where: { id, ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
+      select: { id: true },
     });
+    if (!exists) throw notFound();
+    throw bankAccountLocked();
   }
 
   /**
@@ -311,6 +318,15 @@ function toDto(row: Row): BankAccountDto {
 /** Bỏ mọi khoảng trắng người dùng gõ hoặc dán từ app ngân hàng. */
 function normalizeNumber(value: string): string {
   return value.replace(/\s+/g, '');
+}
+
+/** Tài khoản đã khoá — đổi phải qua yêu cầu có xác minh (biên bản họp 19/11/2026). */
+function bankAccountLocked(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.BANK_ACCOUNT_LOCKED,
+    message:
+      'Tài khoản nhận tiền đã khoá - gửi yêu cầu đổi tài khoản để XePrime gọi điện xác minh chính chủ',
+  });
 }
 
 function notFound(): NotFoundException {

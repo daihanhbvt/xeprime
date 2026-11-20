@@ -441,5 +441,74 @@
         "duplicate_provider_tx": "transaction id used by another payment"
       }
     }
+  },
+  "scheduledCredits": {
+    "title": "Pending wallet credits ({count})",
+    "hint": "When a guest cancels or does not show up, the guest refund and the owner share wait (see App configuration) before reaching the wallet. Hold credits under dispute; release once verified.",
+    "owner": {
+      "customer": "Guest - refund",
+      "shop": "Owner - compensation"
+    },
+    "columns": {
+      "payee": "Payee",
+      "amount": "Amount",
+      "releaseAt": "Credited at",
+      "status": "Status"
+    },
+    "status": {
+      "scheduled": "Waiting",
+      "frozen": "On hold"
+    },
+    "actions": {
+      "freeze": "Hold",
+      "unfreeze": "Remove hold",
+      "release": "Credit now",
+      "freezeSuccess": "Credit put on hold",
+      "unfreezeSuccess": "Hold removed - the credit waits until its original time",
+      "releaseSuccess": "Credited to the wallet",
+      "releaseConfirmTitle": "Credit to the wallet now?",
+      "releaseConfirmBody": "{amount} will reach the wallet of {payee} right now. This cannot be undone."
+    },
+    "freeze": {
+      "title": "Hold a pending credit",
+      "noteLabel": "Reason for holding",
+      "notePlaceholder": "e.g. the owner reports the guest cancelled and rebooked directly; verifying",
+      "noteRequired": "Enter a reason (at least 5 characters)."
+    }
+  },
+  "bankChangeRequests": {
+    "title": "Payout account change requests ({count})",
+    "hint": "Payout accounts are locked after first setup. Call the requester, read the new account number back so they confirm it is really them, then approve - only approval switches the account.",
+    "owner": {
+      "shop": "Shop",
+      "personal": "Personal wallet"
+    },
+    "noPhone": "No phone number - contact by email",
+    "noCurrent": "No account yet",
+    "columns": {
+      "requester": "Requester",
+      "current": "Current account",
+      "next": "New account",
+      "createdAt": "Sent at"
+    },
+    "actions": {
+      "approve": "Approve change",
+      "reject": "Reject"
+    },
+    "approve": {
+      "title": "Approve payout account change",
+      "hint": "New account: {account} - {name}. Approve only after calling and the person confirms they are the account owner.",
+      "noteLabel": "How it was verified",
+      "notePlaceholder": "e.g. called the registered number, name and last 4 ID digits match",
+      "noteRequired": "Record how you verified (at least 5 characters).",
+      "success": "Payout account changed"
+    },
+    "reject": {
+      "title": "Reject account change",
+      "noteLabel": "Reason",
+      "notePlaceholder": "e.g. the person answering was not the account owner",
+      "noteRequired": "Enter a reason (at least 5 characters).",
+      "success": "Rejected - the account stays the same"
+    }
   }
 }

@@ -37,6 +37,7 @@ import type { PlatformWithdrawal } from '../types';
 import { waitingAge } from '../waiting-age';
 import { QueueViewSwitch } from './QueueViewSwitch';
 import { useWaitingAgeLabel } from './WaitingAgeText';
+import { BankAccountChangeRequestsSection } from './BankAccountChangeRequestsSection';
 import { WithdrawalPaidModal } from './WithdrawalPaidModal';
 import styles from './MoneyQueue.module.css';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -323,6 +324,8 @@ export function WithdrawalQueue() {
 
   return (
     <div className={styles.panel}>
+      <BankAccountChangeRequestsSection />
+
       {view === VIEW.ACTIONABLE && overdueCount > 0 ? (
         <Alert
           type="warning"

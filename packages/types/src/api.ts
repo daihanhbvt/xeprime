@@ -592,6 +592,15 @@ export const API_ERROR_CODE = {
    * chủ chỉ một tài khoản, nên thay vì âm thầm đổi chỗ tiền về, server từ chối.
    */
   BANK_ACCOUNT_REPLACE_NOT_CONFIRMED: 'BANK_ACCOUNT_REPLACE_NOT_CONFIRMED',
+  /**
+   * Tài khoản nhận tiền đã KHOÁ từ lần khai đầu (biên bản họp 19/11/2026): chủ ví không tự đổi / gỡ
+   * được — phải gửi yêu cầu đổi để admin/CSKH gọi xác minh chính chủ.
+   */
+  BANK_ACCOUNT_LOCKED: 'BANK_ACCOUNT_LOCKED',
+  /** Đã có một yêu cầu đổi tài khoản đang chờ xác minh — huỷ nó trước khi gửi yêu cầu mới. */
+  BANK_ACCOUNT_CHANGE_PENDING: 'BANK_ACCOUNT_CHANGE_PENDING',
+  /** Yêu cầu đổi sang ĐÚNG tài khoản đang dùng — không có gì để đổi. */
+  BANK_ACCOUNT_CHANGE_UNCHANGED: 'BANK_ACCOUNT_CHANGE_UNCHANGED',
 
   // Rút tiền (ADR 0033)
   /** Số dư khả dụng không đủ, hoặc ví đang tạm khoá. */
