@@ -247,7 +247,8 @@ function ServicesBody({
                 )
               }
             />
-            {serviceOn && hasSetting ? (
+            {/* Có tài xế không tự nhận (19/11/2026) - không có công tắc, chỉ tự lái mới có. */}
+            {serviceOn && hasSetting && service === SERVICE_TYPE.SELF_DRIVE ? (
               settings.isLoading ? (
                 <LoadingState variant="inline" />
               ) : settings.isError ? (
@@ -266,7 +267,6 @@ function ServicesBody({
                   vehicleId={vehicle.id}
                   setting={setting}
                   canEdit={canUpdate && canOperate}
-                  withDriver={service === SERVICE_TYPE.WITH_DRIVER}
                 />
               ) : null
             ) : null}
@@ -537,18 +537,16 @@ function PriceField({
 /**
  * "Tự động đồng ý nhận chuyến" — LƯU NGAY, cùng hook với thẻ "Tối ưu nhận chuyến" ở Hồ sơ xe. Điều
  * kiện để hệ thống tự nhận mở ra ngay dưới công tắc (design chỉ vẽ công tắc; bốn–sáu dòng này là
- * toàn bộ lời hứa của nó nên không được biến mất).
+ * toàn bộ lời hứa của nó nên không được biến mất). Chỉ tab tự lái có — có tài xế luôn duyệt tay.
  */
 function AutoAcceptRow({
   vehicleId,
   setting,
   canEdit,
-  withDriver,
 }: {
   vehicleId: string;
   setting: VehicleServiceSetting;
   canEdit: boolean;
-  withDriver: boolean;
 }) {
   const t = useTranslations('VehicleManage.autoAccept');
   const tEditor = useTranslations('Vehicles.editor.services');
@@ -589,18 +587,12 @@ function AutoAcceptRow({
         )
       }
     >
-      {withDriver ? (
-        // Có tài xế không tự nhận (19/11/2026) - nói lý do thay cho khung năng lực tài xế.
-        <Alert type="info" showIcon title={t('withDriverManualOnly')} />
-      ) : null}
       {rulesOpen ? (
         <div className={styles.rules}>
           <ul className={styles.rulesList}>
             <li>{t('rules.schedule')}</li>
             <li>{t('rules.quote')}</li>
             <li>{t('rules.longTerm')}</li>
-            {withDriver ? <li>{t('rules.driver')}</li> : null}
-            {withDriver ? <li>{t('rules.hold')}</li> : null}
           </ul>
           <p className={styles.rulesPolicy}>
             <strong>{t('policyTitle')}</strong> {t('policyBody')}

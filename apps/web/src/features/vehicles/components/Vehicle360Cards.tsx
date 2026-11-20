@@ -15,7 +15,7 @@ import {
   PictureOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { Badge, Button, Skeleton, Switch, Tooltip } from 'antd';
+import { Badge, Button, Skeleton, Switch } from 'antd';
 import Link from 'next/link';
 import { useId, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
@@ -24,7 +24,6 @@ import {
   VEHICLE_ALERT_KIND,
   VEHICLE_ALERT_SEVERITY,
   VEHICLE_IMAGE_TYPE,
-  VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_SOURCE_TYPE,
   requiredVehicleImageTypes,
   topVehicleAlertSeverity,
@@ -554,17 +553,16 @@ export function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
 
 /**
  * Tối ưu nhận chuyến (Figma `23670:3122`) — công tắc "Tự động đồng ý nhận chuyến" NGAY trên thẻ,
- * lưu tức thì; cùng hook (`useAutoAcceptToggle`) với mục dịch vụ của màn sửa. Xe phục vụ cả tự lái
- * lẫn có tài xế thì mỗi dịch vụ một công tắc, có nhãn dịch vụ. Thuê dài hạn không có công tắc —
- * gian hàng luôn tự chốt lịch (ADR 0011) — nên xe chỉ cho thuê dài hạn không có thẻ này.
+ * lưu tức thì; cùng hook (`useAutoAcceptToggle`) với mục dịch vụ của màn sửa. Chỉ TỰ LÁI có công
+ * tắc: có tài xế luôn chờ chủ xe duyệt (19/11/2026), thuê dài hạn gian hàng luôn tự chốt lịch
+ * (ADR 0011) — nên xe không cho thuê tự lái không có thẻ này.
  */
 export function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const t = useTranslations('Vehicles.overview');
-  const services = VEHICLE_SERVICE_SETTING_SERVICES.filter((service) =>
-    vehicle.serviceTypes.includes(service),
-  );
-  const settings = useVehicleServiceSettings(services.length > 0 ? vehicle.id : undefined);
-  if (services.length === 0) return null;
+  const selfDrive = vehicle.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE);
+  const settings = useVehicleServiceSettings(selfDrive ? vehicle.id : undefined);
+  if (!selfDrive) return null;
+  const setting = settings.data?.find((item) => item.serviceType === SERVICE_TYPE.SELF_DRIVE);
 
   return (
     <Panel title={t('automation.title')} className={styles.pairItem}>
@@ -574,18 +572,9 @@ export function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; c
         <p className={styles.muted}>{t('loadFailed')}</p>
       ) : (
         <div className={styles.toggleList}>
-          {services.map((service) => {
-            const setting = settings.data.find((item) => item.serviceType === service);
-            return setting ? (
-              <AutoAcceptRow
-                key={service}
-                vehicleId={vehicle.id}
-                setting={setting}
-                canEdit={canEdit}
-                showService={services.length > 1}
-              />
-            ) : null;
-          })}
+          {setting ? (
+            <AutoAcceptRow vehicleId={vehicle.id} setting={setting} canEdit={canEdit} />
+          ) : null}
         </div>
       )}
     </Panel>
@@ -596,40 +585,30 @@ function AutoAcceptRow({
   vehicleId,
   setting,
   canEdit,
-  showService,
 }: {
   vehicleId: string;
   setting: VehicleServiceSetting;
   canEdit: boolean;
-  showService: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
-  const tManage = useTranslations('VehicleManage.autoAccept');
-  const domainLabel = useDomainLabel();
   const toggle = useAutoAcceptToggle({ vehicleId, setting, canEdit });
   const labelId = useId();
-  const service = domainLabel('serviceType', setting.serviceType);
-  // Có tài xế không tự nhận (19/11/2026): nói lý do ở tooltip, không để công tắc mờ câm.
-  const blockedHint =
-    setting.serviceType === SERVICE_TYPE.WITH_DRIVER ? tManage('withDriverManualOnly') : undefined;
 
   return (
     <div className={styles.toggleRow}>
       <div className={styles.toggleText}>
         <p id={labelId} className={styles.toggleLabel}>
-          {showService ? t('automation.toggleFor', { service }) : t('automation.toggle')}
+          {t('automation.toggle')}
         </p>
         <p className={styles.toggleHint}>{t('automation.toggleHint')}</p>
       </div>
-      <Tooltip title={blockedHint}>
-        <Switch
-          checked={toggle.enabled}
-          loading={toggle.pending}
-          disabled={toggle.disabled}
-          onChange={(next) => void toggle.change(next)}
-          aria-labelledby={labelId}
-        />
-      </Tooltip>
+      <Switch
+        checked={toggle.enabled}
+        loading={toggle.pending}
+        disabled={toggle.disabled}
+        onChange={(next) => void toggle.change(next)}
+        aria-labelledby={labelId}
+      />
     </div>
   );
 }
