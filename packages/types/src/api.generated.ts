@@ -35298,7 +35298,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -35448,7 +35448,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44698,7 +44698,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {

@@ -844,13 +844,14 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
     );
     const before = (await cards.summary(AT)).tax;
 
-    await taxOn(await bookingFor(null), 30_000, '2001-01');
+    // Kỳ 1901 nằm ngoài dải kỳ ngẫu nhiên của tax-withholding.spec (1930–1959) — không bị giẫm.
+    await taxOn(await bookingFor(null), 30_000, '1901-01');
 
     const after = (await cards.summary(AT)).tax;
     expect(after.count - before.count).toBe(1);
     expect(d(after.amount, before.amount)).toBe(30_000);
-    expect(after.oldestPeriod).toBe('2001-01');
-    expect(after.period).not.toBe('2001-01');
+    expect(after.oldestPeriod).toBe('1901-01');
+    expect(after.period).not.toBe('1901-01');
   });
 });
 

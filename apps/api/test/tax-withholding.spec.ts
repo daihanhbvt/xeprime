@@ -122,14 +122,16 @@ async function makeBooking(snap: BookingPriceSnapshot = snapshot()): Promise<str
 
 /**
  * Kỳ QUÁ KHỨ riêng của spec này — chỉ kỳ đã kết thúc mới kê khai / nộp được, và kê khai lật MỌI
- * dòng của kỳ: dùng kỳ hiện tại là đụng vào dòng của spec khác chạy song song. Năm 1990–2019 rút
- * từ RUN, mỗi lượt gọi một tháng khác.
+ * dòng của kỳ: dùng kỳ hiện tại là đụng vào dòng của spec khác chạy song song. Năm 1930–1959 rút
+ * từ RUN, mỗi lượt gọi một tháng khác. Dải này tránh mọi kỳ cố định của spec khác
+ * (`reconciliation-three-way` 1901-01 · 2019-06, `wallet-activity` 2020-01): trùng kỳ là hai spec
+ * chạy song song giẫm dòng của nhau (CI 20/11/2026 đỏ vì rơi đúng 2001-01).
  */
 const usedPeriods: string[] = [];
 let periodSeq = 0;
 function pastPeriod(): { at: Date; period: string } {
   periodSeq += 1;
-  const year = 1990 + (parseInt(RUN.slice(-4), 36) % 30) + Math.floor((periodSeq - 1) / 12);
+  const year = 1930 + (parseInt(RUN.slice(-4), 36) % 30) + Math.floor((periodSeq - 1) / 12);
   const month = ((periodSeq - 1) % 12) + 1;
   const at = new Date(Date.UTC(year, month - 1, 15, 3));
   const period = taxPeriodKeyVn(at);
