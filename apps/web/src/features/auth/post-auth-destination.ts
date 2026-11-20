@@ -166,6 +166,8 @@ const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: 
   // chúng là `commissionEquivalent` — một lần chuyển, cùng một luật cho gõ URL lẫn `next`.
   { href: ROUTES.MANAGE.HOST_GUIDE },
   { href: ROUTES.MANAGE.CONTRACTS_DOCUMENTS },
+  // Xem/in hợp đồng thuê của một đơn — bộ cơ bản từ 20/11/2026 (SR-245, sửa ADR 0027 điều 1).
+  { href: ROUTES.MANAGE.CONTRACTS },
   { href: ROUTES.MANAGE.DATA_PROTECTION },
   { href: ROUTES.MANAGE.SUPPORT },
   { href: ROUTES.MANAGE.SECURITY },

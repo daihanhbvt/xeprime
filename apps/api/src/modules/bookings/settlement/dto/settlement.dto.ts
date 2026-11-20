@@ -46,10 +46,12 @@ export class SaveSurchargeDto {
   @Matches(MONEY_PATTERN, { message: 'Số tiền không hợp lệ (số VND không âm)' })
   amount!: string;
 
-  @ApiProperty({ description: 'Lý do - bắt buộc, đây là khoản trừ vào tiền của khách' })
+  /** Không bắt buộc (biên bản họp 19/11/2026) — bỏ trống thì lưu chuỗi rỗng, danh mục tự nói. */
+  @ApiPropertyOptional({ description: 'Lý do - không bắt buộc; bỏ trống lưu chuỗi rỗng' })
+  @IsOptional()
   @IsString()
   @MaxLength(1000)
-  reason!: string;
+  reason?: string;
 }
 
 /** Gỡ một khoản đã ghi nhầm. Huỷ MỀM kèm lý do — không xoá dấu vết. */

@@ -66,7 +66,8 @@ import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { isForbiddenError } from '@/lib/http-status';
 import { ApiClientError, getErrorCode, getErrorMessage } from '@/services/api-client';
-import { validateDocumentFile, uploadToR2 } from '@/services/upload';
+import { compressImageForUpload } from '@/lib/image-compression';
+import { validateDocumentSelection, uploadToR2 } from '@/services/upload';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import {
   applyDocumentOcr,
@@ -285,7 +286,7 @@ function DocumentsList({
     doc: VehicleDocumentSummary | null,
     file: File,
   ) {
-    const invalid = validateDocumentFile(file);
+    const invalid = validateDocumentSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return;
@@ -293,8 +294,10 @@ function DocumentsList({
     setUploadState(rowKey, { key: rowKey, fileName: file.name, progress: 0, file });
     try {
       const target = doc ?? (await createVehicleDocument(vehicle.id, { type }));
-      const ticket = await presignDocumentVersion(vehicle.id, target.id, file);
-      await uploadToR2(ticket.uploadUrl, file, (progress) =>
+      // Ảnh giấy tờ nén TRƯỚC presign (presign ký theo dung lượng); PDF đi qua nguyên trạng.
+      const upload = await compressImageForUpload(file, 'detail');
+      const ticket = await presignDocumentVersion(vehicle.id, target.id, upload);
+      await uploadToR2(ticket.uploadUrl, upload, (progress) =>
         setUploadState(rowKey, { key: rowKey, fileName: file.name, progress, file }),
       );
       await attachDocumentVersion(vehicle.id, target.id, ticket.fileId);
@@ -823,8 +826,9 @@ function AddDocumentDialog({
       if (file) {
         try {
           setProgress(0);
-          const ticket = await presignDocumentVersion(vehicleId, created.id, file);
-          await uploadToR2(ticket.uploadUrl, file, setProgress);
+          const upload = await compressImageForUpload(file, 'detail');
+          const ticket = await presignDocumentVersion(vehicleId, created.id, upload);
+          await uploadToR2(ticket.uploadUrl, upload, setProgress);
           await attachDocumentVersion(vehicleId, created.id, ticket.fileId);
         } catch (err) {
           /*
@@ -894,7 +898,7 @@ function AddDocumentDialog({
               disabled={saving}
               fileList={file ? [{ uid: 'picked', name: file.name, status: 'done' as const }] : []}
               beforeUpload={(picked) => {
-                const invalid = validateDocumentFile(picked);
+                const invalid = validateDocumentSelection(picked);
                 if (invalid) message.error(uploadRejectionMessage(invalid));
                 else setFile(picked);
                 return false; // flow presign→PUT→attach tự lo, không dùng upload mặc định AntD

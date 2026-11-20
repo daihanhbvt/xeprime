@@ -423,9 +423,14 @@ describe('Vehicle public approval (WS0)', () => {
   maybe(
     'đăng dịch vụ nào phải có GIÁ CHUYÊN BIỆT của dịch vụ đó mới gửi duyệt được (17/08)',
     async () => {
-      // with_driver không có giá tài xế → chặn (không âm thầm trưng giá tự lái như tổng giá).
+      /*
+       * with_driver không có giá nào để báo (cả giá có tài xế lẫn giá thuê ngày) → chặn. Có giá
+       * thuê ngày thì không chặn nữa (20/11/2026): khách thấy giá đó kèm "chưa gồm tài xế".
+       */
       const withDriver = await seedVehicle(tenantId, {
-        serviceTypes: ['self_drive', 'with_driver'],
+        serviceTypes: ['with_driver'],
+        weekdayPrice: null,
+        weekendPrice: null,
       });
       await expect(
         vehicles.submitForPublicReview(tenantId, withDriver, ownerId),
@@ -463,6 +468,13 @@ describe('Vehicle public approval (WS0)', () => {
       });
       const submitted2 = await vehicles.submitForPublicReview(tenantId, driverOnly, ownerId);
       expect(submitted2.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+
+      // Có tài xế CHƯA niêm yết giá có tài xế nhưng có giá thuê ngày → gửi duyệt được (20/11/2026).
+      const driverUnpriced = await seedVehicle(tenantId, {
+        serviceTypes: ['self_drive', 'with_driver'],
+      });
+      const submitted3 = await vehicles.submitForPublicReview(tenantId, driverUnpriced, ownerId);
+      expect(submitted3.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
     },
   );
 

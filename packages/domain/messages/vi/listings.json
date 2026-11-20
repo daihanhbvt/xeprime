@@ -35,7 +35,9 @@
       "semi_automatic": "Xe số",
       "manual_clutch": "Côn tay",
       "other": "Khác"
-    }
+    },
+    "withDriverIncluded": "Đã gồm tài xế",
+    "withDriverExcluded": "Chưa gồm tài xế"
   },
   "detail": {
     "specs": {
@@ -286,9 +288,12 @@
       "host": "Chủ xe"
     },
     "withDriverPrice": {
-      "title": "Giá thuê có tài xế",
+      "title": "Giá trọn gói có tài xế",
       "included": "Đã gồm tài xế, xăng xe, chi phí qua đêm của tài xế và phục vụ chở khách tại điểm đến.",
-      "excluded": "Chưa gồm phí cầu đường - khách trả trực tiếp trong chuyến."
+      "excluded": "Chưa gồm phí cầu đường - khách trả trực tiếp trong chuyến.",
+      "pendingTitle": "Giá thuê xe - chưa gồm tài xế",
+      "pendingPrice": "Chủ xe chưa niêm yết giá trọn gói có tài xế, nên giá trên là giá thuê xe, chưa gồm tài xế.",
+      "pendingNegotiate": "Tiền công tài xế và các chi phí đi kèm (xăng xe, lưu trú qua đêm…) bạn thống nhất trực tiếp với chủ xe - nhắn tin cho chủ xe trước khi đặt để được báo giá trọn gói."
     }
   },
   "reviews": {

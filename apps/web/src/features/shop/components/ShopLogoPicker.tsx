@@ -8,7 +8,7 @@ import { IMAGE_UPLOAD_MAX_BYTES, IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types'
 
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { cx } from '@/lib/cx';
-import { validateImageFile } from '@/services/upload';
+import { validateImageSelection } from '@/services/upload';
 
 import styles from './ShopLogoPicker.module.css';
 
@@ -70,7 +70,7 @@ export function ShopLogoPicker({
   }
 
   function select(file: File): false {
-    const invalid = validateImageFile(file);
+    const invalid = validateImageSelection(file);
     if (invalid) {
       message.error(rejection(invalid));
     } else {

@@ -54,6 +54,13 @@ const FEATURE_ICON: Readonly<Record<PlanFeature, ComponentType>> = {
 const FEATURE_TILES = 7;
 
 /**
+ * Cờ vẫn nằm trong `PLAN_FEATURE` (app mobile và `limits_json.features` của các gói cũ còn đọc)
+ * nhưng KHÔNG còn gác gì trên web/API: hợp đồng thuê theo đơn thành bộ cơ bản từ 20/11/2026
+ * (SR-245, sửa ADR 0027 điều 1). Mời "mua gói để mở" một thứ chủ xe đang dùng là quảng cáo sai.
+ */
+const NOT_SOLD: ReadonlySet<PlanFeature> = new Set([PLAN_FEATURE.CONTRACTS]);
+
+/**
  * "NÂNG CẤP ĐỂ MỞ KHOÁ" — ADR 0027 §Hệ quả gọi đây là **chỗ bán hàng thật sự** của màn "Gói của
  * tôi", và nói rõ nó chỉ thuyết phục khi danh sách viết bằng **ngôn ngữ người dùng**, không phải
  * tên module. Nhãn vì vậy lấy từ nhóm `Domain.planFeature` (dịch cả vi lẫn en), không phải từ
@@ -87,7 +94,9 @@ export function PlanFeatureList({ onUpgrade }: { onUpgrade?: () => void }) {
 
   const locked: PlanFeature[] = PLAN_FEATURE_VALUES.filter(
     // Cờ vắng trong cache cũ ⇒ coi như đang mở, cùng mặc định "không khoá ai" của `useFeature`.
-    (feature) => (states[feature] ?? FEATURE_STATE.ENABLED) !== FEATURE_STATE.ENABLED,
+    (feature) =>
+      !NOT_SOLD.has(feature) &&
+      (states[feature] ?? FEATURE_STATE.ENABLED) !== FEATURE_STATE.ENABLED,
   );
 
   if (locked.length === 0) return null;

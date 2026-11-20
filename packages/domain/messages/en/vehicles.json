@@ -313,13 +313,13 @@
       "monthlyHelp": "Customer estimate = days × monthly price ÷ 30. Required before submitting for review.",
       "withDriverDaily": "With-driver day rate - in city",
       "withDriverDailyPlaceholder": "e.g. 1,500,000",
-      "withDriverDailyHelp": "Driver included (base rate). Required before submitting for review.",
+      "withDriverDailyHelp": "Daily price with a driver for in-city trips. Leave it blank and renters see the self-drive price, marked as not including a driver.",
       "withDriverInterCity": "With-driver day rate - intercity",
       "withDriverInterCityPlaceholder": "e.g. 1,800,000",
-      "withDriverInterCityHelp": "Intercity round trip - required for a with-driver vehicle",
+      "withDriverInterCityHelp": "Inter-city round trip - leave blank to use the in-city price",
       "withDriverOneWay": "With-driver day rate - one way",
       "withDriverOneWayPlaceholder": "e.g. 2,200,000",
-      "withDriverOneWayHelp": "Intercity one way - required for a with-driver vehicle",
+      "withDriverOneWayHelp": "Inter-city one way - leave blank to use the inter-city round-trip price",
       "hourlyHelp": "Leave empty if you do not rent by the hour."
     },
     "marketPrice": {
@@ -1338,16 +1338,23 @@
     "withDriver": {
       "title": "With driver",
       "daily": "In-city (base price)",
-      "dailyHint": "Required to publish the with-driver service.",
+      "dailyHint": "Daily price including a driver for trips within the city - also the base for other routes. Until it is set, renters see the self-drive price marked as not including a driver.",
       "interCity": "Inter-city - round trip",
-      "interCityHint": "Day rate for a trip to another province and back to the pickup point. Required for a with-driver vehicle.",
+      "interCityHint": "Daily price for trips to another province and back to the pickup point. Leave blank to use the in-city price.",
       "oneWay": "Inter-city - one way",
-      "oneWayHint": "Day rate for a trip to another province without returning. Required for a with-driver vehicle.",
+      "oneWayHint": "Daily price for trips to another province without returning. Leave blank to use the inter-city round-trip price (or the in-city price).",
       "tipLabel": "About with-driver prices",
       "info": "These rates already include the driver; the in-city rate is the base the system falls back to when another rate is missing.",
       "dailyTipLabel": "About the in-city with-driver rate",
       "interCityTipLabel": "About the intercity round-trip rate",
-      "oneWayTipLabel": "About the intercity one-way rate"
+      "oneWayTipLabel": "About the intercity one-way rate",
+      "reminder": {
+        "missingTitle": "Renters do not see an all-inclusive with-driver price yet",
+        "missingBody": "Right now renters see the self-drive price of {price}/day marked \"driver not included\", and have to agree the driver cost with you. Add a price that includes the driver so renters can book straight away without asking.",
+        "missingNoPriceBody": "This vehicle has no price to quote for with-driver trips. Add a price that includes the driver so renters can see it and book.",
+        "partial": "Routes without their own price use the closest price you have set (one way → inter-city round trip → in-city). Set all three to quote each route exactly.",
+        "complete": "Renters see an all-inclusive price covering the driver, fuel and the driver's overnight costs - they only pay tolls on top."
+      }
     },
     "deposit": {
       "title": "Security requirement (collateral)",
@@ -2010,7 +2017,8 @@
       "inheritedElsewhere": "Following the <policies>shop policy</policies>. To customise this vehicle, turn off the switch at the top of <switch>Rental policy</switch>.",
       "deliveryTitle": "Doorstep delivery",
       "rulesTitle": "Delivery, deposit & extra fees",
-      "pricesInvalid": "Some prices in Services & prices are invalid (for example, the weekday price is missing) - open that section, fix them, then save again.",
+      "pricesInvalid": "Some prices in Services & prices are invalid - open that section, fix them, then save again.",
+      "pricesInvalidFields": "Some fields in Services & prices are invalid: {fields} - open that section, fix them, then save again.",
       "bufferTipLabel": "Which bookings the preparation time applies to",
       "savedAll": "Rental policy saved"
     },

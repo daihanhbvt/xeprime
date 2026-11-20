@@ -33,6 +33,21 @@ Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0032](0032
 >   ([ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 10; sort mặc định
 >   theo `rank_score` — [ADR 0045](0045-host-cancellation-and-reputation.md) điều 4–5).
 
+> ⚠️ **Điều 1 sửa 20/11/2026 (Jira SR-245): "Hợp đồng" chuyển sang bộ CƠ BẢN.**
+>
+> Hợp đồng thuê của TỪNG ĐƠN là giấy tờ của chuyến — cùng loại với tiền của từng đơn, vốn đã ở bộ
+> cơ bản. Chủ xe cá nhân (tuyến hoa hồng) lập / xem / in hợp đồng ở bước chuẩn bị giao xe y như
+> gian hàng; bên cho thuê đứng tên theo tuyến (ADR 0054).
+>
+> - **Server:** `ContractsController` bỏ `@SubscriptionTrackOnly()` và `@RequiresFeature(CONTRACTS)`;
+>   còn quyền `contracts.manage` (lập) / `bookings.view` (xem). Phiên hỗ trợ vẫn không vào được
+>   (không route nào khai `@SupportAction`, ADR 0050 §10).
+> - **Web:** dòng "Hợp đồng" của khối chuẩn bị bàn giao chỉ xét quyền + phiên hỗ trợ; trang
+>   `/contracts/<id>` mở cho tuyến hoa hồng; "Gói của tôi" không còn mời mua gói để mở hợp đồng.
+> - **Cờ `PLAN_FEATURE.CONTRACTS` CÒN trong danh mục** và trong `FULL_MANAGE_FEATURES` — app mobile
+>   (`BookingDetailScreen`, `DebtDetailSheet`) vẫn gác nút hợp đồng bằng cờ này, và gỡ cờ khỏi gói
+>   là làm gian hàng tuyến gói mất nút trên mobile. Gỡ hẳn cờ khi mobile đã bỏ đọc nó.
+
 ## Bối cảnh
 
 ADR 0020 (đã gỡ, xem [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)) đến ADR 0026
@@ -62,11 +77,11 @@ quyết định lấy, và sáu tháng sau không ai trả lời được "gian 
    | Xe, giấy tờ xe, đưa xe lên chợ | **Thu chi** (phiếu thu, phiếu chi, sổ quỹ) |
    | Lịch xe, chặn lịch | **Công nợ** |
    | Yêu cầu thuê, duyệt / từ chối | **Báo cáo** (theo xe, theo khách, theo kỳ) |
-   | Đơn thuê, giao và nhận lại xe | **Bảo dưỡng** và chi phí bảo dưỡng |
+   | Đơn thuê, giao và nhận lại xe, hợp đồng thuê của đơn (từ 20/11/2026) | **Bảo dưỡng** và chi phí bảo dưỡng |
    | Sổ khách hàng, đánh giá | **Nhân viên** và phân quyền |
    | Chat, hồ sơ gian hàng | **Chi nhánh** |
    | | **Tài xế** |
-   | | **Hợp đồng** |
+   | | ~~**Hợp đồng**~~ — chuyển sang bộ cơ bản 20/11/2026 (SR-245) |
 
    Chủ xe vẫn thấy **số tiền của từng đơn** — nó nằm sẵn trên đơn thuê. Cái họ không có là **sổ
    tổng hợp**: cộng dồn theo kỳ, theo xe, theo khách, và đối chiếu công nợ. Ranh giới này cố ý

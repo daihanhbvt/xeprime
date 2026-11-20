@@ -136,7 +136,9 @@ function OpenFinanceCard({ finance }: { finance: CustomerTripFinance }) {
                       <span>
                         {dl('surchargeCategory', row.category)}
                       </span>
-                      <span className={styles.surchargeReason}>{row.reason}</span>
+                      {row.reason ? (
+                        <span className={styles.surchargeReason}>{row.reason}</span>
+                      ) : null}
                     </dt>
                     <dd>{fmt.money(row.amount)}</dd>
                   </div>

@@ -285,3 +285,51 @@ describe('Lỗi khi duyệt', () => {
     );
   });
 });
+
+/**
+ * Biên bản họp 19/11/2026 — bước xác nhận duyệt của luồng giao tận nơi thiếu phí giao xe. Chủ xe
+ * nhập phí ngay trong hộp duyệt; trống thì không gửi gì (server hiểu là miễn phí như trước).
+ */
+describe('Phí giao xe ở hộp duyệt', () => {
+  async function renderApprove(item: BookingRequestItem, onConfirm = vi.fn()) {
+    const { ApproveBookingRequestDialog } = await import('./ApproveBookingRequestDialog');
+    render(
+      withQueryClient(
+        <App>
+          <ApproveBookingRequestDialog
+            request={item}
+            submitting={false}
+            error={null}
+            onCancel={vi.fn()}
+            onConfirm={onConfirm}
+          />
+        </App>,
+      ),
+    );
+    return { dialog: await screen.findByRole('dialog'), onConfirm };
+  }
+
+  it('giao tận nơi: nhập phí rồi duyệt - phí đi kèm lượt duyệt', async () => {
+    const { dialog, onConfirm } = await renderApprove(
+      request({ deliveryRequested: true, deliveryAddress: '45 Lê Lợi, Huế' }),
+    );
+
+    fireEvent.change(within(dialog).getByLabelText('Phí giao xe tận nơi'), {
+      target: { value: '150000' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: /Xác nhận yêu cầu/ }));
+
+    expect(onConfirm).toHaveBeenCalledWith({ deliveryFee: '150000' });
+  });
+
+  it('giao tận nơi nhưng để trống: duyệt miễn phí, không gửi phí', async () => {
+    const { dialog, onConfirm } = await renderApprove(request({ deliveryRequested: true }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Xác nhận yêu cầu/ }));
+    expect(onConfirm).toHaveBeenCalledWith({});
+  });
+
+  it('khách tự tới lấy xe: không có ô phí giao xe', async () => {
+    const { dialog } = await renderApprove(request());
+    expect(within(dialog).queryByLabelText('Phí giao xe tận nơi')).toBeNull();
+  });
+});

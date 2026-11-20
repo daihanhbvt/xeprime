@@ -61,7 +61,9 @@ vi.mock('@/services/upload', () => ({
   uploadImage: vi.fn(),
   uploadToR2: vi.fn(),
   validateImageFile: () => null,
+  validateImageSelection: () => null,
   validateDocumentFile: () => null,
+  validateDocumentSelection: () => null,
 }));
 vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
   useVehiclePricing: () => ({

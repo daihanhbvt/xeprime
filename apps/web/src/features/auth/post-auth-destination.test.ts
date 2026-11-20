@@ -11,6 +11,7 @@ import {
   SHOP_SECTION,
   partnerTrackStartHref,
   balancePayoutPath,
+  contractPath,
   shopSectionPath,
   withPlanPurchaseIntent,
 } from '@/constants/routes';
@@ -377,6 +378,12 @@ describe('trang công khai', () => {
     // Không gian Quản lý xe cũ còn để chuyển hướng link cũ.
     expect(isCommissionPage(`${M.VEHICLES}/01V/manage/pricing`)).toBe(true);
     expect(isCommissionPage(`${M.VEHICLES}/01V/edit/x`)).toBe(false);
+  });
+
+  it('isCommissionPage: trang xem/in hợp đồng của đơn mở cho chủ xe cá nhân (SR-245)', () => {
+    expect(isCommissionPage(contractPath.detail('01H'))).toBe(true);
+    // Thư viện hợp đồng MẪU vẫn là trang riêng, không bị nuốt nhầm bởi tiền tố `/contracts`.
+    expect(isCommissionPage(M.CONTRACTS_DOCUMENTS)).toBe(true);
   });
 });
 

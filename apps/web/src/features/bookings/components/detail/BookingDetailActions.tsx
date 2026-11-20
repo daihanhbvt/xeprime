@@ -140,8 +140,10 @@ export function BookingDetailActionsProvider({
   const canViewFinance = has(PERMISSION.FINANCE_VIEW);
   // Phiên hỗ trợ không bao giờ xác nhận bàn giao (ADR 0050 §10) — nút ẩn hẳn, không mờ.
   const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.HANDOVER_ACTIONS);
+  // Hợp đồng thuê là bộ CƠ BẢN từ 20/11/2026 (SR-245): chủ xe cá nhân lập/xem như gian hàng, nên
+  // chỉ còn quyền + phiên hỗ trợ gác, không đọc cờ gói `CONTRACTS`.
+  const supportHidesContracts = useSupportHides(SUPPORT_HIDDEN_AREA.CONTRACTS);
   // Trục NĂNG LỰC theo gói (ADR 0027 điều 2), kiểm NỐI TIẾP với quyền.
-  const contractsFeature = useFeature(PLAN_FEATURE.CONTRACTS);
   const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
 
   const { data: handover } = useHandoverContext(booking.id, canViewHandover);
@@ -168,7 +170,7 @@ export function BookingDetailActionsProvider({
   const can: BookingDetailActionsValue['can'] = {
     collect: has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible && !moneyClosed,
     history: financeFeature.isVisible,
-    contract: has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible,
+    contract: has(PERMISSION.CONTRACT_MANAGE) && !supportHidesContracts,
     edit: has(PERMISSION.BOOKING_UPDATE) && !closed,
     documents: Boolean(booking.tenantCustomerId) && has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE),
     confirmHandover: canConfirm && !inSupport,

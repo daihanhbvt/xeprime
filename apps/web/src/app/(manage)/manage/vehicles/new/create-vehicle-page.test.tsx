@@ -40,6 +40,7 @@ vi.mock('@/services/upload', () => ({
   // ghi đè bốn lần (07/10/2026: đủ góc là điều kiện lưu).
   uploadImage: vi.fn(async () => `https://cdn.test/${++uploaded}.jpg`),
   validateImageFile: () => null,
+  validateImageSelection: () => null,
 }));
 
 let uploaded = 0;

@@ -323,6 +323,7 @@ export function BannerFormModal({
                   </span>
                 }
                 presign={presignBannerImage}
+                compression="banner"
                 validate={validators.desktop}
                 help={
                   <>
@@ -354,6 +355,7 @@ export function BannerFormModal({
                     </span>
                   }
                   presign={presignBannerImage}
+                  compression="banner"
                   validate={validators.tablet}
                   help={sizeHelp('tablet')}
                   variant="card"
@@ -373,6 +375,7 @@ export function BannerFormModal({
                   </span>
                 }
                 presign={presignBannerImage}
+                compression="banner"
                 validate={validators.mobile}
                 help={sizeHelp('mobile')}
                 variant="card"

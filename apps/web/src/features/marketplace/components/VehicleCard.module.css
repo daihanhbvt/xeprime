@@ -852,6 +852,14 @@
   color: var(--xp-color-primary-hover);
 }
 
+/* "Đã gồm tài xế" / "Chưa gồm tài xế" dưới giá khi khách đang xem dịch vụ có tài xế. */
+.priceNote {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}
+
 .priceContact {
   color: var(--xp-color-primary-strong);
   font-size: var(--xp-font-size-body);

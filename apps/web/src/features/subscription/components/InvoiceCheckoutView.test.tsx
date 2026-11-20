@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { App } from 'antd';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ERROR_CODE, SHOP_ONBOARDING_STATE, SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
+import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import type { SubscriptionInvoice } from '../types';
 import { InvoiceCheckoutView } from './InvoiceCheckoutView';
 
@@ -76,7 +78,9 @@ function makeInvoice(over: Partial<SubscriptionInvoice> = {}): SubscriptionInvoi
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>
+      <App>{children}</App>
+    </QueryClientProvider>
   );
   return render(<InvoiceCheckoutView invoiceId="01HINVOICE" />, { wrapper });
 }
@@ -121,13 +125,20 @@ describe('InvoiceCheckoutView', () => {
     expect(qr?.getAttribute('src')).toContain('amount=500000');
   });
 
-  it('hoá đơn đã trả ⇒ gói đã kích hoạt, không còn kênh trả nào', () => {
+  /*
+   * Biên bản họp 19/11/2026: KHÔNG còn màn "Thanh toán thành công" riêng — thông báo góc phải rồi
+   * về trang "Gói & hạn mức", nơi gói vừa bật hiện trạng thái mới.
+   */
+  it('hoá đơn đã trả ⇒ thông báo gói đã bật rồi về trang gói, không còn kênh trả nào', async () => {
     invoice.data = makeInvoice({ status: SUBSCRIPTION_INVOICE_STATUS.PAID, paidAmount: '650000' });
     renderPage();
 
-    expect(screen.getByText('Gói đã được kích hoạt')).toBeTruthy();
+    expect(await screen.findByText('Gói đã được kích hoạt')).toBeTruthy();
     expect(screen.queryByText(/chuyển khoản nhanh/i)).toBeNull();
-    expect(screen.getByRole('link', { name: 'Vào trang quản lý' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Vào trang quản lý' })).toBeNull();
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith(shopSectionPath(SHOP_SECTION.PLAN)),
+    );
   });
 
   it('hoá đơn đã huỷ, gian hàng đang nợ bước đầu ⇒ chọn gói lại ở ONBOARDING', () => {

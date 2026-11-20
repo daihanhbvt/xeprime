@@ -21,6 +21,7 @@ import { appWallClockToIso, nowInAppTz, startOfAppDay, toAppTz, type Dayjs } fro
 import { queryKeys } from '@/services/query-keys';
 import { fetchBookingRequest } from '../api';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../types';
+import { ApprovalDeliveryFeeField, deliveryFeeBody } from './ApprovalDeliveryFeeField';
 import { ApprovalPreviewSummary, type ApprovalWindows } from './ApprovalPreviewSummary';
 
 import { VehicleStillOutAlert } from './VehicleStillOutAlert';
@@ -60,6 +61,7 @@ function ApproveLongTermForm({
   const pattern = useDatePickerPattern();
 
   const requestPackage = request.longTermPackageMonths ?? null;
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
 
   /*
    * `requestedPickupDate`/`pickupWindow*` là NGÀY LỊCH `YYYY-MM-DD` theo giờ Việt Nam, không
@@ -185,6 +187,7 @@ function ApproveLongTermForm({
               scheduledPickupAt: appWallClockToIso(pickupAt),
               // Chỉ gửi gói khi yêu cầu chưa có — không được đổi gói khách đã chọn.
               ...(requestPackage == null ? { longTermPackageMonths: effectivePackage } : {}),
+              ...(request.deliveryRequested ? deliveryFeeBody(deliveryFee) : {}),
             })
           : undefined
       }
@@ -250,6 +253,15 @@ function ApproveLongTermForm({
           <strong>{returnAt ? fmt.rentalPoint(returnAt) : tCommon('labels.emptyValue')}</strong>
           <span className={styles.hint}>{t('longTerm.returnHint')}</span>
         </div>
+
+        {request.deliveryRequested ? (
+          <ApprovalDeliveryFeeField
+            id={`approve-long-term-${request.id}-delivery-fee`}
+            value={deliveryFee}
+            onChange={setDeliveryFee}
+            disabled={submitting}
+          />
+        ) : null}
 
         {effectivePackage != null ? (
           quoteQ.isLoading ? (

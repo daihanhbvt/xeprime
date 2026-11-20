@@ -39,7 +39,7 @@ import { cx } from '@/lib/cx';
 import {
   presignVehicleImage,
   uploadImage,
-  validateImageFile,
+  validateImageSelection,
   type UploadPresign,
 } from '@/services/upload';
 
@@ -210,7 +210,7 @@ export function VehicleImageBoard({
       message.warning(t('maxReached', { max: VEHICLE_GALLERY_MAX_IMAGES }));
       return false;
     }
-    const invalid = validateImageFile(file);
+    const invalid = validateImageSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return false;

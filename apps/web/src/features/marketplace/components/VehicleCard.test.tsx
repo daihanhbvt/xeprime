@@ -165,7 +165,7 @@ describe('VehicleCard', () => {
     expect(screen.queryByText('1,05tr')).toBeNull();
   });
 
-  it('dịch vụ active chưa niêm yết giá → "Liên hệ báo giá", không mượn giá tự lái', () => {
+  it('có tài xế chưa niêm yết giá có tài xế → hiện giá thuê xe kèm "Chưa gồm tài xế"', () => {
     filters.value = { serviceType: 'with_driver' } as typeof filters.value;
     const withDriver = {
       ...LISTING,
@@ -173,9 +173,35 @@ describe('VehicleCard', () => {
       withDriverDailyPrice: null,
     } as unknown as PublicListing;
     render(<VehicleCard listing={withDriver} />);
-    expect(screen.getByText('Liên hệ báo giá')).toBeTruthy();
-    expect(screen.queryByText('1,05tr')).toBeNull();
+    expect(screen.getByText('1,05tr')).toBeTruthy();
+    expect(screen.getByText('Chưa gồm tài xế')).toBeTruthy();
+    expect(screen.queryByText('Liên hệ báo giá')).toBeNull();
     expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=with_driver');
+  });
+
+  it('có tài xế đã niêm yết giá → hiện giá đó kèm "Đã gồm tài xế"', () => {
+    filters.value = { serviceType: 'with_driver' } as typeof filters.value;
+    const withDriver = {
+      ...LISTING,
+      serviceTypes: ['self_drive', 'with_driver'],
+      withDriverDailyPrice: '1500000',
+    } as unknown as PublicListing;
+    render(<VehicleCard listing={withDriver} />);
+    expect(screen.getByText('1,5tr')).toBeTruthy();
+    expect(screen.getByText('Đã gồm tài xế')).toBeTruthy();
+  });
+
+  it('có tài xế mà không có giá nào để báo → "Liên hệ báo giá"', () => {
+    filters.value = { serviceType: 'with_driver' } as typeof filters.value;
+    const withDriver = {
+      ...LISTING,
+      serviceTypes: ['with_driver'],
+      weekdayPrice: null,
+      withDriverDailyPrice: null,
+    } as unknown as PublicListing;
+    render(<VehicleCard listing={withDriver} />);
+    expect(screen.getByText('Liên hệ báo giá')).toBeTruthy();
+    expect(screen.queryByText(/gồm tài xế/)).toBeNull();
   });
 
   it('lọc có tài xế + xe có giá tài xế → hiện giá có tài xế và giữ đúng service trong link', () => {

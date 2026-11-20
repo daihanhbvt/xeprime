@@ -572,6 +572,71 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
   });
 });
 
+/**
+ * Biên bản họp 19/11/2026 — bước xác nhận duyệt thiếu phí giao xe tận nơi. Chủ xe nhập phí NGAY
+ * ở hộp duyệt: phí vào snapshot như dòng `delivery`, rơi trọn vào phần khách trả tận tay —
+ * KHÔNG đội tiền giữ chỗ khách trả online (ADR 0064 · ADR 0066).
+ */
+describe('phí giao xe chốt ngay lúc duyệt', () => {
+  async function pendingRequest(startHours: number, deliveryRequested: boolean): Promise<string> {
+    const id = newId();
+    await prisma.bookingRequest.create({
+      data: {
+        respondBy: bookingRequestRespondBy(new Date()),
+        id,
+        tenantId,
+        vehicleId,
+        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+        customerName: 'Khách giao tận nơi',
+        customerPhone: '0900000333',
+        pickupAt: inHours(startHours),
+        returnAt: inHours(startHours + 72),
+        deliveryRequested,
+        deliveryAddress: deliveryRequested ? '45 Lê Lợi, Huế' : null,
+      },
+    });
+    return id;
+  }
+
+  async function bookingOf(requestId: string) {
+    await settleIfAwaitingHold(asService, holds, requestId);
+    const request = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+    return prisma.booking.findUniqueOrThrow({
+      where: { id: request.bookingId! },
+      select: { baseAmount: true, deliveryFee: true, totalAmount: true, priceSnapshot: true },
+    });
+  }
+
+  maybe('có phí: vào đơn + tổng, tiền giữ chỗ KHÔNG đổi so với duyệt miễn phí', async () => {
+    const free = await pendingRequest(400, true);
+    const paid = await pendingRequest(600, true);
+
+    await requests.approve(tenantId, ownerId, free);
+    await requests.approve(tenantId, ownerId, paid, { deliveryFee: '150000' });
+
+    const [freeHold, paidHold] = await Promise.all([
+      prisma.bookingHold.findUnique({ where: { bookingRequestId: free } }),
+      prisma.bookingHold.findUnique({ where: { bookingRequestId: paid } }),
+    ]);
+    expect(paidHold?.amount.toFixed(0) ?? null).toBe(freeHold?.amount.toFixed(0) ?? null);
+
+    const freeBooking = await bookingOf(free);
+    const paidBooking = await bookingOf(paid);
+    expect(freeBooking.deliveryFee.toFixed(0)).toBe('0');
+    expect(paidBooking.deliveryFee.toFixed(0)).toBe('150000');
+    expect(paidBooking.totalAmount.toFixed(0)).toBe(paidBooking.baseAmount.plus(150000).toFixed(0));
+    const rows = (paidBooking.priceSnapshot as { rows: { key: string; amount: string }[] }).rows;
+    expect(rows.find((row) => row.key === 'delivery')?.amount).toBe('150000');
+  });
+
+  maybe('khách tự tới lấy xe: phí gửi kèm bị bỏ qua, đơn vẫn miễn phí', async () => {
+    const pickup = await pendingRequest(800, false);
+    await requests.approve(tenantId, ownerId, pickup, { deliveryFee: '150000' });
+    const booking = await bookingOf(pickup);
+    expect(booking.deliveryFee.toFixed(0)).toBe('0');
+  });
+});
+
 describe('policy mặc định theo LOẠI XE (17/08 — car/motorbike hai bộ riêng)', () => {
   maybe('precedence: override xe → mặc định theo loại → legacy toàn gian hàng', async () => {
     // Hai policy theo loại + một hàng legacy: cọc khác nhau để phân biệt được nguồn.
@@ -919,10 +984,10 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     // Fallback về giá cơ bản 1.3tr × 2 là giá chốt (19/11/2026) — lý do nằm ở chú thích dòng thuê.
     expect(breakdown.totalAmount).toBe('2600000');
     expect(breakdown.estimateNote).toBeNull();
-    expect(breakdown.rows[0]?.sublabel).toMatch(/chưa niêm yết/);
+    expect(breakdown.rows[0]?.sublabel).toMatch(/chưa có giá liên tỉnh riêng - áp giá nội thành/);
   });
 
-  maybe('with_driver CHƯA cài giá có tài xế: giá thuê ngày + chú thích "chưa gồm tiền tài xế"', async () => {
+  maybe('with_driver CHƯA cài giá có tài xế: giá thuê ngày + chú thích "chưa gồm tài xế"', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
     const breakdown = pricing.buildDailyQuote({
       weekdayPrice: '800000',
@@ -939,7 +1004,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     });
     expect(breakdown.totalAmount).toBe('1600000');
     expect(breakdown.estimateNote).toBeNull();
-    expect(breakdown.rows[0]?.sublabel).toContain('chưa gồm tiền tài xế');
+    expect(breakdown.rows[0]?.sublabel).toContain('giá thuê xe, chưa gồm tài xế');
   });
 
   maybe(

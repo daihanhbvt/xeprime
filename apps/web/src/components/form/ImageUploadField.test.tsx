@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/services/upload', () => ({
   uploadImage: mocks.uploadImage,
-  validateImageFile: mocks.validateImageFile,
+  validateImageSelection: mocks.validateImageFile,
 }));
 
 // Polyfill matchMedia của AntD nằm ở `vitest.setup.ts` (dùng chung cho mọi test).

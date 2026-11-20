@@ -51,6 +51,9 @@ const trimmedText = ({ value }: { value: unknown }) =>
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
+/** Số VND không âm, tối đa 2 chữ số thập phân — cùng luật với `UpdateBookingDeliveryFeeDto`. */
+const DELIVERY_FEE_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
+
 export { DEFAULT_LIMIT as BOOKING_REQUEST_DEFAULT_LIMIT, MAX_LIMIT as BOOKING_REQUEST_MAX_LIMIT };
 
 /** Thứ tự của hộp thư yêu cầu — xem `BookingRequestListQueryDto.sort`. */
@@ -451,6 +454,21 @@ export class ApproveBookingRequestDto {
   @IsInt()
   @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
   longTermPackageMonths?: number;
+
+  /**
+   * Phí giao xe tận nơi chủ xe chốt NGAY lúc duyệt (biên bản họp 19/11/2026) — đi vào snapshot giá
+   * như dòng `delivery`, nên rơi trọn vào phần khách trả tận tay, không tính thuế/hoa hồng/giữ chỗ
+   * (ADR 0064 · ADR 0066). Bỏ trống hoặc `0` = miễn phí như trước. Bị bỏ qua khi yêu cầu không có
+   * giao tận nơi.
+   */
+  @ApiPropertyOptional({
+    description:
+      'Phí giao xe tận nơi VND (chuỗi - ADR 0007), chỉ áp khi khách yêu cầu giao tận nơi. Bỏ trống/`0` = miễn phí.',
+    example: '120000',
+  })
+  @IsOptional()
+  @Matches(DELIVERY_FEE_PATTERN, { message: 'Phí giao nhận không hợp lệ (số VND không âm)' })
+  deliveryFee?: string;
 }
 
 /** Từ chối yêu cầu — lý do tuỳ chọn để báo lại khách. */

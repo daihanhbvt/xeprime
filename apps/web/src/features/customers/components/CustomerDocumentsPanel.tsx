@@ -39,7 +39,7 @@ import { StatusBadge, ToneDotBadge } from '@/components/data-display/StatusBadge
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { DAY_PARAM_FORMAT, dayjs } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
-import { validateDocumentFile } from '@/services/upload';
+import { validateDocumentSelection } from '@/services/upload';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 import { fetchCustomerDocumentDownload } from '../api';
 import { DOCUMENT_TYPE_VALUES, isPreviewableImage } from '../constants';
@@ -153,7 +153,7 @@ export function CustomerDocumentsPanel({
     file: File,
     replaces?: CustomerDocument,
   ) {
-    const invalid = validateDocumentFile(file);
+    const invalid = validateDocumentSelection(file);
     if (invalid) {
       message.error(uploadRejectionMessage(invalid));
       return;

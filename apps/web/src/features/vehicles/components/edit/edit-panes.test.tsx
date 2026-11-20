@@ -70,7 +70,9 @@ const operationSettings = vi.hoisted(() => ({
 }));
 const saveOperation = vi.hoisted(() => ({
   mutateAsync: vi.fn(async (body?: Record<string, unknown>) => ({
-    turnaroundBufferMinutes: body?.useShopDefault ? 120 : Number(body?.turnaroundBufferMinutes ?? 0),
+    turnaroundBufferMinutes: body?.useShopDefault
+      ? 120
+      : Number(body?.turnaroundBufferMinutes ?? 0),
     useShopDefault: body?.useShopDefault === true,
     shopDefaultMinutes: 120,
     pickupWindows: [],
@@ -109,8 +111,11 @@ vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
 }));
 
 /** Tình trạng bảo hiểm của xe (ADR 0091) — mặc định nền tảng CHƯA bán theo bậc ⇒ không có khối chọn. */
+const insuranceStatus = vi.hoisted(() => ({
+  data: { applies: false, eligible: false, gaps: [] as string[] },
+}));
 vi.mock('@/features/vehicle-documents/hooks', () => ({
-  useVehicleInsuranceStatus: () => ({ data: { applies: false, eligible: false, gaps: [] } }),
+  useVehicleInsuranceStatus: () => insuranceStatus,
 }));
 
 const updateVehicle = vi.hoisted(() => ({
@@ -225,6 +230,7 @@ beforeEach(() => {
   (pricing.data as Record<string, unknown>).source = 'shop';
   (pricing.data as Record<string, unknown>).policy = null;
   saveOperation.mutateAsync.mockClear();
+  insuranceStatus.data = { applies: false, eligible: false, gaps: [] };
   onTab.mockReset();
 });
 afterEach(cleanup);
@@ -337,7 +343,7 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
     expect(savePricing.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('bật có tài xế khi xe chưa đủ ba giá ⇒ hộp nhập giá, chưa lưu gì; công tắc tạm hiện bật', async () => {
+  it('bật có tài xế khi xe chưa có giá: bật NGAY, không hộp nhập giá - giá nhập ở tab (20/11/2026)', async () => {
     renderPane(
       <ServicesPane
         vehicle={vehicle({ serviceTypes: [SERVICE_TYPE.SELF_DRIVE] })}
@@ -346,10 +352,47 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
         onTab={onTab}
       />,
     );
-    const toggle = screen.getByRole('switch', { name: 'Xe có tài xế' });
-    fireEvent.click(toggle);
-    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
-    expect(updateVehicle.mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('switch', { name: 'Xe có tài xế' }));
+    await waitFor(() => expect(updateVehicle.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(updateVehicle.mutateAsync.mock.calls[0]![0]).toEqual({
+      serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('tab có tài xế nhắc chủ xe khách đang thấy giá nào: chưa có giá ⇒ giá tự lái, chưa gồm tài xế', () => {
+    const data = pricing.data as Record<string, unknown>;
+    data.withDriverDailyPrice = null;
+    try {
+      renderPane(
+        <ServicesPane
+          vehicle={vehicle()}
+          tab={VEHICLE_EDIT_TAB.WITH_DRIVER}
+          canUpdate
+          onTab={onTab}
+        />,
+      );
+      expect(screen.getByText('Khách chưa thấy giá trọn gói có tài xế')).toBeTruthy();
+      expect(screen.getByText(/giá thuê tự lái 700\.000/)).toBeTruthy();
+      // Không còn dấu * bắt buộc ở ba ô giá có tài xế.
+      expect(
+        (screen.getByRole('spinbutton', { name: /Nội thành/ }) as HTMLInputElement).required,
+      ).toBe(false);
+    } finally {
+      data.withDriverDailyPrice = '1200000';
+    }
+  });
+
+  it('tab có tài xế: có giá nội thành, thiếu lộ trình ⇒ nhắc lộ trình đó tính theo mức gần nhất', () => {
+    renderPane(
+      <ServicesPane
+        vehicle={vehicle()}
+        tab={VEHICLE_EDIT_TAB.WITH_DRIVER}
+        canUpdate
+        onTab={onTab}
+      />,
+    );
+    expect(screen.getByText(/tính theo mức gần nhất bạn đã nhập/)).toBeTruthy();
   });
 
   it('có tài xế: không tự nhận chuyến, nói rõ chủ xe duyệt tay', () => {
@@ -524,6 +567,55 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
     expect(savePricing.mutateAsync).not.toHaveBeenCalled();
   });
 
+  it('xe có tài xế còn thiếu giá lộ trình: sửa chính sách vẫn lưu được (giá có tài xế không bắt buộc)', async () => {
+    // Fixture giá: có tài xế chỉ có giá nội thành - đúng dạng xe bật trước luật 19/11/2026.
+    (pricing.data as Record<string, unknown>).source = 'vehicle';
+    (pricing.data as Record<string, unknown>).policy = {
+      ...VEHICLE_POLICY,
+      depositAmount: '3000000',
+      deliveryTiers: [{ toKm: 20, fee: '0' }],
+    };
+    renderPolicy();
+    const radius = screen.getByRole('spinbutton', { name: /Bán kính hỗ trợ tối đa tự giao/i });
+    fireEvent.change(radius, { target: { value: '20' } });
+    fireEvent.blur(radius);
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu ở cột phải' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lưu thay đổi' }));
+
+    await waitFor(() => expect(savePricing.mutateAsync).toHaveBeenCalledTimes(1));
+    const body = savePricing.mutateAsync.mock.calls[0]![0]!;
+    expect(body.policy).toMatchObject({ deliveryMaxRadiusKm: 20 });
+    expect(body).toMatchObject({ withDriverDailyPrice: '1200000', withDriverInterCityPrice: null });
+    expect(screen.queryByText(/còn ô (giá )?chưa hợp lệ/)).toBeNull();
+  });
+
+  it('ô giá ở mục khác chặn lượt lưu: thông báo nêu ĐÚNG tên ô đó, không đưa ví dụ đoán mò', async () => {
+    const data = pricing.data as Record<string, unknown>;
+    data.source = 'vehicle';
+    data.policy = {
+      ...VEHICLE_POLICY,
+      depositAmount: '3000000',
+      deliveryTiers: [{ toKm: 20, fee: '0' }],
+    };
+    data.weekdayPrice = null;
+    try {
+      renderPolicy();
+      const radius = screen.getByRole('spinbutton', { name: /Bán kính hỗ trợ tối đa tự giao/i });
+      fireEvent.change(radius, { target: { value: '20' } });
+      fireEvent.blur(radius);
+      fireEvent.click(screen.getByRole('button', { name: 'Lưu ở cột phải' }));
+
+      expect(
+        await screen.findByText(
+          'Mục Dịch vụ & giá còn ô chưa hợp lệ: Giá ngày thường - mở mục đó để sửa rồi lưu lại.',
+        ),
+      ).toBeTruthy();
+      expect(savePricing.mutateAsync).not.toHaveBeenCalled();
+    } finally {
+      data.weekdayPrice = '700000';
+    }
+  });
+
   it('có tài xế: không có ô cọc giữ chuyến; không hứa đối chiếu VNeID tự động', () => {
     renderPolicy();
     expect(screen.queryByText(/cọc giữ chuyến/i)).toBeNull();
@@ -543,6 +635,46 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
     fireEvent.change(textarea, { target: { value: 'Sửa dở' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hoàn tác ở cột phải' }));
     await waitFor(() => expect((textarea as HTMLTextAreaElement).value).toBe('Điều khoản gốc'));
+  });
+});
+
+/**
+ * Bảo hiểm Bắt buộc mà xe thiếu dữ liệu ⇒ xe ngừng nhận đặt tự lái (ADR 0091 điều 1). Chủ xe phải
+ * thấy điều đó NGAY khi chọn, kèm đúng thứ còn thiếu và chỗ bổ sung — không phải đợi khách báo.
+ */
+describe('Chính sách thuê - bảo hiểm Bắt buộc báo trước xe thiếu gì', () => {
+  const BLOCKED = /chưa đủ dữ liệu bảo hiểm nên không nhận đặt tự lái/;
+
+  beforeEach(() => {
+    (pricing.data as Record<string, unknown>).source = 'vehicle';
+    (pricing.data as Record<string, unknown>).policy = VEHICLE_POLICY;
+  });
+
+  it('chọn Bắt buộc khi xe thiếu dữ liệu: liệt kê từng mục, mỗi mục dẫn tới đúng tab', () => {
+    insuranceStatus.data = {
+      applies: true,
+      eligible: false,
+      gaps: ['insured_value_missing', 'photos_missing', 'registration_missing'],
+    };
+    renderPolicy();
+    expect(screen.queryByText(BLOCKED)).toBeNull();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Bắt buộc/ }));
+
+    expect(screen.getByText(BLOCKED)).toBeTruthy();
+    const href = (name: string) => screen.getByRole('link', { name }).getAttribute('href');
+    expect(href('Chưa khai giá trị xe')).toBe('/manage/vehicles/v1/edit?tab=information');
+    expect(href('Thiếu ảnh bắt buộc của xe')).toBe('/manage/vehicles/v1/edit?tab=media');
+    expect(href('Chưa có cà vẹt (số khung + tên chủ)')).toBe(
+      '/manage/vehicles/v1/edit?tab=documents',
+    );
+  });
+
+  it('xe đủ điều kiện: chọn Bắt buộc không có cảnh báo', () => {
+    insuranceStatus.data = { applies: true, eligible: true, gaps: [] };
+    renderPolicy();
+    fireEvent.click(screen.getByRole('radio', { name: /Bắt buộc/ }));
+    expect(screen.queryByText(BLOCKED)).toBeNull();
   });
 });
 

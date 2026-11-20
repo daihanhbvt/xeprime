@@ -151,6 +151,18 @@ describe('SurchargeDialog - đề xuất phí vượt km', () => {
     });
   });
 
+  it('lý do KHÔNG bắt buộc (biên bản 19/11/2026): bỏ trống vẫn ghi được', () => {
+    renderDialog(BASE);
+
+    fireEvent.change(amountInput(), { target: { value: '150000' } });
+    fireEvent.change(reasonInput(), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: /Thêm phí phát sinh/ }));
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(add.mutate).toHaveBeenCalledTimes(1);
+    expect(add.mutate.mock.calls[0]![0]).toMatchObject({ amount: '150000', reason: '' });
+  });
+
   it('không vượt km: không điền số nào, và không có nút dùng số đề xuất', () => {
     renderDialog({
       ...BASE,
