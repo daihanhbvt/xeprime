@@ -395,7 +395,7 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
     expect(screen.getByText(/tính theo mức gần nhất bạn đã nhập/)).toBeTruthy();
   });
 
-  it('có tài xế: không tự nhận chuyến, nói rõ chủ xe duyệt tay', () => {
+  it('có tài xế: không có công tắc tự nhận chuyến (luôn duyệt tay)', () => {
     serviceSettings.data = [
       setting(),
       setting({
@@ -411,7 +411,9 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
         onTab={onTab}
       />,
     );
-    expect(screen.getByText(/không tự động nhận/i)).toBeTruthy();
+    expect(screen.queryByText('Tự động đồng ý nhận chuyến')).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Tự động nhận chuyến' })).toBeNull();
+    expect(screen.queryByText(/không tự động nhận/i)).toBeNull();
   });
 
   it('tab tự lái chỉ còn giá + khuyến mãi - cọc/km/công tắc chính sách ở mục Chính sách thuê', () => {
