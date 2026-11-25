@@ -28,6 +28,7 @@ import {
   CUSTOMER_DOCUMENT_TYPE,
   DRIVER_ASSIGNMENT_STATUS,
   DRIVER_LICENCE_STATUS,
+  DRIVER_SOURCE,
   FEE_LINE,
   HANDOVER_ELIGIBLE_BOOKING_STATUS,
   handoverPhotoSlotsFor,
@@ -414,6 +415,12 @@ export class BookingsService {
 
   private async withMoneyOne<T extends BookingListItemDto>(item: T): Promise<T> {
     const [patched] = await this.withMoney([item]);
+    // Chi tiết đơn (mọi đường trả `BookingDetailDto` đi qua đây): thẻ "Tài xế" hiện hạng bằng lái
+    // của tài xế liên kết. Danh sách không cần — không thêm một phép đọc cho mỗi trang đơn.
+    const driver = patched!.driver;
+    if (driver?.source === DRIVER_SOURCE.LINKED && driver.id) {
+      driver.licence = await this.drivers.licenceOfLink(driver.id);
+    }
     return patched!;
   }
 

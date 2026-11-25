@@ -37,6 +37,7 @@ import {
   makeNotificationService,
   makePricingService,
   makeSupportService,
+  TEST_R2_PUBLIC_BASE_URL,
 } from './helpers/service-factory';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
@@ -321,6 +322,68 @@ describe('Danh bạ', () => {
     await expect(
       internal.update(otherTenant, owner, p.id, { name: 'Lấn sân' }),
     ).rejects.toMatchObject(code(API_ERROR_CODE.INTERNAL_DRIVER_NOT_FOUND));
+  });
+
+  maybe('ảnh tuỳ chọn: chỉ nhận ảnh vừa tải lên kho của CHÍNH bên thuê; gỡ bằng null', async () => {
+    const own = `${TEST_R2_PUBLIC_BASE_URL}/tenants/${tenant}/drivers/${newId()}-avatar.jpg`;
+    const foreign = `${TEST_R2_PUBLIC_BASE_URL}/tenants/${otherTenant}/drivers/${newId()}-a.jpg`;
+    const created = await internal.create(tenant, owner, {
+      name: 'Có Ảnh',
+      phone: nextPhone(),
+      photoUrl: own,
+    });
+    expect(created.photoUrl).toBe(own);
+    // Không ảnh vẫn tạo được (ảnh KHÔNG bắt buộc).
+    await expect(addPerson('Không Ảnh')).resolves.toMatchObject({ photoUrl: null });
+    for (const bad of [
+      foreign,
+      'https://evil.example/tenants/x/drivers/a.jpg',
+      `${TEST_R2_PUBLIC_BASE_URL}/tenants/${tenant}/vehicles/${newId()}-xe.jpg`,
+    ]) {
+      await expect(
+        internal.update(tenant, owner, created.id, { photoUrl: bad }),
+      ).rejects.toMatchObject(code(API_ERROR_CODE.INTERNAL_DRIVER_PHOTO_INVALID));
+    }
+    // Gửi lại đúng ảnh đang có (form sửa giữ nguyên) không bị kiểm lại.
+    await expect(
+      internal.update(tenant, owner, created.id, { photoUrl: own, name: 'Có Ảnh Mới' }),
+    ).resolves.toMatchObject({ photoUrl: own, name: 'Có Ảnh Mới' });
+    await expect(
+      internal.update(tenant, owner, created.id, { photoUrl: null }),
+    ).resolves.toMatchObject({ photoUrl: null });
+  });
+
+  maybe('trang chi tiết: đơn đang gán + bảng chuyến theo tháng trả xe, tìm + lọc', async () => {
+    const p = await addPerson('Chi Tiết Nội Bộ');
+    const pickupAt = new Date(Date.UTC(2029, 8, 10, 2));
+    const bookingId = await seedBooking(pickupAt);
+    await bookings.assignInternalDriver(tenant, bookingId, owner, p.id);
+
+    const detail = await internal.detail(tenant, p.id);
+    expect(detail.driver.activeTripCount).toBe(1);
+    expect(detail.current).toEqual([
+      expect.objectContaining({
+        bookingId,
+        customerName: 'Khách tài xế nội bộ',
+        assignmentStatus: null,
+        wageAmount: null,
+      }),
+    ]);
+
+    const month = '2029-09';
+    const all = await internal.trips(tenant, p.id, { month });
+    expect(all.data.map((r) => r.bookingId)).toEqual([bookingId]);
+    const bookingCode = all.data[0]!.bookingCode;
+    expect((await internal.trips(tenant, p.id, { month, q: bookingCode })).meta.total).toBe(1);
+    expect((await internal.trips(tenant, p.id, { month, q: 'không-khớp-gì' })).meta.total).toBe(0);
+    expect(
+      (await internal.trips(tenant, p.id, { month, status: BOOKING_STATUS.COMPLETED })).meta.total,
+    ).toBe(0);
+    // Tháng khác không có chuyến; bên thuê khác không đọc được.
+    expect((await internal.trips(tenant, p.id, { month: '2029-10' })).meta.total).toBe(0);
+    await expect(internal.detail(otherTenant, p.id)).rejects.toMatchObject(
+      code(API_ERROR_CODE.INTERNAL_DRIVER_NOT_FOUND),
+    );
   });
 });
 

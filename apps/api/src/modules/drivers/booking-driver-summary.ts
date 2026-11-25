@@ -18,7 +18,8 @@ import type {
  * mọi bảng đọc cùng một hình — dù người lái là tài xế LIÊN KẾT hay tài xế NGOÀI HỆ THỐNG.
  */
 export const BOOKING_DRIVER_SELECT = {
-  driver: { select: { id: true, name: true, phone: true } },
+  driver: { select: { id: true, name: true, phone: true, user: { select: { avatarUrl: true } } } },
+  internalDriver: { select: { photoUrl: true } },
   driverAssignmentStatus: true,
   driverAssignedAt: true,
   driverRespondedAt: true,
@@ -42,6 +43,8 @@ export function toBookingDriverSummary(b: BookingDriverRow): BookingDriverSummar
       assignedAt: b.driverAssignedAt.toISOString(),
       respondedAt: b.driverRespondedAt?.toISOString() ?? null,
       respondBy: b.driverRespondBy?.toISOString() ?? null,
+      avatarUrl: b.driver.user.avatarUrl,
+      licence: null,
     };
   }
   // Ngoài hệ thống / nội bộ: không có lượt chờ — coi là đã nhận ngay khi lưu (ADR 0067 điều 1 ·
@@ -57,6 +60,8 @@ export function toBookingDriverSummary(b: BookingDriverRow): BookingDriverSummar
       assignedAt: b.driverAssignedAt.toISOString(),
       respondedAt: null,
       respondBy: null,
+      avatarUrl: b.internalDriverId ? (b.internalDriver?.photoUrl ?? null) : null,
+      licence: null,
     };
   }
   return null;
@@ -72,7 +77,15 @@ export function toRenterDriverSummary(b: BookingDriverRow): BookingDriverSummary
   if (!full || full.assignmentStatus !== DRIVER_ASSIGNMENT_STATUS.ACCEPTED) return null;
   // Với khách chỉ có "người sẽ đến đón" — tài xế nội bộ đọc như ngoài hệ thống (ADR 0108 điều 4).
   const source = full.source === DRIVER_SOURCE.INTERNAL ? DRIVER_SOURCE.EXTERNAL : full.source;
-  return { ...full, source, id: null, respondedAt: null, respondBy: null };
+  return {
+    ...full,
+    source,
+    id: null,
+    respondedAt: null,
+    respondBy: null,
+    avatarUrl: null,
+    licence: null,
+  };
 }
 
 /**

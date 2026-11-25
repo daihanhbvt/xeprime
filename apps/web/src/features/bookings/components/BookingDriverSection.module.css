@@ -1,23 +1,171 @@
-/* Khối Tài xế trên chi tiết đơn — cùng nhịp panel với các khối khác của BookingDetailContent. */
+/*
+ * Thẻ "Tài xế" trên chi tiết đơn — Figma `23807:73143`: cùng khuôn thẻ cột phải (trắng, bo 16, đệm
+ * 24), tiêu đề + link "Lịch sử gán tài xế", khung tài xế viền mảnh bo 12.
+ */
 .panel {
-  padding: 14px 16px;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
+  gap: var(--xp-space-12);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
 }
 
 .blockTitle {
-  margin: 0 0 10px;
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold, 600);
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
+.textAction {
+  display: inline-flex;
   align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-6);
+}
+
+.textAction:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-lg);
+  gap: var(--xp-space-12);
+}
+
+.emptyBox {
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.driverRow {
+  display: grid;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.who {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+a.phone:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.sourceTag {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  white-space: nowrap;
+}
+
+.licence {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-label);
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
+}
+
+.licenceOk {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.licenceBad {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+/* Lượt đang chờ tài xế nhận (ADR 0066) — khung vàng nhạt, đồng hồ bên phải. */
+.pendingBox {
+  display: grid;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+  gap: var(--xp-space-sm);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.pendingIcon {
+  font-size: 18px;
+}
+
+.pendingText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.pendingText b {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.clock {
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-lg);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.clockUrgent {
+  color: var(--xp-color-error);
+}
+
+.wageRow {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  color: var(--xp-color-text-secondary);
+  gap: var(--xp-space-sm);
+}
+
+.wageRow b {
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .stack {
@@ -27,71 +175,92 @@
 }
 
 .strong {
-  font-weight: var(--xp-font-weight-medium, 500);
-}
-
-.link {
-  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-medium);
 }
 
 .meta {
+  margin: 0;
   color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
 }
 
 /* Đơn CÓ TÀI XẾ chưa phân công — nhắc bằng màu cảnh báo, không phải chữ xám cho qua. */
 .missing {
-  color: var(--xp-color-warning);
-  font-weight: var(--xp-font-weight-medium, 500);
+  color: var(--xp-color-warning-strong);
+  font-weight: var(--xp-font-weight-medium);
 }
 
-/* Hạn tài xế trả lời lượt gán (ADR 0066) — việc có đồng hồ, nên màu cảnh báo. */
+/* Số ngày của đơn đổi sau khi gán — việc cần làm, màu cảnh báo. */
 .deadline {
-  color: var(--xp-color-warning);
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.select {
-  min-width: 260px;
-  flex: 1;
-}
-
-/* Một dòng trong bộ chọn: tên · SĐT bên trái, trạng thái bằng lái + "Bận" bên phải. */
-.option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.optionTags {
-  display: inline-flex;
-  gap: 4px;
-}
-
-/* Lịch sử gán tài xế — tách khỏi phần tài xế hiện tại bằng một vạch mảnh. */
-.history {
-  margin-top: 10px;
-  border-top: 1px solid var(--xp-color-border-secondary, var(--xp-color-border));
-}
-
-/* Cảnh báo "sắp tới giờ nhận mà chưa có tài xế" (ADR 0067) — đứng trên phần phân công. */
 .alert {
-  margin-bottom: 10px;
+  margin: 0;
 }
 
-/* Ghi chú + lỗi đầu form tài xế ngoài hệ thống — đọc trước khi gõ tên, SĐT. */
-.hints {
+/* ── Hộp "Lịch sử gán tài xế" (Figma `24145:62811`) ─────────────────── */
+
+.dialogSubtitle {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.historyList {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
-  margin-bottom: var(--xp-space-lg);
+  margin: 0;
+  padding: 0;
+  gap: var(--xp-space-md);
+  list-style: none;
 }
 
-/* Lối "Thêm tài xế nội bộ" ở đáy bộ chọn (ADR 0108). */
-.pickerDivider {
-  margin: var(--xp-space-xs) 0;
+.historyItem {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-sm);
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-border);
+}
+
+.dotOpen {
+  background: var(--xp-color-primary);
+}
+
+.historyBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding-bottom: var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-xs);
+}
+
+.historyItem:last-child .historyBody {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.historyLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }

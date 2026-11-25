@@ -1,73 +1,94 @@
 'use client';
 
-import { DownloadOutlined } from '@ant-design/icons';
-import { App, Button, Tag } from 'antd';
-import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { UploadOutlined } from '@ant-design/icons';
+import { App, Button } from 'antd';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DRIVER_ASSIGNMENT_OUTCOME_META, type DriverAssignmentOutcome } from '@xeprime/types';
+import {
+  DRIVER_ASSIGNMENT_OUTCOME,
+  DRIVER_ASSIGNMENT_OUTCOME_META,
+  type DriverAssignmentOutcome,
+} from '@xeprime/types';
 import { driverWageLine } from '@xeprime/domain';
-import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
-import { bookingPath } from '@/constants/routes';
+import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { DRIVER_ASSIGNMENTS_LIMIT, fetchAllDriverAssignments } from '../api';
+import { fetchAllDriverAssignments } from '../api';
 import { useDriverAssignments } from '../hooks/use-drivers';
-import type { Driver, DriverAssignmentRow } from '../types';
+import type { DriverAssignmentRow, DriverTripFilters } from '../types';
 import { downloadCsv, wageStatementCsv } from '../wage-statement';
+import { DriverTripsTable, DriverTripsToolbar, type DriverTripTableRow } from './DriverDetailParts';
 import styles from './DriverDetail.module.css';
 
 /**
- * Tab "Chuyến & tiền công" — các chuyến tài xế đã nhận, KẾT THÚC trong tháng (giờ VN), mỗi chuyến
- * kèm tiền công đã ghi; cùng phép đếm với cột tháng của danh sách. Phân trang ở server.
- *
- * "Tải bảng kê" gom cả tháng qua cùng endpoint (trang lớn) rồi dựng CSV ở trình duyệt theo ngôn
- * ngữ đang dùng — để chủ xe đối chiếu khi trả tài xế. XePrime không giữ hay chi khoản này.
+ * Kết cục một lượt ĐÃ NHẬN có thể mang — lựa chọn của ô "Trạng thái" (lượt chưa nhận không vào
+ * bảng: từ chối / để quá hạn không có tiền công nào).
+ */
+const TRIP_OUTCOMES: readonly DriverAssignmentOutcome[] = [
+  DRIVER_ASSIGNMENT_OUTCOME.COMPLETED,
+  DRIVER_ASSIGNMENT_OUTCOME.CANCELLED,
+  DRIVER_ASSIGNMENT_OUTCOME.NO_SHOW,
+  DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
+  DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
+];
+
+/**
+ * Tab "Chuyến & tiền công" — Figma `24051:80844`: các chuyến tài xế đã nhận, KẾT THÚC trong tháng
+ * (giờ VN), tìm theo mã đơn / khách / xe / biển và lọc kết cục ở server. "Xuất bảng kê" gom cả
+ * tháng (không theo bộ lọc) rồi dựng CSV theo ngôn ngữ đang dùng — để chủ xe đối chiếu khi trả tài
+ * xế. XePrime không giữ hay chi khoản này.
  */
 export function DriverTripsTab({
-  driver,
+  driverId,
+  driverPhone,
   month,
-  monthPicker,
+  wageTotal,
+  filters,
+  onFilters,
 }: {
-  driver: Driver;
+  driverId: string;
+  driverPhone: string;
+  /** `YYYY-MM` đã chốt (server trả). */
   month: string;
-  monthPicker: ReactNode;
+  /** Tổng ghi nhận của tháng — cùng số với thẻ "Tiền công ghi nhận". */
+  wageTotal: string;
+  filters: DriverTripFilters;
+  onFilters: (patch: Partial<DriverTripFilters>) => void;
 }) {
-  const t = useTranslations('Drivers.detail.trips');
+  const t = useTranslations('Drivers.detailPage.trips');
+  const tOld = useTranslations('Drivers.detail.trips');
   const tLine = useTranslations('Drivers.wage.line');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
-  // Trang thuộc về MỘT tháng: đổi tháng là về trang 1 (state theo cặp tháng–trang).
-  const [paging, setPaging] = useState({ month, page: 1 });
-  const page = paging.month === month ? paging.page : 1;
-  const query = useDriverAssignments(driver.id, month, page);
+  const query = useDriverAssignments(driverId, { ...filters, month });
   const [exporting, setExporting] = useState(false);
+  const filtered = Boolean(filters.q || filters.status);
 
   async function exportStatement() {
     if (exporting) return;
     setExporting(true);
     try {
-      const rows = await fetchAllDriverAssignments(driver.id, month);
+      const rows = await fetchAllDriverAssignments(driverId, month);
       const csv = wageStatementCsv(rows, {
         headers: {
-          booking: t('csv.booking'),
-          vehicle: t('csv.vehicle'),
-          plate: t('csv.plate'),
-          pickupAt: t('csv.pickupAt'),
-          returnAt: t('csv.returnAt'),
-          days: t('csv.days'),
-          outcome: t('csv.outcome'),
-          wage: t('csv.wage'),
+          booking: tOld('csv.booking'),
+          vehicle: tOld('csv.vehicle'),
+          plate: tOld('csv.plate'),
+          pickupAt: tOld('csv.pickupAt'),
+          returnAt: tOld('csv.returnAt'),
+          days: tOld('csv.days'),
+          outcome: tOld('csv.outcome'),
+          wage: tOld('csv.wage'),
         },
-        total: t('csv.total'),
+        total: tOld('csv.total'),
         outcome: (o) => domainLabel('driverAssignmentOutcome', o),
         dateTime: (iso) => fmt.dateTime(iso),
       });
-      downloadCsv(`${t('csv.fileName', { month })}-${driver.phone}.csv`, csv);
-      message.success(t('exported', { count: rows.length }));
+      downloadCsv(`${tOld('csv.fileName', { month })}-${driverPhone}.csv`, csv);
+      message.success(tOld('exported', { count: rows.length }));
     } catch (err) {
       message.error(errorMessage(err));
     } finally {
@@ -75,105 +96,87 @@ export function DriverTripsTab({
     }
   }
 
-  const columns: DataTableColumn<DriverAssignmentRow>[] = [
-    {
-      title: t('columns.booking'),
-      key: 'booking',
-      width: 130,
-      render: (_, row) => <Link href={bookingPath.detail(row.bookingId)}>{row.bookingCode}</Link>,
-    },
-    {
-      title: t('columns.vehicle'),
-      key: 'vehicle',
-      width: 200,
-      render: (_, row) => (
-        <span className={styles.vehicle}>
-          <span>{row.vehicleName}</span>
-          {row.vehiclePlate ? <span className={styles.muted}>{row.vehiclePlate}</span> : null}
-        </span>
+  const toRow = (row: DriverAssignmentRow): DriverTripTableRow => {
+    const line = driverWageLine({ amount: row.wageAmount, stage: row.stage });
+    return {
+      key: row.id,
+      bookingId: row.bookingId,
+      bookingCode: row.bookingCode,
+      vehicleName: row.vehicleName,
+      vehiclePlate: row.vehiclePlate,
+      vehicleImageUrl: row.vehicleImageUrl,
+      customerName: row.customerName,
+      customerPhone: row.customerPhone,
+      pickupAt: row.pickupAt,
+      returnAt: row.returnAt,
+      status: (
+        <StatusBadge
+          value={row.outcome as DriverAssignmentOutcome}
+          meta={DRIVER_ASSIGNMENT_OUTCOME_META}
+          group="driverAssignmentOutcome"
+        />
       ),
-    },
-    {
-      title: t('columns.period'),
-      key: 'period',
-      width: 210,
-      render: (_, row) => (
-        <span className={styles.muted}>{fmt.rentalRange(row.pickupAt, row.returnAt)}</span>
+      wage: !line ? (
+        <span className={styles.muted}>-</span>
+      ) : line.kind === 'none' ? (
+        <span className={styles.muted}>{tLine('none')}</span>
+      ) : (
+        <span className={styles.money}>{fmt.money(line.amount)}</span>
       ),
-    },
-    {
-      title: t('columns.outcome'),
-      key: 'outcome',
-      width: 140,
-      render: (_, row) => (
-        <Tag color={DRIVER_ASSIGNMENT_OUTCOME_META[row.outcome as DriverAssignmentOutcome]?.color}>
-          {domainLabel('driverAssignmentOutcome', row.outcome)}
-        </Tag>
-      ),
-    },
-    {
-      title: t('columns.wage'),
-      key: 'wage',
-      width: 190,
-      align: 'right',
-      render: (_, row) => {
-        const line = driverWageLine({ amount: row.wageAmount, stage: row.stage });
-        if (!line) return <span className={styles.muted}>-</span>;
-        return line.kind === 'none' ? (
-          <span className={styles.muted}>{tLine('none')}</span>
-        ) : (
-          <span className={styles.money}>
-            {tLine(line.kind, { amount: fmt.money(line.amount), days: row.wageDays ?? 0 })}
-          </span>
-        );
-      },
-    },
-  ];
+    };
+  };
 
-  const meta = query.data?.meta ?? { page, limit: DRIVER_ASSIGNMENTS_LIMIT, total: 0, hasNext: false };
-  const empty = !query.isFetching && meta.total === 0;
+  const page = query.data
+    ? { items: query.data.items.map(toRow), meta: query.data.meta }
+    : undefined;
+  const empty = !query.isFetching && (query.data?.meta.total ?? 0) === 0;
 
   return (
-    <div className={styles.tabBody}>
-      <div className={styles.toolbar}>
-        <span className={styles.toolbarSummary}>
-          {t.rich('summary', {
-            trips: driver.monthCompletedTrips,
-            amount: fmt.money(driver.monthWageTotal),
-            b: (chunks) => <b>{chunks}</b>,
-          })}
-        </span>
-        <div className={styles.toolbarActions}>
-          {monthPicker}
-          <Button
-            icon={<DownloadOutlined />}
-            loading={exporting}
-            disabled={empty}
-            onClick={() => void exportStatement()}
-          >
-            {t('export')}
-          </Button>
-        </div>
-      </div>
-      <DataTable<DriverAssignmentRow>
-        label={t('tableLabel')}
-        columns={columns}
-        items={query.data?.items ?? []}
-        rowKey={(row) => row.id}
-        minWidth={820}
+    <>
+      <DriverTripsToolbar
+        q={filters.q}
+        status={filters.status}
+        statusOptions={TRIP_OUTCOMES.map((value) => ({
+          value,
+          label: domainLabel('driverAssignmentOutcome', value),
+        }))}
+        onSearch={(q) => onFilters({ q, page: undefined })}
+        onStatus={(status) => onFilters({ status, page: undefined })}
+        end={
+          <>
+            <span className={styles.recorded}>
+              {t('totalRecorded')}
+              <b>{fmt.money(wageTotal)}</b>
+            </span>
+            <Button
+              size="large"
+              icon={<UploadOutlined />}
+              loading={exporting}
+              disabled={empty && !filtered}
+              onClick={() => void exportStatement()}
+            >
+              {t('export')}
+            </Button>
+          </>
+        }
+      />
+      <DriverTripsTable
+        label={tOld('tableLabel')}
+        page={page}
         loading={query.isFetching}
         error={
           query.isError && !query.data
-            ? { title: t('loadError'), onRetry: () => void query.refetch() }
+            ? { title: tOld('loadError'), onRetry: () => void query.refetch() }
             : null
         }
-        empty={{ title: t('empty'), description: t('emptyHint') }}
-        pagination={{
-          meta,
-          onChange: (next) => setPaging({ month, page: next }),
-          totalLabel: (total) => t('total', { count: total }),
-        }}
+        empty={
+          filtered
+            ? { title: t('emptyFiltered'), description: t('emptyFilteredHint') }
+            : { title: tOld('empty'), description: tOld('emptyHint') }
+        }
+        onPage={(next, limit) => onFilters({ page: next > 1 ? next : undefined, limit })}
+        withWage
       />
-    </div>
+    </>
   );
 }

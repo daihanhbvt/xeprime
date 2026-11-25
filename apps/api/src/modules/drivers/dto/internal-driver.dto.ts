@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_STATUS_VALUES,
   EXTERNAL_DRIVER_NAME_LENGTH,
   INTERNAL_DRIVER_NOTE_MAX,
   INTERNAL_DRIVER_PAGE_MAX,
@@ -9,6 +10,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -23,6 +25,9 @@ import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { PhoneInput } from '../../../common/phone';
 
 const DEFAULT_LIMIT = 20;
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+/** Trần độ dài URL ảnh — URL kho R2 thật dài chừng 150 ký tự. */
+const PHOTO_URL_MAX = 1000;
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -98,6 +103,19 @@ export class CreateInternalDriverDto {
   @IsString()
   @MaxLength(INTERNAL_DRIVER_NOTE_MAX)
   note?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Ảnh TUỲ CHỌN - URL công khai trả về từ `POST /uploads/driver-photos/presign` của chính bên thuê',
+  })
+  @IsOptional()
+  @Transform(trimToNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(PHOTO_URL_MAX)
+  photoUrl?: string | null;
 }
 
 /** Sửa một tài xế đang dùng — gửi trường nào đổi trường đó. Đơn đã gán giữ ảnh chụp cũ (ADR 0108). */
@@ -126,6 +144,18 @@ export class UpdateInternalDriverDto {
   @IsString()
   @MaxLength(INTERNAL_DRIVER_NOTE_MAX)
   note?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Ảnh mới (URL từ presign của bên thuê) - `null` = gỡ ảnh, bỏ trống = giữ',
+  })
+  @IsOptional()
+  @Transform(trimToNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(PHOTO_URL_MAX)
+  photoUrl?: string | null;
 }
 
 export class InternalDriverDto {
@@ -133,6 +163,8 @@ export class InternalDriverDto {
   @ApiProperty() name!: string;
   @ApiProperty({ description: 'Dạng `0…`' }) phone!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh tuỳ chọn' })
+  photoUrl!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -146,6 +178,61 @@ export class InternalDriverDto {
 
 export class InternalDriverPageDto {
   @ApiProperty({ type: [InternalDriverDto] }) data!: InternalDriverDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
+/**
+ * `GET /internal-drivers/:id/trips` — các đơn đã gán người này, TRẢ XE trong tháng (giờ VN).
+ * Tài xế nội bộ không có tiền công (ADR 0108) nên bảng chỉ có đơn, không có số tiền.
+ */
+export class InternalDriverTripListQueryDto {
+  @ApiPropertyOptional({ description: 'Tháng YYYY-MM (giờ VN) - mặc định tháng hiện tại' })
+  @IsOptional()
+  @Matches(MONTH_PATTERN, { message: 'Tháng phải có dạng YYYY-MM' })
+  month?: string;
+
+  @ApiPropertyOptional({ description: 'Tìm theo mã đơn, tên/SĐT khách, tên xe, biển số' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: BOOKING_STATUS_VALUES })
+  @IsOptional()
+  @IsIn(BOOKING_STATUS_VALUES)
+  status?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: DEFAULT_LIMIT, minimum: 1, maximum: INTERNAL_DRIVER_PAGE_MAX })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(INTERNAL_DRIVER_PAGE_MAX)
+  limit?: number;
+}
+
+export class InternalDriverTripRowDto {
+  @ApiProperty({ description: 'ID đơn' }) bookingId!: string;
+  @ApiProperty() bookingCode!: string;
+  @ApiProperty({ enum: BOOKING_STATUS_VALUES }) bookingStatus!: string;
+  @ApiProperty() pickupAt!: string;
+  @ApiProperty() returnAt!: string;
+  @ApiProperty() vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehiclePlate!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
+  @ApiProperty() customerName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
+}
+
+export class InternalDriverTripPageDto {
+  @ApiProperty({ type: [InternalDriverTripRowDto] }) data!: InternalDriverTripRowDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
 
@@ -176,6 +263,7 @@ export class AssignableInternalDriverDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
   @ApiProperty() phone!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) photoUrl!: string | null;
   @ApiProperty({ description: 'Đã gán một đơn khác của bên thuê giao khung giờ này' })
   busy!: boolean;
 }

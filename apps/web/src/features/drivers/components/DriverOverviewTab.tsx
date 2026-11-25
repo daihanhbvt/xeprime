@@ -1,277 +1,191 @@
 'use client';
 
 import {
-  CalendarOutlined,
-  CarOutlined,
+  CheckCircleOutlined,
   ClockCircleOutlined,
-  ScheduleOutlined,
-  SafetyCertificateOutlined,
-  WalletOutlined,
+  DollarOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons';
-import Link from 'next/link';
+import { Progress } from 'antd';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
-import {
-  BOOKING_STATUS_META,
-  DRIVER_ASSIGNMENT_STATUS_META,
-  type BookingStatus,
-  type DriverAssignmentStatus,
-} from '@xeprime/types';
-import { MoneyVolumeChart } from '@/components/chart/MoneyVolumeChart';
-import { StatusBadge } from '@/components/data-display/StatusBadge';
-import { bookingPath } from '@/constants/routes';
-import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
+import { BOOKING_STATUS } from '@xeprime/types';
+import { moneyChangePercent } from '@xeprime/domain';
+import { ChangeBadge } from '@/features/dashboard/components/ChangeBadge';
 import { StatCard } from '@/features/dashboard/components/StatCard';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { dayjs } from '@/lib/datetime';
-import { useDriverWageSettings } from '../hooks/use-drivers';
 import type { DriverOverview } from '../types';
+import { DriverUpcomingTrips, DriverWageBars } from './DriverDetailParts';
 import { DRIVER_MONTH_FORMAT } from './DriverMonthPicker';
 import styles from './DriverDetail.module.css';
 
 /**
- * Tab Tổng quan của ngăn chi tiết tài xế — mọi số đến từ MỘT lần đọc `GET /drivers/:id/overview`,
- * nên bốn thẻ, hai panel và biểu đồ luôn khớp nhau.
+ * Tab Tổng quan của trang chi tiết tài xế liên kết — Figma `24042:71009`. Mọi số đến từ MỘT lần
+ * đọc `GET /drivers/:id/overview`, nên bốn thẻ số, biểu đồ, "Chuyến sắp tới" và thẻ tiền công luôn
+ * khớp nhau. Tiền công là số GHI NHẬN (ADR 0075) — không con số nào ở đây là tiền XePrime giữ.
  *
- * Tỉ lệ nhận chỉ là phần trăm khi có ít nhất một lượt để đo; "chưa được gán lần nào" và "được gán
- * mà không nhận" là hai điều khác hẳn nhau, nên không có lượt nào thì hiện "—", không phải 0%.
+ * Tỉ lệ nhận chỉ là phần trăm khi có ít nhất một lượt để đo; "chưa được gán lần nào" khác "được
+ * gán mà không nhận", nên không có lượt nào thì hiện "-", không phải 0%.
  */
-export function DriverOverviewTab({
-  overview,
-  monthPicker,
-}: {
-  overview: DriverOverview;
-  monthPicker: ReactNode;
-}) {
-  const t = useTranslations('Drivers.detail.overview');
+export function DriverOverviewTab({ overview }: { overview: DriverOverview }) {
+  const t = useTranslations('Drivers.detailPage.overview');
+  const tOld = useTranslations('Drivers.detail.overview');
   const fmt = useAppFormat();
-  const settings = useDriverWageSettings();
   const { driver, month, upcoming, current, reliability, trend } = overview;
   const monthLabel = fmt.monthYear(dayjs(month.month, DRIVER_MONTH_FORMAT).toDate());
-  const shopDaily = settings.data?.dailyWage ?? null;
-  const hasTrend = trend.some((p) => p.trips > 0 || Number(p.wageTotal) > 0);
+  const previous = trend.length >= 2 ? trend[trend.length - 2] : undefined;
+  // "Chuyến sắp chạy" = đơn đang gán mà xe CHƯA giao (đơn đang thuê là chuyến đang chạy).
+  const notStarted = current.filter((trip) => trip.bookingStatus !== BOOKING_STATUS.ACTIVE);
+  const nearest = notStarted[0];
 
   return (
-    <div className={styles.tabBody}>
-      <div className={styles.toolbar}>
-        <span className={styles.toolbarSummary}>{t('period', { month: monthLabel })}</span>
-        {monthPicker}
-      </div>
+    <>
       <div className={styles.kpis}>
         <StatCard
-          label={t('stats.wageTotal')}
+          label={t('kpi.wage')}
           value={fmt.money(month.wageTotal)}
-          hint={monthLabel}
-          icon={WalletOutlined}
+          icon={DollarOutlined}
           tone="gold"
+          change={
+            <ChangeBadge value={moneyChangePercent(month.wageTotal, previous?.wageTotal ?? null)} />
+          }
         />
         <StatCard
-          label={t('stats.completedTrips')}
+          label={t('kpi.completed')}
           value={fmt.count(month.completedTrips)}
-          hint={t('stats.drivenDays', { count: month.drivenDays })}
-          icon={CarOutlined}
+          hint={t('kpi.completedHint', { count: month.drivenDays })}
+          icon={CheckCircleOutlined}
           tone="green"
         />
         <StatCard
-          label={t('stats.averageDaily')}
+          label={t('kpi.average')}
           value={month.averageDailyWage == null ? '-' : fmt.money(month.averageDailyWage)}
-          hint={
-            shopDaily
-              ? t('stats.shopDaily', { amount: fmt.money(shopDaily) })
-              : t('stats.noShopDaily')
-          }
-          icon={CalendarOutlined}
+          hint={t('kpi.averageHint', { count: month.drivenDays })}
+          icon={LineChartOutlined}
           tone="blue"
         />
         <StatCard
-          label={t('stats.upcoming')}
-          value={fmt.count(upcoming.acceptedTrips)}
+          label={t('kpi.upcoming')}
+          value={fmt.count(notStarted.length)}
           hint={
-            upcoming.acceptedTrips > 0
-              ? t('stats.upcomingWage', { amount: fmt.money(upcoming.acceptedWage) })
-              : t('stats.upcomingNone')
+            nearest
+              ? t('kpi.upcomingNearest', { time: fmt.dateTime(nearest.pickupAt) })
+              : t('kpi.upcomingNone')
           }
           icon={ClockCircleOutlined}
           tone="blue"
         />
       </div>
 
-      {driver.activeBookingCount > 0 ? (
-        <DashboardPanel
-          title={t('current.title', { count: driver.activeBookingCount })}
-          icon={<ScheduleOutlined />}
-        >
-          <ul className={styles.currentList}>
-            {current.map((trip) => (
-              <li key={trip.bookingId} className={styles.currentRow}>
-                <Link href={bookingPath.detail(trip.bookingId)} className={styles.currentCode}>
-                  {trip.bookingCode}
-                </Link>
-                <span className={styles.vehicle}>
-                  <span>{trip.vehicleName}</span>
-                  {trip.vehiclePlate ? (
-                    <span className={styles.muted}>{trip.vehiclePlate}</span>
-                  ) : null}
-                </span>
-                <span className={styles.muted}>
-                  {fmt.rentalRange(trip.pickupAt, trip.returnAt)}
-                </span>
-                <span className={styles.currentBadges}>
-                  <StatusBadge
-                    value={trip.bookingStatus as BookingStatus}
-                    meta={BOOKING_STATUS_META}
-                    group="bookingStatus"
-                  />
-                  {trip.assignmentStatus ? (
-                    <StatusBadge
-                      value={trip.assignmentStatus as DriverAssignmentStatus}
-                      meta={DRIVER_ASSIGNMENT_STATUS_META}
-                      group="driverAssignmentStatus"
-                    />
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {driver.activeBookingCount > current.length ? (
-            <p className={styles.note}>{t('current.more', { shown: current.length })}</p>
-          ) : null}
-        </DashboardPanel>
-      ) : null}
-
-      <div className={styles.halves}>
-        <DashboardPanel title={t('wage.title', { month: monthLabel })} icon={<WalletOutlined />}>
-          <KeyValues
-            rows={[
-              {
-                key: 'completed',
-                label: t('wage.completed', { count: month.completedTrips }),
-                value: fmt.money(month.completedWage),
-              },
-              {
-                key: 'agreed',
-                label: t('wage.agreed', { count: month.agreedTrips }),
-                value: fmt.money(month.agreedWage),
-              },
-              { key: 'total', label: t('wage.total'), value: fmt.money(month.wageTotal) },
-              {
-                key: 'edited',
-                label: t('wage.edited'),
-                value: t('wage.editedValue', { count: month.editedTrips }),
-              },
-            ]}
-          />
-          <p className={styles.note}>{t('wage.note')}</p>
-        </DashboardPanel>
-
-        <DashboardPanel
-          title={t('reliability.title', { days: reliability.windowDays })}
-          icon={<SafetyCertificateOutlined />}
-        >
-          <KeyValues
-            rows={[
-              {
-                key: 'rate',
-                label: t('reliability.acceptRate'),
-                value:
-                  reliability.acceptRate == null ? (
-                    <span className={styles.sub}>{t('reliability.noSample')}</span>
-                  ) : (
-                    <>
-                      {t('reliability.rate', { rate: reliability.acceptRate })}{' '}
-                      <span className={styles.sub}>
-                        {t('reliability.rateOf', {
-                          accepted: reliability.accepted,
-                          decided: reliability.decided,
-                        })}
-                      </span>
-                    </>
-                  ),
-              },
-              {
-                key: 'response',
-                label: t('reliability.response'),
-                value:
-                  reliability.medianResponseMinutes == null
-                    ? '-'
-                    : reliability.medianResponseMinutes === 0
-                      ? t('reliability.underMinute')
-                      : fmt.minutesDuration(reliability.medianResponseMinutes),
-              },
-              {
-                key: 'declined',
-                label: t('reliability.declined'),
-                value: fmt.count(reliability.declined),
-              },
-              {
-                key: 'expired',
-                label: t('reliability.expired'),
-                value: (
-                  <span className={reliability.expired > 0 ? styles.warn : undefined}>
-                    {fmt.count(reliability.expired)}
-                  </span>
-                ),
-              },
-              {
-                key: 'drops',
-                label: t('reliability.drops'),
-                value:
-                  driver.dropCount > 0 ? (
-                    <span className={driver.criticalDropCount > 0 ? styles.danger : styles.warn}>
-                      {t('reliability.dropsValue', {
-                        count: driver.dropCount,
-                        critical: driver.criticalDropCount,
-                      })}
-                    </span>
-                  ) : (
-                    fmt.count(0)
-                  ),
-              },
-              {
-                key: 'pending',
-                label: t('reliability.pending'),
-                value: fmt.count(upcoming.pendingTrips),
-              },
-              ...(driver.autoAssignCooldownUntil
-                ? [
-                    {
-                      key: 'cooldown',
-                      label: t('reliability.cooldown'),
-                      value: (
-                        <span className={styles.warn}>
-                          {fmt.dateTime(driver.autoAssignCooldownUntil)}
-                        </span>
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-        </DashboardPanel>
-      </div>
-
-      <MoneyVolumeChart
-        title={t('trend.title')}
-        description={t('trend.description')}
-        points={trend.map((p) => ({ key: p.month, money: p.wageTotal, count: p.trips }))}
-        labelOf={(key) => fmt.monthYear(dayjs(key, DRIVER_MONTH_FORMAT).toDate())}
-        moneyLabel={t('trend.money')}
-        countLabel={t('trend.trips')}
-        empty={hasTrend ? null : { title: t('trend.empty') }}
-      />
-    </div>
-  );
-}
-
-function KeyValues({ rows }: { rows: { key: string; label: string; value: ReactNode }[] }) {
-  return (
-    <dl className={styles.kv}>
-      {rows.map((row) => (
-        <div key={row.key} className={styles.kvRow}>
-          <dt>{row.label}</dt>
-          <dd>{row.value}</dd>
+      <div className={styles.overviewGrid}>
+        <div className={styles.column}>
+          <DriverWageBars overview={overview} />
+          <DriverUpcomingTrips trips={current} total={driver.activeBookingCount} showWage />
         </div>
-      ))}
-    </dl>
+
+        <section className={styles.card} aria-label={t('wage.title')}>
+          <h3 className={styles.cardTitle}>
+            {t('wage.title')} · {monthLabel}
+          </h3>
+          <dl className={styles.kv}>
+            <div>
+              <dt>{tOld('wage.completed', { count: month.completedTrips })}</dt>
+              <dd>{fmt.money(month.completedWage)}</dd>
+            </div>
+            {/* Ngoài design (giữ từ 04/11): số thoả thuận của chuyến đã nhận mà không chạy. */}
+            {month.agreedTrips > 0 ? (
+              <div>
+                <dt>{tOld('wage.agreed', { count: month.agreedTrips })}</dt>
+                <dd>{fmt.money(month.agreedWage)}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>{tOld('wage.edited')}</dt>
+              <dd>{tOld('wage.editedValue', { count: month.editedTrips })}</dd>
+            </div>
+          </dl>
+          <p className={styles.smallNote}>{tOld('wage.note')}</p>
+
+          <div className={styles.divider} />
+
+          <div className={styles.cardHead}>
+            <h3 className={styles.cardTitle}>{t('reliability.title')}</h3>
+            <span className={styles.cardHint}>
+              {t('reliability.window', { days: reliability.windowDays })}
+            </span>
+          </div>
+          <div className={styles.rateRow}>
+            <span className={styles.rateValue}>
+              {reliability.acceptRate == null ? '-' : `${fmt.count(reliability.acceptRate)}%`}
+            </span>
+            <div className={styles.rateBar}>
+              <span>
+                {t('reliability.rateLabel')}
+                {reliability.decided > 0
+                  ? ` · ${t('reliability.rateOf', {
+                      accepted: reliability.accepted,
+                      decided: reliability.decided,
+                    })}`
+                  : ` · ${tOld('reliability.noSample')}`}
+              </span>
+              <Progress
+                percent={reliability.acceptRate ?? 0}
+                showInfo={false}
+                size="small"
+                status="success"
+              />
+            </div>
+          </div>
+          <div className={styles.tiles}>
+            <div className={styles.tile}>
+              <span>{t('reliability.response')}</span>
+              <b>
+                {reliability.medianResponseMinutes == null
+                  ? '-'
+                  : reliability.medianResponseMinutes === 0
+                    ? tOld('reliability.underMinute')
+                    : fmt.minutesDuration(reliability.medianResponseMinutes)}
+              </b>
+            </div>
+            <div className={styles.tile}>
+              <span>{t('reliability.declined')}</span>
+              <b>{t('reliability.times', { count: reliability.declined })}</b>
+            </div>
+            <div className={styles.tile}>
+              <span>{t('reliability.expired')}</span>
+              <b className={reliability.expired > 0 ? styles.warnText : undefined}>
+                {t('reliability.trips', { count: reliability.expired })}
+              </b>
+            </div>
+            <div className={styles.tile}>
+              <span>{t('reliability.pending')}</span>
+              <b>{t('reliability.trips', { count: upcoming.pendingTrips })}</b>
+            </div>
+          </div>
+          {/* Ngoài design (giữ từ 04/11, ADR 0074): rút chuyến đã nhận + loại khỏi "Đặt ngay". */}
+          {driver.dropCount > 0 || driver.autoAssignCooldownUntil ? (
+            <dl className={styles.kv}>
+              {driver.dropCount > 0 ? (
+                <div>
+                  <dt>{tOld('reliability.drops')}</dt>
+                  <dd className={driver.criticalDropCount > 0 ? styles.dangerText : styles.warnText}>
+                    {tOld('reliability.dropsValue', {
+                      count: driver.dropCount,
+                      critical: driver.criticalDropCount,
+                    })}
+                  </dd>
+                </div>
+              ) : null}
+              {driver.autoAssignCooldownUntil ? (
+                <div>
+                  <dt>{tOld('reliability.cooldown')}</dt>
+                  <dd className={styles.warnText}>{fmt.dateTime(driver.autoAssignCooldownUntil)}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
+        </section>
+      </div>
+    </>
   );
 }

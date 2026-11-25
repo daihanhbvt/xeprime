@@ -992,6 +992,17 @@ export const customerPath = {
   detail: (id: string): string => `${ROUTES.MANAGE.CUSTOMERS}/${id}`,
 };
 
+/**
+ * Trang chi tiết MỘT tài xế (Figma `24042:71009`, 25/11/2026) - route thật thay cho ngăn kéo
+ * `?open=<id>` cũ của danh sách. Tài xế LIÊN KẾT và tài xế NỘI BỘ là hai bảng id riêng nên hai
+ * đường dẫn riêng. Link cũ `/drivers?open=<id>&tab=` được danh sách chuyển tiếp về `detail`.
+ */
+export const driverPath = {
+  detail: (id: string, tab?: string): string =>
+    `${ROUTES.MANAGE.DRIVERS}/${id}${tab ? `?tab=${tab}` : ''}`,
+  internal: (id: string): string => `${ROUTES.MANAGE.DRIVERS}/internal/${id}`,
+};
+
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
   detail: (id: string): string => `${ROUTES.MANAGE.CONTRACTS}/${id}`,

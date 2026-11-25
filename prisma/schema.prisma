@@ -138,6 +138,7 @@ model User {
   /// Các liên kết tài xế của tài khoản KHÁCH này (ADR 0063).
   driverLinks                  Driver[]                  @relation("driver_link_account")
   driverLinksInvited           Driver[]                  @relation("driver_link_inviter")
+  driverLicencesChecked        Driver[]                  @relation("driver_licence_checker")
   internalDriversCreated       TenantInternalDriver[]    @relation("internal_driver_creator")
   bookingCollateralsReturned   BookingCollateral[]       @relation("booking_collateral_returner")
   bookingCollateralsCreated    BookingCollateral[]       @relation("booking_collateral_creator")
@@ -665,6 +666,8 @@ model CustomerDriverLicence {
 
   user    User  @relation("driver_licence_owner", fields: [userId, realm], references: [id, realm], onDelete: Cascade, map: "customer_driver_licences_user_realm_fkey")
   decider User? @relation("driver_licence_decider", fields: [decidedBy], references: [id], onDelete: Restrict)
+  /// Liên kết tài xế đã "đối chiếu" đúng hồ sơ bằng này.
+  checkedByLinks Driver[] @relation("driver_licence_checked")
 
   /// Trang tài khoản + cổng đặt xe: lượt nộp mới nhất của một người.
   @@index([userId, createdAt(sort: Desc)], map: "customer_driver_licences_user_created_idx")
@@ -2728,10 +2731,17 @@ model Driver {
   /// Cooldown sau một lượt RÚT chuyến sát giờ (ADR 0074 điều 2): tới mốc này liên kết bị loại khỏi
   /// tự gán của "Đặt ngay" (`pickForAutoAssign`). Bên thuê vẫn gán tay được.
   autoAssignCooldownUntil DateTime? @map("auto_assign_cooldown_until") @db.Timestamptz(3)
+  /// "Đã đối chiếu" bằng lái (25/11/2026): hồ sơ bằng (`customer_driver_licences.id`) bên thuê đã xem
+  /// khi tên trên bằng lệch tên họ đặt. Bằng mới ⇒ id khác ⇒ nhãn "Cần đối chiếu" tự hiện lại.
+  licenceCheckedLicenceId String?   @map("licence_checked_licence_id") @db.Char(26)
+  licenceCheckedAt        DateTime? @map("licence_checked_at") @db.Timestamptz(3)
+  licenceCheckedBy        String?   @map("licence_checked_by") @db.Char(26)
   createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  licenceChecked     CustomerDriverLicence?    @relation("driver_licence_checked", fields: [licenceCheckedLicenceId], references: [id], onDelete: SetNull)
+  licenceChecker     User?                     @relation("driver_licence_checker", fields: [licenceCheckedBy], references: [id], onDelete: SetNull)
   user               User                      @relation("driver_link_account", fields: [userId, userRealm], references: [id, realm], onDelete: Restrict, map: "drivers_user_realm_fkey")
   inviter            User?                     @relation("driver_link_inviter", fields: [invitedBy], references: [id], onDelete: SetNull)
   bookings           Booking[]
@@ -2762,6 +2772,8 @@ model TenantInternalDriver {
   /// Di động VN dạng lưu `0xxxxxxxxx` (ADR 0082, CHECK).
   phone      String    @db.VarChar(20)
   note       String?   @db.Text
+  /// Ảnh đại diện TUỲ CHỌN — URL công khai dưới `tenants/<tenant_id>/drivers/` (server kiểm tiền tố).
+  photoUrl   String?   @map("photo_url") @db.Text
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   createdBy  String?   @map("created_by") @db.Char(26)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

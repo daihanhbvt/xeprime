@@ -20,7 +20,10 @@ import {
   DRIVER_LIST_SORT,
   DRIVER_LIST_SORT_VALUES,
   DRIVER_OPERATION_FILTER_VALUES,
+  DRIVER_ROSTER_KIND_VALUES,
+  DRIVER_ROSTER_TYPE_FILTER_VALUES,
   DRIVER_TYPE_VALUES,
+  type DriverRosterKind,
   STOREFRONT_KIND_VALUES,
   DRIVER_LINK_SCOPE_VALUES,
   type DriverLinkScope,
@@ -46,6 +49,7 @@ import {
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { IsMoneyStep } from '../../../common/validators/money-step.validator';
+import { InternalDriverDto } from './internal-driver.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -135,6 +139,99 @@ export class DriverListQueryDto extends DriverListFilterDto {
   limit?: number;
 }
 
+/**
+ * Bộ lọc chung của danh sách GỘP (liên kết + nội bộ) và dải số đếm của nó. `driverType` nhận thêm
+ * `internal` = chỉ tài xế nội bộ (ADR 0108).
+ */
+export class DriverRosterFilterDto {
+  @ApiPropertyOptional({ description: 'Tìm theo tên / SĐT' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+
+  @ApiPropertyOptional({
+    enum: DRIVER_ROSTER_TYPE_FILTER_VALUES,
+    description: 'Hình thức hợp tác của liên kết, hoặc `internal` = chỉ tài xế nội bộ',
+  })
+  @IsOptional()
+  @IsIn(DRIVER_ROSTER_TYPE_FILTER_VALUES)
+  driverType?: string;
+
+  @ApiPropertyOptional({ enum: DRIVER_OPERATION_FILTER_VALUES })
+  @IsOptional()
+  @IsIn(DRIVER_OPERATION_FILTER_VALUES)
+  operation?: string;
+}
+
+export class DriverRosterQueryDto extends DriverRosterFilterDto {
+  @ApiPropertyOptional({
+    enum: LINK_STATUS_FILTER_VALUES,
+    description:
+      'Bỏ trống = liên kết đang mở + tài xế nội bộ đang dùng; `any` = tất cả; `closed` = liên kết đã từ chối/kết thúc + tài xế nội bộ đã lưu trữ. Một trạng thái liên kết cụ thể ⇒ chỉ tài xế liên kết.',
+  })
+  @IsOptional()
+  @IsIn(LINK_STATUS_FILTER_VALUES)
+  linkStatus?: string;
+
+  @ApiPropertyOptional({
+    enum: [DRIVER_LICENCE_CHECK_FILTER],
+    description:
+      '`needed` = chỉ liên kết cần đối chiếu bằng lái (tài xế nội bộ không có bằng trên hệ thống)',
+  })
+  @IsOptional()
+  @IsIn([DRIVER_LICENCE_CHECK_FILTER])
+  licenceCheck?: string;
+
+  @ApiPropertyOptional({ enum: DRIVER_LIST_SORT_VALUES, default: DRIVER_LIST_SORT.STATUS })
+  @IsOptional()
+  @IsIn(DRIVER_LIST_SORT_VALUES)
+  sort?: string;
+
+  @ApiPropertyOptional({
+    description: 'Tháng YYYY-MM (giờ VN) cho số liệu tiền công của thẻ liên kết',
+  })
+  @IsOptional()
+  @Matches(MONTH_PATTERN, { message: 'Tháng phải có dạng YYYY-MM' })
+  month?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: DEFAULT_LIMIT, minimum: 1, maximum: MAX_LIMIT })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_LIMIT)
+  limit?: number;
+}
+
+/** Tra tài khoản theo SĐT trước khi mời (hộp "Mời tài xế", Figma `23737:46392`). */
+export class DriverAccountLookupQueryDto {
+  @ApiProperty({ example: '0901234567' })
+  @PhoneInput()
+  @IsString()
+  @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  phone!: string;
+}
+
+/**
+ * Kết quả tra — CHỈ tài khoản KHÁCH đang hoạt động đã xác minh đúng SĐT này; không có thì
+ * `found = false` và mọi trường khác rỗng. Không trả email, không trả id.
+ */
+export class DriverAccountLookupDto {
+  @ApiProperty() found!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true }) displayName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) avatarUrl!: string | null;
+  @ApiProperty({ description: 'Tài khoản này đã có lời mời / liên kết đang mở với bên thuê' })
+  alreadyLinked!: boolean;
+}
+
 /** Mời một tài khoản KHÁCH làm tài xế — SĐT phải là tài khoản khách đã xác minh. */
 export class InviteDriverDto {
   @ApiProperty({ example: '0901234567', description: 'SĐT tài khoản khách của tài xế' })
@@ -143,10 +240,14 @@ export class InviteDriverDto {
   @Matches(VN_MOBILE_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
 
-  @ApiProperty({ example: 'Trần Văn B', description: 'Tên bên thuê gọi tài xế này' })
+  @ApiPropertyOptional({
+    example: 'Trần Văn B',
+    description: 'Tên bên thuê gọi tài xế này - bỏ trống = tên hiển thị của tài khoản',
+  })
+  @IsOptional()
   @IsString()
   @Length(1, 255)
-  name!: string;
+  name?: string;
 
   @ApiPropertyOptional({ enum: DRIVER_TYPE_VALUES, default: 'staff' })
   @IsOptional()
@@ -205,6 +306,15 @@ export class DriverLicenceSummaryDto {
   kind!: string | null;
 }
 
+/**
+ * Bên thuê đã "đối chiếu" bằng lái hiện tại của tài xế (25/11/2026) — chỉ có khi mốc đối chiếu trỏ
+ * ĐÚNG hồ sơ bằng đang hiệu lực; tài xế nộp bằng mới thì về `null` và nhãn "Cần đối chiếu" hiện lại.
+ */
+export class DriverLicenceCheckDto {
+  @ApiProperty({ description: 'ISO-8601 UTC' }) checkedAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) checkedByName!: string | null;
+}
+
 export class DriverDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
@@ -219,6 +329,8 @@ export class DriverDto {
   endedByParty!: string | null;
   @ApiProperty({ type: DriverAccountDto }) account!: DriverAccountDto;
   @ApiProperty({ type: DriverLicenceSummaryDto }) licence!: DriverLicenceSummaryDto;
+  @ApiPropertyOptional({ type: DriverLicenceCheckDto, nullable: true })
+  licenceCheck!: DriverLicenceCheckDto | null;
   @ApiProperty({ description: 'Số chuyến chưa xong đang gán cho tài xế này' })
   activeBookingCount!: number;
   @ApiPropertyOptional({
@@ -263,6 +375,36 @@ export class DriverSummaryDto {
   @ApiProperty({ description: 'Liên kết còn mở cần đối chiếu bằng lái' }) licenceCheck!: number;
 }
 
+/** Một dòng của danh sách GỘP — đúng MỘT trong hai trường có giá trị, theo `kind`. */
+export class DriverRosterItemDto {
+  @ApiProperty({ enum: DRIVER_ROSTER_KIND_VALUES }) kind!: DriverRosterKind;
+  @ApiPropertyOptional({ type: DriverDto, nullable: true }) linked!: DriverDto | null;
+  @ApiPropertyOptional({ type: InternalDriverDto, nullable: true })
+  internal!: InternalDriverDto | null;
+}
+
+export class DriverRosterPageDto {
+  @ApiProperty({ type: [DriverRosterItemDto] }) data!: DriverRosterItemDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
+/**
+ * Dải số đếm của danh sách gộp — mỗi ô bằng tổng danh sách khi bấm vào nó: `open` = liên kết mở +
+ * nội bộ đang dùng; `closed` = liên kết đã đóng + nội bộ đã lưu trữ; các ô còn lại chỉ liên kết.
+ */
+export class DriverRosterSummaryDto {
+  @ApiProperty() open!: number;
+  @ApiProperty() active!: number;
+  @ApiProperty() invited!: number;
+  @ApiProperty() suspended!: number;
+  @ApiProperty() closed!: number;
+  @ApiProperty() licenceCheck!: number;
+  @ApiProperty({ description: 'Tài xế nội bộ đang dùng (đã gồm trong open)' })
+  internalActive!: number;
+  @ApiProperty({ description: 'Tài xế nội bộ đã lưu trữ (đã gồm trong closed)' })
+  internalArchived!: number;
+}
+
 export class DriverPageDto {
   @ApiProperty({ type: [DriverDto] }) data!: DriverDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
@@ -305,6 +447,19 @@ export class BookingDriverSummaryDto {
       'Hạn tài xế trả lời (ISO-8601, ADR 0066) - chỉ khác null khi lượt đang chờ (pending). Quá hạn ⇒ hệ thống trả lượt về bên thuê.',
   })
   respondBy!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Ảnh: tài khoản của tài xế liên kết / ảnh trong danh bạ của tài xế nội bộ - luôn null ở bề mặt khách',
+  })
+  avatarUrl!: string | null;
+  @ApiPropertyOptional({
+    type: () => DriverLicenceSummaryDto,
+    nullable: true,
+    description: 'Bằng lái của tài xế LIÊN KẾT - chỉ có ở chi tiết đơn phía bên thuê, null ở nơi khác',
+  })
+  licence!: DriverLicenceSummaryDto | null;
 }
 
 /**
@@ -498,6 +653,17 @@ export class DriverWageMonthQueryDto {
 
 /** `GET /drivers/:id/assignments` — các lượt tài xế đã nhận, kết thúc trong tháng. */
 export class DriverAssignmentListQueryDto extends DriverWageMonthQueryDto {
+  @ApiPropertyOptional({ description: 'Tìm theo mã đơn, tên/SĐT khách, tên xe, biển số' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: DRIVER_ASSIGNMENT_OUTCOME_VALUES, description: 'Kết cục của lượt' })
+  @IsOptional()
+  @IsIn(DRIVER_ASSIGNMENT_OUTCOME_VALUES)
+  outcome?: string;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -529,6 +695,11 @@ export class DriverAssignmentRowDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Biển số xe của chuyến' })
   vehiclePlate!: string | null;
   @ApiProperty({ description: 'Tên xe của chuyến' }) vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của xe' })
+  vehicleImageUrl!: string | null;
+  @ApiProperty({ description: 'Tên khách của đơn' }) customerName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT khách của đơn (dạng 0…)' })
+  customerPhone!: string | null;
 }
 
 /** Số liệu tiền công của MỘT tài xế trong tháng (giờ VN) — các lượt kết thúc trong tháng. */
@@ -584,6 +755,15 @@ export class DriverCurrentTripDto {
     description: 'Tài xế đã nhận (accepted) hay còn chờ trả lời (pending)',
   })
   assignmentStatus!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
+  @ApiProperty({ description: 'Tên khách của đơn' }) customerName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tiền công của lượt đang mở (VND) - null với tài xế nội bộ / chưa ghi',
+  })
+  wageAmount!: string | null;
 }
 
 /**
@@ -635,6 +815,19 @@ export class DriverOverviewDto {
       'Các tháng liên tiếp kết thúc ở tháng được chọn, cũ trước - tháng trống vẫn có mặt',
   })
   trend!: DriverWageTrendPointDto[];
+}
+
+/**
+ * `GET /internal-drivers/:id` — trang chi tiết một tài xế NỘI BỘ (ADR 0108): hồ sơ + các đơn đang
+ * gán còn chiếm lịch. Không tiền công, không bằng lái, không độ tin cậy — người này không có tài khoản.
+ */
+export class InternalDriverOverviewDto {
+  @ApiProperty({ type: InternalDriverDto }) driver!: InternalDriverDto;
+  @ApiProperty({
+    type: [DriverCurrentTripDto],
+    description: 'Các đơn đang gán, sớm nhất trước - tối đa 20; tổng ở driver.activeTripCount',
+  })
+  current!: DriverCurrentTripDto[];
 }
 
 export class DriverAssignmentPageDto {
@@ -712,6 +905,14 @@ export class AssignableDriverDto {
   @ApiProperty({ description: 'Có chuyến khác (ở bất kỳ bên thuê nào) giao khung giờ này' })
   busy!: boolean;
   @ApiProperty({ enum: DRIVER_LICENCE_STATE_VALUES }) licenceState!: string;
+  @ApiProperty({ type: [String], description: 'Hạng trên bằng đã xác thực (rỗng khi chưa có)' })
+  licenceClasses!: string[];
+  @ApiProperty({ enum: DRIVER_TYPE_VALUES }) driverType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) avatarUrl!: string | null;
+  @ApiProperty({
+    description: `Số lượt gán của bên thuê này mà tài xế để quá hạn không xác nhận trong ${DRIVER_DROP_STATS_WINDOW_DAYS} ngày`,
+  })
+  expiredCount!: number;
 }
 
 export class AssignableDriversDto {

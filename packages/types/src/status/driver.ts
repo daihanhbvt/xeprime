@@ -94,6 +94,27 @@ export const DRIVER_OPERATION_FILTER_VALUES = Object.values(
  */
 export const DRIVER_LICENCE_CHECK_FILTER = 'needed';
 
+/**
+ * Danh sách GỘP của màn Tài xế (Figma `23737:41945`, 25/11/2026): tài xế LIÊN KẾT (ADR 0063) và tài
+ * xế NỘI BỘ (ADR 0108) chung một lưới. Mỗi dòng mang `kind` để client dựng đúng thẻ.
+ */
+export const DRIVER_ROSTER_KIND = {
+  LINKED: 'linked',
+  INTERNAL: 'internal',
+} as const;
+export type DriverRosterKind = (typeof DRIVER_ROSTER_KIND)[keyof typeof DRIVER_ROSTER_KIND];
+export const DRIVER_ROSTER_KIND_VALUES = Object.values(DRIVER_ROSTER_KIND) as DriverRosterKind[];
+
+/**
+ * Giá trị thêm của lọc "Hình thức" ở danh sách gộp = chỉ tài xế NỘI BỘ. Ba hình thức hợp tác
+ * (`DRIVER_TYPE`) là thuộc tính của liên kết — chọn một trong ba thì danh sách không còn người nội bộ.
+ */
+export const DRIVER_TYPE_FILTER_INTERNAL = DRIVER_ROSTER_KIND.INTERNAL;
+export const DRIVER_ROSTER_TYPE_FILTER_VALUES: readonly string[] = [
+  ...DRIVER_TYPE_VALUES,
+  DRIVER_TYPE_FILTER_INTERNAL,
+];
+
 /** Sắp xếp danh sách tài xế. `status` (lời mời chờ trả lời lên đầu, rồi tên) là mặc định của server. */
 export const DRIVER_LIST_SORT = {
   STATUS: 'status',

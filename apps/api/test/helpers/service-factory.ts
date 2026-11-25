@@ -103,12 +103,20 @@ export function makeDriversService(
   );
 }
 
+/** Gốc kho ảnh công khai mà các spec dùng để dựng URL ảnh "đã tải lên". */
+export const TEST_R2_PUBLIC_BASE_URL = 'https://media.xeprime.test';
+
 /** Danh bạ tài xế nội bộ (ADR 0108). */
 export function makeInternalDriversService(
   prisma: PrismaService,
   audit?: AuditService,
 ): InternalDriversService {
-  return new InternalDriversService(prisma, audit ?? new AuditService(prisma));
+  return new InternalDriversService(
+    prisma,
+    audit ?? new AuditService(prisma),
+    // Kho ảnh công khai giả — ảnh tài xế nội bộ chỉ hợp lệ dưới `tenants/<id>/drivers/` của kho này.
+    new ConfigService({ R2_PUBLIC_BASE_URL: TEST_R2_PUBLIC_BASE_URL }),
+  );
 }
 
 /** Sổ tài sản thế chấp theo đơn (ADR 0109). */

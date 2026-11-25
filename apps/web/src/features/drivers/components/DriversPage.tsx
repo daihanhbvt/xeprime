@@ -1,24 +1,26 @@
 'use client';
 
 import {
+  CheckOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
-  EyeOutlined,
   LinkOutlined,
   LockOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   PlusOutlined,
+  RollbackOutlined,
   StopOutlined,
   UserOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
-import { App, Button, Pagination, Segmented, Select, Skeleton } from 'antd';
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useState, type ReactNode } from 'react';
+import { App, Button, Pagination, Select, Skeleton } from 'antd';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   DRIVER_LICENCE_CHECK_FILTER,
+  DRIVER_LICENCE_STATE,
   DRIVER_LINK_OPEN_STATUSES,
   DRIVER_LINK_STATUS,
   DRIVER_LINK_STATUS_FILTER_ANY,
@@ -28,6 +30,9 @@ import {
   DRIVER_LIST_SORT_VALUES,
   DRIVER_OPERATION_FILTER,
   DRIVER_OPERATION_FILTER_VALUES,
+  DRIVER_ROSTER_KIND,
+  DRIVER_ROSTER_TYPE_FILTER_VALUES,
+  DRIVER_TYPE_FILTER_INTERNAL,
   DRIVER_TYPE_VALUES,
   PERMISSION,
   type DriverLinkStatus,
@@ -40,39 +45,46 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ALL_FILTER } from '@/constants/filters';
+import { driverPath } from '@/constants/routes';
+import { useAvailableHref } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useOpenRecordPager } from '@/hooks/use-open-record-pager';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
 import { DRIVERS_DEFAULT_LIMIT } from '../api';
 import {
-  useDriverSummary,
-  useDrivers,
+  useDriverRoster,
+  useDriverRosterSummary,
   useEndDriver,
   useResumeDriver,
+  useSetDriverLicenceChecked,
   useSuspendDriver,
 } from '../hooks/use-drivers';
+import { holderNameDiffers } from '@xeprime/domain';
+import { useArchiveInternalDriver, useRestoreInternalDriver } from '../hooks/use-internal-drivers';
 import {
+  DRIVER_DETAIL_TAB,
   DRIVER_DETAIL_TABS,
-  DRIVERS_VIEW,
-  type DriversView,
   type Driver,
-  type DriverDetailTab,
   type DriverFilters,
+  type InternalDriver,
 } from '../types';
 import type { InviteDriverFormValues } from '../schema';
-import { DriverCard } from './DriverCard';
-import { DriverDetailDrawer } from './DriverDetailDrawer';
+import { AddDriverModal } from './AddDriverModal';
+import { DriverCard, InternalDriverCard } from './DriverCard';
 import { DRIVER_MONTH_FORMAT, DRIVER_MONTH_PATTERN, DriverMonthPicker } from './DriverMonthPicker';
 import { DriverWageSettingsButton } from './DriverWageSettingsButton';
-import { EditDriverModal } from './EditDriverModal';
-import { InternalDriversView } from './InternalDriversView';
-import { InviteDriverModal } from './InviteDriverModal';
 import styles from './DriversPage.module.css';
 
-type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
+type ToastKey =
+  | 'toast.suspended'
+  | 'toast.resumed'
+  | 'toast.ended'
+  | 'toast.revoked'
+  | 'internal.toast.archived'
+  | 'internal.toast.restored'
+  | 'toast.licenceChecked';
 
 const LINK_STATUS_FILTERS: readonly string[] = [
   ...DRIVER_LINK_STATUS_VALUES,
@@ -83,6 +95,8 @@ const LINK_STATUS_FILTERS: readonly string[] = [
 /** Số khung chờ — đúng một hàng đầy của lưới 4 cột. */
 const SKELETON_COUNT = 4;
 const CARD_MONTH_FORMAT = 'MM/YYYY';
+/** Tham số của danh sách nội bộ RIÊNG trước 25/11/2026 — link cũ thành lọc "Hình thức = nội bộ". */
+const LEGACY_VIEW_INTERNAL = 'internal';
 
 /** Ô của dải số đếm — mỗi ô là một lối lọc nhanh ghi CÙNG tham số với ô "Trạng thái". */
 const SUMMARY_CHIP = {
@@ -131,11 +145,11 @@ function activeChip(filters: DriverFilters): SummaryChip | null {
 
 function parseFilters(params: URLSearchParams): DriverFilters {
   const linkStatus = params.get('linkStatus') ?? '';
-  const driverType = params.get('driverType') ?? '';
+  const legacyInternal = params.get('view') === LEGACY_VIEW_INTERNAL;
+  const driverType = legacyInternal ? DRIVER_TYPE_FILTER_INTERNAL : (params.get('driverType') ?? '');
   const operation = params.get('operation') ?? '';
   const sort = params.get('sort') ?? '';
   const page = Number(params.get('page'));
-  const tab = params.get('tab');
   return {
     q: params.get('q') ?? undefined,
     linkStatus: LINK_STATUS_FILTERS.includes(linkStatus) ? linkStatus : undefined,
@@ -143,7 +157,7 @@ function parseFilters(params: URLSearchParams): DriverFilters {
       params.get('licenceCheck') === DRIVER_LICENCE_CHECK_FILTER
         ? DRIVER_LICENCE_CHECK_FILTER
         : undefined,
-    driverType: (DRIVER_TYPE_VALUES as string[]).includes(driverType) ? driverType : undefined,
+    driverType: DRIVER_ROSTER_TYPE_FILTER_VALUES.includes(driverType) ? driverType : undefined,
     operation: (DRIVER_OPERATION_FILTER_VALUES as string[]).includes(operation)
       ? operation
       : undefined,
@@ -151,104 +165,77 @@ function parseFilters(params: URLSearchParams): DriverFilters {
     month: DRIVER_MONTH_PATTERN.test(params.get('month') ?? '')
       ? (params.get('month') as string)
       : undefined,
-    open: params.get('open') || undefined,
-    tab: (DRIVER_DETAIL_TABS as readonly string[]).includes(tab ?? '')
-      ? (tab as DriverDetailTab)
-      : undefined,
     page: page > 1 ? page : undefined,
     limit: Number(params.get('limit')) || undefined,
   };
 }
 
 /**
- * Quản lý tài xế — Figma Partner-XePrime `23737:41945` (04/11/2026). Mỗi thẻ là một LIÊN KẾT với
- * một tài khoản khách (ADR 0063): mời bằng SĐT, tài xế đồng ý ở site khách. Mở cho cả gian hàng
- * tuyến gói lẫn chủ xe tuyến hoa hồng, không sau cờ gói. Bên thuê chỉ thấy TRẠNG THÁI và phần chữ
- * của bằng lái — không ảnh, không số bằng.
+ * Quản lý tài xế — Figma Partner-XePrime `23737:41945` (cập nhật 25/11/2026). MỘT lưới cho cả tài xế
+ * LIÊN KẾT (tài khoản khách, ADR 0063) và tài xế NỘI BỘ (danh bạ không tài khoản, ADR 0108); một nút
+ * "Thêm tài xế mới" mở hộp hai tab. Mở cho cả gian hàng tuyến gói lẫn chủ xe tuyến hoa hồng.
  *
- * Bộ lọc, sắp xếp, trang, tài xế đang mở và tháng thống kê tiền công sống trên URL (ADR 0004).
- * Dải số đếm là lối lọc nhanh của CÙNG tham số `linkStatus` / `licenceCheck` với ô "Trạng thái".
+ * Bộ lọc, sắp xếp, trang và tháng thống kê sống trên URL (ADR 0004); danh sách gộp phân trang ở
+ * server (`GET /drivers/roster`). Chi tiết một tài xế là trang riêng (`driverPath`) — link cũ
+ * `?open=<id>&tab=` được chuyển tiếp tới đó.
  */
 export function DriversPage() {
   const t = useTranslations('Drivers.page');
   // `useUrlFilters` đọc `useSearchParams` — Next bắt buộc một ranh giới Suspense.
   return (
     <Suspense fallback={<Skeleton active aria-label={t('loading')} />}>
-      <DriversViews />
+      <DriversPageInner />
     </Suspense>
   );
 }
 
-/**
- * Hai danh sách của màn Tài xế: tài xế LIÊN KẾT (tài khoản khách, ADR 0063) và danh bạ tài xế NỘI BỘ
- * (không tài khoản, ADR 0108). Danh sách đang xem sống trên URL (`view`); đổi danh sách bỏ tìm kiếm
- * và trang của danh sách kia — hai bộ lọc không cùng nghĩa.
- */
-function DriversViews() {
-  const t = useTranslations('Drivers.internal');
-  const searchParams = useSearchParams();
-  const { setFilters } = useUrlFilters((params) => ({ view: params.get('view') ?? undefined }));
-  const view: DriversView =
-    searchParams.get('view') === DRIVERS_VIEW.INTERNAL ? DRIVERS_VIEW.INTERNAL : DRIVERS_VIEW.LINKED;
-
-  const viewSwitch = (
-    <Segmented<DriversView>
-      size="large"
-      value={view}
-      aria-label={t('viewLabel')}
-      options={[
-        { value: DRIVERS_VIEW.LINKED, label: t('views.linked') },
-        { value: DRIVERS_VIEW.INTERNAL, label: t('views.internal') },
-      ]}
-      onChange={(next) =>
-        setFilters({
-          view: next === DRIVERS_VIEW.INTERNAL ? next : undefined,
-          q: undefined,
-          page: undefined,
-          limit: undefined,
-          archived: undefined,
-          linkStatus: undefined,
-          licenceCheck: undefined,
-          driverType: undefined,
-          operation: undefined,
-          open: undefined,
-          tab: undefined,
-        } as Record<string, undefined | string>)
-      }
-    />
-  );
-
-  return view === DRIVERS_VIEW.INTERNAL ? (
-    <InternalDriversView viewSwitch={viewSwitch} />
-  ) : (
-    <DriversPageInner viewSwitch={viewSwitch} />
-  );
-}
-
-function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
+function DriversPageInner() {
   const t = useTranslations('Drivers');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const { has } = usePermissions();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const availableHref = useAvailableHref();
 
   const { filters, setFilters } = useUrlFilters(parseFilters);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  // "Mời lại" mở cùng modal mời, điền sẵn từ thẻ cũ.
+  const [addOpen, setAddOpen] = useState(false);
+  // "Mời lại" mở cùng hộp thêm, chỉ tab mời, điền sẵn từ thẻ cũ.
   const [reinviteFrom, setReinviteFrom] = useState<InviteDriverFormValues | null>(null);
-  const [editing, setEditing] = useState<Driver | null>(null);
 
   const canView = has(PERMISSION.DRIVER_VIEW);
   const canManage = has(PERMISSION.DRIVER_MANAGE);
-  const { data, isError, refetch, isFetching } = useDrivers(filters);
-  const summary = useDriverSummary(filters);
+
+  // Link cũ của ngăn chi tiết (`?open=<id>&tab=`) — chuyển tới trang chi tiết thật.
+  const legacyOpen = searchParams.get('open');
+  const legacyTab = searchParams.get('tab');
+  useEffect(() => {
+    if (!legacyOpen) return;
+    const tab = (DRIVER_DETAIL_TABS as readonly string[]).includes(legacyTab ?? '')
+      ? (legacyTab as string)
+      : undefined;
+    const target = availableHref(driverPath.detail(legacyOpen, tab));
+    if (target) router.replace(target);
+  }, [legacyOpen, legacyTab, availableHref, router]);
+
+  const roster = useDriverRoster(filters, canView && !legacyOpen);
+  const summary = useDriverRosterSummary(filters, canView && !legacyOpen);
   const suspend = useSuspendDriver();
   const resume = useResumeDriver();
   const end = useEndDriver();
+  const licenceCheck = useSetDriverLicenceChecked();
+  const archive = useArchiveInternalDriver();
+  const restore = useRestoreInternalDriver();
 
-  const items = data?.items ?? [];
-  const meta = data?.meta ?? { page: 1, limit: DRIVERS_DEFAULT_LIMIT, total: 0, hasNext: false };
+  const items = roster.data?.items ?? [];
+  const meta = roster.data?.meta ?? {
+    page: 1,
+    limit: DRIVERS_DEFAULT_LIMIT,
+    total: 0,
+    hasNext: false,
+  };
   // "11/2026" — dạng số, đọc như nhau ở hai ngôn ngữ; bản chữ ("Tháng 11 năm 2026") làm dòng thẻ quá dài.
   const monthLabel = (
     filters.month ? dayjs(filters.month, DRIVER_MONTH_FORMAT) : nowInAppTz()
@@ -257,15 +244,6 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
     filters.q || filters.driverType || filters.operation || filters.linkStatus || filters.licenceCheck,
   );
 
-  // Ngăn chi tiết: tài xế + tab sống trên URL; mở/đóng chỉ đổi giao diện, giữ nguyên trang.
-  const pager = useOpenRecordPager(
-    items.map((row) => row.id),
-    filters.open,
-  );
-  const openDetail = (id: string | undefined, tab?: DriverDetailTab) => {
-    if (id) pager.remember();
-    setFilters({ open: id, tab: id ? tab : undefined }, { resetPage: false });
-  };
   const changeMonth = (month: string) => setFilters({ month }, { resetPage: false });
   const clearFilters = () =>
     setFilters({
@@ -274,7 +252,8 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
       operation: undefined,
       linkStatus: undefined,
       licenceCheck: undefined,
-    });
+      view: undefined,
+    } as Record<string, undefined>);
 
   const feedback = (successKey: ToastKey) => ({
     onSuccess: () => message.success(t(successKey)),
@@ -288,7 +267,7 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
       driverType: row.driverType,
       note: row.note ?? '',
     });
-    setInviteOpen(true);
+    setAddOpen(true);
   };
 
   // Thiếu quyền xem → thay TOÀN BỘ nội dung; chặn thật là guard backend.
@@ -310,6 +289,7 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
       options: [
         { value: ALL_FILTER, label: t('filters.allTypes') },
         ...DRIVER_TYPE_VALUES.map((value) => ({ value, label: domainLabel('driverType', value) })),
+        { value: DRIVER_TYPE_FILTER_INTERNAL, label: t('roster.typeInternal') },
       ],
     },
     {
@@ -326,8 +306,8 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
       kind: 'select',
       key: 'linkStatus',
       label: t('filters.status'),
-      // Không tham số = các liên kết CÒN MỞ (mặc định của server) — `all` chỉ là "xoá tham số";
-      // `any` = mọi trạng thái; `closed` = hai trạng thái lịch sử.
+      // Không tham số = liên kết CÒN MỞ + nội bộ đang dùng (mặc định của server) — `all` chỉ là
+      // "xoá tham số"; `any` = mọi trạng thái; `closed` = đã đóng + nội bộ đã lưu trữ.
       options: [
         { value: ALL_FILTER, label: t('filters.openLinks') },
         { value: DRIVER_LINK_STATUS_FILTER_ANY, label: t('filters.allStatuses') },
@@ -386,15 +366,42 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
     },
   ];
 
-  const menuFor = (row: Driver): RowAction[] => {
+  /** Menu "…" của thẻ liên kết — Figma: Thu hồi lời mời / Ngừng hợp tác / Tạm khoá (+ Mở khoá). */
+  const linkedMenu = (row: Driver): RowAction[] => {
     const open = DRIVER_LINK_OPEN_STATUSES.includes(row.linkStatus as DriverLinkStatus);
     const invited = row.linkStatus === DRIVER_LINK_STATUS.INVITED;
+    // Tên trên bằng lệch tên đã đặt, chưa ai đối chiếu ⇒ cho đánh dấu ngay từ thẻ.
+    const needsCheck =
+      row.licence.state === DRIVER_LICENCE_STATE.VERIFIED &&
+      !row.licenceCheck &&
+      holderNameDiffers(row.licence.fullName, row.name);
     return [
       {
-        key: 'view',
-        label: t('actions.view'),
-        icon: <EyeOutlined />,
-        onClick: () => openDetail(row.id),
+        key: 'licenceCheck',
+        label: t('licenceCheck.menu'),
+        icon: <CheckOutlined />,
+        hidden: !canManage || !open || !needsCheck,
+        loading: licenceCheck.isPending && licenceCheck.variables?.id === row.id,
+        onClick: () =>
+          licenceCheck.mutate({ id: row.id, checked: true }, feedback('toast.licenceChecked')),
+      },
+      {
+        key: 'end',
+        label: invited ? t('actions.revoke') : t('actions.end'),
+        icon: <StopOutlined />,
+        danger: !invited,
+        hidden: !canManage || !open,
+        loading: end.isPending && end.variables === row.id,
+        confirm: {
+          title: invited
+            ? t('actions.revokeConfirm')
+            : row.activeBookingCount > 0
+              ? t('actions.endConfirmWithTrips', { count: row.activeBookingCount })
+              : t('actions.endConfirm'),
+          okText: invited ? t('actions.revoke') : t('actions.end'),
+          cancelText: tCommon('actions.close'),
+        },
+        onClick: () => end.mutate(row.id, feedback(invited ? 'toast.revoked' : 'toast.ended')),
       },
       {
         key: 'suspend',
@@ -417,47 +424,59 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
         loading: resume.isPending && resume.variables === row.id,
         onClick: () => resume.mutate(row.id, feedback('toast.resumed')),
       },
-      {
-        key: 'end',
-        label: invited ? t('actions.revoke') : t('actions.end'),
-        icon: <StopOutlined />,
-        danger: true,
-        hidden: !canManage || !open,
-        loading: end.isPending && end.variables === row.id,
-        confirm: {
-          title: invited
-            ? t('actions.revokeConfirm')
-            : row.activeBookingCount > 0
-              ? t('actions.endConfirmWithTrips', { count: row.activeBookingCount })
-              : t('actions.endConfirm'),
-          okText: invited ? t('actions.revoke') : t('actions.end'),
-          cancelText: tCommon('actions.close'),
-        },
-        onClick: () => end.mutate(row.id, feedback(invited ? 'toast.revoked' : 'toast.ended')),
-      },
     ];
   };
 
-  const inviteButton = canManage ? (
-    <Button type="primary" size="large" icon={<PlusOutlined />} onClick={() => setInviteOpen(true)}>
-      {t('actions.invite')}
+  /** Menu "…" của thẻ nội bộ — "Ngừng hợp tác" là LƯU TRỮ (đơn đã gán giữ nguyên người này). */
+  const internalMenu = (row: InternalDriver): RowAction[] => [
+    {
+      key: 'archive',
+      label: t('actions.end'),
+      icon: <StopOutlined />,
+      danger: true,
+      hidden: !canManage || row.archivedAt !== null,
+      loading: archive.isPending && archive.variables === row.id,
+      confirm: {
+        title: t('internal.actions.archiveConfirm', { name: row.name }),
+        description:
+          row.activeTripCount > 0
+            ? t('internal.actions.archiveHasTrips', { count: row.activeTripCount })
+            : undefined,
+        okText: t('actions.end'),
+        cancelText: tCommon('actions.close'),
+      },
+      onClick: () => archive.mutate(row.id, feedback('internal.toast.archived')),
+    },
+    {
+      key: 'restore',
+      label: t('internal.actions.restore'),
+      icon: <RollbackOutlined />,
+      hidden: !canManage || row.archivedAt === null,
+      loading: restore.isPending && restore.variables === row.id,
+      onClick: () => restore.mutate(row.id, feedback('internal.toast.restored')),
+    },
+  ];
+
+  const addButton = canManage ? (
+    <Button type="primary" size="large" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
+      {t('roster.addDriver')}
     </Button>
   ) : null;
 
   function renderBody() {
-    if (isError && !data) {
+    if (roster.isError && !roster.data) {
       return (
         <div className={styles.state}>
           <EmptyState
             variant="error"
             title={t('page.loadError')}
             description={t('page.loadErrorHint')}
-            onRetry={() => void refetch()}
+            onRetry={() => void roster.refetch()}
           />
         </div>
       );
     }
-    if (isFetching && items.length === 0) {
+    if ((roster.isFetching || legacyOpen) && items.length === 0) {
       return (
         <div className={styles.grid} role="status" aria-busy="true" aria-label={t('page.loading')}>
           {Array.from({ length: SKELETON_COUNT }, (_, index) => (
@@ -483,27 +502,47 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
               variant="empty"
               title={t('page.empty')}
               description={t('page.emptyHint')}
-              action={inviteButton ?? undefined}
+              action={addButton ?? undefined}
             />
           )}
         </div>
       );
     }
     return (
-      <ul className={styles.grid} aria-label={t('page.gridLabel')} aria-busy={isFetching || undefined}>
-        {items.map((row) => (
-          <li key={row.id} className={styles.cell}>
-            <DriverCard
-              driver={row}
-              monthLabel={monthLabel}
-              canManage={canManage}
-              menu={menuFor(row)}
-              onOpen={(tab) => openDetail(row.id, tab)}
-              onEdit={() => setEditing(row)}
-              onReinvite={() => reinvite(row)}
-            />
-          </li>
-        ))}
+      <ul
+        className={styles.grid}
+        aria-label={t('page.gridLabel')}
+        aria-busy={roster.isFetching || undefined}
+      >
+        {items.map((row) => {
+          const internal = row.kind === DRIVER_ROSTER_KIND.INTERNAL ? row.internal : null;
+          const linked = row.kind === DRIVER_ROSTER_KIND.LINKED ? row.linked : null;
+          if (internal) {
+            return (
+              <li key={`internal-${internal.id}`} className={styles.cell}>
+                <InternalDriverCard
+                  driver={internal}
+                  menu={internalMenu(internal)}
+                  detailHref={availableHref(driverPath.internal(internal.id))}
+                />
+              </li>
+            );
+          }
+          if (!linked) return null;
+          return (
+            <li key={`linked-${linked.id}`} className={styles.cell}>
+              <DriverCard
+                driver={linked}
+                monthLabel={monthLabel}
+                canManage={canManage}
+                menu={linkedMenu(linked)}
+                detailHref={availableHref(driverPath.detail(linked.id))}
+                tripsHref={availableHref(driverPath.detail(linked.id, DRIVER_DETAIL_TAB.TRIPS))}
+                onReinvite={() => reinvite(linked)}
+              />
+            </li>
+          );
+        })}
       </ul>
     );
   }
@@ -519,11 +558,10 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
         extra={
           <div className={styles.headerActions}>
             <DriverWageSettingsButton />
-            {inviteButton}
+            {addButton}
           </div>
         }
       />
-      {viewSwitch}
 
       <FilterBar
         fields={filterFields}
@@ -534,13 +572,14 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
           linkStatus: filters.linkStatus ?? ALL_FILTER,
         }}
         onChange={(patch) =>
-          setFilters(
+          setFilters({
+            ...(patch as Partial<DriverFilters>),
             // Ô "Trạng thái" và ô "Cần đối chiếu" của dải số đếm là cùng một câu hỏi — chọn ô này
             // thì bỏ ô kia, để danh sách không âm thầm lọc giao của hai.
-            'linkStatus' in patch
-              ? { ...(patch as Partial<DriverFilters>), licenceCheck: undefined }
-              : (patch as Partial<DriverFilters>),
-          )
+            ...('linkStatus' in patch ? { licenceCheck: undefined } : {}),
+            // `view=internal` cũ nằm trên URL tới khi người dùng chọn lại "Hình thức".
+            ...('driverType' in patch ? { view: undefined } : {}),
+          } as Partial<DriverFilters>)
         }
         onClear={hasFilters ? clearFilters : undefined}
         actions={
@@ -591,26 +630,13 @@ function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
         </div>
       ) : null}
 
-      <InviteDriverModal
-        open={inviteOpen}
+      <AddDriverModal
+        open={addOpen}
         prefill={reinviteFrom}
         onClose={() => {
-          setInviteOpen(false);
+          setAddOpen(false);
           setReinviteFrom(null);
         }}
-      />
-      <EditDriverModal driver={editing} onClose={() => setEditing(null)} />
-      <DriverDetailDrawer
-        driverId={filters.open ?? null}
-        month={filters.month}
-        tab={filters.tab}
-        previousId={pager.previousId}
-        nextId={pager.nextId}
-        onNavigate={(id) => openDetail(id, filters.tab)}
-        onTabChange={(tab) => setFilters({ tab }, { resetPage: false })}
-        onMonthChange={changeMonth}
-        onEdit={setEditing}
-        onClose={() => openDetail(undefined)}
       />
     </div>
   );

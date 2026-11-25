@@ -785,6 +785,11 @@ export const API_ERROR_CODE = {
   DRIVER_LICENCE_IMAGE_INVALID: 'DRIVER_LICENCE_IMAGE_INVALID',
   /** Chạm trần lượt nộp trong 24 giờ (`details.limit`) — mỗi lượt chiếm vài giây CPU của máy chủ. */
   DRIVER_LICENCE_SUBMISSION_LIMIT: 'DRIVER_LICENCE_SUBMISSION_LIMIT',
+  /**
+   * "Đã đối chiếu" bằng lái của một liên kết (25/11/2026) khi tài xế CHƯA có bằng đã xác thực còn
+   * hạn — không có giấy tờ nào để đối chiếu; chờ tài xế nộp bằng.
+   */
+  DRIVER_LICENCE_NOT_VERIFIED: 'DRIVER_LICENCE_NOT_VERIFIED',
 
   /**
    * Xe bỏ một loại dịch vụ khi còn chuyến ĐANG MỞ dùng loại đó (19/10/2026). `details.bookings`
@@ -833,6 +838,8 @@ export const API_ERROR_CODE = {
   INTERNAL_DRIVER_ARCHIVED: 'INTERNAL_DRIVER_ARCHIVED',
   /** SĐT đã có trong danh bạ tài xế nội bộ đang dùng của bên thuê. */
   INTERNAL_DRIVER_PHONE_TAKEN: 'INTERNAL_DRIVER_PHONE_TAKEN',
+  /** Ảnh tài xế nội bộ không phải ảnh vừa tải lên kho của chính bên thuê (`/uploads/driver-photos/presign`). */
+  INTERNAL_DRIVER_PHOTO_INVALID: 'INTERNAL_DRIVER_PHOTO_INVALID',
   /** Đơn tự lập (ADR 0109): giảm giá lớn hơn tiền thuê. */
   BOOKING_DISCOUNT_EXCEEDS_BASE: 'BOOKING_DISCOUNT_EXCEEDS_BASE',
   /** Tài sản thế chấp không thuộc đơn này. */

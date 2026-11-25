@@ -9,6 +9,11 @@ export function vehicleImageObjectPrefix(tenantId: string): string {
   return `tenants/${tenantId}/vehicles`;
 }
 
+/** Tiền tố object ảnh tài xế NỘI BỘ của MỘT bên thuê (ADR 0108) — cùng quy ước với ảnh xe. */
+export function internalDriverPhotoObjectPrefix(tenantId: string): string {
+  return `tenants/${tenantId}/drivers`;
+}
+
 /**
  * Tên file cuối mà `R2Service.presignUpload` sinh: `<ULID>-<tên đã làm sạch>` — `sanitize` chỉ để
  * lại `[\w.-]`, tối đa 120 ký tự.
@@ -17,16 +22,36 @@ const OBJECT_FILE = /^[0-9A-HJKMNP-TV-Z]{26}-[\w.-]{1,120}$/;
 
 /**
  * URL công khai này có ĐÚNG là một ảnh xe được presign cho gian hàng `tenantId` không.
+ */
+export function isTenantVehicleImageUrl(
+  url: string,
+  publicBase: string | undefined,
+  tenantId: string,
+): boolean {
+  return isPresignedObjectUrl(url, publicBase, vehicleImageObjectPrefix(tenantId));
+}
+
+/** URL công khai này có ĐÚNG là một ảnh tài xế nội bộ presign cho bên thuê `tenantId` không. */
+export function isTenantInternalDriverPhotoUrl(
+  url: string,
+  publicBase: string | undefined,
+  tenantId: string,
+): boolean {
+  return isPresignedObjectUrl(url, publicBase, internalDriverPhotoObjectPrefix(tenantId));
+}
+
+/**
+ * URL công khai này có ĐÚNG là một object presign dưới tiền tố `objectPrefix` không.
  *
  * So trên URL đã PARSE, không `startsWith` trên chuỗi thô: `…/tenants/A/vehicles/../../B/…`,
  * dạng `%2e%2e`, dấu `\`, query hay fragment đều qua được một phép so tiền tố thô nhưng trình
  * duyệt/CDN chuẩn hoá chúng thành object của gian hàng khác. Vì vậy: cùng origin với kho, không ký
  * tự thoát/`..`/`\`, không query/hash, URL đã ở dạng chuẩn, và đường dẫn khớp ĐÚNG hình dạng key.
  */
-export function isTenantVehicleImageUrl(
+function isPresignedObjectUrl(
   url: string,
   publicBase: string | undefined,
-  tenantId: string,
+  objectPrefix: string,
 ): boolean {
   if (!publicBase) return false;
   if (/[\\%]|\.\./.test(url)) return false;
@@ -42,7 +67,7 @@ export function isTenantVehicleImageUrl(
   if (parsed.origin !== base.origin || parsed.search !== '' || parsed.hash !== '') return false;
   if (parsed.username !== '' || parsed.password !== '') return false;
 
-  const prefix = `${base.pathname}${vehicleImageObjectPrefix(tenantId)}/`;
+  const prefix = `${base.pathname}${objectPrefix}/`;
   if (!parsed.pathname.startsWith(prefix)) return false;
   return OBJECT_FILE.test(parsed.pathname.slice(prefix.length));
 }

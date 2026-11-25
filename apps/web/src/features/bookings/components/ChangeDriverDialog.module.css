@@ -1,0 +1,241 @@
+/*
+ * Hộp "Gán / Đổi tài xế" — Figma `24145:47780`: cột danh sách bên trái, cột "Tài xế" nền xám 300
+ * bên phải, hàng nút cuối hộp. Điện thoại: hai cột xếp chồng.
+ */
+.subtitle {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.layout {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-md);
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.listColumn {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+}
+
+.filters {
+  display: grid;
+  gap: var(--xp-space-sm);
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@media (max-width: 640px) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Danh sách cuộn trong hộp — tối đa ~7 dòng, phần còn lại cuộn. */
+/* `Radio.Group` của AntD đặt cỡ chữ 0 cho khối nhóm — đặt lại để tên trong dòng hiện ra. */
+.list {
+  font-size: var(--xp-font-size-body);
+  display: flex;
+  max-height: 440px;
+  flex-direction: column;
+  overflow-y: auto;
+  gap: var(--xp-space-sm);
+}
+
+.row {
+  display: grid;
+  align-items: center;
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  gap: var(--xp-space-12);
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+}
+
+.row:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.rowActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-pale);
+}
+
+.rowDisabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.rowDisabled:hover {
+  border-color: var(--xp-color-border-subtle);
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .badgeCell,
+  .availability {
+    grid-column: 3;
+  }
+}
+
+.who {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badgeCell {
+  display: flex;
+  min-width: 0;
+}
+
+.licence {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-label);
+  gap: var(--xp-space-xs);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.licenceOk {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.licenceBad {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.licenceMuted {
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+}
+
+.availability {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.availFree {
+  color: var(--xp-color-success);
+}
+
+.availWarn {
+  color: var(--xp-color-warning-strong);
+}
+
+.availBusy {
+  color: var(--xp-color-error);
+}
+
+.availInfo {
+  color: var(--xp-color-text-secondary);
+}
+
+.addInternal {
+  align-self: flex-start;
+  padding-inline: 0;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--xp-space-lg) 0;
+  color: var(--xp-color-text-tertiary);
+  text-align: center;
+}
+
+/* Cột "Tài xế" — nền xám bo 16, đệm 16. */
+.side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg);
+  gap: var(--xp-space-md);
+}
+
+.sideTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Người đang chọn: ảnh + tên/SĐT một hàng, viên bằng lái xuống hàng dưới (cột hẹp 300). */
+.chosen {
+  display: grid;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.chosen > :last-child:not(.who) {
+  justify-self: start;
+  grid-column: 1 / -1;
+}
+
+.form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+}
+
+.deadline {
+  margin: 0;
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}

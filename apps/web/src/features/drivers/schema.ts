@@ -23,7 +23,9 @@ export function makeInviteDriverSchema(t: (key: string) => string) {
       .trim()
       .required(t('form.errors.phoneRequired'))
       .matches(/^(0|\+84)\d{9}$/, t('form.errors.phoneInvalid')),
-    name: yup.string().trim().required(t('form.errors.nameRequired')).max(255),
+    // Hộp mời mới (Figma `23737:46392`) không có ô tên: tên lưu là tên tài khoản tra được. `name`
+    // chỉ còn mang tên cũ khi MỜI LẠI một liên kết đã đóng.
+    name: yup.string().trim().max(255).default(''),
     driverType: yup.mixed<DriverType>().oneOf(DRIVER_TYPE_VALUES).default(DRIVER_TYPE.STAFF),
     note: yup.string().trim().max(2000).default(''),
   });
@@ -62,6 +64,8 @@ export function makeInternalDriverSchema(t: (key: string) => string) {
         VN_MOBILE_PHONE_PATTERN.test(normalizeVnPhoneInput(v ?? '')),
       ),
     note: yup.string().trim().max(INTERNAL_DRIVER_NOTE_MAX).default(''),
+    /** Ảnh TUỲ CHỌN — URL kho ảnh của bên thuê; `null` = không ảnh. */
+    photoUrl: yup.string().nullable().default(null),
   });
 }
 
