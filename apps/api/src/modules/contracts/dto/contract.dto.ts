@@ -51,6 +51,18 @@ export class ContractRentalDto {
   @ApiPropertyOptional({ type: String, nullable: true }) destination?: string | null;
 }
 
+/** Một dòng phụ phí của đơn tự lập (ADR 0109) — vắng ở hợp đồng lập trước 25/11/2026. */
+export class ContractExtraChargeDto {
+  @ApiProperty() label!: string;
+  @ApiProperty({ description: 'MoneyString' }) amount!: string;
+}
+
+/** Một món tài sản thế chấp khách để lại lúc lập hợp đồng (ADR 0109). */
+export class ContractCollateralDto {
+  @ApiProperty({ description: '@xeprime/types → BookingCollateralType' }) collateralType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
+}
+
 export class ContractPricingDto {
   @ApiProperty({ description: 'MoneyString' }) baseAmount!: string;
   @ApiProperty({ description: 'MoneyString' }) deliveryFee!: string;
@@ -60,6 +72,11 @@ export class ContractPricingDto {
   @ApiProperty({ description: 'MoneyString' }) paidAmount!: string;
   @ApiProperty({ description: 'MoneyString - còn phải trả = tổng − đã trả' })
   remainingAmount!: string;
+  @ApiPropertyOptional({
+    type: [ContractExtraChargeDto],
+    description: 'Phụ phí theo dòng (ADR 0109) - vắng ở hợp đồng cũ',
+  })
+  extraCharges?: ContractExtraChargeDto[];
 }
 
 export class ContractSnapshotDto {
@@ -68,6 +85,11 @@ export class ContractSnapshotDto {
   @ApiProperty({ type: ContractVehicleDto }) vehicle!: ContractVehicleDto;
   @ApiProperty({ type: ContractRentalDto }) rental!: ContractRentalDto;
   @ApiProperty({ type: ContractPricingDto }) pricing!: ContractPricingDto;
+  @ApiPropertyOptional({
+    type: [ContractCollateralDto],
+    description: 'Tài sản thế chấp đang giữ lúc lập (ADR 0109) - vắng ở hợp đồng cũ',
+  })
+  collaterals?: ContractCollateralDto[];
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Ghi chú đơn' })
   note!: string | null;
 }

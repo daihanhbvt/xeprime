@@ -90,3 +90,8 @@
   gap: var(--xp-space-sm);
   margin-bottom: var(--xp-space-lg);
 }
+
+/* Lối "Thêm tài xế nội bộ" ở đáy bộ chọn (ADR 0108). */
+.pickerDivider {
+  margin: var(--xp-space-xs) 0;
+}

@@ -67,6 +67,8 @@ vi.mock('../hooks/use-booking-mutations', async (importOriginal) => ({
   useSetHandoverPrepCheck: () => prepCheck,
 }));
 vi.mock('./BookingDriverSection', () => ({ BookingDriverSection: () => null }));
+// Thẻ Cọc & thế chấp (ADR 0109) có test riêng.
+vi.mock('./detail/CollateralSideCard', () => ({ CollateralSideCard: () => null }));
 vi.mock('./BookingFormDialog', () => ({ BookingFormDialog: () => null }));
 vi.mock('./BookingExtensionsPanel', () => ({ BookingExtensionsPanel: () => null }));
 vi.mock('./BookingInsuranceCertificatesPanel', () => ({
@@ -117,6 +119,8 @@ const BOOKING: BookingDetail = {
   baseAmount: '520000',
   deliveryFee: '0',
   discountAmount: '52000',
+  extraChargesAmount: '0',
+  collaterals: [],
   priceSnapshot: null,
   customerTotalAmount: '477360',
   holdPaidAmount: '102960',

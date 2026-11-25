@@ -127,7 +127,13 @@
       "overdue": "Đã quá hạn điều phối ({time}). Khách đang được huỷ hoàn 100% và lượt huỷ tính cho bên thuê.",
       "urgent": "Còn dưới 2 giờ tới giờ đón - khách đang được huỷ hoàn 100% bất cứ lúc nào.",
       "cancelForDriver": "Huỷ chuyến do thiếu tài xế"
-    }
+    },
+    "internalTag": "Tài xế nội bộ",
+    "internalAssigned": "Đã gán tài xế nội bộ cho chuyến",
+    "pickerGroupLinked": "Tài xế liên kết",
+    "pickerGroupInternal": "Tài xế nội bộ",
+    "pickerEmptyAll": "Chưa có tài xế liên kết hay tài xế nội bộ nào",
+    "addInternal": "Thêm tài xế nội bộ"
   },
   "endedBy": {
     "driver": "Tài xế ngừng",
@@ -405,5 +411,57 @@
     "edit": "Chỉnh sửa",
     "editInfo": "Chỉnh sửa thông tin",
     "viewTrips": "Xem chuyến"
+  },
+  "internal": {
+    "viewLabel": "Danh sách tài xế",
+    "views": {
+      "linked": "Tài xế liên kết",
+      "internal": "Tài xế nội bộ"
+    },
+    "subtitle": "Tài xế cố định của xe, không cần tài khoản XePrime. Gán thẳng vào chuyến có tài xế; hệ thống không gửi tin cho họ, bạn tự báo lịch.",
+    "searchPlaceholder": "Tìm theo tên hoặc số điện thoại",
+    "state": {
+      "active": "Đang dùng",
+      "archived": "Đã lưu trữ"
+    },
+    "total": "{total, plural, other {# tài xế}}",
+    "columns": {
+      "name": "Tài xế",
+      "phone": "Số điện thoại",
+      "activeTrips": "Chuyến chưa xong",
+      "actions": "Thao tác"
+    },
+    "actions": {
+      "add": "Thêm tài xế nội bộ",
+      "archive": "Lưu trữ",
+      "restore": "Khôi phục",
+      "archiveConfirm": "Lưu trữ tài xế {name}?",
+      "archiveHasTrips": "Người này đang gán {count, plural, other {# chuyến}} chưa xong. Các chuyến đó giữ nguyên tài xế; chỉ không gán mới được nữa."
+    },
+    "empty": {
+      "title": "Chưa có tài xế nội bộ",
+      "description": "Thêm tài xế cố định của xe để gán vào chuyến mà không cần họ có tài khoản.",
+      "noResults": "Không có tài xế nào khớp tìm kiếm",
+      "noArchived": "Chưa lưu trữ tài xế nào"
+    },
+    "form": {
+      "titleCreate": "Thêm tài xế nội bộ",
+      "titleEdit": "Sửa tài xế nội bộ",
+      "hint": "Tài xế nội bộ không cần tài khoản XePrime và không nhận thông báo. Khách sẽ thấy tên và số điện thoại này trên trang chuyến.",
+      "phone": "Số điện thoại",
+      "phonePlaceholder": "Số di động khách gọi để gặp tài xế",
+      "notePlaceholder": "Ghi chú nội bộ, ví dụ xe thường lái",
+      "snapshotNote": "Đổi tên hoặc số điện thoại không cập nhật {count, plural, other {# chuyến}} đã gán: chuyến giữ thông tin lúc gán.",
+      "errors": {
+        "nameRequired": "Nhập tên tài xế",
+        "nameShort": "Tên tài xế cần ít nhất 2 ký tự"
+      }
+    },
+    "toast": {
+      "created": "Đã thêm tài xế nội bộ",
+      "updated": "Đã lưu thông tin tài xế",
+      "archived": "Đã lưu trữ tài xế",
+      "restored": "Đã khôi phục tài xế"
+    }
   }
 }

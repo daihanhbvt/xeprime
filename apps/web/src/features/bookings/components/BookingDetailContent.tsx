@@ -31,6 +31,7 @@ import {
   SideActions,
   VehicleSideCard,
 } from './detail/BookingDetailSide';
+import { CollateralSideCard } from './detail/CollateralSideCard';
 import styles from './detail/BookingDetail.module.css';
 
 /**
@@ -156,6 +157,8 @@ function BookingDetailBody({
           <VehicleSideCard />
           <DriverSideCard />
           <CustomerSideCard />
+          {/* Cọc tiền + tài sản thế chấp theo đơn (ADR 0109) — tự ẩn khi không có gì để giữ. */}
+          <CollateralSideCard />
           <PaymentSideCard />
           <SideActions />
         </aside>

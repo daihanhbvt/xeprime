@@ -278,14 +278,14 @@ export class BookingDriverSummaryDto {
   @ApiProperty({
     enum: DRIVER_SOURCE_VALUES,
     description:
-      '`linked` = tài khoản khách đã liên kết (ADR 0063) · `external` = tên + SĐT bên thuê ghi trên đơn (ADR 0067)',
+      '`linked` = tài khoản khách đã liên kết (ADR 0063) · `external` = tên + SĐT bên thuê ghi trên đơn (ADR 0067; phía KHÁCH cũng dùng cho tài xế nội bộ) · `internal` = tài xế nội bộ từ danh bạ (ADR 0108, chỉ phía bên thuê)',
   })
   source!: DriverSource;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
     description:
-      'ID liên kết tài xế (`drivers.id`) - null khi `source = external`, và luôn null ở bề mặt khách',
+      'ID liên kết tài xế (`drivers.id`), hoặc id trong danh bạ khi `source = internal` - null khi `source = external`, và luôn null ở bề mặt khách',
   })
   id!: string | null;
   @ApiProperty() name!: string;

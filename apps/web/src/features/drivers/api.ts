@@ -11,6 +11,11 @@ import {
 } from '@/services/api-client';
 import type {
   AssignableDriver,
+  AssignableInternalDriver,
+  CreateInternalDriverInput,
+  InternalDriver,
+  InternalDriverFilters,
+  UpdateInternalDriverInput,
   Driver,
   DriverAssignmentRow,
   DriverFilters,
@@ -134,3 +139,47 @@ export async function fetchAllDriverAssignments(
 /** Ngăn chi tiết một tài xế trong tháng `YYYY-MM` (bỏ trống = tháng hiện tại, server quyết). */
 export const fetchDriverOverview = (id: string, month: string | undefined): Promise<DriverOverview> =>
   apiGet<DriverOverview>(`/drivers/${id}/overview`, { month: month ?? null });
+
+// ── Danh bạ tài xế NỘI BỘ (ADR 0108) ────────────────────────────────────────────
+
+export function internalFiltersToParams(filters: InternalDriverFilters): QueryParams {
+  return {
+    q: filters.q?.trim() || null,
+    archived: filters.archived ? 'true' : null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? DRIVERS_DEFAULT_LIMIT,
+  };
+}
+
+export const fetchInternalDrivers = (filters: InternalDriverFilters): Promise<Paged<InternalDriver>> =>
+  fetchPage<InternalDriver>(
+    '/internal-drivers',
+    internalFiltersToParams(filters),
+    DRIVERS_DEFAULT_LIMIT,
+  );
+
+/** Bộ chọn gán đơn — người đang dùng, kèm cờ bận theo khung giờ (bỏ qua chính đơn đó). */
+export const fetchAssignableInternalDrivers = (window: {
+  pickupAt: string;
+  returnAt: string;
+  excludeBookingId?: string;
+}): Promise<AssignableInternalDriver[]> =>
+  apiGet<AssignableInternalDriver[]>('/internal-drivers/assignable', {
+    pickupAt: window.pickupAt,
+    returnAt: window.returnAt,
+    excludeBookingId: window.excludeBookingId ?? null,
+  });
+
+export const createInternalDriver = (body: CreateInternalDriverInput): Promise<InternalDriver> =>
+  apiPost<InternalDriver>('/internal-drivers', body);
+
+export const updateInternalDriver = (
+  id: string,
+  body: UpdateInternalDriverInput,
+): Promise<InternalDriver> => apiPatch<InternalDriver>(`/internal-drivers/${id}`, body);
+
+export const archiveInternalDriver = (id: string): Promise<InternalDriver> =>
+  apiPost<InternalDriver>(`/internal-drivers/${id}/archive`);
+
+export const restoreInternalDriver = (id: string): Promise<InternalDriver> =>
+  apiPost<InternalDriver>(`/internal-drivers/${id}/restore`);

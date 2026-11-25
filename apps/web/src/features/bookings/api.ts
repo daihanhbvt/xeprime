@@ -2,6 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import {
   apiGet,
   apiPatch,
+  apiDelete,
   apiPost,
   apiPut,
   fetchPage,
@@ -10,6 +11,8 @@ import {
 } from '@/services/api-client';
 import type {
   AssignBookingDriverInput,
+  BookingCollateral,
+  BookingCollateralInput,
   BookingDetail,
   BookingExtension,
   BookingExtensionQuote,
@@ -166,3 +169,20 @@ export const setHandoverPrepCheck = (
   body: SetHandoverPrepCheckInput,
 ): Promise<BookingHandoverPrep> =>
   apiPut<BookingHandoverPrep>(`/bookings/${encodeURIComponent(id)}/handover-prep`, body);
+
+// ── Tài sản thế chấp theo đơn (ADR 0109) ──────────────────────────────────────────
+// Server trả danh sách MỚI của đơn sau mỗi thao tác — cache chi tiết đơn ghi thẳng từ đó.
+
+export const addBookingCollateral = (
+  id: string,
+  body: BookingCollateralInput,
+): Promise<BookingCollateral[]> =>
+  apiPost<BookingCollateral[]>(`/bookings/${id}/collaterals`, body);
+
+export const removeBookingCollateral = (id: string, collateralId: string) =>
+  apiDelete<BookingCollateral[]>(`/bookings/${id}/collaterals/${collateralId}`);
+
+export const setBookingCollateralReturned = (id: string, collateralId: string, returned: boolean) =>
+  apiPost<BookingCollateral[]>(
+    `/bookings/${id}/collaterals/${collateralId}/${returned ? 'return' : 'unreturn'}`,
+  );

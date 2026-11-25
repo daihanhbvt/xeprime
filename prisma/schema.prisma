@@ -138,6 +138,9 @@ model User {
   /// Các liên kết tài xế của tài khoản KHÁCH này (ADR 0063).
   driverLinks                  Driver[]                  @relation("driver_link_account")
   driverLinksInvited           Driver[]                  @relation("driver_link_inviter")
+  internalDriversCreated       TenantInternalDriver[]    @relation("internal_driver_creator")
+  bookingCollateralsReturned   BookingCollateral[]       @relation("booking_collateral_returner")
+  bookingCollateralsCreated    BookingCollateral[]       @relation("booking_collateral_creator")
   driverWageChanges            BookingDriverWageChange[] @relation("driver_wage_changer")
   decidedDriverLicences        CustomerDriverLicence[]   @relation("driver_licence_decider")
   assignedSalesFollowUps       SalesFollowUp[]           @relation("sales_follow_up_assignee")
@@ -280,6 +283,8 @@ model Tenant {
   bookingRequests               BookingRequest[]
   bookingCancellations          BookingCancellation[]
   drivers                       Driver[]
+  internalDrivers               TenantInternalDriver[]
+  bookingCollaterals            BookingCollateral[]
   driverAssignments             BookingDriverAssignment[]
   driverWageChanges             BookingDriverWageChange[]
   occupancies                   VehicleOccupancy[]
@@ -2172,6 +2177,9 @@ model Booking {
   totalAmount             Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
   paidAmount              Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
   depositAmount           Decimal   @default(0) @map("deposit_amount") @db.Decimal(14, 2)
+  /// Σ phụ phí theo dòng của đơn gian hàng tự lập (ADR 0109 — vd ghế trẻ em). Từng dòng nằm trong
+  /// `price_snapshot_json.rows` (`PRICE_ROW.EXTRAS`). Nằm TRONG `total_amount`; đóng băng lúc tạo. CHECK ≥ 0.
+  extraChargesAmount      Decimal   @default(0) @map("extra_charges_amount") @db.Decimal(14, 2)
   /// Snapshot giá BẤT BIẾN chốt lúc tạo đơn (Wave 2): đủ dòng breakdown + chính sách hiệu lực
   /// để giải thích số tiền về sau. Đổi chính sách KHÔNG được ghi lại field này (chỉ ghi lúc
   /// create). Cấu trúc → @xeprime/types `BookingPriceSnapshot`.
@@ -2241,6 +2249,11 @@ model Booking {
   /// chỉ bên thuê và khách của chính đơn thấy.
   externalDriverName      String?   @map("external_driver_name") @db.VarChar(120)
   externalDriverPhone     String?   @map("external_driver_phone") @db.VarChar(20)
+  /// Tài xế NỘI BỘ chọn từ danh bạ của bên thuê (ADR 0108) — không tài khoản. Có cột này thì tên + SĐT
+  /// đã được CHỤP lên hai cột `external_driver_*` ngay trên (CHECK `bookings_internal_driver_snapshot_check`),
+  /// nên mọi chỗ đọc tài xế ngoài hệ thống thấy người này. Chống trùng lịch theo người bằng EXCLUDE viết
+  /// tay `bookings_internal_driver_schedule_excl`. Writer duy nhất: `DriversService`.
+  internalDriverId        String?   @map("internal_driver_id") @db.Char(26)
   /// Cột CLAIM của lượt báo khẩn "chuyến sắp nhận chưa có tài xế" (ADR 0067 điều 2) — worker lật
   /// từ NULL cùng transaction phát tin, nên mỗi đơn được báo tối đa MỘT lần (gán rồi gỡ cũng không
   /// báo lại). Partial index viết tay `bookings_driver_missing_sweep_idx`.
@@ -2288,6 +2301,10 @@ model Booking {
   /// (cùng cơ chế `vehicles.branch`). NoAction: xoá tài xế còn đơn tham chiếu thì bị chặn.
   driver            Driver?                   @relation(fields: [driverId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
   driverAssignments BookingDriverAssignment[]
+  /// Composite FK (internal_driver_id, tenant_id) — DB chặn gán tài xế nội bộ của bên thuê khác (ADR 0108).
+  internalDriver    TenantInternalDriver?     @relation(fields: [internalDriverId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "bookings_internal_driver_fkey")
+  /// Tài sản thế chấp khách để lại (ADR 0109).
+  collaterals       BookingCollateral[]
   /// Composite FK (tenant_customer_id, tenant_id) — DB tự chặn gắn đơn của shop A vào khách
   /// của shop B. NoAction: hồ sơ khách chỉ LƯU TRỮ (soft), không xoá cứng khi còn lịch sử.
   tenantCustomer    TenantCustomer?           @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "bookings_tenant_customer_fkey")
@@ -2731,6 +2748,33 @@ model Driver {
   /// "Nơi tôi làm tài xế" của tài khoản khách.
   @@index([userId, linkStatus])
   @@map("drivers")
+}
+
+/// Danh bạ tài xế NỘI BỘ của một bên thuê (ADR 0108) — người không có tài khoản XePrime. Không
+/// CCCD/bằng lái/ảnh, không chia sẻ giữa bên thuê. "Xoá" là lưu trữ (`archived_at`): dòng đã gán vào
+/// đơn bị FK NO ACTION giữ lại. Partial unique viết tay `(tenant_id, phone) WHERE archived_at IS NULL`.
+/// Writer duy nhất: `InternalDriversService`.
+model TenantInternalDriver {
+  id         String    @id @db.Char(26)
+  tenantId   String    @map("tenant_id") @db.Char(26)
+  /// Đã cắt khoảng trắng, 2–120 ký tự (CHECK).
+  name       String    @db.VarChar(120)
+  /// Di động VN dạng lưu `0xxxxxxxxx` (ADR 0082, CHECK).
+  phone      String    @db.VarChar(20)
+  note       String?   @db.Text
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdBy  String?   @map("created_by") @db.Char(26)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator  User?     @relation("internal_driver_creator", fields: [createdBy], references: [id], onDelete: SetNull)
+  bookings Booking[]
+
+  /// Mục tiêu cho composite FK (internal_driver_id, tenant_id) từ bookings.
+  @@unique([id, tenantId])
+  @@index([tenantId, archivedAt, name])
+  @@map("tenant_internal_drivers")
 }
 
 /// Lịch sử gán tài xế của một đơn (ADR 0063) — MỖI LƯỢT GÁN một dòng: gán → (nhận) → kết thúc
@@ -3572,6 +3616,33 @@ model BookingSurcharge {
 
   @@index([tenantId, bookingId], map: "booking_surcharges_tenant_booking_idx")
   @@map("booking_surcharges")
+}
+
+/// Tài sản thế chấp khách để lại cho MỘT đơn (ADR 0109) — sổ ghi nhận thực tế, khác danh mục công bố
+/// của chính sách xe (`rental_policies.collateral_asset_types`). Cọc TIỀN vẫn là `bookings.deposit_amount`.
+/// CHECK viết tay: loại thuộc `BOOKING_COLLATERAL_TYPE`, loại "khác" phải có mô tả. Writer duy nhất:
+/// `BookingCollateralsService`.
+model BookingCollateral {
+  id             String    @id @db.Char(26)
+  tenantId       String    @map("tenant_id") @db.Char(26)
+  bookingId      String    @map("booking_id") @db.Char(26)
+  /// @xeprime/types → BookingCollateralType
+  collateralType String    @map("collateral_type") @db.VarChar(30)
+  /// Biển số xe máy, số giấy tờ… — bắt buộc với loại `other`.
+  description    String?   @db.VarChar(255)
+  returnedAt     DateTime? @map("returned_at") @db.Timestamptz(3)
+  returnedBy     String?   @map("returned_by") @db.Char(26)
+  createdBy      String?   @map("created_by") @db.Char(26)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  returner User?   @relation("booking_collateral_returner", fields: [returnedBy], references: [id], onDelete: SetNull)
+  creator  User?   @relation("booking_collateral_creator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([bookingId, createdAt])
+  @@map("booking_collaterals")
 }
 
 /// Ghi nhận hoàn cọc THỦ CÔNG (Wave 10 — docs/design/14 §5).
@@ -5057,7 +5128,7 @@ model FeePolicy {
   /// Yêu cầu của KHÁCH trên chợ (tự lái + có tài xế): NGÀY nhận (giờ VN) không quá hôm gửi + N
   /// ngày — `bookingLimitViolation` (ADR 0091 điều 4). Không phải dòng tiền: KHÔNG vào snapshot
   /// phí của đơn. CHECK 1..365.
-  maxAdvanceBookingDays    Int     @default(15) @map("max_advance_booking_days")
+  maxAdvanceBookingDays    Int     @default(30) @map("max_advance_booking_days")
   /// Chuyến TỰ LÁI của khách trên chợ dài tối đa N × 24 giờ — dài hơn thì đặt thuê dài hạn
   /// (ADR 0091 điều 4). Giữ mọi chuyến tự lái trong bậc phí MIC 30 ngày. CHECK 1..90.
   selfDriveMaxDays         Int     @default(30) @map("self_drive_max_days")

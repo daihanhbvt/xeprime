@@ -1778,5 +1778,13 @@
     "photos_missing": "Thiếu ảnh bắt buộc của xe",
     "registration_missing": "Chưa có cà vẹt (số khung + tên chủ)",
     "vehicle_info_missing": "Thiếu hãng, mẫu, năm sản xuất hoặc số chỗ"
+  },
+  "bookingCollateralType": {
+    "citizen_id": "CCCD",
+    "driver_licence": "Bằng lái",
+    "passport": "Hộ chiếu",
+    "motorbike": "Xe máy",
+    "vehicle_registration": "Cà vẹt xe máy",
+    "other": "Khác"
   }
 }

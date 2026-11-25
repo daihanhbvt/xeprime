@@ -1126,6 +1126,10 @@ export class BookingPriceSnapshotDto {
   @ApiProperty() calculatedAt!: string;
   @ApiProperty({ enum: ['quote', 'manual'] }) source!: string;
   @ApiProperty({ enum: ['VND'] }) currency!: string;
+  @ApiPropertyOptional({
+    description: 'Đơn tự lập bật "Giá thoả thuận" (ADR 0109) - vắng = không bật',
+  })
+  negotiated?: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) days!: number | null;
   @ApiProperty({ type: [PriceBreakdownRowDto] }) rows!: PriceBreakdownRowDto[];
   @ApiProperty() totalAmount!: string;

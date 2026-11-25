@@ -1,36 +1,37 @@
 'use client';
 
-import {
-  SERVICE_TYPE_LABEL,
-  VEHICLE_TYPE,
-  longTermPackageLabel,
-  routeTypeLabel,
-  type ServiceType,
-} from '@xeprime/types';
+import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import type { Contract } from '../types';
 import styles from './ContractDocument.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
-
-function vehicleTypeLabel(t: string): string {
-  return t === VEHICLE_TYPE.MOTORBIKE ? 'Xe máy' : 'Ô tô';
-}
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 /**
  * Tờ hợp đồng thuê xe — render thuần từ snapshot (đông cứng). Đọc tốt trên mobile lẫn PC, và in
  * đẹp khổ A4 (print CSS ở page ẩn phần vỏ app, chỉ chừa `[data-print-root]`).
+ *
+ * Nhãn mã (loại xe, dịch vụ, lộ trình, loại tài sản) dịch theo ngôn ngữ người xem; SỐ LIỆU luôn đọc
+ * từ snapshot đã ký. Phụ phí theo dòng và tài sản thế chấp (ADR 0109) chỉ có ở hợp đồng lập từ
+ * 25/11/2026 — hợp đồng cũ không có hai khoá đó và in như trước.
  */
 export function ContractDocument({ contract }: { contract: Contract }) {
+  const t = useTranslations('Bookings.contractDocument');
   const fmt = useAppFormat();
+  const dl = useDomainLabel();
 
   const { snapshot: s, contractNo, createdAt } = contract;
   const shopContact = [s.shop.phone, s.shop.email].filter(Boolean).join(LIST_SEPARATOR);
   const shopLegal = [
-    s.shop.taxCode ? `MST: ${s.shop.taxCode}` : null,
-    s.shop.businessLicenseNo ? `GPKD: ${s.shop.businessLicenseNo}` : null,
+    s.shop.taxCode ? t('shop.taxCode', { value: s.shop.taxCode }) : null,
+    s.shop.businessLicenseNo
+      ? t('shop.businessLicense', { value: s.shop.businessLicenseNo })
+      : null,
   ]
     .filter(Boolean)
     .join(LIST_SEPARATOR);
+  const extraCharges = s.pricing.extraCharges ?? [];
+  const collaterals = s.collaterals ?? [];
 
   return (
     <article className={styles.sheet} data-print-root>
@@ -46,66 +47,68 @@ export function ContractDocument({ contract }: { contract: Contract }) {
           {shopLegal ? <div className={styles.shopMeta}>{shopLegal}</div> : null}
         </div>
         <div className={styles.headRight}>
-          <div className={styles.contractNo}>Số: {contractNo}</div>
-          <div className={styles.shopMeta}>Ngày lập: {fmt.date(createdAt)}</div>
+          <div className={styles.contractNo}>{t('number', { value: contractNo })}</div>
+          <div className={styles.shopMeta}>{t('createdAt', { date: fmt.date(createdAt) })}</div>
         </div>
       </header>
 
-      <h1 className={styles.title}>Hợp đồng thuê xe</h1>
+      <h1 className={styles.title}>{t('title')}</h1>
 
       <section className={styles.parties}>
         <div className={styles.party}>
-          <div className={styles.partyLabel}>Bên cho thuê (Bên A)</div>
+          <div className={styles.partyLabel}>{t('parties.lessor')}</div>
           <div className={styles.partyName}>{s.shop.name}</div>
-          {s.shop.phone ? <div className={styles.partyLine}>Điện thoại: {s.shop.phone}</div> : null}
+          {s.shop.phone ? (
+            <div className={styles.partyLine}>{t('parties.phone', { value: s.shop.phone })}</div>
+          ) : null}
           {s.shop.bankAccountNo ? (
             <div className={styles.partyLine}>
-              TK: {s.shop.bankAccountNo}
+              {t('parties.bankAccount', { value: s.shop.bankAccountNo })}
               {s.shop.bankName ? ` · ${s.shop.bankName}` : ''}
               {s.shop.bankAccountName ? ` · ${s.shop.bankAccountName}` : ''}
             </div>
           ) : null}
         </div>
         <div className={styles.party}>
-          <div className={styles.partyLabel}>Bên thuê (Bên B)</div>
+          <div className={styles.partyLabel}>{t('parties.lessee')}</div>
           <div className={styles.partyName}>{s.customer.name}</div>
           {s.customer.phone ? (
-            <div className={styles.partyLine}>Điện thoại: {s.customer.phone}</div>
+            <div className={styles.partyLine}>
+              {t('parties.phone', { value: s.customer.phone })}
+            </div>
           ) : null}
         </div>
       </section>
 
-      <Section title="Thông tin xe">
+      <Section title={t('vehicle.title')}>
         <dl className={styles.grid}>
-          <Field label="Tên xe" value={s.vehicle.name} />
-          <Field label="Biển số" value={s.vehicle.plateNumber ?? '-'} />
-          <Field label="Loại xe" value={vehicleTypeLabel(s.vehicle.vehicleType)} />
-          <Field
-            label="Hình thức"
-            value={
-              SERVICE_TYPE_LABEL[s.vehicle.serviceType as ServiceType] ?? s.vehicle.serviceType
-            }
-          />
+          <Field label={t('vehicle.name')} value={s.vehicle.name} />
+          <Field label={t('vehicle.plate')} value={s.vehicle.plateNumber ?? '-'} />
+          <Field label={t('vehicle.type')} value={dl('vehicleType', s.vehicle.vehicleType)} />
+          <Field label={t('vehicle.service')} value={dl('serviceType', s.vehicle.serviceType)} />
           {s.vehicle.brand || s.vehicle.model ? (
             <Field
-              label="Hãng / dòng"
+              label={t('vehicle.brandModel')}
               value={[s.vehicle.brand, s.vehicle.model].filter(Boolean).join(' ')}
             />
           ) : null}
           {s.vehicle.manufactureYear ? (
-            <Field label="Đời xe" value={String(s.vehicle.manufactureYear)} />
+            <Field label={t('vehicle.year')} value={String(s.vehicle.manufactureYear)} />
           ) : null}
-          {s.vehicle.color ? <Field label="Màu" value={s.vehicle.color} /> : null}
+          {s.vehicle.color ? <Field label={t('vehicle.color')} value={s.vehicle.color} /> : null}
           {s.vehicle.seatCount ? (
-            <Field label="Số chỗ" value={`${s.vehicle.seatCount} chỗ`} />
+            <Field
+              label={t('vehicle.seats')}
+              value={t('vehicle.seatsValue', { count: s.vehicle.seatCount })}
+            />
           ) : null}
         </dl>
       </Section>
 
-      <Section title="Thời gian thuê">
+      <Section title={t('rental.title')}>
         <dl className={styles.grid}>
-          <Field label="Nhận xe" value={fmt.dateTime(s.rental.pickupAt)} />
-          <Field label="Trả xe" value={fmt.dateTime(s.rental.returnAt)} />
+          <Field label={t('rental.pickup')} value={fmt.dateTime(s.rental.pickupAt)} />
+          <Field label={t('rental.return')} value={fmt.dateTime(s.rental.returnAt)} />
           {/*
             Chuyến THUÊ DÀI HẠN ký theo GÓI tháng lịch, không theo số ngày (ADR 0011) — in "90
             ngày" cho gói 3 tháng là sai văn bản khi các tháng lệch độ dài. Hợp đồng ký trước
@@ -113,67 +116,87 @@ export function ContractDocument({ contract }: { contract: Contract }) {
           */}
           {s.rental.longTermPackageMonths ? (
             <Field
-              label="Thời hạn thuê"
-              value={longTermPackageLabel(s.rental.longTermPackageMonths)}
+              label={t('rental.term')}
+              value={fmt.packageLabel(s.rental.longTermPackageMonths) ?? '-'}
             />
           ) : (
-            <Field label="Số ngày" value={`${s.rental.days} ngày`} />
+            <Field
+              label={t('rental.days')}
+              value={t('rental.daysValue', { count: s.rental.days })}
+            />
           )}
-          <Field label="Mã đơn" value={s.rental.bookingCode} />
+          <Field label={t('rental.bookingCode')} value={s.rental.bookingCode} />
           {/* Hành trình chuyến có tài xế — hợp đồng cũ không có key này, chỉ render khi tồn tại. */}
           {s.rental.routeType ? (
-            <Field label="Lộ trình" value={routeTypeLabel(s.rental.routeType)} />
+            <Field label={t('rental.route')} value={dl('routeType', s.rental.routeType)} />
           ) : null}
           {s.rental.pickupAddress ? (
-            <Field label="Địa chỉ đón" value={s.rental.pickupAddress} />
+            <Field label={t('rental.pickupAddress')} value={s.rental.pickupAddress} />
           ) : null}
-          {s.rental.destination ? <Field label="Điểm đến" value={s.rental.destination} /> : null}
+          {s.rental.destination ? (
+            <Field label={t('rental.destination')} value={s.rental.destination} />
+          ) : null}
         </dl>
       </Section>
 
-      <Section title="Chi phí thuê">
+      <Section title={t('pricing.title')}>
         <table className={styles.priceTable}>
           <tbody>
-            <PriceRow label="Tiền thuê" value={s.pricing.baseAmount} />
-            <PriceRow label="Phí giao xe" value={s.pricing.deliveryFee} />
-            <PriceRow label="Giảm giá" value={s.pricing.discountAmount} minus />
-            <PriceRow label="Tổng cộng" value={s.pricing.totalAmount} strong />
-            <PriceRow label="Tiền cọc" value={s.pricing.depositAmount} />
-            <PriceRow label="Đã thanh toán" value={s.pricing.paidAmount} />
-            <PriceRow label="Còn phải trả" value={s.pricing.remainingAmount} strong />
+            <PriceRow label={t('pricing.base')} value={s.pricing.baseAmount} />
+            <PriceRow label={t('pricing.delivery')} value={s.pricing.deliveryFee} />
+            {extraCharges.map((charge, index) => (
+              <PriceRow
+                key={`${charge.label}-${index}`}
+                label={charge.label}
+                value={charge.amount}
+              />
+            ))}
+            <PriceRow label={t('pricing.discount')} value={s.pricing.discountAmount} minus />
+            <PriceRow label={t('pricing.total')} value={s.pricing.totalAmount} strong />
+            <PriceRow label={t('pricing.deposit')} value={s.pricing.depositAmount} />
+            <PriceRow label={t('pricing.paid')} value={s.pricing.paidAmount} />
+            <PriceRow label={t('pricing.remaining')} value={s.pricing.remainingAmount} strong />
           </tbody>
         </table>
       </Section>
 
-      <Section title="Điều khoản">
+      {collaterals.length > 0 ? (
+        <Section title={t('collateral.title')}>
+          <ul className={styles.terms}>
+            {collaterals.map((item, index) => (
+              <li key={`${item.collateralType}-${index}`}>
+                {dl('bookingCollateralType', item.collateralType)}
+                {item.description ? `: ${item.description}` : ''}
+              </li>
+            ))}
+          </ul>
+          <p className={styles.note}>{t('collateral.note')}</p>
+        </Section>
+      ) : null}
+
+      <Section title={t('terms.title')}>
         <ol className={styles.terms}>
-          <li>Bên B nhận và trả xe đúng thời gian, địa điểm đã thỏa thuận; giữ gìn xe cẩn thận.</li>
-          <li>
-            Bên B chịu trách nhiệm về vi phạm giao thông, hư hỏng, mất mát phát sinh trong thời gian
-            thuê.
-          </li>
-          <li>Tiền cọc được hoàn lại sau khi trả xe, trừ các khoản phát sinh (nếu có).</li>
-          <li>
-            Hai bên tự thỏa thuận và giải quyết trên tinh thần hợp tác; XePrime chỉ là nền tảng kết
-            nối.
-          </li>
+          <li>{t('terms.handover')}</li>
+          <li>{t('terms.liability')}</li>
+          <li>{t('terms.deposit')}</li>
+          <li>{t('terms.platform')}</li>
         </ol>
       </Section>
 
       {s.note ? (
-        <Section title="Ghi chú">
+        <Section title={t('note')}>
           <p className={styles.note}>{s.note}</p>
         </Section>
       ) : null}
 
       <section className={styles.signatures}>
         <div className={styles.sign}>
-          <div className={styles.signRole}>Bên cho thuê (Bên A)</div>
-          <div className={styles.signHint}>(Ký, ghi rõ họ tên)</div>
+          <div className={styles.signRole}>{t('parties.lessor')}</div>
+          <div className={styles.signHint}>{t('signHint')}</div>
         </div>
         <div className={styles.sign}>
-          <div className={styles.signRole}>Bên thuê (Bên B)</div>
-          <div className={styles.signHint}>(Ký, ghi rõ họ tên)</div>
+          <div className={styles.signRole}>{t('parties.lessee')}</div>
+          <div className={styles.signHint}>{t('signHint')}</div>
         </div>
       </section>
     </article>

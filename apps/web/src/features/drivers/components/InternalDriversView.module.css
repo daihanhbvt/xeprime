@@ -1,0 +1,56 @@
+/* Danh bạ tài xế nội bộ (ADR 0108) — cùng nhịp khối 20px của màn Tài xế liên kết. */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+.search {
+  width: min(100%, 360px);
+}
+
+.nameCell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

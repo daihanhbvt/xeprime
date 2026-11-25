@@ -2,6 +2,8 @@
 
 Ngày: 22/10/2026 · Trạng thái: **Partially superseded** — điều 1 (ghi MỚI tài xế ngoài hệ thống) bị [0074](0074-driver-drop-accepted-trip.md) điều 4 gỡ; điều 2 còn hiệu lực · Ghi đè một phần: [0063](0063-linked-driver-accounts.md) (điều 2 câu "Bỏ hồ sơ không tài khoản" trong phạm vi MỘT ĐƠN; điều 13 mở rộng sang hai cột mới), [0066](0066-hold-15-percent-dynamic-sla-and-handover-safeguards.md) (điều 4, gạch "tự huỷ đơn khi sát giờ … chưa làm") · Giữ nguyên: 0045 (trách nhiệm huỷ), 0056 (liên hệ khách phía chủ xe), 0064 điều 13 (chi trả tài xế hoãn)
 
+> 25/11/2026: [ADR 0108](0108-internal-driver-directory.md) dựng danh bạ tài xế nội bộ (có chống trùng lịch); tài xế chọn từ danh bạ dùng lại hai cột `external_driver_*` của ADR này làm ảnh chụp trên đơn.
+
 ## Bối cảnh
 
 ADR 0063 chỉ cho gán tài xế là một TÀI KHOẢN KHÁCH đã liên kết, và ADR 0066 thêm hạn trả lời cho lượt
