@@ -155,6 +155,10 @@ export const presignVehicleImage = (file: File): Promise<UploadPresign> =>
 export const presignShopMedia = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/uploads/shop-media/presign', presignBody(file));
 
+/** Presign ảnh tài xế NỘI BỘ (ADR 0108, tuỳ chọn) — cần quyền `drivers.manage` trong gian hàng. */
+export const presignDriverPhoto = (file: File): Promise<UploadPresign> =>
+  apiPost<UploadPresign>('/uploads/driver-photos/presign', presignBody(file));
+
 /**
  * Presign ảnh đại diện của CHÍNH người đang đăng nhập — chỉ cần đăng nhập, không cần gian hàng.
  *

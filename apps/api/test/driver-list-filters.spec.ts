@@ -1,6 +1,7 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  API_ERROR_CODE,
   BOOKING_STATUS,
   DRIVER_LICENCE_CHECK_FILTER,
   DRIVER_LICENCE_DECISION_SOURCE,
@@ -11,6 +12,8 @@ import {
   DRIVER_LINK_STATUS_FILTER_CLOSED,
   DRIVER_LIST_SORT,
   DRIVER_OPERATION_FILTER,
+  DRIVER_TYPE,
+  DRIVER_TYPE_FILTER_INTERNAL,
   MEMBERSHIP_STATUS,
   SERVICE_TYPE,
   TENANT_ROLE,
@@ -274,5 +277,161 @@ describe('Dải số đếm', () => {
   maybe('áp cùng bộ lọc chung với danh sách', async () => {
     const summary = await drivers.summary(tenant, { operation: DRIVER_OPERATION_FILTER.ON_TRIP });
     expect(summary).toMatchObject({ open: 1, active: 1, licenceCheck: 0, closed: 0 });
+  });
+});
+
+describe('Danh sách GỘP liên kết + nội bộ (Figma 23737:41945, 25/11/2026)', () => {
+  const internalIds: Record<string, string> = {};
+
+  beforeAll(async () => {
+    if (!dbAvailable) return;
+    internalIds.active = newId();
+    internalIds.archived = newId();
+    await prisma.tenantInternalDriver.createMany({
+      data: [
+        { id: internalIds.active, tenantId: tenant, name: 'Ánh Nội Bộ', phone: '0911000001' },
+        {
+          id: internalIds.archived,
+          tenantId: tenant,
+          name: 'Lưu Trữ Nội Bộ',
+          phone: '0911000002',
+          archivedAt: new Date(),
+        },
+      ],
+    });
+  });
+
+  const rosterIds = async (query: Parameters<typeof drivers.roster>[1]) =>
+    (await drivers.roster(tenant, query)).data
+      .map((r) => (r.linked ?? r.internal)!.id)
+      .sort();
+
+  maybe('mặc định = liên kết đang mở + nội bộ đang dùng; mỗi dòng mang đúng một bên', async () => {
+    const page = await drivers.roster(tenant, {});
+    expect(page.meta.total).toBe(5);
+    for (const row of page.data) {
+      expect(Boolean(row.linked) !== Boolean(row.internal)).toBe(true);
+    }
+    expect(await rosterIds({})).toEqual(
+      [ids.onTrip, ids.mismatch, ids.invited, ids.suspended, internalIds.active].sort(),
+    );
+  });
+
+  maybe('"Hình thức" = nội bộ / trạng thái đã đóng / cần đối chiếu / trạng thái cụ thể', async () => {
+    expect(await rosterIds({ driverType: DRIVER_TYPE_FILTER_INTERNAL })).toEqual([
+      internalIds.active,
+    ]);
+    expect(
+      await rosterIds({
+        driverType: DRIVER_TYPE_FILTER_INTERNAL,
+        linkStatus: DRIVER_LINK_STATUS_FILTER_CLOSED,
+      }),
+    ).toEqual([internalIds.archived]);
+    expect(await rosterIds({ linkStatus: DRIVER_LINK_STATUS_FILTER_CLOSED })).toEqual(
+      [ids.ended, ids.declined, internalIds.archived].sort(),
+    );
+    expect(await rosterIds({ licenceCheck: DRIVER_LICENCE_CHECK_FILTER })).toEqual(
+      [ids.mismatch, ids.invited, ids.suspended].sort(),
+    );
+    expect(await rosterIds({ linkStatus: DRIVER_LINK_STATUS.ACTIVE })).toEqual(
+      [ids.onTrip, ids.mismatch].sort(),
+    );
+    expect(await rosterIds({ driverType: DRIVER_TYPE.STAFF })).not.toContain(internalIds.active);
+    expect(await rosterIds({ operation: DRIVER_OPERATION_FILTER.ON_TRIP })).toEqual([ids.onTrip]);
+    expect(await rosterIds({ q: 'ánh nội' })).toEqual([internalIds.active]);
+  });
+
+  maybe('phân trang ở server: các trang không trùng, gộp lại đủ tổng', async () => {
+    const seen: string[] = [];
+    for (let page = 1; page <= 3; page += 1) {
+      const res = await drivers.roster(tenant, { page, limit: 2, sort: DRIVER_LIST_SORT.NAME_ASC });
+      expect(res.meta.total).toBe(5);
+      seen.push(...res.data.map((r) => (r.linked ?? r.internal)!.id));
+    }
+    expect(new Set(seen).size).toBe(5);
+  });
+
+  maybe('dải số đếm gộp: mỗi ô bằng tổng danh sách khi bấm vào nó', async () => {
+    const summary = await drivers.rosterSummary(tenant, {});
+    expect(summary).toEqual({
+      open: 5,
+      active: 2,
+      invited: 1,
+      suspended: 1,
+      closed: 3,
+      licenceCheck: 3,
+      internalActive: 1,
+      internalArchived: 1,
+    });
+    expect((await drivers.roster(tenant, { linkStatus: DRIVER_LINK_STATUS_FILTER_CLOSED })).meta.total).toBe(
+      summary.closed,
+    );
+    expect(
+      await drivers.rosterSummary(tenant, { driverType: DRIVER_TYPE_FILTER_INTERNAL }),
+    ).toMatchObject({ open: 1, active: 0, closed: 1, licenceCheck: 0 });
+  });
+
+  maybe('tra SĐT ở hộp mời: chỉ tài khoản khách đã xác minh, báo đã liên kết', async () => {
+    const link = await prisma.driver.findUniqueOrThrow({
+      where: { id: ids.onTrip! },
+      select: { phone: true },
+    });
+    await expect(drivers.lookupAccount(tenant, link.phone)).resolves.toMatchObject({
+      found: true,
+      alreadyLinked: true,
+      displayName: expect.any(String),
+    });
+    await expect(drivers.lookupAccount(tenant, '0900000009')).resolves.toEqual({
+      found: false,
+      displayName: null,
+      avatarUrl: null,
+      alreadyLinked: false,
+    });
+  });
+});
+
+describe('"Đã đối chiếu" bằng lái (25/11/2026)', () => {
+  maybe('tắt "Cần đối chiếu" cho đúng bằng hiện tại; bằng mới thì hiện lại; gỡ được', async () => {
+    const before = await listIds({ licenceCheck: DRIVER_LICENCE_CHECK_FILTER });
+    expect(before).toContain(ids.mismatch);
+
+    const checked = await drivers.setLicenceChecked(tenant, owner, ids.mismatch!, true);
+    expect(checked.licenceCheck).toMatchObject({ checkedAt: expect.any(String) });
+    expect(await listIds({ licenceCheck: DRIVER_LICENCE_CHECK_FILTER })).not.toContain(
+      ids.mismatch,
+    );
+    expect((await drivers.summary(tenant, {})).licenceCheck).toBe(before.length - 1);
+
+    // Tài xế nộp bằng MỚI (vẫn lệch tên) ⇒ mốc đối chiếu cũ hết giá trị.
+    const link = await prisma.driver.findUniqueOrThrow({
+      where: { id: ids.mismatch! },
+      select: { userId: true },
+    });
+    // Như luồng thật: bằng cũ thành `superseded` khi bằng mới được xác thực (một bằng verified/tài khoản).
+    await prisma.customerDriverLicence.updateMany({
+      where: { userId: link.userId, status: DRIVER_LICENCE_STATUS.VERIFIED },
+      data: { status: DRIVER_LICENCE_STATUS.SUPERSEDED },
+    });
+    await verifiedLicence(link.userId, 'LE VAN CUONG MOI');
+    expect(await listIds({ licenceCheck: DRIVER_LICENCE_CHECK_FILTER })).toContain(ids.mismatch);
+    const list = await drivers.list(tenant, {});
+    expect(list.data.find((d) => d.id === ids.mismatch)?.licenceCheck).toBeNull();
+
+    // Gỡ đánh dấu: cột về null.
+    await drivers.setLicenceChecked(tenant, owner, ids.mismatch!, false);
+    const row = await prisma.driver.findUniqueOrThrow({
+      where: { id: ids.mismatch! },
+      select: { licenceCheckedLicenceId: true, licenceCheckedAt: true },
+    });
+    expect(row).toEqual({ licenceCheckedLicenceId: null, licenceCheckedAt: null });
+  });
+
+  maybe('chưa có bằng đã xác thực còn hạn ⇒ 409 DRIVER_LICENCE_NOT_VERIFIED', async () => {
+    await expect(drivers.setLicenceChecked(tenant, owner, ids.invited!, true)).rejects.toMatchObject({
+      response: expect.objectContaining({ code: API_ERROR_CODE.DRIVER_LICENCE_NOT_VERIFIED }),
+    });
+    await expect(drivers.setLicenceChecked(tenant, owner, ids.suspended!, true)).rejects.toMatchObject({
+      response: expect.objectContaining({ code: API_ERROR_CODE.DRIVER_LICENCE_NOT_VERIFIED }),
+    });
   });
 });

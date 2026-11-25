@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
@@ -15,6 +16,8 @@ import { DriversService } from './drivers.service';
 import {
   AssignableDriversDto,
   AssignableDriversQueryDto,
+  DriverAccountLookupDto,
+  DriverAccountLookupQueryDto,
   DriverAssignmentListQueryDto,
   DriverAssignmentPageDto,
   DriverDto,
@@ -22,6 +25,10 @@ import {
   DriverListQueryDto,
   DriverOverviewDto,
   DriverPageDto,
+  DriverRosterFilterDto,
+  DriverRosterPageDto,
+  DriverRosterQueryDto,
+  DriverRosterSummaryDto,
   DriverSummaryDto,
   DriverWageMonthQueryDto,
   DriverWageSettingsDto,
@@ -29,6 +36,9 @@ import {
   UpdateDriverDto,
   UpdateDriverWageSettingsDto,
 } from './dto/driver.dto';
+
+/** Tra SĐT ở hộp mời: đủ cho một người gõ vài số, không đủ để dò cả danh bạ. */
+const ACCOUNT_LOOKUP_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
 /**
  * Tài xế LIÊN KẾT của bên thuê (ADR 0063) — tenant-scoped, `tenantId` từ membership của phiên.
@@ -68,6 +78,46 @@ export class DriversController {
     @Query() query: DriverListFilterDto,
   ): Promise<DriverSummaryDto> {
     return this.drivers.summary(tenant.tenantId, query);
+  }
+
+  @Get('roster')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
+  @ApiOperation({
+    summary: 'Danh sách GỘP tài xế liên kết + tài xế nội bộ (lọc, sắp xếp, phân trang ở server)',
+  })
+  @ApiOkResponse({ type: DriverRosterPageDto })
+  roster(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: DriverRosterQueryDto,
+  ): Promise<DriverRosterPageDto> {
+    return this.drivers.roster(tenant.tenantId, query);
+  }
+
+  @Get('roster/summary')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
+  @ApiOperation({ summary: 'Dải số đếm của danh sách gộp (đã áp bộ lọc chung)' })
+  @ApiOkResponse({ type: DriverRosterSummaryDto })
+  rosterSummary(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: DriverRosterFilterDto,
+  ): Promise<DriverRosterSummaryDto> {
+    return this.drivers.rosterSummary(tenant.tenantId, query);
+  }
+
+  @Get('account-lookup')
+  @RequirePermissions(PERMISSION.DRIVER_MANAGE)
+  @Throttle(ACCOUNT_LOOKUP_THROTTLE)
+  @ApiOperation({
+    summary: 'Tra tài khoản khách đã xác minh theo SĐT trước khi mời (tên hiển thị + ảnh)',
+  })
+  @ApiOkResponse({ type: DriverAccountLookupDto })
+  lookupAccount(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: DriverAccountLookupQueryDto,
+  ): Promise<DriverAccountLookupDto> {
+    return this.drivers.lookupAccount(tenant.tenantId, query.phone);
   }
 
   @Get('assignable')
@@ -199,6 +249,34 @@ export class DriversController {
     @Param('id') id: string,
   ): Promise<DriverDto> {
     return this.drivers.setSuspended(tenant.tenantId, user.id, id, false);
+  }
+
+  @Post(':id/licence-check')
+  @RequirePermissions(PERMISSION.DRIVER_MANAGE)
+  @ApiOperation({
+    summary: 'Đánh dấu đã đối chiếu bằng lái hiện tại của tài xế (tắt nhãn "Cần đối chiếu")',
+    description:
+      'Ghi đúng hồ sơ bằng đang hiệu lực - tài xế nộp bằng mới thì nhãn hiện lại. Chưa có bằng đã xác thực còn hạn ⇒ 409 `DRIVER_LICENCE_NOT_VERIFIED`.',
+  })
+  @ApiOkResponse({ type: DriverDto })
+  markLicenceChecked(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<DriverDto> {
+    return this.drivers.setLicenceChecked(tenant.tenantId, user.id, id, true);
+  }
+
+  @Delete(':id/licence-check')
+  @RequirePermissions(PERMISSION.DRIVER_MANAGE)
+  @ApiOperation({ summary: 'Gỡ đánh dấu đã đối chiếu bằng lái' })
+  @ApiOkResponse({ type: DriverDto })
+  clearLicenceChecked(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<DriverDto> {
+    return this.drivers.setLicenceChecked(tenant.tenantId, user.id, id, false);
   }
 
   @Delete(':id')

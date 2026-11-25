@@ -50,7 +50,7 @@ Design: Header `23649:27690` (biến thể Default) · `23661:22492` (Details, c
 | Khách hàng · `/customers` | Quản lý › Khách hàng | **Vận hành › Danh sách khách hàng** | menu | — |
 | Danh sách xe · `/vehicles` | Quản lý › Xe của tôi › Danh sách xe | **Xe & Tài xế › Danh sách xe** (huy hiệu số xe có việc chặn) | menu | Danh sách xong (03/11, §3.5). Chi tiết `/vehicles/[id]` và Chỉnh sửa `/vehicles/[id]/edit` xong (03/11, §3.6) — cả hai tuyến |
 | Đăng nhanh xe tự lái (gian hàng) · `/vehicles/register?from=manage` | Menu phụ cạnh nút thêm xe ở Danh sách xe | **Gỡ khỏi Danh sách xe** (chốt 03/11) — màn chỉ còn "Thêm xe mới" → wizard đầy đủ. Route vẫn sống (chủ xe tuyến hoa hồng dùng `?from=account`) | URL | — |
-| Tài xế · `/drivers` | Cấu hình › Tài xế | **Xe & Tài xế › Quản lý tài xế** | menu | — (ráp xong 04/11, §3.7) |
+| Tài xế · `/drivers` | Cấu hình › Tài xế | **Xe & Tài xế › Quản lý tài xế** | menu | — (ráp xong 04/11, §3.7; cập nhật 25/11: lưới gộp tài xế nội bộ, chi tiết thành trang `/drivers/[id]` · `/drivers/internal/[id]`) |
 | Bảo dưỡng · `/maintenance` | Quản lý › Xe của tôi › Bảo dưỡng | **Xe & Tài xế › Bảo dưỡng** | menu | — (ráp xong 04/11, §3.8) |
 | Doanh thu · `/finance` | Kinh doanh › Tài chính › Tổng quan doanh thu | **Doanh thu › Tổng quan doanh thu** | menu | — (ráp xong 04/11, §3.9) |
 | Số dư & rút tiền · `/balance` (chỉ CHỦ) | Kinh doanh › Tài chính › Số dư & rút tiền | **Doanh thu › Quản lý ví** | menu | — |
@@ -162,7 +162,7 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Danh sách xe | `/vehicles` (cả hai tuyến) | section `23672:25620`: ít xe `23655:38521` · lưới `23649:29724` · danh sách `23655:36959` | **Xong** 03/11/2026 (danh sách) | Xem §3.5 |
 | Chi tiết xe | `/vehicles/[id]` (cả hai tuyến, cả modal hồ sơ xe) | section `23672:25621` | **Xong** 03/11/2026 | Xem §3.6 |
 | Chỉnh sửa xe | `/vehicles/[id]/edit` (cả hai tuyến; `/vehicles/[id]/manage/<mục>` cũ chuyển hướng) | section `23731:37932` (13 frame) | **Xong** 03/11/2026 | Xem §3.6 |
-| Quản lý tài xế | `/drivers` (cả hai tuyến, cả phiên hỗ trợ) | `23737:45750` (3 frame) | **Xong** 04/11/2026 | Xem §3.7 |
+| Quản lý tài xế | `/drivers` + `/drivers/[id]` + `/drivers/internal/[id]` (cả hai tuyến, cả phiên hỗ trợ) | `23737:45750` (7 frame) | **Xong** 25/11/2026 | Xem §3.7 (cập nhật 25/11) |
 | Danh sách bảo dưỡng | `/maintenance` (cả phiên hỗ trợ) | `23733:41941` | **Xong** 04/11/2026 | Xem §3.8 |
 | Chính sách thuê | `/shop/policies` (`?type=motorbike`; `/shop/payment-settings` chuyển hướng tới `#deposit-collection`) | `23874:63907` | **Xong** 06/11/2026 | Xem §3.12 (link "Gói & hạn mức" của P3 trỏ `/shop?section=plan` — đã đúng chỗ) |
 | Thông tin cửa hàng | `/shop` (+ thanh toán trong khung `/shop/payment/:id`, `/shop/payment/checkout/:id`) | section `23999:111044` (9 frame) | **Xong** 06/11/2026 | Xem §3.13 — kèm hoá đơn gộp (ADR 0083) và giới thiệu có định dạng |
@@ -416,6 +416,16 @@ ngôn ngữ design.**
 | 11 | Banner hoàn thành "Số tiền … đã cộng vào ví điểm" | 🆕 | Chỉ khi đơn có `ownerPayableAmount > 0` |
 | 12 | Bảo hiểm chuyến · Phụ lục gia hạn · Bổ sung ảnh sau bàn giao · Lịch sử tiền | 🟡 | Giữ — thẻ dưới "Lợi nhuận chuyến" / tab ảnh / nút header |
 
+**Thẻ Tài xế — cập nhật 25/11/2026** (Waiting/Driver `23807:73143` · hộp Đổi tài xế `24145:47780` · Sửa tiền
+công `24145:61977` · Lịch sử gán `24145:62811`):
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| D1 | Khung tài xế: ảnh · tên · SĐT · "Bằng lái B2" · menu "…" · khung vàng "Chờ tài xế nhận chuyến - Gán lúc …, hạn …" + đồng hồ · "Tiền công (xN ngày)" | ✅ | `BookingDriverSummaryDto` thêm `avatarUrl` (+ `licence` ở chi tiết đơn). Menu: Đổi tài xế · Sửa tiền công · Bỏ gán. Nội bộ/ngoài hệ thống hiện nhãn nguồn thay bằng lái |
+| D2 | Hộp Đổi/Gán tài xế hai cột: tìm · Trạng thái · Loại tài xế; dòng có bằng lái + "Rảnh trong khung giờ / Rảnh - N lần không xác nhận / Chưa xác minh / Trùng chuyến"; "+ Thêm tài xế nội bộ"; cột phải tiền công | 🆕 | Liên kết + nội bộ chung danh sách (thay ô chọn + hộp gán riêng). `/drivers/assignable` thêm hạng bằng, hình thức, ảnh, `expiredCount` (90 ngày, chính bên thuê). Người **trùng chuyến không chọn được**; người **chưa xác minh bằng vẫn chọn được** (server không chặn) kèm cảnh báo đỏ |
+| D3 | Tiền công "đ/chuyến" (hộp đổi) và "Tiền công mới" là TỔNG (hộp sửa) | ⚠️ | **Giữ MỨC/NGÀY theo ADR 0075** (người dùng 25/11): ô "đ/ngày", khung "Tiền công (xN ngày)" = tổng; chip chọn nhanh = mức chung · mức gợi ý · 2 bậc trên gợi ý; hộp sửa hiện "Hiện tại", lý do, "Tổng thu nhập" + chênh lệch. Giữ lựa chọn "chỉ chuyến này / các chuyến sau" ở hộp gán |
+| D4 | Hộp "Lịch sử gán tài xế" (chấm · tên · SĐT · tiền công · "Gán bởi …, lúc …" · viên kết cục) | ✅ | Thay khối thu gọn. Giữ ngoài design: lúc nhận, lý do/vùng của lượt rút, ai kết thúc, lịch sử sửa tiền công + nút sửa |
+
 **Cập nhật design 03/11/2026** — Waiting `23845:49956` · cảnh báo thiếu `23845:51599` · popup "Sẵn sàng giao xe" `23845:53852` (modal `23845:54382`):
 
 | # | Hạng mục | Loại | Quyết định |
@@ -663,6 +673,28 @@ danh sách vẫn chạy. Huy hiệu menu "Quản lý tài xế" vẫn **chưa l�
 có nút "+" Mời tài xế; dải trạng thái thành `ChipTabs` kèm số đếm; tấm Lọc dạng lưới; thẻ đệm 16, viên
 hình thức/trạng thái dạng nhãn, hàng nút compact tràn ngang (nút cuối là nút chính). Chi tiết tài xế:
 ← + tên + SĐT, dải tab gạch chân.
+
+**Cập nhật design 25/11/2026** — danh sách `23737:41945` · hộp "Thêm tài xế mới" tab Mời `23737:46392` / tab
+Nội bộ `24612:139222` (đã có ảnh `24612:140670`) · trang chi tiết Tổng quan `24042:71009` · Chuyến & tiền
+công `24051:80844`. Chốt với người dùng 25/11:
+
+| # | Hạng mục | Dấu | Quyết định |
+| --- | --- | --- | --- |
+| 16 | Thẻ "Nhân viên nội bộ" chung lưới với tài xế liên kết | 🆕 | **Gộp một lưới** (`GET /drivers/roster` + `/drivers/roster/summary`, sắp/cắt trang ở server). "Hình thức" có thêm "Nhân viên nội bộ"; nội bộ đang dùng vào ô "Tất cả", đã lưu trữ vào ô "Đã từ chối/Kết thúc"; không vào "Cần đối chiếu". Bỏ nút chuyển "Liên kết / Nội bộ"; link cũ `?view=internal` thành lọc Hình thức = nội bộ |
+| 17 | Một nút "Thêm tài xế mới" mở hộp 2 tab Mời tài xế · Tài xế nội bộ | ✅ | Theo design. "Mời lại" dùng cùng hộp, chỉ tab mời |
+| 18 | Tab mời: bỏ ô Họ tên, ô CHỈ ĐỌC "Thông tin tài xế" (tên + ảnh tài khoản theo SĐT) | 🆕 | **Tra cứu có giới hạn** (`GET /drivers/account-lookup`, quyền `drivers.manage`, 20 lượt/phút): chỉ tài khoản khách đã xác minh, trả tên hiển thị + ảnh, không email/id; tên lưu = tên tài khoản (`InviteDriverDto.name` thành tuỳ chọn). Tra lỗi vẫn gửi được |
+| 19 | Tab nội bộ: ảnh · SĐT · Họ tên · Ghi chú | 🆕 | Ảnh **tuỳ chọn** (người dùng): cột `tenant_internal_drivers.photo_url`, presign `/uploads/driver-photos/presign`, server chỉ nhận URL dưới kho `tenants/<id>/drivers/` của chính bên thuê (`INTERNAL_DRIVER_PHOTO_INVALID`). Không bằng lái, không tài khoản |
+| 20 | Menu "…": Thu hồi lời mời · Ngừng hợp tác · Tạm khoá | ✅ | Theo design (+ Mở khoá khi đang tạm khoá). Bỏ mục "Xem chi tiết" vì tên + nút "Chi tiết" đã dẫn tới trang. Thẻ nội bộ: "Ngừng hợp tác" = lưu trữ, "Khôi phục" khi đã lưu trữ |
+| 21 | Nút "Chỉnh sửa thông tin" trên thẻ | 🟡 | **Bỏ** (người dùng 25/11) — thay bằng "Chi tiết"; sửa ở trang chi tiết. Hộp sửa tài xế liên kết theo khuôn hộp sửa nội bộ (nhãn trên ô, ảnh + SĐT tài khoản chỉ xem) |
+| 22 | Chi tiết tài xế là TRANG riêng (breadcrumb "Quản lý tài xế › Chi tiết tài xế") | 🆕 | **Làm** `/drivers/[id]` (liên kết) · `/drivers/internal/[id]` (nội bộ), cả trong phiên hỗ trợ. Ngăn kéo cũ bỏ; link `?open=<id>&tab=` chuyển tiếp. Tab "Hồ sơ" cũ dồn vào cột trái |
+| 23 | Cột trái: Chỉnh sửa · Chat · Gọi · Zalo; "Tên tài khoản"; Hủy liên kết | ⚠️🆕 | Nút **Chat không làm** (chưa có kênh nhắn bên thuê ↔ tài xế). "Tên tài khoản" hiện TÊN HIỂN THỊ, không email. "Huỷ liên kết" = kết thúc liên kết (lời mời đang chờ: "Thu hồi lời mời"); Tạm khoá / Mở khoá đặt cạnh; liên kết đã đóng có "Mời lại" |
+| 24 | Tổng quan: 4 thẻ số (Tiền công + % so tháng trước · Hoàn thành · Bình quân/ngày lái · Sắp chạy), cột 6 tháng, Chuyến sắp tới, thẻ Tiền công · tháng + Độ tin cậy | ✅ | Một lần đọc `/drivers/:id/overview` (thêm khách, ảnh xe, tiền công lượt mở vào `current`). Giữ ngoài design: dòng chuyến không chạy có thoả thuận, rút chuyến 90 ngày, loại khỏi "Đặt ngay" |
+| 25 | Chuyến & tiền công: bảng (mã đơn · xe · khách · thời gian · trạng thái · tiền công · Chi tiết), tìm + lọc trạng thái, "Tổng ghi nhận", "Xuất bảng kê", phân trang | 🆕 | `/drivers/:id/assignments` thêm `q` (mã đơn/khách/xe/biển) + `outcome`, trả khách + ảnh xe. Bảng kê vẫn gom cả tháng |
+| 26 | "Cần đối chiếu" tắt bằng cách nào | 🆕 | **Nút "Đánh dấu đã đối chiếu"** (người dùng 25/11): `POST/DELETE /drivers/:id/licence-check` ghi ĐÚNG hồ sơ bằng đang hiệu lực (`drivers.licence_checked_*`, audit) — tài xế nộp bằng mới ⇒ nhãn hiện lại. Chỉ cho tên lệch; chưa có bằng xác thực còn hạn ⇒ 409 `DRIVER_LICENCE_NOT_VERIFIED`. Ở thẻ bằng lái trang chi tiết + menu "…" của thẻ |
+
+Tự dựng: trang chi tiết đang tải / không tìm thấy (nút về danh sách) / lỗi; bảng chuyến rỗng theo tháng và
+rỗng theo bộ lọc; trang nội bộ (Chuyến sắp tới + bảng đơn trả xe trong tháng, lọc trạng thái đơn, không tiền
+công). Màn hẹp: hai cột chi tiết xếp chồng dưới 1024px.
 
 ### 3.8 Danh sách bảo dưỡng — kiểm kê và quyết định (04/11/2026)
 
@@ -1024,7 +1056,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `24565:59734` | Tạo đơn thuê — bước Chọn xe (Kanban + hộp): hộp `24565:59738` · hàng lọc `24565:59741` · lưới thẻ `24565:59748` (thẻ `24599:135819`, hàng biển số + giá `24599:135925`; bản cập nhật 25/11 thay `24565:59749`/`59753`) · chân hộp `24565:59754` |
 | `24117:65745` | Đơn thuê xe — điện thoại "Rental Request - MB" (10/11): dải tab `24117:67234` · thẻ mở `24117:72641` · thẻ thu gọn `24117:72841` · thẻ siêu gọn nháp `24117:69914` (không dựng). Chấm tab: đỏ #D92D20 · cam #F79009 · xanh #1570EF · lá #039855 |
 | `23948:99504` | Chi tiết đơn — đơn đã huỷ (Failed) · `23930:45292` đang thuê + toast |
-| `23777:53056` | Section Chi tiết đơn: chờ giao `23845:49956` (03/11, thay `23768:29928`) · cảnh báo thiếu `23845:51599` · popup sẵn sàng giao `23845:53852` (modal `23845:54382`) · chờ giao có tài xế `23807:73143` · hộp Thông tin khách `23777:49485` · hộp Thu tiền đơn `23777:52010` · đang thuê `23777:48710` · hoàn thành `23777:52626` |
+| `23777:53056` | Section Chi tiết đơn: chờ giao `23845:49956` (03/11, thay `23768:29928`) · cảnh báo thiếu `23845:51599` · popup sẵn sàng giao `23845:53852` (modal `23845:54382`) · chờ giao có tài xế `23807:73143` (hộp Đổi tài xế `24145:47780`, Sửa tiền công `24145:61977`, Lịch sử gán `24145:62811`) · hộp Thông tin khách `23777:49485` · hộp Thu tiền đơn `23777:52010` · đang thuê `23777:48710` · hoàn thành `23777:52626` |
 | `23777:54974` | Section Khách hàng: danh sách `23777:53057` (dải số liệu `23777:53832`) · Tổng quan `23777:54975` · Lịch sử thuê `23797:54015` · Thu chi `23797:55706` · Giấy tờ `23797:62633` |
 | `23807:68543` · `23807:70054` | Hộp Gia hạn thuê xe · Thanh toán gia hạn (ADR 0077) |
 | `23746:50954` | Nút chuyển (`_switch`) Active yes/no |
@@ -1032,7 +1064,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `24352:70390` | Section Thêm xe mới: Bước 1 `24352:79234` · Bước 2 `24352:80745` · Bước 3 `24352:81824` · hộp xác nhận `24335:66465` · thiếu thông tin `24352:69368` · thành công `24352:67918` |
 | `23731:37932` | Section Chỉnh sửa xe: Thông tin chung `23683:17598` · Ảnh `23707:25596` · Giấy tờ `23713:7609` · Tự lái `23713:21048` · Có tài xế `23716:27912` · Dài hạn `23716:29056` · Điều kiện `23721:30416` · Giao nhận `23721:31485` · Bảo dưỡng `23724:10374` (hộp thêm KM `23731:39262`, thêm lịch `23724:29202`, lịch sử `23724:32002`) · Nguồn gốc & tài chính `23730:32702` |
 | `23672:25620` | Section Danh sách xe: từ 4 xe `23655:38521` (thẻ `23655:38951`) · dưới 4 xe `23655:36959` (hàng `23655:38389`) · lưới `23649:29724` (thẻ `23655:36682`) — KHÔNG còn dùng từ 16/11, chỉ còn đọc page header + hàng lọc `23649:30744` |
-| `23737:45750` | Section Quản lý tài xế: danh sách `23737:41945` (thẻ `23737:43826`, dải số `23737:44163`; menu "…" đang mở vẽ ngay trong frame này) · hộp Mời tài xế mới `23737:45751` |
+| `23737:45750` | Section Quản lý tài xế: danh sách `23737:41945` (thẻ `23737:43826`, dải số `23737:44163`; menu "…" đang mở vẽ ngay trong frame này) · hộp Thêm tài xế tab Mời `23737:46392` · tab Nội bộ `24612:139222` (có ảnh `24612:140670`) · chi tiết Tổng quan `24042:71009` · Chuyến & tiền công `24051:80844` |
 | `23733:41941` | Section Danh sách bảo dưỡng: frame `23754:28662`, hàng xe `23754:29574` |
 | `I23661:27390;23649:28221` | Icon xe của dòng "Danh sách xe" — xuất qua instance cha trả nhầm icon tài liệu |
 | `23857:58927` | Section Doanh thu / Tài chính: Tổng quan doanh thu theo xe `23813:30723` (page header `23813:30726`, sáu thẻ `23813:32225`, biểu đồ `23813:32266`, cơ cấu `23813:37042`, hiệu suất `23813:37081`, thuế `23813:38909`) · theo khách `23813:38107` (bảng `23813:38176`) · Quản lý ví `23813:39558` · `23813:55449` |

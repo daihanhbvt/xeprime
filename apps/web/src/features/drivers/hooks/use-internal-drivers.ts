@@ -6,26 +6,17 @@ import {
   archiveInternalDriver,
   createInternalDriver,
   fetchAssignableInternalDrivers,
-  fetchInternalDrivers,
-  internalFiltersToParams,
+  fetchInternalDriverDetail,
+  fetchInternalDriverTrips,
   restoreInternalDriver,
+  tripFiltersToParams,
   updateInternalDriver,
 } from '../api';
 import type {
   CreateInternalDriverInput,
-  InternalDriverFilters,
+  DriverTripFilters,
   UpdateInternalDriverInput,
 } from '../types';
-
-/** Danh bạ tài xế nội bộ (ADR 0108) — phân trang + tìm ở server. */
-export function useInternalDrivers(filters: InternalDriverFilters, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.drivers.internal(internalFiltersToParams(filters)),
-    queryFn: () => fetchInternalDrivers(filters),
-    placeholderData: (prev) => prev,
-    enabled,
-  });
-}
 
 /** Bộ chọn tài xế nội bộ của đơn — server trả cả người bận (không nói bận ở đơn nào). */
 export function useAssignableInternalDrivers(
@@ -37,6 +28,26 @@ export function useAssignableInternalDrivers(
     queryFn: () => fetchAssignableInternalDrivers(window),
     enabled,
     staleTime: 30_000,
+  });
+}
+
+/** Trang chi tiết một tài xế nội bộ (ADR 0108): hồ sơ + đơn đang gán. */
+export function useInternalDriverDetail(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.drivers.internalDetail(id ?? ''),
+    queryFn: () => fetchInternalDriverDetail(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+/** Bảng chuyến của trang chi tiết tài xế nội bộ (tìm, lọc trạng thái, phân trang server-side). */
+export function useInternalDriverTrips(id: string | null, filters: DriverTripFilters) {
+  const params = { ...tripFiltersToParams(filters), status: filters.status ?? null };
+  return useQuery({
+    queryKey: queryKeys.drivers.internalTrips(id ?? '', params),
+    queryFn: () => fetchInternalDriverTrips(id as string, filters),
+    enabled: Boolean(id),
+    placeholderData: (prev) => prev,
   });
 }
 

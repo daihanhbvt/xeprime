@@ -170,6 +170,17 @@ export const queryKeys = {
       returnAt: string;
       excludeBookingId?: string;
     }) => ['drivers', 'internal-assignable', window] as const,
+    /** Danh sách GỘP liên kết + nội bộ của màn Tài xế (25/11/2026). */
+    roster: (params: QueryParams) => ['drivers', 'roster', params] as const,
+    /** Dải số đếm của danh sách gộp. */
+    rosterSummary: (params: QueryParams) => ['drivers', 'roster-summary', params] as const,
+    /** Trang chi tiết một tài xế nội bộ: hồ sơ + đơn đang gán. */
+    internalDetail: (id: string) => ['drivers', 'internal-detail', id] as const,
+    /** Bảng chuyến của một tài xế nội bộ theo tháng. */
+    internalTrips: (id: string, params: QueryParams) =>
+      ['drivers', 'internal-trips', id, params] as const,
+    /** Tra tài khoản theo SĐT ở hộp "Mời tài xế". */
+    accountLookup: (phone: string) => ['drivers', 'account-lookup', phone] as const,
   },
   /**
    * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) - lời mời/liên kết, huy hiệu chờ trả

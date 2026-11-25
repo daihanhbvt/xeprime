@@ -2,7 +2,7 @@
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Skeleton } from 'antd';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
@@ -26,27 +26,30 @@ import {
 import styles from './DriverWageDialogs.module.css';
 
 /**
- * Sửa tiền công của MỘT lượt gán (ADR 0075). Không cần tài xế đồng ý — mỗi lần đổi ghi một dòng
- * lịch sử và báo tài xế.
+ * Sửa tiền công của MỘT lượt gán (ADR 0075) — Figma `24145:61977`: tiêu đề + viên trạng thái lượt
+ * gán, "Tên - SĐT", ô số mới, "Hiện tại", lý do, khung "Tổng thu nhập" kèm chênh lệch. Không cần tài
+ * xế đồng ý — mỗi lần đổi ghi một dòng lịch sử và báo tài xế.
  *
- *  - Chuyến đang mời / đang chạy / đã xong: nhập MỨC/NGÀY × số ngày HIỆN TẠI của đơn (server chụp
- *    lại số ngày khi ghi). Sửa trên một đơn chỉ áp cho CHÍNH chuyến đó — đổi mức chung cho các lượt
- *    gán sau là việc của hộp gán và trang Tài xế, không phải của hộp sửa.
- *  - Chuyến đã nhận mà không chạy: một con số hai bên thoả thuận (0 nếu không có) — không theo ngày,
- *    không đụng mức chung.
+ *  - Chuyến đang mời / đang chạy / đã xong: nhập MỨC/NGÀY × số ngày HIỆN TẠI của đơn (giữ đơn vị
+ *    ngày theo ADR, chốt 25/11/2026 dù design ghi "Tiền công mới" là tổng). Sửa trên một đơn chỉ áp
+ *    cho CHÍNH chuyến đó — đổi mức chung là việc của hộp gán và trang Tài xế.
+ *  - Chuyến đã nhận mà không chạy: một con số hai bên thoả thuận (0 nếu không có).
  *
  * Số ngày và khoảng hợp lệ đọc từ cùng `driver-wage-quote` với hộp gán; server kiểm lại khi ghi.
  */
 export function DriverWageEditDialog({
   bookingId,
   item,
+  status,
   onClose,
 }: {
   bookingId: string;
   item: BookingDriverHistoryItem;
+  /** Viên trạng thái cạnh tiêu đề (vd "Chờ tài xế nhận chuyến") — vắng khi lượt đã khép. */
+  status?: ReactNode;
   onClose: () => void;
 }) {
-  const t = useTranslations('Drivers.wage.edit');
+  const t = useTranslations('Drivers.booking.wageDialog');
   const tAssign = useTranslations('Drivers.wage.assign');
   const quote = useDriverWageQuote(bookingId, true);
   const agreed = item.wage.stage === DRIVER_WAGE_STAGE.NOT_RUN;
@@ -54,7 +57,15 @@ export function DriverWageEditDialog({
   return (
     <ResponsiveDialog
       title={
-        agreed ? t('titleAgreed', { name: item.driverName }) : t('title', { name: item.driverName })
+        <span>
+          <span className={styles.titleRow}>
+            {agreed ? t('titleAgreed') : t('title')}
+            {status}
+          </span>
+          <span className={styles.subtitle}>
+            {t('driverLine', { name: item.driverName, phone: item.driverPhone })}
+          </span>
+        </span>
       }
       open
       onClose={onClose}
@@ -96,6 +107,7 @@ function DailyWageEditForm({
   onClose: () => void;
 }) {
   const t = useTranslations('Drivers.wage.edit');
+  const tDialog = useTranslations('Drivers.booking.wageDialog');
   const tForm = useTranslations('Drivers.wage.form');
   const fmt = useAppFormat();
   const { message } = App.useApp();
@@ -142,24 +154,39 @@ function DailyWageEditForm({
   }
 
   return (
-    <DialogForm className={styles.form} onSubmit={(e) => void handleSubmit(submit)(e)}>
-      <div className={styles.facts}>
-        <span>{t('current')}</span>
-        <b>{fmt.money(wage.amount ?? '0')}</b>
-      </div>
+    <DialogForm
+      className={styles.form}
+      labelPosition="top"
+      onSubmit={(e) => void handleSubmit(submit)(e)}
+    >
       {wage.days != null && wage.days !== quote.days ? (
         <Alert type="warning" showIcon title={t('daysChanged', { from: wage.days, to: quote.days })} />
       ) : null}
-      <DriverDailyWageFields control={control} quote={quote} canSetDefault={false} />
-      <TextAreaField
+      <DriverDailyWageFields
         control={control}
-        name="reason"
-        label={t('reason')}
-        placeholder={t('reasonPlaceholder')}
-        rows={2}
-        maxLength={DRIVER_WAGE_REASON_MAX_LENGTH}
+        quote={quote}
+        canSetDefault={false}
+        label={tDialog('newDaily')}
+        showQuick={false}
+        currentTotal={wage.amount === null ? null : Number(wage.amount)}
+        afterField={
+          <p className={styles.current}>
+            {tDialog('current')} 
+            <b>{fmt.money(wage.amount ?? '0')}</b>
+          </p>
+        }
+        beforeTotal={
+          <TextAreaField
+            control={control}
+            name="reason"
+            label={t('reason')}
+            placeholder={t('reasonPlaceholder')}
+            rows={2}
+            maxLength={DRIVER_WAGE_REASON_MAX_LENGTH}
+          />
+        }
       />
-      <Alert type="info" showIcon title={t('notice')} />
+      <p className={styles.note}>{t('notice')}</p>
       <EditFooter editableUntil={wage.editableUntil} busy={busy} onClose={onClose} />
     </DialogForm>
   );
@@ -177,6 +204,7 @@ function AgreedWageForm({
   onClose: () => void;
 }) {
   const t = useTranslations('Drivers.wage.edit');
+  const tDialog = useTranslations('Drivers.booking.wageDialog');
   const tForm = useTranslations('Drivers.wage.form');
   const fmt = useAppFormat();
   const { message } = App.useApp();
@@ -223,11 +251,11 @@ function AgreedWageForm({
   }
 
   return (
-    <DialogForm className={styles.form} onSubmit={(e) => void handleSubmit(submit)(e)}>
-      <div className={styles.facts}>
-        <span>{t('current')}</span>
-        <b>{fmt.money(wage.amount ?? '0')}</b>
-      </div>
+    <DialogForm
+      className={styles.form}
+      labelPosition="top"
+      onSubmit={(e) => void handleSubmit(submit)(e)}
+    >
       <NumberField
         control={control}
         name="amount"
@@ -237,6 +265,10 @@ function AgreedWageForm({
         required
         help={tForm('rangeAgreed', { max: fmt.money(String(max)) })}
       />
+      <p className={styles.current}>
+        {tDialog('current')} 
+        <b>{fmt.money(wage.amount ?? '0')}</b>
+      </p>
       <TextAreaField
         control={control}
         name="reason"
@@ -245,7 +277,7 @@ function AgreedWageForm({
         rows={2}
         maxLength={DRIVER_WAGE_REASON_MAX_LENGTH}
       />
-      <Alert type="info" showIcon title={t('noticeAgreed')} />
+      <p className={styles.note}>{t('noticeAgreed')}</p>
       <EditFooter editableUntil={wage.editableUntil} busy={update.isPending} onClose={onClose} />
     </DialogForm>
   );
@@ -261,7 +293,7 @@ function EditFooter({
   onClose: () => void;
 }) {
   const t = useTranslations('Drivers.wage.edit');
-  const tCommon = useTranslations('Common.actions');
+  const tDialog = useTranslations('Drivers.booking.wageDialog');
   const fmt = useAppFormat();
   return (
     <>
@@ -270,10 +302,10 @@ function EditFooter({
       ) : null}
       <div className={styles.actions}>
         <Button onClick={onClose} disabled={busy}>
-          {tCommon('cancel')}
+          {tDialog('back')}
         </Button>
         <Button type="primary" htmlType="submit" loading={busy}>
-          {tCommon('save')}
+          {tDialog('save')}
         </Button>
       </div>
     </>

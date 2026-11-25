@@ -13,25 +13,27 @@ import type {
   AssignableDriver,
   AssignableInternalDriver,
   CreateInternalDriverInput,
-  InternalDriver,
-  InternalDriverFilters,
-  UpdateInternalDriverInput,
   Driver,
+  DriverAccountLookup,
   DriverAssignmentRow,
   DriverFilters,
   DriverOverview,
-  DriverSummary,
+  DriverRosterItem,
+  DriverRosterSummary,
+  DriverTripFilters,
   DriverWageSettings,
-  UpdateDriverWageSettingsInput,
+  InternalDriver,
+  InternalDriverOverview,
+  InternalDriverTripRow,
   InviteDriverInput,
   UpdateDriverInput,
+  UpdateDriverWageSettingsInput,
+  UpdateInternalDriverInput,
 } from './types';
 
 export const DRIVERS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export type DriverListResult = Paged<Driver>;
-
-/** Bộ lọc chung của danh sách VÀ dải số đếm — trạng thái liên kết đi riêng ở `filtersToParams`. */
+/** Bộ lọc chung của danh sách gộp VÀ dải số đếm — trạng thái đi riêng ở `rosterFiltersToParams`. */
 export function sharedFilterParams(filters: DriverFilters): QueryParams {
   return {
     q: filters.q ?? null,
@@ -40,7 +42,7 @@ export function sharedFilterParams(filters: DriverFilters): QueryParams {
   };
 }
 
-export function filtersToParams(filters: DriverFilters): QueryParams {
+export function rosterFiltersToParams(filters: DriverFilters): QueryParams {
   return {
     ...sharedFilterParams(filters),
     linkStatus: filters.linkStatus ?? null,
@@ -52,12 +54,24 @@ export function filtersToParams(filters: DriverFilters): QueryParams {
   };
 }
 
-export const fetchDrivers = (filters: DriverFilters): Promise<DriverListResult> =>
-  fetchPage<Driver>('/drivers', filtersToParams(filters), DRIVERS_DEFAULT_LIMIT);
+/**
+ * Danh sách GỘP tài xế liên kết + tài xế nội bộ (25/11/2026) — lọc, sắp, phân trang ở server.
+ * `GET /drivers` (chỉ liên kết) vẫn còn cho app native.
+ */
+export const fetchDriverRoster = (filters: DriverFilters): Promise<Paged<DriverRosterItem>> =>
+  fetchPage<DriverRosterItem>(
+    '/drivers/roster',
+    rosterFiltersToParams(filters),
+    DRIVERS_DEFAULT_LIMIT,
+  );
 
 /** Dải số đếm đầu màn — mỗi ô bằng tổng danh sách khi bấm vào nó. */
-export const fetchDriverSummary = (filters: DriverFilters): Promise<DriverSummary> =>
-  apiGet<DriverSummary>('/drivers/summary', sharedFilterParams(filters));
+export const fetchDriverRosterSummary = (filters: DriverFilters): Promise<DriverRosterSummary> =>
+  apiGet<DriverRosterSummary>('/drivers/roster/summary', sharedFilterParams(filters));
+
+/** Tra tài khoản khách đã xác minh theo SĐT — hộp "Mời tài xế" hiện tên + ảnh trước khi gửi. */
+export const lookupDriverAccount = (phone: string): Promise<DriverAccountLookup> =>
+  apiGet<DriverAccountLookup>('/drivers/account-lookup', { phone });
 
 /** Mời một TÀI KHOẢN KHÁCH đã xác minh SĐT làm tài xế (ADR 0063). */
 export const inviteDriver = (body: InviteDriverInput): Promise<Driver> =>
@@ -72,10 +86,19 @@ export const suspendDriver = (id: string): Promise<Driver> =>
 export const resumeDriver = (id: string): Promise<Driver> =>
   apiPost<Driver>(`/drivers/${id}/resume`);
 
+/**
+ * "Đã đối chiếu" bằng lái hiện tại của tài xế (tên trên bằng lệch tên đã đặt) — tài xế nộp bằng mới
+ * thì nhãn "Cần đối chiếu" tự hiện lại. `checked = false` gỡ đánh dấu.
+ */
+export const setDriverLicenceChecked = (id: string, checked: boolean): Promise<Driver> =>
+  checked
+    ? apiPost<Driver>(`/drivers/${id}/licence-check`)
+    : apiDelete<Driver>(`/drivers/${id}/licence-check`);
+
 /** Thu hồi lời mời / kết thúc liên kết — server chặn khi tài xế đang chạy chuyến. */
 export const endDriver = (id: string): Promise<unknown> => apiDelete<unknown>(`/drivers/${id}`);
 
-/** Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ + trạng thái bằng lái. */
+/** Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ, bằng lái, số lần để quá hạn. */
 export const fetchAssignableDrivers = (window: {
   pickupAt: string;
   returnAt: string;
@@ -102,16 +125,25 @@ const DRIVER_ASSIGNMENTS_EXPORT_LIMIT = 100;
 /** Trần số trang gom cho một bảng kê — 5.000 chuyến/tháng của MỘT tài xế là dữ liệu hỏng, không phải thật. */
 const DRIVER_ASSIGNMENTS_EXPORT_MAX_PAGES = 50;
 
-/** Các chuyến một tài xế đã nhận, kết thúc trong tháng — phân trang server-side. */
+export function tripFiltersToParams(filters: DriverTripFilters): QueryParams {
+  return {
+    month: filters.month ?? null,
+    q: filters.q?.trim() || null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? DRIVER_ASSIGNMENTS_LIMIT,
+  };
+}
+
+/** Các chuyến một tài xế LIÊN KẾT đã nhận, kết thúc trong tháng — tìm + lọc kết cục ở server. */
 export const fetchDriverAssignments = (
   id: string,
-  params: { month?: string; page: number; limit?: number },
+  filters: DriverTripFilters,
 ): Promise<Paged<DriverAssignmentRow>> => {
-  const limit = params.limit ?? DRIVER_ASSIGNMENTS_LIMIT;
+  const base = tripFiltersToParams(filters);
   return fetchPage<DriverAssignmentRow>(
     `/drivers/${id}/assignments`,
-    { month: params.month ?? null, page: params.page, limit },
-    limit,
+    { ...base, outcome: filters.status ?? null },
+    Number(base.limit),
   );
 };
 
@@ -136,27 +168,28 @@ export async function fetchAllDriverAssignments(
   return rows;
 }
 
-/** Ngăn chi tiết một tài xế trong tháng `YYYY-MM` (bỏ trống = tháng hiện tại, server quyết). */
+/** Trang chi tiết một tài xế trong tháng `YYYY-MM` (bỏ trống = tháng hiện tại, server quyết). */
 export const fetchDriverOverview = (id: string, month: string | undefined): Promise<DriverOverview> =>
   apiGet<DriverOverview>(`/drivers/${id}/overview`, { month: month ?? null });
 
 // ── Danh bạ tài xế NỘI BỘ (ADR 0108) ────────────────────────────────────────────
 
-export function internalFiltersToParams(filters: InternalDriverFilters): QueryParams {
-  return {
-    q: filters.q?.trim() || null,
-    archived: filters.archived ? 'true' : null,
-    page: filters.page ?? 1,
-    limit: filters.limit ?? DRIVERS_DEFAULT_LIMIT,
-  };
-}
+/** Trang chi tiết một tài xế nội bộ: hồ sơ + đơn đang gán. */
+export const fetchInternalDriverDetail = (id: string): Promise<InternalDriverOverview> =>
+  apiGet<InternalDriverOverview>(`/internal-drivers/${id}`);
 
-export const fetchInternalDrivers = (filters: InternalDriverFilters): Promise<Paged<InternalDriver>> =>
-  fetchPage<InternalDriver>(
-    '/internal-drivers',
-    internalFiltersToParams(filters),
-    DRIVERS_DEFAULT_LIMIT,
+/** Các đơn đã gán một tài xế nội bộ, trả xe trong tháng — tìm + lọc trạng thái đơn ở server. */
+export const fetchInternalDriverTrips = (
+  id: string,
+  filters: DriverTripFilters,
+): Promise<Paged<InternalDriverTripRow>> => {
+  const base = tripFiltersToParams(filters);
+  return fetchPage<InternalDriverTripRow>(
+    `/internal-drivers/${id}/trips`,
+    { ...base, status: filters.status ?? null },
+    Number(base.limit),
   );
+};
 
 /** Bộ chọn gán đơn — người đang dùng, kèm cờ bận theo khung giờ (bỏ qua chính đơn đó). */
 export const fetchAssignableInternalDrivers = (window: {

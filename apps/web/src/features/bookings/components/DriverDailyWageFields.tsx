@@ -1,14 +1,15 @@
 'use client';
 
 import { Alert } from 'antd';
-import { useMemo } from 'react';
-import { useWatch, type Control } from 'react-hook-form';
+import { useMemo, type ReactNode } from 'react';
+import { useController, useWatch, type Control } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import { DRIVER_WAGE_REASON_MAX_LENGTH, MONEY_STEP_VND } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { RadioGroupField } from '@/components/form/RadioGroupField';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
 import type { DriverWageQuote } from '../types';
 import styles from './DriverWageDialogs.module.css';
 
@@ -48,24 +49,65 @@ export function useDailyWageSchema(quote: DriverWageQuote) {
 export type DailyWageValues = yup.InferType<ReturnType<typeof useDailyWageSchema>>;
 
 /**
- * Ô "Tiền công/ngày" + tổng của chuyến (× số ngày của đơn) + lựa chọn phạm vi áp dụng.
+ * Mức chọn nhanh dưới ô tiền công (Figma `24145:47780`): mức chung của gian hàng, mức gợi ý của
+ * nền tảng, rồi hai bậc trên gợi ý — chỉ những số nằm trong khoảng hợp lệ, không trùng nhau.
+ */
+export function quickDailyWages(quote: DriverWageQuote): number[] {
+  const min = Number(quote.wageDaily.min);
+  const max = Number(quote.wageDaily.max);
+  const suggested = Number(quote.suggestedDaily);
+  const candidates = [
+    quote.dailyWage === null ? null : Number(quote.dailyWage),
+    suggested,
+    suggested * 1.25,
+    suggested * 1.5,
+  ];
+  const seen = new Set<number>();
+  for (const value of candidates) {
+    if (value === null || !Number.isFinite(value)) continue;
+    const rounded = Math.round(value / MONEY_STEP_VND) * MONEY_STEP_VND;
+    if (rounded >= min && rounded <= max) seen.add(rounded);
+  }
+  return [...seen].slice(0, 3);
+}
+
+/**
+ * Ô "Tiền công/ngày" (ADR 0075 — nhập theo NGÀY, chốt 25/11/2026 dù design ghi "đ/chuyến") + chip
+ * chọn nhanh + khung tổng (× số ngày của đơn) + lựa chọn phạm vi áp dụng.
  *
  * Mức chung của gian hàng (`quote.dailyWage`) là con số DUY NHẤT tự điền; chưa đặt thì ô để trống
  * và mức gợi ý của nền tảng chỉ hiện làm lời nhắc. Lựa chọn phạm vi chỉ hiện khi người dùng được
  * quản lý tài xế và số vừa nhập khác mức chung — nhập đúng mức chung thì không có gì để quyết.
+ *
+ * `currentTotal` (hộp SỬA) đổi khung tổng thành "Tổng thu nhập" kèm chênh lệch so với số đang ghi.
  */
 export function DriverDailyWageFields({
   control,
   quote,
   canSetDefault,
+  label,
+  currentTotal = null,
+  showQuick = true,
+  afterField,
+  beforeTotal,
 }: {
   control: Control<DailyWageValues>;
   quote: DriverWageQuote;
   canSetDefault: boolean;
+  label?: string;
+  currentTotal?: number | null;
+  showQuick?: boolean;
+  /** Dòng ngay dưới ô số (hộp sửa: "Hiện tại: …"). */
+  afterField?: ReactNode;
+  /** Ô chèn trước khung tổng (hộp sửa: lý do) — đúng thứ tự của design. */
+  beforeTotal?: ReactNode;
 }) {
   const t = useTranslations('Drivers.wage.form');
+  const tPicker = useTranslations('Drivers.booking.picker');
+  const tEdit = useTranslations('Drivers.booking.wageDialog');
   const fmt = useAppFormat();
   const daily = useWatch({ control, name: 'daily' });
+  const { field } = useController({ control, name: 'daily' });
   const valid =
     typeof daily === 'number' &&
     daily >= Number(quote.wageDaily.min) &&
@@ -75,16 +117,19 @@ export function DriverDailyWageFields({
   const shopDefault = quote.dailyWage === null ? null : Number(quote.dailyWage);
   const showScope = canSetDefault && valid && daily !== shopDefault;
   const range = { min: fmt.money(quote.wageDaily.min), max: fmt.money(quote.wageDaily.max) };
+  const quick = showQuick ? quickDailyWages(quote) : [];
+  const diff = total !== null && currentTotal !== null ? total - currentTotal : null;
 
   return (
     <>
       <NumberField
         control={control}
         name="daily"
-        label={t('daily')}
+        label={label ?? t('daily')}
         money
         min={0}
         required
+        addonAfter={tPicker('wageSuffix')}
         placeholder={t('placeholder', { amount: fmt.count(Number(quote.suggestedDaily)) })}
         help={
           shopDefault === null
@@ -92,14 +137,36 @@ export function DriverDailyWageFields({
             : t('help', { ...range, current: fmt.money(quote.dailyWage) })
         }
       />
-      <div className={styles.facts}>
+      {afterField}
+      {quick.length > 0 ? (
+        <div className={styles.quick} role="group" aria-label={tPicker('wageQuick')}>
+          {quick.map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={cx(styles.quickChip, daily === value && styles.quickChipActive)}
+              aria-pressed={daily === value}
+              onClick={() => field.onChange(value)}
+            >
+              {fmt.count(value)}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {beforeTotal}
+      <div className={styles.totalBox}>
         <span>
-          {t('total', {
-            daily: valid ? fmt.money(String(daily)) : '-',
-            days: quote.days,
-          })}
+          {currentTotal === null ? tPicker('wageTotal', { days: quote.days }) : tEdit('total')}
         </span>
-        <b>{total === null ? '-' : fmt.money(String(total))}</b>
+        <span className={styles.totalValue}>
+          {diff !== null && diff !== 0 ? (
+            <span className={diff > 0 ? styles.diffUp : styles.diffDown}>
+              {diff > 0 ? '+' : '-'}
+              {fmt.count(Math.abs(diff))}
+            </span>
+          ) : null}
+          <b>{total === null ? '-' : fmt.money(String(total))}</b>
+        </span>
       </div>
       {total !== null && total > Number(quote.rentAmount) ? (
         <Alert type="warning" showIcon title={t('aboveRent', { rent: fmt.money(quote.rentAmount) })} />

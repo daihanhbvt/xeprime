@@ -1,64 +1,74 @@
 'use client';
 
-import { PlusOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Divider, Popconfirm, Select, Tag } from 'antd';
-import { useState, type ReactNode } from 'react';
+import {
+  CheckOutlined,
+  ClockCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  SwapOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { Alert, App, Avatar, Button } from 'antd';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BOOKING_STATUS,
   CANCELLATION_REASON_CATEGORY,
   canTransitionBooking,
   DRIVER_ASSIGNMENT_OUTCOME,
+  DRIVER_ASSIGNMENT_STATUS,
   DRIVER_ASSIGNMENT_STATUS_META,
   DRIVER_INCIDENT_LEVEL,
+  DRIVER_LICENCE_STATE,
   DRIVER_MISSING_ALERT_LEAD_MINUTES,
   DRIVER_SOURCE,
+  DRIVER_WAGE_STAGE,
+  holdRemainingMs,
   isDriverMissingAlertDue,
   isDriverReassignable,
+  longClockText,
   PERMISSION,
   SERVICE_TYPE,
   type BookingStatus,
+  type DriverAssignmentStatus,
 } from '@xeprime/types';
-import { StatusTag } from '@/components/data-display/StatusTag';
-import { DriverLicenceStateTag } from '@/features/drivers/components/DriverLicenceStateTag';
-import { InternalDriverModal } from '@/features/drivers/components/InternalDriverModal';
-import { useAssignableDrivers } from '@/features/drivers/hooks/use-drivers';
-import { useAssignableInternalDrivers } from '@/features/drivers/hooks/use-internal-drivers';
+import { RowActions, type RowAction } from '@/components/data-display/RowActions';
+import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { useNow } from '@/hooks/use-now';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { telHref } from '@/lib/contact';
+import { cx } from '@/lib/cx';
 import { useBookingDriverHistory, useDriverWageQuote } from '../hooks/use-booking';
 import { useAssignBookingDriver } from '../hooks/use-booking-mutations';
 import type { BookingDetail, BookingDriverHistoryItem, BookingDriverIncident } from '../types';
-import { AssignDriverDialog } from './AssignDriverDialog';
-import { BookingDriverHistory } from './BookingDriverHistory';
-import { DriverWageEditDialog } from './DriverWageEditDialog';
-import { DriverWageInfo } from './DriverWageInfo';
+import { BookingDriverHistoryDialog } from './BookingDriverHistory';
 import { BookingStatusTransitionDialog } from './BookingStatusTransitionDialog';
+import { ChangeDriverDialog } from './ChangeDriverDialog';
+import { DriverWageEditDialog } from './DriverWageEditDialog';
 import styles from './BookingDriverSection.module.css';
 
-/** Giá trị trong bộ chọn mang tiền tố nguồn - hai danh sách là hai bảng id riêng. */
-const PICK_PREFIX = { LINKED: 'linked:', INTERNAL: 'internal:' } as const;
+/** Nhịp của đồng hồ hạn nhận chuyến — hiện cả giây (Figma "30:15"). */
+const CLOCK_TICK_MS = 1_000;
+/** Dưới mốc này đồng hồ đổi sắc thái khẩn. */
+const RESPOND_URGENT_MS = 5 * 60_000;
 
 /**
- * Khối "Tài xế" trên chi tiết đơn (ADR 0063 · ADR 0074 · ADR 0108).
+ * Thẻ "Tài xế" trên chi tiết đơn — Figma `23807:73143` (ADR 0063 · ADR 0074 · ADR 0075 · ADR 0108).
  *
- * CHỈ đơn `with_driver` mới có tài xế: đơn khác ẩn hẳn khối, trừ khi còn một tài xế gán từ trước
- * (dữ liệu cũ) — khi đó hiện chỉ-đọc để không ai mất dấu người đang cầm xe. Chỉ còn tài xế LIÊN
- * KẾT: chọn ở bộ chọn, `pending` cho tới khi tài xế nhận ở site khách; bộ chọn hiện cả người BẬN
- * (disable, nhãn "Bận" — không bao giờ nói bận ở đâu). Đơn cũ còn mang tài xế ngoài hệ thống vẫn
- * hiện, gỡ / thay bằng tài xế liên kết được (ADR 0074 điều 4). Tài xế NỘI BỘ (ADR 0108) chọn ở nhóm thứ
- * hai của cùng bộ chọn - gán thẳng, không tiền công; thêm nhanh người mới ngay trong bộ chọn.
+ * CHỈ đơn `with_driver` mới có tài xế: đơn khác ẩn hẳn thẻ, trừ khi còn một tài xế gán từ trước
+ * (dữ liệu cũ) — khi đó hiện chỉ-đọc để không ai mất dấu người đang cầm xe.
+ *
+ * Khung tài xế: ảnh · tên · SĐT · bằng lái (liên kết) hoặc nhãn nguồn (nội bộ / ngoài hệ thống) ·
+ * menu "…" (Đổi tài xế · Sửa tiền công · Gỡ tài xế). Lượt đang chờ nhận: khung vàng "Chờ tài xế nhận
+ * chuyến - Gán lúc …, hạn …" + đồng hồ đếm ngược (ADR 0066). Dòng "Tiền công (xN ngày)" (ADR 0075 —
+ * XePrime chỉ ghi nhận). Link "Lịch sử gán tài xế" mở hộp lịch sử.
  *
  * Tài xế ĐÃ NHẬN rồi rút ⇒ thẻ SỰ CỐ: ai rút, vì sao, hạn điều phối lại; quá hạn hoặc sát giờ thì
  * nói rõ khách đang được huỷ hoàn 100% tính cho bên thuê, kèm lối "Huỷ chuyến do thiếu tài xế".
- *
- * Tiền công (ADR 0075): chọn tài xế mở hộp gán KÈM tiền công (server gợi ý mặc định × số ngày);
- * lượt đang mở hiện số + nút sửa; mỗi lượt trong lịch sử mang số và lịch sử sửa của nó. XePrime chỉ
- * ghi nhận — chủ xe trả trực tiếp cho tài xế, không một đồng nào của đơn đổi theo.
  */
 export function BookingDriverSection({
   booking,
@@ -68,20 +78,17 @@ export function BookingDriverSection({
   canUpdate: boolean;
 }) {
   const t = useTranslations('Drivers.booking');
+  const tCard = useTranslations('Drivers.booking.card');
   const tWage = useTranslations('Drivers.wage');
   const { message } = App.useApp();
-  const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const { has } = usePermissions();
   const fmt = useAppFormat();
   const now = useNow();
-  const [selecting, setSelecting] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  // Tài xế vừa chọn ở bộ chọn — chờ nhập tiền công trong hộp gán.
-  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
   const [editingWage, setEditingWage] = useState<BookingDriverHistoryItem | null>(null);
-  // Thêm nhanh một tài xế nội bộ ngay từ bộ chọn - lưu xong gán luôn vào đơn (ADR 0108).
-  const [creatingInternal, setCreatingInternal] = useState(false);
   const assign = useAssignBookingDriver(booking.id);
 
   const isWithDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
@@ -89,17 +96,7 @@ export function BookingDriverSection({
   const isExternal = driver?.source === DRIVER_SOURCE.EXTERNAL;
   // Tài xế nội bộ (ADR 0108): đã nhận ngay như tài xế ngoài hệ thống, nhưng chọn từ danh bạ.
   const isInternal = driver?.source === DRIVER_SOURCE.INTERNAL;
-  const isAcceptedOnSave = isExternal || isInternal;
   const incident = booking.driverIncident ?? null;
-
-  // Chỉ tải danh sách khi thật sự mở bộ chọn — theo KHUNG GIỜ của đơn.
-  const pickWindow = {
-    pickupAt: booking.pickupAt,
-    returnAt: booking.returnAt,
-    excludeBookingId: booking.id,
-  };
-  const driversQ = useAssignableDrivers(pickWindow, selecting && isWithDriver);
-  const internalQ = useAssignableInternalDrivers(pickWindow, selecting && isWithDriver);
 
   // Lịch sử lượt gán mang tiền công của lượt ĐANG MỞ — tải luôn cho đơn có tài xế (nhỏ, một đơn).
   const historyQ = useBookingDriverHistory(booking.id, isWithDriver);
@@ -118,7 +115,7 @@ export function BookingDriverSection({
   const canWrite = canUpdate && isWithDriver && reassignable;
   // Bộ chọn đọc `/drivers/assignable` (DRIVER_VIEW) — thiếu quyền thì không bày nút, như app native.
   const canPick = canWrite && has(PERMISSION.DRIVER_VIEW);
-  const canAddInternal = canPick && has(PERMISSION.DRIVER_MANAGE);
+  const canEditWage = canUpdate && Boolean(openItem?.wage.editable);
   const canCancel =
     canUpdate && canTransitionBooking(booking.status as BookingStatus, BOOKING_STATUS.CANCELLED);
   // Thẻ sự cố đã nói việc cần làm — không chồng thêm cảnh báo "sắp tới giờ chưa có tài xế".
@@ -131,52 +128,66 @@ export function BookingDriverSection({
       new Date(now),
     );
 
-  /** Tài xế nội bộ: không tiền công, không lượt chờ - gán thẳng (ADR 0108). */
-  function assignInternal(internalDriverId: string) {
+  function unassign() {
     if (assign.isPending) return;
     assign.mutate(
-      { internalDriverId },
+      { driverId: null },
       {
-        onSuccess: () => {
-          message.success(t('internalAssigned'));
-          setSelecting(false);
-        },
+        onSuccess: () => message.success(t('unassignedToast')),
         onError: (err) => message.error(errorMessage(err)),
       },
     );
   }
 
-  /** Chỉ còn đường BỎ GÁN đi thẳng - gán tài xế liên kết luôn qua hộp gán kèm tiền công. */
-  function submit(driverId: string | null) {
-    if (assign.isPending) return;
-    assign.mutate(
-      { driverId },
-      {
-        onSuccess: () => {
-          message.success(driverId ? t('assigned') : t('unassignedToast'));
-          setSelecting(false);
-        },
-        onError: (err) => message.error(errorMessage(err)),
-      },
-    );
-  }
+  const menu: RowAction[] = [
+    {
+      key: 'change',
+      label: t('change'),
+      icon: <SwapOutlined />,
+      hidden: !canPick,
+      onClick: () => setPicking(true),
+    },
+    {
+      key: 'wage',
+      label:
+        openItem?.wage.stage === DRIVER_WAGE_STAGE.NOT_RUN
+          ? tWage('edit.actionAgreed')
+          : tCard('editWage'),
+      icon: <EditOutlined />,
+      hidden: !canEditWage || !openItem,
+      onClick: () => openItem && setEditingWage(openItem),
+    },
+    {
+      key: 'unassign',
+      label: t('unassign'),
+      icon: <DeleteOutlined />,
+      danger: true,
+      hidden: !canWrite,
+      loading: assign.isPending,
+      confirm: { title: t('unassignConfirm'), okText: t('unassign') },
+      onClick: unassign,
+    },
+  ];
 
+  const pending =
+    driver?.source === DRIVER_SOURCE.LINKED &&
+    driver.assignmentStatus === DRIVER_ASSIGNMENT_STATUS.PENDING;
   const driverTel = driver ? telHref(driver.phone) : null;
+  const rangeLabel = fmt.rentalRange(booking.pickupAt, booking.returnAt);
 
   return (
     <section className={styles.panel}>
-      <h3 className={styles.blockTitle}>{t('title')}</h3>
+      <div className={styles.head}>
+        <h2 className={styles.blockTitle}>{t('title')}</h2>
+        {isWithDriver ? (
+          <button type="button" className={styles.textAction} onClick={() => setHistoryOpen(true)}>
+            <FileTextOutlined aria-hidden="true" />
+            {tCard('historyLink')}
+          </button>
+        ) : null}
+      </div>
 
       {!isWithDriver ? <p className={styles.meta}>{t('legacyHint')}</p> : null}
-
-      {/* Tài xế cần biết mình chạy đâu — hành trình nằm ngay cạnh việc phân công. */}
-      {isWithDriver && booking.routeType ? (
-        <p className={styles.meta}>
-          {domainLabel('routeType', booking.routeType)}
-          {booking.pickupAddress ? ` · ${t('pickup', { address: booking.pickupAddress })}` : ''}
-          {booking.destination ? ` ${t('destination', { destination: booking.destination })}` : ''}
-        </p>
-      ) : null}
 
       {incident ? (
         <DriverIncidentAlert
@@ -200,210 +211,108 @@ export function BookingDriverSection({
         />
       ) : null}
 
-      {selecting ? (
-        <div className={styles.row}>
-          <Select
-            className={styles.select}
-            placeholder={t('pickerPlaceholder')}
-            loading={driversQ.isLoading || internalQ.isLoading}
-            showSearch
-            optionFilterProp="title"
-            options={[
-              {
-                key: 'linked',
-                label: t('pickerGroupLinked'),
-                options: (driversQ.data ?? []).map((d) => ({
-                  value: `${PICK_PREFIX.LINKED}${d.id}`,
-                  title: `${d.name} ${d.phone}`,
-                  disabled: d.busy,
-                  label: (
-                    <span className={styles.option}>
-                      <span>
-                        {d.name} · {d.phone}
-                      </span>
-                      <span className={styles.optionTags}>
-                        <DriverLicenceStateTag licence={{ state: d.licenceState }} compact />
-                        {d.busy ? <Tag>{t('busy')}</Tag> : null}
-                      </span>
-                    </span>
-                  ),
-                })),
-              },
-              {
-                key: 'internal',
-                label: t('pickerGroupInternal'),
-                options: (internalQ.data ?? []).map((d) => ({
-                  value: `${PICK_PREFIX.INTERNAL}${d.id}`,
-                  title: `${d.name} ${d.phone}`,
-                  disabled: d.busy || (isInternal && d.id === driver?.id),
-                  label: (
-                    <span className={styles.option}>
-                      <span>
-                        {d.name} · {d.phone}
-                      </span>
-                      <span className={styles.optionTags}>
-                        <Tag>{t('internalTag')}</Tag>
-                        {d.busy ? <Tag>{t('busy')}</Tag> : null}
-                      </span>
-                    </span>
-                  ),
-                })),
-              },
-            ].filter((group) => group.options.length > 0)}
-            popupRender={(menu) =>
-              canAddInternal ? (
-                <>
-                  {menu}
-                  <Divider className={styles.pickerDivider} />
-                  <Button
-                    type="text"
-                    block
-                    icon={<PlusOutlined />}
-                    onClick={() => setCreatingInternal(true)}
-                  >
-                    {t('addInternal')}
-                  </Button>
-                </>
+      {driver ? (
+        <div className={styles.box}>
+          <div className={styles.driverRow}>
+            <Avatar
+              size={36}
+              src={driver.avatarUrl ?? undefined}
+              icon={driver.avatarUrl ? undefined : <UserOutlined />}
+            />
+            <span className={styles.who}>
+              <span className={styles.name}>{driver.name}</span>
+              {driverTel ? (
+                <a href={driverTel} className={styles.phone}>
+                  {driver.phone}
+                </a>
               ) : (
-                menu
-              )
-            }
-            notFoundContent={
-              driversQ.isLoading || internalQ.isLoading
-                ? null
-                : driversQ.isError
-                  ? errorMessage(driversQ.error)
-                  : internalQ.isError
-                    ? errorMessage(internalQ.error)
-                    : t('pickerEmptyAll')
-            }
-            onChange={(value: string) => {
-              if (value.startsWith(PICK_PREFIX.INTERNAL)) {
-                assignInternal(value.slice(PICK_PREFIX.INTERNAL.length));
-                return;
-              }
-              const id = value.slice(PICK_PREFIX.LINKED.length);
-              const chosen = driversQ.data?.find((d) => d.id === id);
-              if (chosen) setPicked({ id: chosen.id, name: chosen.name });
-            }}
-            value={null}
-            disabled={assign.isPending}
-            aria-label={t('pickerLabel')}
-          />
-          <div className={styles.actions}>
-            <Button size="small" onClick={() => setSelecting(false)}>
-              {t('close')}
-            </Button>
-          </div>
-        </div>
-      ) : driver ? (
-        <div className={styles.row}>
-          <div className={styles.stack}>
-            <span className={styles.strong}>
-              {driver.name}{' '}
-              {isInternal ? (
-                <Tag>{t('internalTag')}</Tag>
-              ) : isExternal ? (
-                <Tag>{t('externalTag')}</Tag>
-              ) : (
-                <StatusTag
-                  value={driver.assignmentStatus}
-                  meta={DRIVER_ASSIGNMENT_STATUS_META}
-                  group="driverAssignmentStatus"
-                />
+                <span className={styles.phone}>{driver.phone}</span>
               )}
             </span>
-            {driverTel ? (
-              <a href={driverTel} className={styles.link}>
-                {driver.phone}
-              </a>
-            ) : (
-              <span>{driver.phone}</span>
-            )}
-            <span className={styles.meta}>
-              {isAcceptedOnSave
+            <SourceBadge driver={driver} />
+            <RowActions actions={menu} maxInline={0} overflowLabel={tCard('menu')} />
+          </div>
+
+          {pending ? (
+            <div className={styles.pendingBox}>
+              <ClockCircleOutlined className={styles.pendingIcon} aria-hidden="true" />
+              <span className={styles.pendingText}>
+                <b>{tCard('pendingTitle')}</b>
+                <span>
+                  {driver.respondBy
+                    ? tCard('pendingTime', {
+                        assigned: fmt.time(driver.assignedAt),
+                        deadline: fmt.shortDateTime(driver.respondBy),
+                      })
+                    : t('assignedAt', { time: fmt.dateTime(driver.assignedAt) })}
+                </span>
+              </span>
+              {driver.respondBy ? <RespondClock deadline={driver.respondBy} /> : null}
+            </div>
+          ) : (
+            <p className={styles.meta}>
+              {isInternal || isExternal
                 ? t('externalSetAt', { time: fmt.dateTime(driver.assignedAt) })
                 : driver.respondedAt
-                  ? t('respondedAt', { time: fmt.dateTime(driver.respondedAt) })
+                  ? tCard('accepted', { time: fmt.dateTime(driver.respondedAt) })
                   : t('assignedAt', { time: fmt.dateTime(driver.assignedAt) })}
-            </span>
-            {/* Hạn tài xế trả lời (ADR 0066) — quá hạn thì hệ thống trả lượt về và báo khẩn. */}
-            {driver.respondBy ? (
-              <span className={styles.deadline}>
-                {t('respondBy', { time: fmt.dateTime(driver.respondBy) })}
+            </p>
+          )}
+
+          {isExternal && canWrite ? <p className={styles.meta}>{t('externalLegacy')}</p> : null}
+
+          {isInternal ? (
+            <p className={styles.meta}>{tCard('internalNoWage')}</p>
+          ) : openItem && openItem.wage.amount !== null ? (
+            <div className={styles.wageRow}>
+              <span>
+                {openItem.wage.stage === DRIVER_WAGE_STAGE.NOT_RUN
+                  ? tCard('wageAgreed')
+                  : tCard('wageLine', { days: openItem.wage.days ?? 1 })}
               </span>
-            ) : null}
-            {isExternal && canWrite ? (
-              <span className={styles.meta}>{t('externalLegacy')}</span>
-            ) : null}
-            {openItem ? (
-              <DriverWageInfo
-                wage={openItem.wage}
-                canEdit={canUpdate}
-                onEdit={() => setEditingWage(openItem)}
-              />
-            ) : null}
-            {daysChanged ? (
-              <span className={styles.deadline}>{tWage('daysChanged', daysChanged)}</span>
-            ) : null}
-          </div>
-          {canWrite ? (
-            <div className={styles.actions}>
-              {canPick ? (
-                <Button size="small" onClick={() => setSelecting(true)}>
-                  {t('change')}
-                </Button>
-              ) : null}
-              <Popconfirm title={t('unassignConfirm')} onConfirm={() => submit(null)}>
-                <Button size="small" loading={assign.isPending}>
-                  {t('unassign')}
-                </Button>
-              </Popconfirm>
+              <b>{fmt.money(openItem.wage.amount)}</b>
             </div>
+          ) : null}
+          {daysChanged ? (
+            <span className={styles.deadline}>{tWage('daysChanged', daysChanged)}</span>
           ) : null}
         </div>
       ) : (
-        <div className={styles.row}>
+        <div className={cx(styles.box, styles.emptyBox)}>
           {/* Đơn có tài xế chưa phân công nghĩa là chưa chạy được — nhắc bằng màu cảnh báo. */}
           <span className={styles.missing}>{t('unassigned')}</span>
+          <span className={styles.meta}>{tCard('emptyHint')}</span>
           {canPick ? (
-            <div className={styles.actions}>
-              <Button size="small" type="primary" onClick={() => setSelecting(true)}>
-                {t('assign')}
-              </Button>
-            </div>
+            <Button type="primary" icon={<CheckOutlined />} onClick={() => setPicking(true)}>
+              {t('assign')}
+            </Button>
           ) : null}
         </div>
       )}
-      {isWithDriver ? (
-        <BookingDriverHistory
-          bookingId={booking.id}
-          canEditWage={canUpdate}
-          onEditWage={setEditingWage}
-        />
-      ) : null}
 
-      {picked ? (
-        <AssignDriverDialog
+      {picking ? <ChangeDriverDialog booking={booking} onClose={() => setPicking(false)} /> : null}
+      {historyOpen ? (
+        <BookingDriverHistoryDialog
           bookingId={booking.id}
-          driver={picked}
-          onClose={() => setPicked(null)}
-          onAssigned={() => {
-            setPicked(null);
-            setSelecting(false);
-          }}
+          subtitle={tCard('historySubtitle', { code: booking.code, range: rangeLabel })}
+          canEditWage={canUpdate}
+          onEditWage={(item) => setEditingWage(item)}
+          onClose={() => setHistoryOpen(false)}
         />
       ) : null}
-      <InternalDriverModal
-        open={creatingInternal}
-        driver={null}
-        onClose={() => setCreatingInternal(false)}
-        onSaved={(created) => assignInternal(created.id)}
-      />
       {editingWage ? (
         <DriverWageEditDialog
           bookingId={booking.id}
           item={editingWage}
+          status={
+            editingWage.outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN && driver?.assignmentStatus ? (
+              <StatusBadge
+                value={driver.assignmentStatus as DriverAssignmentStatus}
+                meta={DRIVER_ASSIGNMENT_STATUS_META}
+                group="driverAssignmentStatus"
+              />
+            ) : undefined
+          }
           onClose={() => setEditingWage(null)}
         />
       ) : null}
@@ -419,6 +328,57 @@ export function BookingDriverSection({
         />
       ) : null}
     </section>
+  );
+}
+
+/** Bằng lái (tài xế liên kết) hoặc nhãn nguồn (nội bộ / ngoài hệ thống) ở góc khung tài xế. */
+function SourceBadge({ driver }: { driver: NonNullable<BookingDetail['driver']> }) {
+  const t = useTranslations('Drivers.booking');
+  const tCard = useTranslations('Drivers.booking.card');
+  if (driver.source === DRIVER_SOURCE.INTERNAL) {
+    return <span className={styles.sourceTag}>{t('internalTag')}</span>;
+  }
+  if (driver.source === DRIVER_SOURCE.EXTERNAL) {
+    return <span className={styles.sourceTag}>{t('externalTag')}</span>;
+  }
+  const licence = driver.licence;
+  if (!licence) return null;
+  if (licence.state === DRIVER_LICENCE_STATE.VERIFIED) {
+    return (
+      <span className={cx(styles.licence, styles.licenceOk)}>
+        <CheckOutlined aria-hidden="true" />
+        {licence.classes.length > 0
+          ? tCard('licence', { classes: licence.classes.join(', ') })
+          : tCard('licenceVerified')}
+      </span>
+    );
+  }
+  return <span className={cx(styles.licence, styles.licenceBad)}>{tCard('licenceUnverified')}</span>;
+}
+
+/** Đồng hồ "30:15" tới hạn tài xế trả lời (ADR 0066) — mốc do server chốt, đây chỉ đếm. */
+function RespondClock({ deadline }: { deadline: string }) {
+  const tCard = useTranslations('Drivers.booking.card');
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (holdRemainingMs(deadline) <= 0) return undefined;
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      if (holdRemainingMs(deadline) <= 0) clearInterval(timer);
+    }, CLOCK_TICK_MS);
+    return () => clearInterval(timer);
+  }, [deadline]);
+  const remaining = holdRemainingMs(deadline, new Date(now));
+  if (remaining <= 0) return null;
+  const clock = longClockText(remaining);
+  return (
+    <span
+      className={cx(styles.clock, remaining < RESPOND_URGENT_MS && styles.clockUrgent)}
+      aria-label={tCard('countdown', { time: clock })}
+      suppressHydrationWarning
+    >
+      {clock}
+    </span>
   );
 }
 

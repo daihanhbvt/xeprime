@@ -72,7 +72,9 @@
     "suspended": "Driver suspended",
     "resumed": "Driver reactivated",
     "ended": "Partnership with the driver ended",
-    "revoked": "Invitation revoked"
+    "revoked": "Invitation revoked",
+    "licenceChecked": "Licence marked as checked",
+    "licenceUnchecked": "Check mark removed"
   },
   "form": {
     "titleInvite": "Invite new driver",
@@ -91,7 +93,8 @@
     },
     "titleReinvite": "Invite driver again",
     "notePlaceholder": "Add a note about this driver",
-    "hintTitle": "Note"
+    "hintTitle": "Note",
+    "accountPhotoHint": "Photo and phone come from the driver's XePrime account - to change the person, invite again."
   },
   "booking": {
     "title": "Driver",
@@ -133,7 +136,82 @@
     "pickerGroupLinked": "Linked drivers",
     "pickerGroupInternal": "In-house drivers",
     "pickerEmptyAll": "No linked or in-house drivers yet",
-    "addInternal": "Add in-house driver"
+    "addInternal": "Add in-house driver",
+    "card": {
+      "licence": "Licence {classes}",
+      "licenceVerified": "Licence verified",
+      "licenceUnverified": "Licence not verified",
+      "menu": "Driver actions",
+      "pendingTitle": "Waiting for the driver to accept",
+      "pendingTime": "Assigned at {assigned}, due {deadline}",
+      "countdown": "{time} left",
+      "wageLine": "{days, plural, one {Pay (x# day)} other {Pay (x# days)}}",
+      "wageAgreed": "Agreed pay",
+      "historyLink": "Driver assignment history",
+      "editWage": "Edit pay",
+      "internalNoWage": "In-house driver - no pay recorded",
+      "accepted": "Driver accepted the trip at {time}",
+      "emptyTitle": "No driver yet",
+      "emptyHint": "Assign a driver to get the handover ready.",
+      "historySubtitle": "Booking {code}, {range}"
+    },
+    "picker": {
+      "titleAssign": "Assign driver",
+      "titleChange": "Change driver",
+      "subtitle": "Booking {code}, {range}",
+      "search": "Search driver name, phone number...",
+      "searchLabel": "Search drivers",
+      "status": "Status",
+      "statusAll": "All statuses",
+      "statusFree": "Free in this window",
+      "statusBusy": "Overlapping trip",
+      "type": "Driver type",
+      "typeAll": "All driver types",
+      "typeLinked": "Linked drivers",
+      "typeInternal": "In-house drivers",
+      "internal": "In-house",
+      "listLabel": "Drivers you can assign",
+      "free": "Free in this window",
+      "freeExpired": "{count, plural, one {Free - # missed reply} other {Free - # missed replies}}",
+      "busy": "Overlapping trip",
+      "current": "Assigned now",
+      "licenceVerified": "Licence {classes} - Verified",
+      "licenceVerifiedNoClass": "Licence verified",
+      "licencePending": "Reading licence",
+      "licenceNone": "Licence not verified",
+      "unverifiedWarning": "This driver's licence is not verified - check their documents before handover.",
+      "empty": "No drivers match your search",
+      "emptyAll": "No linked or in-house drivers yet",
+      "loadError": "Could not load the drivers.",
+      "sideTitle": "Driver",
+      "noSelection": "Pick a driver from the list on the left.",
+      "wageField": "Pay per day",
+      "wageSuffix": "VND/day",
+      "wageTotal": "{days, plural, one {Pay (x# day)} other {Pay (x# days)}}",
+      "wageQuick": "Quick daily pay",
+      "respondWindow": "The driver has {duration} to accept the trip.",
+      "internalNote": "In-house drivers are assigned directly, count as accepted, and have no pay recorded.",
+      "confirmAssign": "Confirm driver",
+      "confirmChange": "Confirm change",
+      "back": "Back"
+    },
+    "historyDialog": {
+      "title": "Driver assignment history",
+      "assignedBy": "Assigned by {name} at {time}",
+      "assignedBySystem": "Assigned automatically (Instant book) at {time}",
+      "close": "Back"
+    },
+    "wageDialog": {
+      "title": "Edit pay",
+      "titleAgreed": "Agreed pay",
+      "newDaily": "New pay per day",
+      "newAmount": "New pay",
+      "current": "Current:",
+      "total": "Total earnings",
+      "save": "Save pay",
+      "back": "Back",
+      "driverLine": "{name} - {phone}"
+    }
   },
   "endedBy": {
     "driver": "Driver left",
@@ -397,7 +475,7 @@
     "expiry": "Valid until",
     "noExpiry": "No expiry",
     "kind": "Type",
-    "nameMismatch": "The name on the licence differs from the name you entered - check their documents at handover.",
+    "nameMismatch": "The name on the licence differs from the name you entered - check the real document, then press \"Mark as checked\", or edit the driver name to match.",
     "pendingTitle": "Reading the licence photo",
     "pendingHint": "The driver has just submitted a licence; the result is ready in a few minutes.",
     "noneTitle": "Not provided",
@@ -410,7 +488,8 @@
     "dropsCritical": "{count, plural, other {# close to pickup}}",
     "edit": "Edit",
     "editInfo": "Edit details",
-    "viewTrips": "View trips"
+    "viewTrips": "View trips",
+    "detail": "Details"
   },
   "internal": {
     "viewLabel": "Driver list",
@@ -463,5 +542,168 @@
       "archived": "Driver archived",
       "restored": "Driver restored"
     }
+  },
+  "roster": {
+    "typeInternal": "In-house staff",
+    "statusLabel": "Status",
+    "internalActive": "Active",
+    "internalArchived": "Archived",
+    "addDriver": "Add driver"
+  },
+  "add": {
+    "title": "Add driver",
+    "tabsLabel": "Driver type",
+    "tabs": {
+      "invite": "Invite driver",
+      "internal": "In-house driver"
+    },
+    "invite": {
+      "account": "Driver info",
+      "accountPlaceholder": "Enter a phone number to see the account",
+      "lookingUp": "Looking up the account...",
+      "notFound": "No verified XePrime account uses this number",
+      "alreadyLinked": "This account already has an invitation or is already your driver",
+      "lookupError": "Could not look up the account right now - you can still send the invitation",
+      "submit": "Invite driver"
+    },
+    "internal": {
+      "title": "Add in-house driver",
+      "editTitle": "Edit in-house driver",
+      "name": "Full name",
+      "namePlaceholder": "Enter the driver's full name",
+      "phone": "Phone number",
+      "phonePlaceholder": "Enter the in-house driver's phone number",
+      "note": "Note",
+      "notePlaceholder": "Enter a note about this driver",
+      "submit": "Add driver",
+      "save": "Save changes",
+      "photo": "Driver photo",
+      "photoAdd": "Upload photo",
+      "photoChange": "Change photo",
+      "photoRemove": "Remove photo",
+      "photoHint": "PNG, JPG, JPEG, WEBP (up to {maxMb}MB)",
+      "photoAlt": "Driver photo",
+      "photoUploading": "Uploading photo {percent}%"
+    }
+  },
+  "detailPage": {
+    "pageTitle": "Driver details",
+    "loading": "Loading driver details",
+    "loadError": "Could not load the driver details.",
+    "notFound": "This driver was not found - the link may have been removed.",
+    "backToList": "Back to drivers",
+    "profile": {
+      "edit": "Edit",
+      "call": "Call {name}",
+      "zalo": "Message {name} on Zalo",
+      "account": "Account name",
+      "activeTrips": "Assigned trips",
+      "linkedSince": "Linked since",
+      "invitedAt": "Invited at",
+      "endedAt": "Ended at",
+      "addedAt": "Added to directory",
+      "archivedAt": "Archived at",
+      "photoAlt": "Photo of {name}"
+    },
+    "licence": {
+      "title": "Driver's licence",
+      "class": "Class",
+      "expiry": "Valid until",
+      "holder": "Name on licence",
+      "kind": "Licence type"
+    },
+    "note": {
+      "title": "Internal note",
+      "edit": "Edit",
+      "empty": "No note yet"
+    },
+    "unlink": "Remove link",
+    "month": {
+      "previous": "Previous month",
+      "next": "Next month",
+      "label": "{month}"
+    },
+    "overview": {
+      "kpi": {
+        "wage": "Recorded pay",
+        "completed": "Completed trips",
+        "completedHint": "{count, plural, one {# driving day in total} other {# driving days in total}}",
+        "average": "Average / driving day",
+        "averageHint": "{count, plural, one {Average over # driving day} other {Average over # driving days}}",
+        "upcoming": "Upcoming trips",
+        "upcomingNearest": "Next: {time}",
+        "upcomingNone": "No upcoming trips"
+      },
+      "chart": {
+        "title": "Pay over the last 6 months",
+        "hint": "By the month a trip ends",
+        "trips": "{count, plural, one {# trip} other {# trips}}",
+        "empty": "No trips ended in these 6 months.",
+        "label": "Pay by month",
+        "bar": "{month}: {amount} · {trips}"
+      },
+      "upcoming": {
+        "title": "Upcoming trips",
+        "viewCalendar": "View vehicle calendar",
+        "openBooking": "Booking details",
+        "empty": "No trips are assigned to this driver.",
+        "more": "Showing the {shown} earliest of {total, plural, one {# trip} other {# trips}}.",
+        "noWage": "No pay recorded"
+      },
+      "wage": {
+        "title": "Pay"
+      },
+      "reliability": {
+        "title": "Reliability",
+        "window": "Last {days} days",
+        "rateLabel": "Acceptance rate",
+        "rateOf": "{accepted}/{decided} assigned trips",
+        "response": "Average reply time",
+        "declined": "Declined",
+        "expired": "No reply",
+        "pending": "Awaiting reply",
+        "times": "{count, plural, one {# time} other {# times}}",
+        "trips": "{count, plural, one {# trip} other {# trips}}"
+      }
+    },
+    "trips": {
+      "searchPlaceholder": "Search booking code, customer, vehicle, plate...",
+      "searchLabel": "Search trips",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "totalRecorded": "Total recorded:",
+      "export": "Export statement",
+      "columns": {
+        "booking": "Booking",
+        "vehicle": "Vehicle",
+        "customer": "Customer",
+        "period": "Time",
+        "status": "Status",
+        "wage": "Pay",
+        "actions": "Actions"
+      },
+      "detail": "Details",
+      "emptyFiltered": "No trips match the filters",
+      "emptyFilteredHint": "Try another keyword or status."
+    }
+  },
+  "internalDetail": {
+    "tripsTitle": "Assigned trips",
+    "tripsHint": "Bookings returned in the selected month",
+    "tableLabel": "In-house driver's trips in the month",
+    "empty": "No trips were returned in this month.",
+    "emptyHint": "Pick another month in the top right to see its trips.",
+    "loadError": "Could not load the trips.",
+    "noWageNote": "In-house drivers have no pay recorded on XePrime.",
+    "archive": "Stop working together",
+    "restore": "Restore"
+  },
+  "licenceCheck": {
+    "checked": "Checked",
+    "mark": "Mark as checked",
+    "unmark": "Remove mark",
+    "checkedBy": "Checked by {name} at {time}",
+    "checkedAt": "Checked at {time}",
+    "menu": "Documents checked"
   }
 }

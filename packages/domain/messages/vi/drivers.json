@@ -72,7 +72,9 @@
     "suspended": "Đã tạm khoá tài xế",
     "resumed": "Đã mở khoá tài xế",
     "ended": "Đã ngừng hợp tác với tài xế",
-    "revoked": "Đã thu hồi lời mời"
+    "revoked": "Đã thu hồi lời mời",
+    "licenceChecked": "Đã đánh dấu đối chiếu bằng lái",
+    "licenceUnchecked": "Đã bỏ đánh dấu đối chiếu"
   },
   "form": {
     "titleInvite": "Mời tài xế mới",
@@ -91,7 +93,8 @@
     },
     "titleReinvite": "Mời lại tài xế",
     "notePlaceholder": "Nhập ghi chú cho tài xế",
-    "hintTitle": "Lưu ý"
+    "hintTitle": "Lưu ý",
+    "accountPhotoHint": "Ảnh và số điện thoại theo tài khoản XePrime của tài xế - đổi người thì mời lại."
   },
   "booking": {
     "title": "Tài xế",
@@ -133,7 +136,82 @@
     "pickerGroupLinked": "Tài xế liên kết",
     "pickerGroupInternal": "Tài xế nội bộ",
     "pickerEmptyAll": "Chưa có tài xế liên kết hay tài xế nội bộ nào",
-    "addInternal": "Thêm tài xế nội bộ"
+    "addInternal": "Thêm tài xế nội bộ",
+    "card": {
+      "licence": "Bằng lái {classes}",
+      "licenceVerified": "Đã xác thực bằng lái",
+      "licenceUnverified": "Chưa xác thực bằng lái",
+      "menu": "Thao tác với tài xế",
+      "pendingTitle": "Chờ tài xế nhận chuyến",
+      "pendingTime": "Gán lúc {assigned}, hạn {deadline}",
+      "countdown": "Còn {time}",
+      "wageLine": "{days, plural, other {Tiền công (x# ngày)}}",
+      "wageAgreed": "Tiền công thoả thuận",
+      "historyLink": "Lịch sử gán tài xế",
+      "editWage": "Sửa tiền công",
+      "internalNoWage": "Tài xế nội bộ - không ghi tiền công",
+      "accepted": "Tài xế đã nhận chuyến lúc {time}",
+      "emptyTitle": "Chưa có tài xế",
+      "emptyHint": "Gán tài xế để chuẩn bị bàn giao chuyến.",
+      "historySubtitle": "Đơn hàng {code}, {range}"
+    },
+    "picker": {
+      "titleAssign": "Gán tài xế",
+      "titleChange": "Đổi tài xế",
+      "subtitle": "Đơn hàng {code}, {range}",
+      "search": "Tìm tên tài xế, số điện thoại...",
+      "searchLabel": "Tìm tài xế",
+      "status": "Trạng thái",
+      "statusAll": "Tất cả trạng thái",
+      "statusFree": "Rảnh trong khung giờ",
+      "statusBusy": "Trùng chuyến",
+      "type": "Loại tài xế",
+      "typeAll": "Tất cả loại tài xế",
+      "typeLinked": "Tài xế liên kết",
+      "typeInternal": "Tài xế nội bộ",
+      "internal": "Nội bộ",
+      "listLabel": "Danh sách tài xế có thể gán",
+      "free": "Rảnh trong khung giờ",
+      "freeExpired": "{count, plural, other {Rảnh - # lần không xác nhận}}",
+      "busy": "Trùng chuyến",
+      "current": "Đang gán",
+      "licenceVerified": "Bằng lái {classes} - Đã xác thực",
+      "licenceVerifiedNoClass": "Bằng lái đã xác thực",
+      "licencePending": "Đang đọc bằng lái",
+      "licenceNone": "Chưa xác minh bằng lái",
+      "unverifiedWarning": "Tài xế chưa xác minh bằng lái - đối chiếu giấy tờ trước khi giao xe.",
+      "empty": "Không có tài xế nào khớp tìm kiếm",
+      "emptyAll": "Chưa có tài xế liên kết hay tài xế nội bộ nào",
+      "loadError": "Không tải được danh sách tài xế.",
+      "sideTitle": "Tài xế",
+      "noSelection": "Chọn một tài xế ở danh sách bên trái.",
+      "wageField": "Tiền công/ngày",
+      "wageSuffix": "đ/ngày",
+      "wageTotal": "{days, plural, other {Tiền công (x# ngày)}}",
+      "wageQuick": "Chọn nhanh tiền công/ngày",
+      "respondWindow": "Tài xế có {duration} để nhận chuyến.",
+      "internalNote": "Tài xế nội bộ được gán thẳng, coi như đã nhận chuyến, không ghi tiền công.",
+      "confirmAssign": "Xác nhận gán tài xế",
+      "confirmChange": "Xác nhận đổi tài xế",
+      "back": "Quay lại"
+    },
+    "historyDialog": {
+      "title": "Lịch sử gán tài xế",
+      "assignedBy": "Gán bởi {name}, lúc {time}",
+      "assignedBySystem": "Hệ thống tự gán (Đặt ngay), lúc {time}",
+      "close": "Quay lại"
+    },
+    "wageDialog": {
+      "title": "Sửa tiền công",
+      "titleAgreed": "Tiền công thoả thuận",
+      "newDaily": "Tiền công mới/ngày",
+      "newAmount": "Tiền công mới",
+      "current": "Hiện tại:",
+      "total": "Tổng thu nhập",
+      "save": "Lưu tiền công",
+      "back": "Quay lại",
+      "driverLine": "{name} - {phone}"
+    }
   },
   "endedBy": {
     "driver": "Tài xế ngừng",
@@ -397,7 +475,7 @@
     "expiry": "Thời hạn",
     "noExpiry": "Không thời hạn",
     "kind": "Loại",
-    "nameMismatch": "Tên trên bằng khác tên bạn đã nhập - đối chiếu giấy tờ khi giao xe.",
+    "nameMismatch": "Tên trên bằng khác tên bạn đã nhập - xem giấy tờ thật rồi bấm \"Đánh dấu đã đối chiếu\", hoặc sửa tên tài xế cho khớp.",
     "pendingTitle": "Đang đọc ảnh bằng lái",
     "pendingHint": "Tài xế vừa nộp bằng lái, kết quả có sau ít phút.",
     "noneTitle": "Chưa cập nhật",
@@ -410,7 +488,8 @@
     "dropsCritical": "{count, plural, other {# lần sát giờ}}",
     "edit": "Chỉnh sửa",
     "editInfo": "Chỉnh sửa thông tin",
-    "viewTrips": "Xem chuyến"
+    "viewTrips": "Xem chuyến",
+    "detail": "Chi tiết"
   },
   "internal": {
     "viewLabel": "Danh sách tài xế",
@@ -463,5 +542,168 @@
       "archived": "Đã lưu trữ tài xế",
       "restored": "Đã khôi phục tài xế"
     }
+  },
+  "roster": {
+    "typeInternal": "Nhân viên nội bộ",
+    "statusLabel": "Trạng thái",
+    "internalActive": "Đang hoạt động",
+    "internalArchived": "Đã lưu trữ",
+    "addDriver": "Thêm tài xế mới"
+  },
+  "add": {
+    "title": "Thêm tài xế mới",
+    "tabsLabel": "Loại tài xế",
+    "tabs": {
+      "invite": "Mời tài xế",
+      "internal": "Tài xế nội bộ"
+    },
+    "invite": {
+      "account": "Thông tin tài xế",
+      "accountPlaceholder": "Nhập số điện thoại để xem tài khoản",
+      "lookingUp": "Đang tìm tài khoản...",
+      "notFound": "Chưa có tài khoản XePrime đã xác minh với số này",
+      "alreadyLinked": "Tài khoản này đã có lời mời hoặc đang là tài xế của bạn",
+      "lookupError": "Không tra được tài khoản lúc này - vẫn có thể gửi lời mời",
+      "submit": "Mời tài xế"
+    },
+    "internal": {
+      "title": "Thêm tài xế nội bộ",
+      "editTitle": "Chỉnh sửa tài xế nội bộ",
+      "name": "Họ và tên",
+      "namePlaceholder": "Nhập họ và tên tài xế",
+      "phone": "Số điện thoại",
+      "phonePlaceholder": "Nhập số điện thoại tài xế nội bộ",
+      "note": "Ghi chú",
+      "notePlaceholder": "Nhập ghi chú cho tài xế",
+      "submit": "Thêm tài xế",
+      "save": "Lưu thay đổi",
+      "photo": "Ảnh tài xế",
+      "photoAdd": "Tải ảnh lên",
+      "photoChange": "Thay ảnh",
+      "photoRemove": "Xoá ảnh",
+      "photoHint": "PNG, JPG, JPEG, WEBP (tối đa {maxMb}Mb)",
+      "photoAlt": "Ảnh tài xế",
+      "photoUploading": "Đang tải ảnh {percent}%"
+    }
+  },
+  "detailPage": {
+    "pageTitle": "Chi tiết tài xế",
+    "loading": "Đang tải thông tin tài xế",
+    "loadError": "Không tải được thông tin tài xế.",
+    "notFound": "Không tìm thấy tài xế này - có thể liên kết đã bị gỡ.",
+    "backToList": "Về danh sách tài xế",
+    "profile": {
+      "edit": "Chỉnh sửa",
+      "call": "Gọi {name}",
+      "zalo": "Nhắn Zalo cho {name}",
+      "account": "Tên tài khoản",
+      "activeTrips": "Chuyến đang gán",
+      "linkedSince": "Liên kết từ",
+      "invitedAt": "Mời lúc",
+      "endedAt": "Kết thúc lúc",
+      "addedAt": "Thêm vào danh bạ",
+      "archivedAt": "Lưu trữ lúc",
+      "photoAlt": "Ảnh của {name}"
+    },
+    "licence": {
+      "title": "Bằng lái",
+      "class": "Hạng",
+      "expiry": "Hạn đến",
+      "holder": "Tên trên bằng",
+      "kind": "Loại bằng lái"
+    },
+    "note": {
+      "title": "Ghi chú nội bộ",
+      "edit": "Sửa",
+      "empty": "Chưa có ghi chú"
+    },
+    "unlink": "Huỷ liên kết",
+    "month": {
+      "previous": "Tháng trước",
+      "next": "Tháng sau",
+      "label": "Tháng {month}"
+    },
+    "overview": {
+      "kpi": {
+        "wage": "Tiền công ghi nhận",
+        "completed": "Chuyến hoàn thành",
+        "completedHint": "{count, plural, other {Tổng số # ngày lái}}",
+        "average": "Bình quân / ngày lái",
+        "averageHint": "{count, plural, other {Bình quân trên tổng # ngày lái}}",
+        "upcoming": "Chuyến sắp chạy",
+        "upcomingNearest": "Gần nhất: {time}",
+        "upcomingNone": "Chưa có chuyến sắp chạy"
+      },
+      "chart": {
+        "title": "Tiền công 6 tháng gần nhất",
+        "hint": "Theo tháng kết thúc chuyến",
+        "trips": "{count, plural, other {# chuyến}}",
+        "empty": "Chưa có chuyến nào kết thúc trong 6 tháng này.",
+        "label": "Tiền công theo tháng",
+        "bar": "{month}: {amount} · {trips}"
+      },
+      "upcoming": {
+        "title": "Chuyến sắp tới",
+        "viewCalendar": "Xem lịch xe",
+        "openBooking": "Chi tiết đơn",
+        "empty": "Chưa có chuyến nào đang gán cho tài xế này.",
+        "more": "Hiển thị {shown} chuyến sớm nhất trong {total, plural, other {# chuyến}}.",
+        "noWage": "Chưa ghi tiền công"
+      },
+      "wage": {
+        "title": "Tiền công"
+      },
+      "reliability": {
+        "title": "Độ tin cậy",
+        "window": "{days} ngày gần nhất",
+        "rateLabel": "Tỉ lệ nhận chuyến",
+        "rateOf": "{accepted}/{decided} chuyến được gán",
+        "response": "Trả lời trung bình",
+        "declined": "Từ chối",
+        "expired": "Không phản hồi",
+        "pending": "Đang chờ trả lời",
+        "times": "{count, plural, other {# lần}}",
+        "trips": "{count, plural, other {# chuyến}}"
+      }
+    },
+    "trips": {
+      "searchPlaceholder": "Tìm kiếm mã đơn, khách hàng, tên xe, biển số...",
+      "searchLabel": "Tìm chuyến",
+      "status": "Trạng thái",
+      "allStatuses": "Tất cả trạng thái",
+      "totalRecorded": "Tổng ghi nhận:",
+      "export": "Xuất bảng kê",
+      "columns": {
+        "booking": "Mã đơn",
+        "vehicle": "Xe",
+        "customer": "Khách hàng",
+        "period": "Thời gian",
+        "status": "Trạng thái",
+        "wage": "Tiền công",
+        "actions": "Thao tác"
+      },
+      "detail": "Chi tiết",
+      "emptyFiltered": "Không có chuyến nào khớp bộ lọc",
+      "emptyFilteredHint": "Thử đổi từ khoá hoặc trạng thái."
+    }
+  },
+  "internalDetail": {
+    "tripsTitle": "Chuyến đã gán",
+    "tripsHint": "Các đơn trả xe trong tháng đang chọn",
+    "tableLabel": "Chuyến của tài xế nội bộ trong tháng",
+    "empty": "Không có chuyến nào trả xe trong tháng này.",
+    "emptyHint": "Chọn tháng khác ở góc phải để xem chuyến của tháng đó.",
+    "loadError": "Không tải được danh sách chuyến.",
+    "noWageNote": "Tài xế nội bộ không ghi tiền công trên XePrime.",
+    "archive": "Ngừng hợp tác",
+    "restore": "Khôi phục"
+  },
+  "licenceCheck": {
+    "checked": "Đã đối chiếu",
+    "mark": "Đánh dấu đã đối chiếu",
+    "unmark": "Bỏ đánh dấu",
+    "checkedBy": "Đã đối chiếu bởi {name} lúc {time}",
+    "checkedAt": "Đã đối chiếu lúc {time}",
+    "menu": "Đã đối chiếu giấy tờ"
   }
 }
