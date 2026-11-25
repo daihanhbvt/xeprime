@@ -34,7 +34,11 @@ const HINT_INLINE_MAX = 60;
  */
 export type FieldAppearance = 'default' | 'v2';
 
-const FieldAppearanceContext = createContext<FieldAppearance>('default');
+/*
+ * MẶC ĐỊNH là `v2` cho MỌI ô của cả hai app (người dùng 25/11/2026: "bắt buộc mọi input theo style
+ * này"). `default` chỉ còn để một màn chủ động bọc `<FieldAppearanceProvider value="default">`.
+ */
+const FieldAppearanceContext = createContext<FieldAppearance>('v2');
 
 export const FieldAppearanceProvider = FieldAppearanceContext.Provider;
 
@@ -55,16 +59,44 @@ export const FIELD_V2 = {
   padX: 14,
   height: buttonHeight.md,
   icon: iconSize.lg,
+  /** Cỡ chữ của NHÃN (Figma `14px/Medium`). */
   fontSize: typeScale.body.fontSize,
+  /**
+   * Chữ GÕ VÀO / giá trị đã chọn / placeholder trong khung - Figma component gốc "Input - Select"
+   * (`1111:1232`, `16px/Regular`). Một số cho MỌI ô v2 (TextField, SelectControl…): người dùng báo
+   * chữ trong ô nhỏ hơn Figma 20/11/2026 khi ô gõ đang 14 còn ô chọn 16.
+   */
+  valueFontSize: typeScale.body.fontSize,
+  /**
+   * Ô CHỌN / ô NGÀY (dropdown, "Thời gian") - Figma tab Lịch sử của hồ sơ khách `24494:25402`: chữ giá trị và
+   * placeholder `14px/Regular` (nhỏ hơn 16 của ô gõ), icon 20 ở mép phải, nền trắng viền `stroke/gray-low300`.
+   */
+  selectFontSize: typeScale.body.fontSize,
 } as const;
+
+/**
+ * Gợi ý DÀI của một ô đứng cạnh NHÃN dưới dạng dấu ⓘ (người dùng 25/11/2026, mọi tấm trượt/hộp thoại):
+ * "Số điện thoại ⓘ" - chạm mở tấm đọc đủ. Gợi ý ngắn vẫn hiện thẳng dưới ô. Mỗi ô gọi CẢ HAI hàm:
+ * `inLabelHint` cho nhãn, `belowHint` cho `FieldMessage` - để một gợi ý không hiện hai lần.
+ */
+export function inLabelHint(hint: string | undefined): string | undefined {
+  return hint && hint.length > HINT_INLINE_MAX ? hint : undefined;
+}
+
+export function belowHint(hint: string | undefined): string | undefined {
+  return inLabelHint(hint) ? undefined : hint;
+}
 
 export function FieldLabel({
   label,
   required = false,
   publishRequired = false,
+  hint,
 }: {
   label: string;
   required?: boolean;
+  /** Gợi ý dài hiện thành ⓘ ngay sau nhãn - truyền `inLabelHint(hint)`. */
+  hint?: string | undefined;
   /**
    * Dấu `●` "cần bổ sung trước khi gửi duyệt công khai" — KHÁC hẳn `*` bắt buộc-để-lưu.
    *
@@ -88,7 +120,7 @@ export function FieldLabel({
     như một khối. Nhãn là thứ được quét đầu tiên khi dò form nên nó phải đậm nhất trong ba; chữ
     gợi ý ở `FieldMessage` mới là phần được phép mờ.
   */
-  return (
+  const text = (
     <Text
       col={v2 ? colors.textMuted : colors.text}
       fos={v2 ? FIELD_V2.fontSize : fieldFontSize.label}
@@ -103,6 +135,14 @@ export function FieldLabel({
         </Text>
       ) : null}
     </Text>
+  );
+  if (!hint) return text;
+  return (
+    <XStack ai="center" gap={space.xs}>
+      {text}
+      {/* Dấu ⓘ BẰNG cỡ chữ của nhãn (người dùng 25/11/2026), căn giữa theo dòng nhãn. */}
+      <InfoHint content={hint} label={label} size={v2 ? FIELD_V2.fontSize : fieldFontSize.label} />
+    </XStack>
   );
 }
 
@@ -131,7 +171,7 @@ export function FieldMessage({
     if (hint.length > HINT_INLINE_MAX) {
       return (
         <XStack ai="center" gap={space.xs}>
-          <InfoHint content={hint} label={tLabels('note')} size={iconSize.sm} />
+          <InfoHint content={hint} label={tLabels('note')} size={fieldFontSize.message} />
           <Text col={colors.textMuted} fos={fieldFontSize.message}>
             {tLabels('note')}
           </Text>

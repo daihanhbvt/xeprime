@@ -1,7 +1,9 @@
-import { useCallback } from 'react';
+import { createElement, useCallback } from 'react';
+import { useSheetLevel, useSheetPortal } from '@/components/ui/SheetPortal';
 import type { LegalDoc } from '@xeprime/domain';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
+import { LegalDocOverlay } from './LegalDocOverlay';
 
 /**
  * Mở một văn bản pháp lý — MỘT cửa duy nhất cho mọi nơi viện dẫn nó.
@@ -16,6 +18,23 @@ import { ROUTES } from '@/navigation/routes';
  */
 export function useOpenLegalDoc(): (doc: LegalDoc) => void {
   const navigateOnce = useNavigateOnce();
+  const portal = useSheetPortal();
+  const level = useSheetLevel();
 
-  return useCallback((doc: LegalDoc) => navigateOnce(ROUTES.legal.doc(doc)), [navigateOnce]);
+  return useCallback(
+    (doc: LegalDoc) => {
+      /*
+       * Gọi từ BÊN TRONG một tấm trượt ⇒ văn bản mở đè lên tấm (tầng trên), không điều hướng: tấm
+       * vẽ ở host phủ trên cả ngăn xếp, một màn mới sẽ nằm DƯỚI nó (người dùng 20/11/2026).
+       */
+      if (portal && level > 0) {
+        const id = `legal-doc-${doc}`;
+        const close = () => portal.remove(id);
+        portal.upsert(id, level + 1, createElement(LegalDocOverlay, { doc, onClose: close }));
+        return;
+      }
+      navigateOnce(ROUTES.legal.doc(doc));
+    },
+    [navigateOnce, portal, level],
+  );
 }

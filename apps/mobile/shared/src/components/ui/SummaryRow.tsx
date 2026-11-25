@@ -33,7 +33,7 @@ export const SummaryRow = memo(function SummaryRow({
   const colors = useColors();
   const strong = emphasis !== 'none';
   const valueColor =
-    emphasis === 'brand' ? colors.primary : emphasis === 'success' ? colors.success : colors.text;
+    emphasis === 'brand' ? colors.brandMoney : emphasis === 'success' ? colors.success : colors.text;
   const valueType = strong ? typeScale.title : typeScale.body;
 
   return (

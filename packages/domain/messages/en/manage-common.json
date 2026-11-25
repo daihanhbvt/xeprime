@@ -114,6 +114,50 @@
     "legal": {
       "title": "Legal documents",
       "body": "The marketplace operating rules bind your shop: listing requirements, ranking, service fees and how disputes are handled. They open in a new tab so you don't lose what you are working on."
+    },
+    "app": {
+      "quickStart": {
+        "vehicles": {
+          "title": "Add a vehicle",
+          "body": "Update the vehicle profile, photos & inspection papers.",
+          "cta": "Add vehicle"
+        },
+        "policies": {
+          "title": "Set up policies",
+          "body": "Daily rates, deposit, extra cleaning fees.",
+          "cta": "Open policies"
+        },
+        "requests": {
+          "title": "Review rental requests",
+          "body": "Confirm customer bookings and response deadlines.",
+          "cta": "View requests"
+        },
+        "calendar": {
+          "title": "Track the rental calendar",
+          "body": "Busy vehicles and upcoming trips on one grid.",
+          "cta": "Open calendar"
+        },
+        "finance": {
+          "title": "Manage income & expenses",
+          "body": "Record income and expenses, reconcile shop revenue.",
+          "cta": "Open cash book"
+        },
+        "members": {
+          "title": "Staff accounts",
+          "body": "Create accounts, grant fleet and accounting roles.",
+          "cta": "Open staff"
+        }
+      },
+      "faq": {
+        "publishLink": "See vehicle approval status"
+      },
+      "legalBody": "The marketplace operating rules apply to your shop, covering listing requirements, ranking, service fees and the dispute process.",
+      "contact": {
+        "title": "Still can't find an answer?",
+        "casesBody": "For issues XePrime has to handle, such as trip disputes, incidents or payments, send a support request to get a tracking code.",
+        "hotline": "Or call our hotline: ",
+        "callHotline": "Call hotline {phone}"
+      }
     }
   },
   "adminGate": {

@@ -22,7 +22,12 @@ export interface ListingSpecSource {
  * số `transmissionFamily`, nhãn năng lượng từ danh mục) — không bao giờ in mã thô ("cvt").
  * Thiếu mục nào thì bỏ mục đó.
  */
-export function useListingSpecSummary(source: ListingSpecSource | null): string[] {
+export function useListingSpecSummary(
+  source: ListingSpecSource | null,
+  /** `transmission: false` - thẻ đơn v2 chỉ "4 chỗ · Xe điện" như Figma (dòng hẹp cạnh viên biển số). */
+  options: { transmission?: boolean } = {},
+): string[] {
+  const withTransmission = options.transmission !== false;
   const t = useTranslations('Listings.card');
   const dl = useDomainLabel();
   const { fuelTypeLabel } = useCatalogLabels();
@@ -37,11 +42,11 @@ export function useListingSpecSummary(source: ListingSpecSource | null): string[
         : source.seatCount
           ? t('seats', { count: source.seatCount })
           : null,
-      source.transmission
+      withTransmission && source.transmission
         ? t(`transmissionFamily.${transmissionFamily(source.transmission)}`)
         : null,
       fuelTypeLabel(source.fuelType),
     ];
     return parts.filter((part): part is string => Boolean(part));
-  }, [source, t, dl, fuelTypeLabel]);
+  }, [source, t, dl, fuelTypeLabel, withTransmission]);
 }

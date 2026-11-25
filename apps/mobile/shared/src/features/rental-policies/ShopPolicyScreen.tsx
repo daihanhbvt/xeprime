@@ -8,6 +8,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import * as yup from 'yup';
 import { useLocale, useTranslations } from 'use-intl';
 import {
+  INSURANCE_MODE,
   PERMISSION,
   TURNAROUND_BUFFER_MAX_MINUTES,
   VEHICLE_TYPE,
@@ -39,11 +40,13 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { POLICY_ANCHOR, PolicySections, type PolicyAnchor } from './components/PolicySections';
 import { TurnaroundBufferField } from './components/TurnaroundBufferField';
+import { InsuranceModeBlock } from './components/InsuranceModeBlock';
 import { formToSaveInput, policyToForm } from './form';
 import { policyFormSchema, type PolicyFormValues } from './schema';
 import {
   useSaveShopOperationDefaults,
   useSaveShopPolicy,
+  useShopInsuranceImpact,
   useShopOperationDefaults,
   useShopPolicy,
 } from './hooks/use-shop-policy';
@@ -210,6 +213,12 @@ function PolicyWorkspace({
   };
   const defaultsQuery = useShopOperationDefaults(vehicleType, canView);
   const save = useSaveShopPolicy(vehicleType);
+  /*
+   * Bảo hiểm vật chất xe chỉ bán cho Ô TÔ và chỉ khi nền tảng đang bán theo bậc (ADR 0091 điều 1) -
+   * `applies` của cảnh báo nói đúng điều đó (web `ShopPolicyForm`).
+   */
+  const insuranceImpact = useShopInsuranceImpact(vehicleType, canView && vehicleType === VEHICLE_TYPE.CAR);
+  const insuranceApplies = vehicleType === VEHICLE_TYPE.CAR && insuranceImpact.data?.applies === true;
   const saveDefaults = useSaveShopOperationDefaults(vehicleType);
   const submitting = save.isPending || saveDefaults.isPending;
   const [confirming, setConfirming] = useState<ShopPolicyFormValues | null>(null);
@@ -430,6 +439,17 @@ function PolicyWorkspace({
                 {...(data.inheritingVehicles > 0
                   ? { depositHint: t('depositHint', { count: data.inheritingVehicles }) }
                   : {})}
+                {...(insuranceApplies
+                  ? {
+                      afterRules: (
+                        <InsuranceModeBlock
+                          control={control}
+                          disabled={!canEdit || submitting}
+                          impact={insuranceImpact.data}
+                        />
+                      ),
+                    }
+                  : {})}
                 {...(data.policy?.legacyDiscountTiers?.length
                   ? { legacyDiscountTiers: data.policy.legacyDiscountTiers }
                   : {})}
@@ -463,11 +483,18 @@ function PolicyWorkspace({
       <AlertDialog
         open={confirming !== null}
         title={t('confirm.title')}
-        message={
+        message={[
           data && data.inheritingVehicles > 0
             ? t('confirm.bodyInheriting', { count: data.inheritingVehicles })
-            : t('confirm.body')
-        }
+            : t('confirm.body'),
+          // Chuyển sang Bắt buộc mà có xe kế thừa thiếu dữ liệu ⇒ nói rõ số xe sẽ ngừng nhận tự lái (web).
+          ...(insuranceApplies &&
+          confirming?.insuranceMode === INSURANCE_MODE.REQUIRED &&
+          values.insuranceMode !== INSURANCE_MODE.REQUIRED &&
+          (insuranceImpact.data?.total ?? 0) > 0
+            ? [t('confirm.insuranceRequired', { count: insuranceImpact.data?.total ?? 0 })]
+            : []),
+        ].join(ALERT_LINE_BREAK)}
         confirmLabel={t('confirm.ok')}
         cancelLabel={tActions('cancel')}
         loading={submitting}
@@ -546,3 +573,6 @@ function AppliedSummary({
     </Callout>
   );
 }
+
+/** Ngắt dòng trong thân `AlertDialog` (thân là chuỗi). */
+const ALERT_LINE_BREAK = String.fromCharCode(10);

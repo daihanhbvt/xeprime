@@ -57,8 +57,8 @@
     "cancel": "Hủy đơn",
     "noShow": "Ghi nhận khách không đến",
     "dialog": {
-      "cancelTitle": "Hủy đơn {code}",
-      "noShowTitle": "Ghi nhận khách không đến - đơn {code}",
+      "cancelTitle": "Hủy đơn #{code}",
+      "noShowTitle": "Ghi nhận khách không đến - đơn #{code}",
       "cancelLead": "Đơn đã hủy không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền giữ chỗ khách đã chuyển qua XePrime (nếu có) được hoàn 100% vào Ví điểm của khách.",
       "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất. Tiền bảo hiểm (nếu có) hoàn cho khách; bạn nhận trọn phần giữ chỗ dành cho chủ xe, còn phí đặt xe và phí dịch vụ - chủ xe thuộc XePrime.",
       "cancelOk": "Hủy đơn",
@@ -236,6 +236,7 @@
       "title": "Ảnh hiện trạng",
       "camera": "Chụp ảnh",
       "library": "Chọn từ thư viện",
+      "replace": "Đổi ảnh",
       "remove": "Gỡ ảnh",
       "uploading": "Đang tải ảnh…",
       "removeConfirm": "Gỡ ảnh này khỏi biên bản? Ảnh hiện trạng là bằng chứng - gỡ rồi thì phải chụp lại.",
@@ -753,14 +754,16 @@
     "commissionHintBody": "Gian hàng có gói: 0đ. Khoản này giúp XePrime vận hành chợ, chăm sóc khách, xử lý hoàn/huỷ, hỗ trợ tranh chấp và bảo hiểm.",
     "tax": "Thuế khấu trừ",
     "taxSplit": "Thuế khấu trừ (GTGT {vat}% + TNCN {pit}%)",
+    "taxRates": "GTGT {vat}% + TNCN {pit}%",
+    "taxBreakdown": "GTGT {vat}% ({vatAmount}) + TNCN {pit}% ({pitAmount})",
     "taxCombined": "Thuế khấu trừ ({percent}%)",
     "taxExempt": "Không khấu trừ (doanh nghiệp)",
     "taxHint": "Theo NĐ 117/2025 và NĐ 68/2026, XePrime khấu trừ, kê khai và nộp thay thuế cho chủ xe là cá nhân/hộ kinh doanh. Mức khấu trừ theo loại dịch vụ (tự lái, dài hạn, có tài xế), tính trên tiền thuê, theo chính sách thuế áp cho chuyến. Doanh nghiệp không bị khấu trừ.",
     "taxPolicyLink": "Chính sách thuế",
-    "ownerNet": "Thu nhập chủ xe (a)",
-    "payAtPickup": "Khách thanh toán trực tiếp (b)",
+    "ownerNet": "Thu nhập chủ xe (A)",
+    "payAtPickup": "Khách thanh toán trực tiếp (B)",
     "payAtPickupHint": "Phần tiền thuê khách trả tận tay bạn lúc nhận xe, không đi qua XePrime. Không gồm phí giao xe.",
-    "walletCredit": "Số tiền cộng ví (a − b)",
+    "walletCredit": "Số tiền cộng ví (A − B)",
     "walletCreditHint": "XePrime ghi có vào Ví điểm của bạn khi chuyến hoàn thành.",
     "hintLabel": "Giải thích: {item}"
   },
@@ -777,6 +780,7 @@
     "overdueReturn": "Quá giờ trả xe {duration}",
     "pickupToday": "Giao xe hôm nay · {time}",
     "pickupOverdue": "Quá giờ giao xe · {time}",
+    "pickupOverdueFor": "Quá giờ giao xe: {elapsed}",
     "pickupNeverConfirmed": "Quá cả giờ trả xe ({date}) - chưa xác nhận giao xe",
     "pickupUpcoming": "Giao xe {date}{sep}{time}",
     "returnedOnTime": "Đã trả xe đúng hạn",
@@ -881,6 +885,14 @@
         "collected": "Đã thu",
         "debt": "Còn phải thu"
       },
+      "partnerApp": {
+        "searchPlaceholder": "Mã đơn, khách hàng, tên xe,...",
+        "pickup": "Nhận xe",
+        "place": "Địa chỉ nhận",
+        "payAtPickup": "Trả khi nhận xe",
+        "dayClock": "{days}d {clock}",
+        "returnOverdueFor": "Quá giờ trả xe: {elapsed}"
+      },
       "schedule": {
         "period": "Thời gian",
         "placeDelivery": "Giao xe tới",
@@ -959,6 +971,11 @@
     }
   },
   "detailPage": {
+    "partnerApp": {
+      "titleLoading": "Chi tiết đơn",
+      "title": "Chi tiết đơn #{code}",
+      "returnBranch": "Trả tại chi nhánh"
+    },
     "tabs": {
       "prep": "Chuẩn bị",
       "trip": "Chuyến & thời gian",
@@ -989,6 +1006,10 @@
       "morePhotos": "Bổ sung ảnh"
     },
     "prep": {
+      "partnerApp": {
+        "documentsPending": "Chưa có GPLX / CCCD",
+        "photosPending": "Bổ sung ảnh của phương tiện"
+      },
       "title": "Chuẩn bị bàn giao",
       "progress": "{done}/{total} hoàn tất",
       "confirm": "Xác nhận đơn & thông tin khách hàng",
@@ -1051,6 +1072,9 @@
       "title": "Lợi nhuận chuyến"
     },
     "side": {
+      "partnerApp": {
+        "due": "Còn lại (phải thu)"
+      },
       "schedule": "Lịch xe",
       "serviceType": "Hình thức",
       "pickup": "Nhận xe",
@@ -1137,6 +1161,24 @@
     "noteMax": "Tối đa 500 ký tự"
   },
   "history": {
+    "partnerApp": {
+      "searchPlaceholder": "Mã đơn, khách hàng,...",
+      "groupLabel": "Nhóm",
+      "groupAll": "Tất cả nhóm",
+      "outcomeShort": {
+        "completed": "Hoàn thành",
+        "cancelled_by_customer": "Khách huỷ",
+        "cancelled_by_host": "Bạn huỷ",
+        "cancelled_other": "Đã huỷ",
+        "no_show": "Khách không đến",
+        "request_rejected": "Bạn từ chối",
+        "request_expired": "Quá hạn",
+        "request_withdrawn": "Khách rút",
+        "request_hold_expired": "Hết hạn TT",
+        "request_slot_taken": "Xe đã có khách",
+        "request_cancelled_by_host": "Bạn huỷ"
+      }
+    },
     "title": "Đơn đã kết thúc",
     "subtitle": "Tổng hợp các đơn thuê đã hoàn thành, bị huỷ và các yêu cầu không thành đơn.",
     "tabsLabel": "Lọc theo kết thúc",

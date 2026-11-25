@@ -15,6 +15,9 @@ export type LegacyDiscountTier = Schemas['LegacyDiscountTierDto'];
 export type ShopOperationDefaults = Schemas['ShopOperationDefaultsDto'];
 export type SaveShopOperationDefaultsInput = Schemas['SaveShopOperationDefaultsDto'];
 
+/** Xe kế thừa mà thiếu dữ liệu bảo hiểm bắt buộc (ADR 0091 điều 1) - web `fetchShopInsuranceImpact`. */
+export type ShopInsuranceImpact = Schemas['ShopInsuranceImpactDto'];
+
 const PATH = '/shop/rental-policies';
 
 /**
@@ -29,6 +32,11 @@ const PATH = '/shop/rental-policies';
 export const shopPoliciesApi = {
   get(vehicleType: string): Promise<ShopRentalPolicy> {
     return getApiClient().get<ShopRentalPolicy>(PATH, { vehicleType });
+  },
+
+  /** `applies` = nền tảng đang bán bảo hiểm theo bậc cho loại xe này; `vehicles` = xe sẽ ngừng nhận tự lái nếu Bắt buộc. */
+  insuranceImpact(vehicleType: string): Promise<ShopInsuranceImpact> {
+    return getApiClient().get<ShopInsuranceImpact>(`${PATH}/insurance-impact`, { vehicleType });
   },
 
   /**

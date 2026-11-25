@@ -130,7 +130,7 @@ async function renderScreen(
   profile: UserProfile = PROFILE,
   isPlanPromotionEnabled = false,
 ) {
-  jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1 });
+  jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1, supportHotline: null });
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(session(permissions, billingMode));
   jest.spyOn(accountApi, 'me').mockResolvedValue(profile);
   jest

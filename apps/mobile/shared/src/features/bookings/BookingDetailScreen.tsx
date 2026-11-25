@@ -1,10 +1,13 @@
-import { Children, useCallback, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { ActionSheetButtons, type SheetAction } from '@/components/ui/ActionSheetButtons';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { CardTitle } from '@/components/ui/CardTitle';
 import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Linking, Pressable, type ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
@@ -46,6 +49,7 @@ import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { TOAST_PRESET } from '@/components/feedback/AppToast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
@@ -123,8 +127,11 @@ const UNASSIGNED_ROW_GAP = 10;
 export function BookingDetailScreen({
   bookingId,
   openNoShow = false,
+  preview,
 }: {
   bookingId: string;
+  /** Mã/chặng/ngày tạo truyền qua điều hướng - dựng header đầy đủ ngay khi đang tải. */
+  preview?: { code: string; status?: string; createdAt?: string } | undefined;
   /** Mở sẵn tấm "Khách không đến" — từ nút trên thẻ đơn (web mở hộp ngay trên thẻ). */
   openNoShow?: boolean;
 }) {
@@ -154,7 +161,8 @@ export function BookingDetailScreen({
   if (query.isPending) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        {/* LUÔN cùng khung header thật - có/không dữ liệu truyền sang (20/11/2026). */}
+        <PreviewHeader preview={preview} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']}>
           <YStack gap={layout.section}>
             <Skeleton height={90} />
@@ -309,10 +317,10 @@ function BookingDetailBody({
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
   // Cổng của khối "Chuẩn bị bàn giao" — cùng `can` của web (BookingDetailActions).
   const prepFinance = useFeature(PLAN_FEATURE.FINANCE);
-  const prepContracts = useFeature(PLAN_FEATURE.CONTRACTS);
+  // Hợp đồng của đơn thuộc bộ CƠ BẢN từ 20/11/2026 (ADR 0027 sửa điều 1, SR-245) - chỉ xét quyền.
   const prepCan = {
     collect: permissions.has(PERMISSION.PAYMENT_RECORD) && prepFinance.isVisible && !moneyClosed,
-    contract: permissions.has(PERMISSION.CONTRACT_MANAGE) && prepContracts.isVisible,
+    contract: permissions.has(PERMISSION.CONTRACT_MANAGE),
     markPrep: permissions.has(PERMISSION.HANDOVER_MANAGE) && !closed,
     documents:
       Boolean(booking.tenantCustomerId) && permissions.has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE),
@@ -416,7 +424,8 @@ function BookingDetailBody({
       {/* Web `ManagePageHeader` của trang chi tiết: "Chi tiết đơn · #mã" + nút quay lại. */}
       {/* Figma "Page Header" `24145:102197`: ← tiêu đề, "Tạo lúc" + viên chặng, thanh 4 bước. */}
       <ManagePageHeader
-        title={t('detailPage.title', { code: booking.code })}
+        // App: "Chi tiết đơn #mã" như Figma (không dấu ·); web giữ `detailPage.title`.
+        title={t('detailPage.partnerApp.title', { code: booking.code })}
         onBack={onBack}
         subtitle={
           <XStack ai="center" jc="space-between" gap={space.sm}>
@@ -670,7 +679,10 @@ function BookingDetailBody({
             </Card>
           ) : null}
 
-          {/* Thẻ KHÁCH — web `CustomerSideCard`: "Chỉnh sửa" = form Sửa đơn; hồ sơ khách + giấy tờ. */}
+          {/*
+            Thẻ KHÁCH như Figma: tên (bấm mở hồ sơ khách khi có quyền) · "Khách quen" · SĐT · bút Sửa
+            đơn. Giấy tờ khách vào từ dòng "Bổ sung giấy tờ của khách" ở tab Chuẩn bị (20/11/2026).
+          */}
           <CustomerSideCard
             booking={booking}
             onEdit={canUpdate && !closed ? () => setEditing(true) : undefined}
@@ -678,9 +690,6 @@ function BookingDetailBody({
               booking.tenantCustomerId && customerProfileAccess
                 ? () => navigateOnce(ROUTES.manage.customerDetail(booking.tenantCustomerId as string))
                 : undefined
-            }
-            onDocuments={
-              booking.tenantCustomerId && prepCan.documents ? () => setDocsOpen(true) : undefined
             }
           />
 
@@ -690,20 +699,33 @@ function BookingDetailBody({
           />
           {/* Lợi nhuận chuyến đứng riêng ngay sau Thanh toán như cột phải của web (16/11/2026). */}
             {booking.ownerPayout ? (
-              <SectionCard title={t('detailPage.profit.title')}>
-                <OwnerPayoutTable payout={booking.ownerPayout} label={t('detailPage.profit.title')} />
-                <Text col={colors.placeholder} fos={fontSize.label}>
-                  {t('money.ownerEconomics.note')}
-                </Text>
+              <SectionCard
+                title={t('detailPage.profit.title')}
+                // "Số đã chốt lúc đặt…" thành dấu "i" cạnh tiêu đề (người dùng 20/11/2026).
+                extra={
+                  <InfoHint
+                    content={t('money.ownerEconomics.note')}
+                    label={t('detailPage.profit.title')}
+                    size={fontSize.body}
+                  />
+                }
+              >
+                <OwnerPayoutTable
+                  payout={booking.ownerPayout}
+                  label={t('detailPage.profit.title')}
+                  // Figma "Lợi nhuận chuyến" `24512:131124` (người dùng chốt 20/11/2026): đủ dòng, style v2.
+                  variant="v2"
+                />
               </SectionCard>
             ) : null}
-
+          {/* Figma: "Bảo hiểm chuyến đi" đứng ngay sau Lợi nhuận chuyến, ngoài các tab (20/11/2026). */}
+          <BookingInsurancePanel bookingId={booking.id} />
 
           <BookingOutcomeBanner booking={booking} />
-          {/* Dòng thời gian đầy đủ (chấm + mốc giờ từng bước) ngay trước thẻ tab - header chỉ giữ thanh gọn (16/11/2026). */}
-          <Card>
-            <BookingStepper booking={booking} />
-          </Card>
+          {/*
+            Thẻ các bước có chấm đã gỡ (người dùng chốt 20/11/2026): trùng thanh 4 bước ở đầu màn,
+            Figma không vẽ. Mốc giờ giao/nhận vẫn ở tab "Chuyến & thời gian".
+          */}
           {/*
             Figma thẻ 3 tab `24158:102976`: Chuẩn bị (việc bàn giao) · Chuyến & thời gian (lịch,
             gia hạn) · Phát sinh (quyết toán, bảo hiểm, lợi nhuận). Mọi khối cũ vẫn còn, chỉ xếp lại.
@@ -737,7 +759,6 @@ function BookingDetailBody({
               ) : (
                 <YStack gap={space.md}>
                   <BookingSettlementCard bookingId={booking.id} moneyClosed={moneyClosed} />
-                  <BookingInsurancePanel bookingId={booking.id} />
                 </YStack>
               )}
             </YStack>
@@ -937,6 +958,8 @@ function useHandoverCta(
   const tAlert = useTranslations('Bookings.detailPage.handoverAlert');
   const tPrep = useTranslations('Bookings.detailPage.prep');
   const slotLabel = useDomainLabel();
+  const toast = useAppToast();
+  const fmt = useAppFormat();
   /** Lượt cảnh báo: chiều bàn giao + ĐÚNG những việc còn thiếu (web tô đỏ từng dòng/góc ảnh). */
   const [handoverAlert, setHandoverAlert] = useState<{ type: HandoverType; missing: string[] } | null>(
     null,
@@ -949,6 +972,18 @@ function useHandoverCta(
      */
     if (type === HANDOVER_TYPE.RETURN) {
       navigateOnce(ROUTES.manage.handover(booking.id, type));
+      return;
+    }
+    /*
+     * Giao xe chỉ mở từ 60′ trước giờ nhận (ADR 0104 điều 1 - web `requestHandover`). Nói giờ mở NGAY
+     * ở cú bấm thay vì mở luồng rồi để server từ chối sau khi chủ xe đã điền xong. Server vẫn là cửa chặn thật.
+     */
+    const opensAt = context?.pickupConfirmOpensAt;
+    if (opensAt && Date.now() < new Date(opensAt).getTime()) {
+      toast.showNotice({
+        title: t('pickupNotOpen', { time: fmt.dateTime(opensAt) }),
+        tone: TOAST_PRESET.WARNING,
+      });
       return;
     }
     const prepMissing = booking.handoverPrep
@@ -1021,12 +1056,9 @@ function useHandoverCta(
  */
 function BookingHeaderActions({
   booking,
-  stacked = false,
   onDone,
 }: {
   booking: BookingDetail;
-  /** Trong tấm "Thao tác": nút xếp dọc, trải hết bề ngang. */
-  stacked?: boolean;
   onDone?: () => void;
 }) {
   const t = useTranslations('Bookings.detailPage.actions');
@@ -1036,70 +1068,78 @@ function BookingHeaderActions({
   const toast = useAppToast();
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
-  const contractsFeature = useFeature(PLAN_FEATURE.CONTRACTS);
   const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
   const moneyClosed = isBookingClosedWithoutTrip(booking.status as BookingStatus);
 
   const can = {
-    contract: permissions.has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible,
+    contract: permissions.has(PERMISSION.CONTRACT_MANAGE),
     history: financeFeature.isVisible,
     collect: permissions.has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible && !moneyClosed,
   };
   if (!can.contract && !can.history && !can.collect) return null;
-  const hasDebt = !isZeroMoney(booking.debtAmount);
+  // Cùng số với tấm Thu tiền và ô "Còn phải thu của khách" (web, ADR 0101): phần `D` khách đã trả
+  // trước qua XePrime không còn là việc phải thu ở quầy.
+  const hasDebt = !isZeroMoney(booking.counterDueAmount);
   const contractKnown = booking.handoverPrep ? booking.handoverPrep.contractId !== null : true;
+
+  // Figma "Thao tác" `24273:89851`: hợp đồng + lịch sử thu tiền là nút phụ, "Thu tiền" là nút chính.
+  const actions: SheetAction[] = [
+    ...(can.contract
+      ? [
+          {
+            key: 'contract',
+            icon: 'doc-align-left-6' as const,
+            label: contractKnown ? t('viewContract') : t('createContract'),
+            loading: createContract.isPending,
+            onPress: () =>
+              createContract.mutate(booking.id, {
+                onSuccess: (contract) => {
+                  onDone?.();
+                  navigateOnce(ROUTES.manage.contract(contract.id));
+                },
+                onError: (error) => toast.showError(errorMessage(error)),
+              }),
+          },
+        ]
+      : []),
+    ...(can.history
+      ? [
+          {
+            key: 'history',
+            icon: 'doc-align-right-10' as const,
+            label: t('moneyHistory'),
+            onPress: () => {
+              onDone?.();
+              navigateOnce(ROUTES.manage.payments(booking.id));
+            },
+          },
+        ]
+      : []),
+    ...(can.collect
+      ? [
+          {
+            key: 'collect',
+            icon: 'dollar-circle' as const,
+            label: hasDebt ? t('collect') : t('collected'),
+            primary: true,
+            disabled: !hasDebt,
+            onPress: () => setCollecting(true),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
-    <ActionsWrap stacked={stacked}>
-      {can.contract ? (
-        <Button
-          label={contractKnown ? t('viewContract') : t('createContract')}
-          icon={contractKnown ? 'document-text-outline' : 'add-circle-outline'}
-          variant="gradient"
-          block={stacked}
-          loading={createContract.isPending}
-          onPress={() =>
-            createContract.mutate(booking.id, {
-              onSuccess: (contract) => {
-                onDone?.();
-                navigateOnce(ROUTES.manage.contract(contract.id));
-              },
-              onError: (error) => toast.showError(errorMessage(error)),
-            })
-          }
-        />
-      ) : null}
-      {can.history ? (
-        <Button
-          label={t('moneyHistory')}
-          icon="receipt-outline"
-          variant="gradient"
-          block={stacked}
-          onPress={() => {
-            onDone?.();
-            navigateOnce(ROUTES.manage.payments(booking.id));
-          }}
-        />
-      ) : null}
-      {can.collect ? (
-        <Button
-          label={hasDebt ? t('collect') : t('collected')}
-          icon={hasDebt ? 'wallet-outline' : 'checkmark-circle-outline'}
-          variant="gradient"
-          block={stacked}
-          disabled={!hasDebt}
-          onPress={() => setCollecting(true)}
-        />
-      ) : null}
-    </ActionsWrap>
+    <ActionSheetButtons actions={actions} />
     {/* Gắn/tháo theo cờ mở: số điền sẵn chỉ đọc lúc dựng. */}
     {collecting ? (
       <RecordPaymentSheet
         open
         onClose={() => setCollecting(false)}
         bookingId={booking.id}
-        debtAmount={booking.debtAmount}
+        debtAmount={booking.counterDueAmount}
+        counterDue
       />
     ) : null}
     </>
@@ -1155,29 +1195,53 @@ function BookingActionsMenu({ booking }: { booking: BookingDetail }) {
     <>
       {/* Figma: dấu ⋮ trơn, không viền/nền. */}
       <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={t('menuTitle')} hitSlop={12}>
-        <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+        <LineIcon name="menu-kebab" size={20} color={colors.textMuted} />
       </Pressable>
       <BottomSheet open={open} onClose={() => setOpen(false)} title={t('menuTitle')} chrome="v2" headerDivider>
-        <BookingHeaderActions booking={booking} stacked onDone={() => setOpen(false)} />
+        <BookingHeaderActions booking={booking} onDone={() => setOpen(false)} />
       </BottomSheet>
     </>
   );
 }
 
-/** Tấm "Thao tác": mỗi nút một hàng trải hết bề ngang; ngoài tấm thì xếp ngang tự xuống dòng. */
-function ActionsWrap({ stacked, children }: { stacked: boolean; children: ReactNode }) {
-  return stacked ? (
-    // Hai nút một hàng, cùng màu vàng (chuẩn tấm "Thao tác" của hồ sơ khách, 16/11/2026).
-    <XStack flexWrap="wrap" gap={space.sm} alignSelf="stretch">
-      {Children.toArray(children).map((child, index) => (
-        <YStack key={index} f={1} minWidth="45%">
-          {child}
+/**
+ * Header ĐẦY ĐỦ dựng từ dữ liệu truyền qua điều hướng trong lúc chi tiết đơn đang tải - cùng khung
+ * với header thật (tiêu đề "Chi tiết đơn #mã", "Tạo lúc" + viên chặng, chỗ thanh bước), nên khi dữ
+ * liệu về màn không nhảy từ header nhỏ sang header to (người dùng 20/11/2026).
+ */
+function PreviewHeader({
+  preview,
+  onBack,
+}: {
+  preview: { code: string; status?: string; createdAt?: string } | undefined;
+  onBack: () => void;
+}) {
+  const t = useTranslations('Bookings');
+  const colors = useColors();
+  const fmt = useAppFormat();
+  return (
+    <ManagePageHeader
+      title={
+        preview ? t('detailPage.partnerApp.title', { code: preview.code }) : t('detailPage.partnerApp.titleLoading')
+      }
+      onBack={onBack}
+      subtitle={
+        <XStack ai="center" jc="space-between" gap={space.sm} minHeight={typeScale.body.lineHeight}>
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1} flexShrink={1}>
+            {preview?.createdAt ? t('detailPage.createdAt', { date: fmt.date(preview.createdAt) }) : ''}
+          </Text>
+          {preview?.status ? <BookingStageChip status={preview.status} /> : null}
+        </XStack>
+      }
+      below={
+        // Cùng chiều cao thanh bước thật (vạch 4 + cách 6 + nhãn 14) - không nhảy khi dữ liệu về.
+        <YStack h={PREVIEW_STEPPER_H}>
+          <Skeleton height={4} />
         </YStack>
-      ))}
-    </XStack>
-  ) : (
-    <XStack flexWrap="wrap" gap={space.sm}>
-      {children}
-    </XStack>
+      }
+    />
   );
 }
+
+/** Chỗ của thanh 4 bước khi đang tải. */
+const PREVIEW_STEPPER_H = 24;

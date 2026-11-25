@@ -1,7 +1,7 @@
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   type ListRenderItemInfo,
@@ -176,9 +176,7 @@ export function AccountPaymentsScreen() {
           }
           ListFooterComponent={
             query.isFetchingNextPage ? (
-              <YStack ai="center" py={space.md}>
-                <ActivityIndicator color={colors.primaryActive} />
-              </YStack>
+              <ListLoadingFooter />
             ) : rows.length > 0 && !query.hasNextPage ? (
               <ListEnd />
             ) : null

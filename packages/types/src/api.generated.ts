@@ -20289,6 +20289,11 @@ export interface components {
              * @example 3
              */
             version: number;
+            /**
+             * @description Hotline hỗ trợ đối tác - Trung tâm hỗ trợ của app Partner hiện kèm nút gọi. `null` = ẩn dòng.
+             * @example 1900 1234
+             */
+            supportHotline: string | null;
         };
         PartnerBillingDto: {
             plan: components["schemas"]["PartnerPlanSummaryDto"];
@@ -20515,6 +20520,10 @@ export interface components {
             returnsOverdue: number;
             /** @description Trong `active`: ĐẾN HẠN trả - hẹn trả tới hết hôm nay, gồm cả lượt đã quá giờ. Mỗi đơn đếm một lần. */
             returnsDue: number;
+            /** @description Trong `awaitingPickup`: giờ hẹn giao SỚM NHẤT chưa tới (`pickupAt >= now`) - ISO-8601 UTC. Lượt đã quá giờ nằm ở `pickupsOverdue`, không ở đây. `null` khi không còn lượt sắp tới. */
+            nextPickupAt: string | null;
+            /** @description Trong `active`: giờ hẹn trả SỚM NHẤT chưa tới (`returnAt >= now`) - ISO-8601 UTC. `null` khi không còn lượt sắp tới. */
+            nextReturnAt: string | null;
         };
         PartnerDashboardTrendPointDto: {
             /** @description Tháng lịch `YYYY-MM` giờ VN. */

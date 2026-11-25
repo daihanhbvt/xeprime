@@ -1,12 +1,14 @@
 import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { LinearGradient } from 'expo-linear-gradient';
+import { IS_PARTNER_APP } from '@/lib/app-kind';
 import { useCallback } from 'react';
 import { ActivityIndicator, Keyboard, StyleSheet } from 'react-native';
 import { PressableScale } from '@/components/motion/PressableScale';
 import { haptics } from '@/lib/haptics';
 import { ShineSweep } from '@/components/motion/ShineSweep';
 import { Text, XStack } from 'tamagui';
-import { themed, useColors } from '@/theme/ThemeProvider';
+import { themed, useAppScheme, useColors } from '@/theme/ThemeProvider';
 import {
   buttonHeight,
   buttonHitSlop,
@@ -33,6 +35,7 @@ import type { IconName } from './Chip';
  * web: nền thẻ, viền `color-primary-muted`, chữ `color-primary`. Màn quản lý giữ `primary`
  * phẳng vì Manage web là nút AntD phẳng.
  */
+export type ButtonVariant = Variant;
 type Variant =
   | 'primary'
   | 'gradient'
@@ -70,7 +73,7 @@ type Size = 'sm' | 'md' | 'lg' | 'compact';
  */
 type Shape = 'pill' | 'square';
 
-// MỌI nút có nền đều có VIỀN nhìn thấy được (người dùng chốt 28/10/2026) — chỉ ghost/ghostDanger không viền.
+// Nút có nền có VIỀN (chốt 28/10/2026) — trừ ghost/ghostDanger, và nút vàng chính ở nền SÁNG (chốt 20/11/2026, xem `borderless`).
 const useVariant = themed<Record<Variant, { bg: string; fg: string; border: string }>>(
   (colors) => ({
     // Nút vàng CHÍNH vẽ cùng dải gradient với 'gradient' (người dùng chốt 27/10/2026: mọi nút vàng một kiểu).
@@ -130,6 +133,11 @@ interface ButtonProps {
   variant?: Variant;
   size?: Size;
   icon?: IconName;
+  /**
+   * Biểu tượng NÉT của Figma (`LineIcon`, khung 20) đứng TRƯỚC chữ - nút trong tấm "Thao tác" (Figma
+   * `24273:89851`: icon 20 + chữ 14 đậm). Khác `icon` (Ionicons) ở chỗ đây là bộ icon thiết kế.
+   */
+  lineIcon?: LineIconName;
   loading?: boolean;
   disabled?: boolean;
   shape?: Shape;
@@ -194,7 +202,14 @@ interface ButtonProps {
    * "Đăng ký & đăng xe đầu tiên →"). Mặc định biểu tượng đứng trước chữ.
    */
   iconEnd?: boolean;
+  /** Nhãn ĐẬM (700) - nút hành động của các màn tài khoản app Partner (người dùng chốt 20/11/2026). */
+  bold?: boolean;
+  /** Nhãn THƯỜNG (500) - nút trong tấm "Thao tác" của Figma (người dùng 20/11/2026). */
+  medium?: boolean;
 }
+
+/** Dải vàng của nút chính: app Partner theo Figma Partner, app khách giữ token chung (20/11/2026). */
+export const MAIN_GRADIENT = IS_PARTNER_APP ? gradients.partnerPrimary : gradients.primary;
 
 export function Button({
   label,
@@ -203,6 +218,7 @@ export function Button({
   size = 'md',
   shape = 'pill',
   icon,
+  lineIcon,
   loading = false,
   disabled = false,
   block = true,
@@ -211,6 +227,8 @@ export function Button({
   tight = false,
   shine,
   iconEnd = false,
+  bold = false,
+  medium = false,
 }: ButtonProps) {
   const colors = useColors();
   const VARIANT = useVariant();
@@ -240,14 +258,29 @@ export function Button({
   const height = buttonHeight[compact ? 'sm' : size];
   const slop = buttonHitSlop(height);
   /** Hai biến thể KHÔNG nền, không viền — nền mờ lúc bị chặn cũng không áp cho chúng. */
-  const borderless = variant === 'ghost' || variant === 'ghostDanger';
+  const { scheme } = useAppScheme();
+  const isMain = variant === 'gradient' || variant === 'primary';
+  /*
+   * Nút vàng chính KHÔNG viền ở nền sáng (Figma Partner-XePrime, người dùng chốt 20/11/2026); nền
+   * tối giữ viền `primaryHover` để mép nút tách khỏi nền đen. Nút bị chặn vẫn có viền (nền xám).
+   */
+  // App Partner: nút vàng KHÔNG viền ở cả nền tối (Figma, 20/11/2026); app khách giữ viền nền tối.
+  const borderless =
+    variant === 'ghost' ||
+    variant === 'ghostDanger' ||
+    (isMain && !blocked && (IS_PARTNER_APP || scheme !== 'dark'));
   /*
    * Chữ nút bị khoá dùng `textMuted`, KHÔNG `textDisabled`: cái sau đặt trên nền `surfaceMuted`
    * chỉ đạt tương phản ~1.6:1 nên nhãn gần như biến mất, và trạng thái khoá đọc thành "màn hình
    * lỗi" thay vì "chưa nhập đủ". Cái phân biệt khoá với bấm được là NỀN, không phải độ mờ chữ.
    */
-  const fg = blocked ? colors.textMuted : skin.fg;
-  const isMain = variant === 'gradient' || variant === 'primary';
+  /*
+   * Nút CHÍNH (vàng) bị VÔ HIỆU (không phải đang tải) giữ họ màu vàng ở dạng NHẠT - nền `brandLow`, viền
+   * `brandBorder`, chữ `brandHigh` - thay vì xám thuần của mọi nút khác (người dùng 25/11/2026: "Thu
+   * tiền" bị khoá vì đã thu đủ phải còn đọc ra là nút chính, chỉ là không bấm được).
+   */
+  const mainDisabled = isMain && disabled && !loading;
+  const fg = mainDisabled ? colors.brandHigh : blocked ? colors.textMuted : skin.fg;
   const showShine = (shine ?? (isMain && size !== 'sm' && !compact)) && !blocked;
 
   return (
@@ -278,8 +311,8 @@ export function Button({
         jc="center"
         gap={space.xs}
         overflow="hidden"
-        bg={blocked && !borderless ? colors.surfaceMuted : skin.bg}
-        bc={blocked ? colors.border : skin.border}
+        bg={mainDisabled ? colors.brandLow : blocked && !borderless ? colors.surfaceMuted : skin.bg}
+        bc={mainDisabled ? colors.brandBorder : blocked ? colors.border : skin.border}
         bw={borderless ? 0 : 1}
         // Chuẩn chung của mọi nút = nút "Chọn thuê" (người dùng chốt 28/10/2026): bo `control` 12, không còn viên thuốc.
         br={shape === 'square' && !compact ? radius.md : radius.control}
@@ -297,8 +330,8 @@ export function Button({
       >
         {(variant === 'gradient' || variant === 'primary') && !blocked ? (
           <LinearGradient
-            colors={gradients.primary.colors}
-            locations={gradients.primary.locations}
+            colors={MAIN_GRADIENT.colors}
+            locations={MAIN_GRADIENT.locations}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={StyleSheet.absoluteFill}
@@ -309,6 +342,11 @@ export function Button({
           <ActivityIndicator color={fg} size="small" />
         ) : (
           <>
+            {lineIcon ? (
+              <XStack flexShrink={0}>
+                <LineIcon name={lineIcon} size={iconSize.lg} color={fg} />
+              </XStack>
+            ) : null}
             {icon && !iconEnd ? (
               // `flexShrink={0}`: hết chỗ thì CHỮ co, không phải biểu tượng méo đi.
               <XStack flexShrink={0}>
@@ -329,14 +367,26 @@ export function Button({
                       ? typeScale.body.fontSize
                       : fontSize.body
               }
-              fow={compact ? fontWeight.medium : fontWeight.semibold}
+              fow={bold ? fontWeight.bold : compact || medium ? fontWeight.medium : fontWeight.semibold}
               numberOfLines={1}
             >
               {label}
             </Text>
             {icon && iconEnd ? (
               <XStack flexShrink={0}>
-                <Ionicons name={icon} size={size === 'sm' || compact ? iconSize.sm : iconSize.lg} color={fg} />
+                {icon === 'arrow-forward' ? (
+                  /*
+                   * Mũi tên "đi tiếp" là "Right 1" của Figma (khung 20), không phải glyph Ionicons. Nút
+                   * viền vàng tô mũi tên `stroke/primary-300` (Figma "Chọn mô hình & đăng ký" `24464:26329`).
+                   */
+                  <LineIcon
+                    name="arrow-right"
+                    size={size === 'sm' || compact ? iconSize.sm : iconSize.lg}
+                    color={variant === 'brandOutline' && !blocked ? colors.brandBorder : fg}
+                  />
+                ) : (
+                  <Ionicons name={icon} size={size === 'sm' || compact ? iconSize.sm : iconSize.lg} color={fg} />
+                )}
               </XStack>
             ) : null}
           </>

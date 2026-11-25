@@ -6,6 +6,15 @@ import {
   type SaveVehicleDocumentInput,
 } from '../api';
 
+/** Điều kiện bán bảo hiểm vật chất xe theo bậc của xe (ADR 0088) - web `useVehicleInsuranceStatus`. */
+export function useVehicleInsuranceStatus(vehicleId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.vehicles.insuranceEligibility(vehicleId),
+    queryFn: () => vehicleDocumentsApi.insuranceStatus(vehicleId),
+    enabled,
+  });
+}
+
 /** Danh sách TÓM TẮT giấy tờ của xe — `enabled` tắt khi thiếu `vehicles.documents.view`. */
 export function useVehicleDocuments(vehicleId: string | undefined, enabled = true) {
   return useQuery({

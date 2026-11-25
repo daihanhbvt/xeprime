@@ -7,6 +7,117 @@
     "listTitle": "Customers",
     "listSubtitle": "Profiles, contact details and booking history of the customers who rent from your shop"
   },
+  "app": {
+    "titleWithCount": "Customers ({count})",
+    "searchPlaceholder": "Search name, phone number...",
+    "listTitle": "List ({count})",
+    "sortLine": "Sort: {sort}",
+    "sortLastRental": "Most recent rental",
+    "chips": {
+      "all": "All",
+      "has_debt": "Owes money",
+      "returning": "Returning",
+      "watchlist": "Watchlist"
+    },
+    "summary": {
+      "customers": "Customers",
+      "rentals": "Rentals",
+      "revenue": "Total revenue",
+      "debtCustomers": "{count, plural, one {# customer owes money} other {# customers owe money}}",
+      "revenueCompact": "{amount} ₫"
+    },
+    "card": {
+      "call": "Call {name}",
+      "completedWithDate": "{count} completed · {date}",
+      "completedOnly": "{count} completed",
+      "debt": "Owes {amount}",
+      "noDebt": "No debt"
+    },
+    "detail": {
+      "title": "Customer details",
+      "stats": {
+        "completed": "Completed",
+        "active": "Active",
+        "revenue": "Revenue",
+        "debt": "Owes"
+      },
+      "notes": {
+        "viewAll": "View all",
+        "add": "Add note"
+      },
+      "source": {
+        "manual": "Added by staff",
+        "booking": "Counter booking",
+        "marketplace": "Marketplace"
+      },
+      "overview": {
+        "debtBody": "Booking {code} not fully paid · Collected {paid}",
+        "debtBodyMore": "Booking {code} and {count, plural, one {# other booking} other {# other bookings}} not fully paid · Collected {paid}",
+        "total": "Total",
+        "nextAwaiting": "Prepare handover & collect payment",
+        "collect": "Collect",
+        "detail": "Details"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "history": "History",
+        "finance": "Finance",
+        "documents": "Documents"
+      },
+      "history": {
+        "searchPlaceholder": "Search booking code, vehicle, plate...",
+        "status": "Status",
+        "time": "Time",
+        "unpaid": "Not collected",
+        "partial": "Not fully collected",
+        "paid": "Paid in full"
+      },
+      "finance": {
+        "receivable": "Receivable · {count, plural, one {# unpaid booking} other {# unpaid bookings}}",
+        "collected": "Collected this period",
+        "completed": "Completed trips",
+        "collect": "Collect",
+        "chartTitle": "Revenue (k VND)",
+        "chartMoney": "Order value",
+        "chartCount": "Orders",
+        "periodMonth": "{month}/{year}",
+        "periodQuarter": "Q{quarter}/{year}",
+        "periodYear": "{year}",
+        "periodRange": "{from} - {to}",
+        "receivablesTitle": "Receivables",
+        "ledger": "Income & expense ledger",
+        "unpaid": "Unpaid"
+      },
+      "docs": {
+        "verify": "Confirm verified",
+        "replace": "Replace document",
+        "status": "Status",
+        "uploadImage": "Upload {type} photo",
+        "edit": "Edit details"
+      },
+      "form": {
+        "title": "Edit customer profile",
+        "name": "Customer name",
+        "namePlaceholder": "Enter customer name",
+        "source": "Customer source",
+        "phone": "Phone number",
+        "email": "Email",
+        "province": "Province/City",
+        "ward": "Ward",
+        "wardPlaceholder": "Select ward",
+        "addressLine": "Street address",
+        "addressLinePlaceholder": "House number, street name,...",
+        "riskLevel": "Risk level",
+        "reason": "Reason",
+        "reasonPlaceholder": "Enter reason",
+        "cancel": "Cancel",
+        "submit": "Update",
+        "riskFailed": "The profile was saved but the risk level could not be changed."
+      },
+      "actionsTitle": "Actions",
+      "actionClassify": "Classify"
+    }
+  },
   "permission": {
     "title": "You don't have permission to view the customer book",
     "description": "Ask the shop owner to grant you the \"Customers\" permission."

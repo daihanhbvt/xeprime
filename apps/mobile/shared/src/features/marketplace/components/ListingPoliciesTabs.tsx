@@ -160,10 +160,18 @@ export function ListingPoliciesTabs({
 
               {activeService === SERVICE_TYPE.WITH_DRIVER ? (
                 // Giá có tài xế là giá TRỌN GÓI (ADR 0075) - khách chỉ trả thêm phí cầu đường.
-                <Sub title={tDetail('withDriverPrice.title')}>
-                  <Rule>{tDetail('withDriverPrice.included')}</Rule>
-                  <Rule>{tDetail('withDriverPrice.excluded')}</Rule>
-                </Sub>
+                // Chưa niêm yết giá có tài xế ⇒ giá đang hiện là giá thuê xe, chưa gồm tài xế (20/11/2026).
+                listing.withDriverDailyPrice ? (
+                  <Sub title={tDetail('withDriverPrice.title')}>
+                    <Rule>{tDetail('withDriverPrice.included')}</Rule>
+                    <Rule>{tDetail('withDriverPrice.excluded')}</Rule>
+                  </Sub>
+                ) : (
+                  <Sub title={tDetail('withDriverPrice.pendingTitle')}>
+                    <Rule>{tDetail('withDriverPrice.pendingPrice')}</Rule>
+                    <Rule>{tDetail('withDriverPrice.pendingNegotiate')}</Rule>
+                  </Sub>
+                )
               ) : null}
 
               {/* Hoá đơn VAT (ADR 0059) - chỉ khi chủ xe đã công bố. */}

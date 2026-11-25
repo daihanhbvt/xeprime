@@ -7,6 +7,7 @@ import { useTranslations } from 'use-intl';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { Pill } from '@/components/ui/Pill';
+import { SelectTrigger } from '@/components/ui/SelectTrigger';
 import { elevation } from '@/theme/elevation';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { buttonHeight, fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
@@ -30,6 +31,7 @@ export function BranchFilterField({
   value,
   block = false,
   scope = false,
+  select = false,
 }: {
   filter: BranchFilterState;
   value: string | undefined;
@@ -45,6 +47,11 @@ export function BranchFilterField({
    * phạm vi 14/20 đậm vừa + viên "N cơ sở" (khi xem tất cả), mũi tên xuống. Rộng hết khổ.
    */
   scope?: boolean;
+  /**
+   * Ô "Input - Select" gọn của Figma (Tổng quan doanh thu `24228:98932`): đứng cạnh ô kỳ trên
+   * cùng một hàng, rộng theo khung cha.
+   */
+  select?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Branches');
@@ -53,6 +60,38 @@ export function BranchFilterField({
   if (!filter.visible) return null;
 
   const a11yLabel = `${t('filter.label')}: ${filter.currentLabel}`;
+  const sheet = (
+    <BottomSheet open={open} onClose={() => setOpen(false)} title={t('filter.label')}>
+      <MenuOptionList>
+        {[{ value: ALL, label: t('scope.all') }, ...filter.options].map((option) => (
+          <MenuOption
+            key={option.value}
+            label={option.label}
+            selected={option.value === (value ?? ALL)}
+            onPress={() => {
+              filter.select(option.value === ALL ? undefined : option.value);
+              setOpen(false);
+            }}
+          />
+        ))}
+      </MenuOptionList>
+    </BottomSheet>
+  );
+
+  if (select) {
+    return (
+      <>
+        <SelectTrigger
+          label={filter.currentLabel}
+          accessibilityLabel={a11yLabel}
+          locked={filter.locked}
+          onPress={() => setOpen(true)}
+        />
+        {filter.locked ? null : sheet}
+      </>
+    );
+  }
+
   const pill = scope ? (
     <XStack
       ai="center"
@@ -189,21 +228,7 @@ export function BranchFilterField({
         {pill}
       </Pressable>
 
-      <BottomSheet open={open} onClose={() => setOpen(false)} title={t('filter.label')}>
-        <MenuOptionList>
-          {[{ value: ALL, label: t('scope.all') }, ...filter.options].map((option) => (
-            <MenuOption
-              key={option.value}
-              label={option.label}
-              selected={option.value === (value ?? ALL)}
-              onPress={() => {
-                filter.select(option.value === ALL ? undefined : option.value);
-                setOpen(false);
-              }}
-            />
-          ))}
-        </MenuOptionList>
-      </BottomSheet>
+      {sheet}
     </>
   );
 }

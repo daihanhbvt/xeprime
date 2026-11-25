@@ -97,6 +97,21 @@
     "viewBookingFor": "Xem chi tiết đơn thuê của {vehicle}"
   },
   "detail": {
+    "partnerApp": {
+      "statusShort": {
+        "pending_host_approval": "Chờ duyệt",
+        "approved_by_host": "Đã duyệt",
+        "rejected_by_host": "Bạn từ chối",
+        "cancelled_by_customer": "Khách huỷ",
+        "expired": "Quá hạn",
+        "converted_to_booking": "Đã tạo đơn",
+        "awaiting_hold": "Chờ thanh toán",
+        "hold_paid": "Đã thanh toán",
+        "hold_expired": "Hết hạn TT",
+        "slot_taken": "Xe đã có khách",
+        "cancelled_by_host": "Bạn huỷ"
+      }
+    },
     "title": "Chi tiết yêu cầu thuê",
     "openVehicle": "Xem hồ sơ xe",
     "openCustomer": "Xem hồ sơ khách",
@@ -185,6 +200,9 @@
     "wishLegacy": "Yêu cầu cũ - khách chưa nêu nguyện vọng theo mẫu mới"
   },
   "reject": {
+    "partnerApp": {
+      "title": "Từ chối yêu cầu"
+    },
     "title": "Từ chối yêu cầu thuê xe",
     "context": "{customer} · {vehicle}",
     "reasonLabel": "Ghi chú cho khách",
@@ -644,6 +662,9 @@
     "differentPhone": "Khách để lại số liên hệ khác số đăng ký tài khoản. Số tài khoản {phone} đã xác thực; số liên hệ thì chưa."
   },
   "approvalPreview": {
+    "partnerApp": {
+      "paymentWindow": "Khách hàng có <b>{duration}</b> (đến {time}) để thanh toán giữ chỗ, quá hạn yêu cầu sẽ tự động hủy."
+    },
     "title": "Nếu duyệt ngay",
     "estimate": "Ước tính",
     "noHold": "Chuyến này không thu tiền giữ chỗ online - đơn thuê được tạo ngay khi bạn duyệt, không có mã QR.",

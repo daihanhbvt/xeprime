@@ -4,6 +4,7 @@ import { useTranslations } from 'use-intl';
 import { useIsOnline } from '@/hooks/use-is-online';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
 
 /**
  * Chữ nhỏ đặt ngay DƯỚI một nút bị khoá vì offline — một cách nói lý do cho mọi hành động chính
@@ -33,5 +34,5 @@ const useStyles = makeStyles((colors) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs },
   center: { justifyContent: 'center' },
   start: { justifyContent: 'flex-start' },
-  text: { fontSize: fontSize.label, color: colors.warning, flexShrink: 1 },
+  text: { fontFamily: FONT_FAMILY.body, fontSize: fontSize.label, color: colors.warning, flexShrink: 1 },
 }));

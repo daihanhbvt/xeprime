@@ -1,4 +1,5 @@
 import { Ionicons } from '@/components/icons/Ionicons';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -118,7 +119,7 @@ function TripHistoryBody({ vehicleId }: { vehicleId: string }) {
             vào không xảy ra gì, và người dùng sẽ bấm vài lần trước khi tin là đã hết.
           */}
           {query.isFetchingNextPage ? (
-            <MiniRowsSkeleton rows={2} />
+            <ListLoadingFooter />
           ) : query.hasNextPage ? (
             <Button
               label={tActions('viewMore')}

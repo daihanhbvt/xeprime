@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import {
   SERVICE_TYPE,
   SHOP_ONBOARDING_STATE,
-  missingPackageShopListingRequirements,
+  packageShopListingGapsOf,
   type PackageShopListingRequirement,
   VEHICLE_IMAGE_TYPE,
   VEHICLE_TYPE,
@@ -40,18 +40,7 @@ export interface CreateReadiness {
 export function shopListingGaps(
   shop: MyShop | null | undefined,
 ): PackageShopListingRequirement[] | null {
-  if (!shop) return null;
-  const packageTrack =
-    shop.onboardingState === SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE ||
-    shop.onboardingState === SHOP_ONBOARDING_STATE.PACKAGE_PENDING;
-  if (!packageTrack) return null;
-  return missingPackageShopListingRequirements({
-    displayName: shop.name,
-    contactPhone: 'n/a',
-    provinceCode: shop.defaultBranch?.provinceCode ?? null,
-    addressLine: shop.defaultBranch?.address ?? null,
-    logoUrl: shop.profile?.logoUrl ?? null,
-  });
+  return packageShopListingGapsOf(shop);
 }
 
 /**

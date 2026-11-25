@@ -1,6 +1,6 @@
 import FileImageOutlined from '@ant-design/icons-svg/es/asn/FileImageOutlined';
 import { Ionicons } from '@/components/icons/Ionicons';
-import { CardTitle } from '@/components/ui/CardTitle';
+import { LineIcon } from '@/components/icons/LineIcon';
 import FilePdfOutlined from '@ant-design/icons-svg/es/asn/FilePdfOutlined';
 import LoadingOutlined from '@ant-design/icons-svg/es/asn/LoadingOutlined';
 import { AntIcon } from '@/components/icons/AntIcon';
@@ -13,14 +13,15 @@ import {
   API_ERROR_CODE,
   CUSTOMER_DOCUMENT_EXPIRY_META,
   CUSTOMER_DOCUMENT_TYPE,
+  IDENTITY_VERIFY_METHOD,
   IDENTITY_VERIFY_METHOD_VALUES,
   STATUS_COLOR,
   type CustomerDocumentExpiry,
   type CustomerDocumentType,
   type IdentityVerifyMethod,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AlertDialog } from '@/components/ui/AlertDialog';
+import { ActionSheetButtons } from '@/components/ui/ActionSheetButtons';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -30,7 +31,7 @@ import { FORM_DATE_FLOOR } from '@/components/ui/DateField';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { IconButton } from '@/components/ui/IconButton';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
-import { SkeletonText } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Pill } from '@/components/ui/Pill';
 import { TextControl } from '@/components/ui/TextControl';
@@ -64,10 +65,34 @@ import {
 } from '../hooks/use-customers';
 import { customersApi, type CustomerDocument, type PresignCustomerDocumentInput } from '../api';
 
-/** Khung ảnh của một ô giấy tờ — đủ để nhận ra CCCD/GPLX, như `.thumb` của web. */
-/** Ô ảnh giấy tờ - cùng cỡ ô ảnh bàn giao (Figma Frame 815, 103 × 88). */
-const CELL_W = 103;
-const CELL_H = 88;
+/** Figma "Identity Document Card" `24486:81199`: đệm/khe 12, ảnh 332 × 190,8, vùng tải lên cao 56. */
+const CARD_PAD = 12;
+const IMAGE_RATIO = 332 / 190.8;
+const UPLOAD_ZONE_HEIGHT = 56;
+
+/** Khung chờ của tab Giấy tờ - cùng hình dạng thẻ thật: ảnh · tên + viên trạng thái · ô tải lên. */
+function DocumentsSkeleton() {
+  return (
+    <YStack gap={space.lg}>
+      {[0, 1, 2].map((i) => (
+        <Card key={i} padded={false}>
+          <YStack p={CARD_PAD} gap={CARD_PAD}>
+            {i === 0 ? <Skeleton aspectRatio={IMAGE_RATIO} /> : null}
+            <XStack ai="center" jc="space-between" gap={space.sm}>
+              <Skeleton width="45%" height={18} />
+              <Skeleton width={84} height={22} round />
+            </XStack>
+            {i === 0 ? (
+              <Skeleton width="60%" height={14} />
+            ) : (
+              <Skeleton width="100%" height={UPLOAD_ZONE_HEIGHT} />
+            )}
+          </YStack>
+        </Card>
+      ))}
+    </YStack>
+  );
+}
 
 const styles = StyleSheet.create({
   slotImage: { width: '100%', height: '100%' },
@@ -111,6 +136,7 @@ export function CustomerDocumentsPanel({
   const t = useTranslations('Customers');
   const tCommon = useTranslations('Common.actions');
   const tDocs = useTranslations('Customers.profile.docs');
+  const tApp = useTranslations('Customers.app.detail.docs');
   const tStates = useTranslations('Common.states');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -256,7 +282,7 @@ export function CustomerDocumentsPanel({
       ? document.customTypeName
       : domainLabel('customerDocumentType', type);
 
-  if (isLoading && !data) return <SkeletonText lines={6} />;
+  if (isLoading && !data) return <DocumentsSkeleton />;
   if (isError && !data) {
     return (
       <ScreenError error={error} title={t('documents.errorTitle')} onRetry={() => void refetch()} />
@@ -265,7 +291,7 @@ export function CustomerDocumentsPanel({
 
   const fact = (label: string, value: ReactNode) => (
     <XStack jc="space-between" ai="center" gap={space.sm}>
-      <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
         {label}
       </Text>
       {typeof value === 'string' ? (
@@ -275,6 +301,7 @@ export function CustomerDocumentsPanel({
           col={colors.text}
           fos={typeScale.body.fontSize}
           lh={typeScale.body.lineHeight}
+          fow={fontWeight.semibold}
           numberOfLines={1}
         >
           {value}
@@ -286,72 +313,35 @@ export function CustomerDocumentsPanel({
   );
 
   return (
-    <YStack gap={space.md}>
-      <XStack ai="center" jc="space-between" gap={space.sm}>
-        <YStack f={1}>
-          <CardTitle icon="id-card-outline">{tDocs('title')}</CardTitle>
-        </YStack>
-      </XStack>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {t('hints.documents')}
-      </Text>
-
+    <YStack gap={space.lg}>
       <XStack flexWrap="wrap" mx={-space.xs}>
         {slots.map(({ key, type, document }) => {
           const busy = uploading.has(key);
           const previewUrl = document ? (previews[document.id] ?? null) : null;
           const isImage = document ? isPreviewableImage(document.mimeType) : true;
+          const verified = Boolean(document?.verifiedAt);
+          const badge = (
+            <Pill
+              label={
+                !document
+                  ? tDocs('notUploaded')
+                  : verified
+                    ? tDocs('verified')
+                    : tDocs('notVerified')
+              }
+              tone={!document ? 'neutral' : verified ? 'success' : 'warning'}
+            />
+          );
           return (
             <YStack key={key} w={isTablet ? '50%' : '100%'} p={space.xs}>
-              <Card>
-                <YStack gap={space.sm}>
-                  {/* Ô ảnh bên trái (khuôn ảnh bàn giao xe), tên + trạng thái + thông tin bên phải. */}
-                  <XStack gap={space.md} ai="flex-start">
-                  {!document && editable ? (
+              {/* Figma "Identity Document Card": đệm 12, ảnh trải hết thẻ, khe 12 giữa các khối. */}
+              <Card padded={false}>
+                <YStack p={CARD_PAD} gap={CARD_PAD}>
+                  {document ? (
                     <YStack
-                      w={CELL_W}
-                      h={CELL_H}
-                      flexShrink={0}
-                      br={radius.md}
-                      bw={1}
-                      borderStyle="dashed"
-                      bc={colors.border}
-                      bg={colors.background}
-                      ai="center"
-                      jc="center"
-                      gap={space.xs}
-                      onPress={busy ? undefined : () => setTarget({ slotKey: key, type })}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${tDocs('upload')} - ${typeLabel(type, null)}`}
-                    >
-                      <AntIcon
-                        icon={busy ? LoadingOutlined : FileImageOutlined}
-                        size={iconSize.lg}
-                        color={colors.textMuted}
-                      />
-                      {/* Nút máy ảnh nổi góc ô - cùng khuôn ô ảnh bàn giao xe. */}
-                      <XStack
-                        pos="absolute"
-                        bottom={6}
-                        right={6}
-                        w={28}
-                        h={28}
-                        br={14}
-                        ai="center"
-                        jc="center"
-                        bg={colors.primary}
-                        bw={2}
-                        bc={colors.surface}
-                      >
-                        <Ionicons name="camera" size={14} color={colors.onPrimary} />
-                      </XStack>
-                    </YStack>
-                  ) : (
-                    <YStack
-                      w={CELL_W}
-                      h={CELL_H}
-                      flexShrink={0}
-                      br={radius.md}
+                      w="100%"
+                      aspectRatio={IMAGE_RATIO}
+                      br={radius.control}
                       bg={colors.surfaceMuted}
                       ai="center"
                       jc="center"
@@ -360,7 +350,7 @@ export function CustomerDocumentsPanel({
                         ? {
                             onPress: () => setZoomed(previewUrl),
                             accessibilityRole: 'button' as const,
-                            accessibilityLabel: document?.originalName ?? '',
+                            accessibilityLabel: document.originalName,
                           }
                         : {})}
                     >
@@ -379,8 +369,8 @@ export function CustomerDocumentsPanel({
                           color={colors.textMuted}
                         />
                       )}
-                      {/* Con mắt nổi góc ô, như ảnh bàn giao xe: xem ảnh (PDF cũ thì mở tệp). */}
-                      {document && (previewUrl || (canViewFiles && !isImage)) ? (
+                      {/* Con mắt chỉ cho tệp KHÔNG có ảnh xem trước (PDF cũ): mở tệp qua URL ký. */}
+                      {canViewFiles && !isImage && !previewUrl ? (
                         <XStack
                           pos="absolute"
                           bottom={6}
@@ -394,8 +384,7 @@ export function CustomerDocumentsPanel({
                           bw={2}
                           bc={colors.surface}
                           onPress={() => {
-                            if (previewUrl) setZoomed(previewUrl);
-                            else if (opening !== document.id) void openDocument(document);
+                            if (opening !== document.id) void openDocument(document);
                           }}
                           accessibilityRole="button"
                           accessibilityLabel={t('documents.openFile')}
@@ -404,126 +393,132 @@ export function CustomerDocumentsPanel({
                         </XStack>
                       ) : null}
                     </YStack>
-                  )}
+                  ) : null}
 
-                    <YStack f={1} minWidth={0} gap={space.xs}>
-                  {/* Khuôn thẻ đơn thuê: tên giấy tờ trái, viên trạng thái phải. */}
                   <XStack ai="center" jc="space-between" gap={space.sm}>
                     <Text
+                      f={1}
+                      minWidth={0}
                       col={colors.text}
-                      fos={fontSize.body}
+                      fos={typeScale.title.fontSize}
+                      lh={typeScale.title.lineHeight}
                       fow={fontWeight.semibold}
                       numberOfLines={1}
-                      flexShrink={1}
                     >
                       {typeLabel(type, document)}
                     </Text>
-                    <Pill
-                      label={
-                        !document
-                          ? tDocs('notUploaded')
-                          : document.verifiedAt
-                            ? tDocs('verified')
-                            : tDocs('notVerified')
-                      }
-                      tone={!document ? 'neutral' : document.verifiedAt ? 'success' : 'warning'}
-                    />
+                    {badge}
                   </XStack>
-                  <YStack gap={space.xs}>
-                    {fact(tDocs('holder'), document?.holderName ?? '-')}
-                    {fact(
-                      tDocs(`numberOf.${type}` as 'numberOf.other'),
-                      document?.documentNumber ?? '-',
-                    )}
-                    {fact(
-                      tDocs('expiry'),
-                      !document ? (
-                        '-'
-                      ) : document.expiresAt ? (
-                        <XStack ai="center" gap={space.xs}>
-                          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-                            {fmt.date(document.expiresAt)}
-                          </Text>
-                          <StatusBadge
-                            label={domainLabel('customerDocumentExpiry', document.expiryStatus)}
-                            color={
-                              CUSTOMER_DOCUMENT_EXPIRY_META[
-                                document.expiryStatus as CustomerDocumentExpiry
-                              ].color
-                            }
-                            size="sm"
-                          />
-                        </XStack>
-                      ) : (
-                        tDocs('noExpiry')
-                      ),
-                    )}
-                  </YStack>
-                    </YStack>
-                  </XStack>
+
                   {document ? (
-                    <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
-                      {[
-                        document.originalName,
-                        document.uploadedByName ?? t('documents.unknownUploader'),
-                        fmt.date(document.createdAt),
-                      ].join(LIST_SEPARATOR)}
-                    </Text>
+                    <YStack gap={space.sm}>
+                      {fact(tDocs('holder'), document.holderName ?? '-')}
+                      {fact(
+                        tDocs(`numberOf.${type}` as 'numberOf.other'),
+                        document.documentNumber ?? '-',
+                      )}
+                      {fact(
+                        tDocs('expiry'),
+                        document.expiresAt ? (
+                          <XStack ai="center" gap={space.xs}>
+                            <Text
+                              col={colors.text}
+                              fos={typeScale.body.fontSize}
+                              lh={typeScale.body.lineHeight}
+                              fow={fontWeight.semibold}
+                            >
+                              {fmt.date(document.expiresAt)}
+                            </Text>
+                            <StatusBadge
+                              label={domainLabel('customerDocumentExpiry', document.expiryStatus)}
+                              color={
+                                CUSTOMER_DOCUMENT_EXPIRY_META[
+                                  document.expiryStatus as CustomerDocumentExpiry
+                                ].color
+                              }
+                              size="sm"
+                            />
+                          </XStack>
+                        ) : (
+                          tDocs('noExpiry')
+                        ),
+                      )}
+                      {/* Figma: dòng "Trạng thái" + viên chỉ khi CHƯA đối chiếu (đã đối chiếu thì viên chỉ ở tiêu đề). */}
+                      {!verified
+                        ? fact(tApp('status'), <Pill label={tDocs('notVerified')} tone="warning" />)
+                        : null}
+                    </YStack>
                   ) : null}
 
-                  {/* Nút trải đều một hàng như thẻ danh sách đơn; chưa có tệp thì một nút vàng "Tải lên". */}
                   {document && editable ? (
-                    // Nút biểu tượng (chữ dài bị cắt "Sửa thông…"): Xoá · Sửa · Thay/Xác nhận, đều nhau.
-                    <XStack gap={space.sm}>
-                      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+                    <YStack gap={CARD_PAD} pt={CARD_PAD} borderTopWidth={1} borderTopColor={colors.borderSubtle}>
+                      <XStack gap={space.sm} ai="center">
                         <Button
                           label={tDocs('remove')}
-                          icon="trash-outline"
                           variant="dangerOutline"
                           size="compact"
                           onPress={() => setRemoving(document)}
                         />
-                      </YStack>
-                      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+                        {/* Nút CHỮ rõ ràng, không icon (người dùng 25/11/2026). */}
                         <Button
                           label={tDocs('edit')}
-                          icon="create-outline"
-                          variant="outline"
+                          variant="neutral"
                           size="compact"
                           onPress={() => setEditing(document)}
                         />
-                      </YStack>
-                      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-                        {document.verifiedAt ? (
-                          <Button
-                            label={tDocs('replaceShort')}
-                            icon="refresh-outline"
-                            variant="outline"
-                            size="compact"
-                            loading={busy}
-                            onPress={() => setTarget({ slotKey: key, type, replaces: document })}
-                          />
+                        <YStack f={1} minWidth={0}>
+                          {verified ? (
+                            <Button
+                              label={tApp('replace')}
+                              variant="neutral"
+                              size="compact"
+                              loading={busy}
+                              onPress={() => setTarget({ slotKey: key, type, replaces: document })}
+                            />
+                          ) : (
+                            <Button
+                              label={tApp('verify')}
+                              variant="gradient"
+                              size="compact"
+                              disabled={verify.isPending}
+                              onPress={() => setVerifying(document)}
+                            />
+                          )}
+                        </YStack>
+                      </XStack>
+                    </YStack>
+                  ) : null}
+
+                  {!document && editable ? (
+                    // Vùng tải lên viền đứt (Figma "Hộ chiếu"): biểu tượng tải lên + "Tải lên ảnh {loại}".
+                    <YStack
+                      h={UPLOAD_ZONE_HEIGHT}
+                      br={radius.control}
+                      bw={1}
+                      borderStyle="dashed"
+                      bc={colors.border}
+                      bg={colors.background}
+                      ai="center"
+                      jc="center"
+                      onPress={busy ? undefined : () => setTarget({ slotKey: key, type })}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${tDocs('upload')} - ${typeLabel(type, null)}`}
+                    >
+                      <XStack ai="center" gap={space.sm}>
+                        {busy ? (
+                          <AntIcon icon={LoadingOutlined} size={iconSize.sm} color={colors.textMuted} />
                         ) : (
-                          <Button
-                            label={tDocs('verifyShort')}
-                            icon="shield-checkmark-outline"
-                            variant="gradient"
-                            size="compact"
-                            disabled={verify.isPending}
-                            onPress={() => setVerifying(document)}
-                          />
+                          <LineIcon name="upload" size={iconSize.sm} color={colors.placeholder} />
                         )}
-                      </YStack>
-                    </XStack>
-                  ) : editable ? (
-                    <Button
-                      label={tDocs('upload')}
-                      icon="add"
-                      variant="gradient"
-                      size="compact"
-                      loading={busy}
-                      onPress={() => setTarget({ slotKey: key, type })}
-                    />
+                        <Text
+                          col={colors.textMuted}
+                          fos={typeScale.label.fontSize}
+                          lh={typeScale.label.lineHeight}
+                        >
+                          {tApp('uploadImage', { type: typeLabel(type, null) })}
+                        </Text>
+                      </XStack>
+                    </YStack>
                   ) : null}
                 </YStack>
               </Card>
@@ -567,21 +562,24 @@ export function CustomerDocumentsPanel({
         onClose={() => setTarget(null)}
         title={t('documents.pickSourceTitle')}
       >
-        <YStack gap={space.sm}>
-          <Button
-            label={t('documents.pickCamera')}
-            variant="secondary"
-            icon="camera-outline"
-            onPress={() => void pickImage(IMAGE_SOURCE.CAMERA)}
-          />
-          <Button
-            label={t('documents.pickLibrary')}
-            variant="secondary"
-            icon="images-outline"
-            onPress={() => void pickImage(IMAGE_SOURCE.LIBRARY)}
-          />
-          {/* Chỉ chụp ảnh / chọn ảnh - bỏ chọn tệp PDF (người dùng 16/11/2026); PDF cũ vẫn mở xem được. */}
-        </YStack>
+        {/* Chỉ chụp ảnh / chọn ảnh - bỏ chọn tệp PDF (người dùng 16/11/2026); PDF cũ vẫn mở xem được. Hai hàng, có icon, "Chọn từ thư viện" là nút chính (25/11/2026). */}
+        <ActionSheetButtons
+          actions={[
+            {
+              key: 'camera',
+              label: t('documents.pickCamera'),
+              icon: 'camera',
+              onPress: () => void pickImage(IMAGE_SOURCE.CAMERA),
+            },
+            {
+              key: 'library',
+              label: t('documents.pickLibrary'),
+              icon: 'gallery',
+              primary: true,
+              onPress: () => void pickImage(IMAGE_SOURCE.LIBRARY),
+            },
+          ]}
+        />
       </BottomSheet>
 
       {/* Đối chiếu THỦ CÔNG có ghi nhận — nói rõ đã soi bằng đường nào (web Dropdown phương thức). */}
@@ -595,7 +593,7 @@ export function CustomerDocumentsPanel({
             <Button
               key={method}
               label={domainLabel('identityVerifyMethod', method)}
-              variant="secondary"
+              variant={method === IDENTITY_VERIFY_METHOD.IN_PERSON ? 'primary' : 'secondary'}
               disabled={verify.isPending}
               onPress={() => {
                 const document = verifying;

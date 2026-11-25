@@ -233,8 +233,11 @@ export function SocialButtons({
  */
 const ROW_BUTTON_HEIGHT = 44;
 const ROW_ICON_SIZE = 26;
-const ROW_SECTION_GAP = 24;
+/** Bản vẽ 24; giảm nhẹ còn 20 để màn đăng nhập gói trong một khung máy (chốt 20/11/2026). */
+const ROW_SECTION_GAP = space.lg + space.xs;
 const ROW_DIVIDER_LINE_HEIGHT = 22;
+/** Nhãn nút kiểu `row`: 14/20 (Figma `24464:24607`). */
+const ROW_LABEL_LINE_HEIGHT = 20;
 
 const useStyles = makeStyles((colors) => ({
   button: {
@@ -265,7 +268,18 @@ const useStyles = makeStyles((colors) => ({
    */
   blocked: { borderColor: colors.border, opacity: DISABLED_OPACITY },
   rowButton: { flex: 1, height: ROW_BUTTON_HEIGHT, borderRadius: radius.control },
-  rowLabel: { color: colors.textMuted, fontSize: fontSize.body, fontWeight: '500' },
+  /*
+   * Kiểu `row` (app Partner) theo Figma: Google Sans Flex Medium 14/20 - font của app, không phải font
+   * hệ thống của kiểu `stack`. `fontWeight` về thường: mặt chữ đã là Medium (Android chọn file theo
+   * `fontFamily`; giữ '500' thì máy có thể tô đậm giả lên mặt Medium).
+   */
+  rowLabel: {
+    color: colors.textMuted,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: fontSize.body,
+    fontWeight: 'normal',
+    lineHeight: ROW_LABEL_LINE_HEIGHT,
+  },
 }));
 
 /** Một nút provider — Google, Facebook, Apple dùng chung để trông như MỘT bộ. */

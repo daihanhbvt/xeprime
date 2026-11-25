@@ -204,12 +204,6 @@ export function MaintenanceRecordSheet({
     : record
       ? t('form.submitEdit')
       : t('form.submitCreate');
-  /* Ba việc khác nhau, ba hình: đóng phiếu · lưu sửa đổi · đặt một mốc lịch mới. */
-  const submitIcon = completing
-    ? 'checkmark-outline'
-    : record
-      ? 'save-outline'
-      : 'calendar-outline';
 
   return (
     <BottomSheet
@@ -220,7 +214,6 @@ export function MaintenanceRecordSheet({
         <Button
           variant="gradient"
           label={submitLabel}
-          icon={submitIcon}
           loading={pending}
           onPress={submit}
         />
@@ -299,7 +292,7 @@ export function MaintenanceRecordSheet({
           control={control}
           name="notes"
           label={t('form.notes')}
-          multiline
+          multiline scrollable
           rows={3}
           maxLength={2000}
         />

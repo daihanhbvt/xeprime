@@ -442,3 +442,10 @@ export {
 } from './audit-action-label';
 
 export { customerStatusOf, type CustomerStatusKey } from './customer-status';
+
+export {
+  customerFeeLines,
+  visibleFeeLines,
+  type CustomerFeeLine,
+  type IncludedInsuranceServiceFee,
+} from './customer-fee-lines';

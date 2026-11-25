@@ -1,4 +1,6 @@
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { LockedValueField, type FieldLock } from './LockedValueField';
 import { NumberControl } from './NumberControl';
 
 /**
@@ -47,6 +49,7 @@ export function NumberField<T extends FieldValues>({
   integer = false,
   grouped = true,
   percent = false,
+  lock,
 }: {
   control: Control<T>;
   name: Path<T>;
@@ -69,8 +72,26 @@ export function NumberField<T extends FieldValues>({
   grouped?: boolean;
   /** Ô phần trăm: tự `min=0`, `max=100`, hậu tố `%`; tự nguyên hoá trừ khi có `precision`. */
   percent?: boolean;
+  /** Khoá tại chỗ của ô tự điền (ADR 0102) - khoá thì ô chỉ đọc + bút để mở. */
+  lock?: FieldLock | undefined;
 }) {
   const { field, fieldState } = useController({ control, name });
+  const fmt = useAppFormat();
+  const raw = field.value as number | null | undefined;
+  if (lock?.locked && raw != null) {
+    // Định dạng theo ngôn ngữ (`5,7` ở vi) - ô khoá là ô ĐỌC, không phải chuỗi thô của form.
+    const shown = grouped ? fmt.measure(raw) : String(raw);
+    return (
+      <LockedValueField
+        label={label}
+        value={suffix ? `${shown} ${suffix}` : shown}
+        lock={lock}
+        required={required}
+        hint={hint}
+        error={fieldState.error?.message}
+      />
+    );
+  }
 
   return (
     <NumberControl

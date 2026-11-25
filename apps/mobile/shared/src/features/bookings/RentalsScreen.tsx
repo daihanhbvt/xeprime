@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -22,6 +22,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -70,7 +71,6 @@ import {
   RENTAL_VIEW,
   type RentalView,
 } from '@/lib/rentals-view-memory';
-import { ExtendBookingSheet } from './components/ExtendBookingSheet';
 import { useBookingHistory } from './hooks/use-booking-history';
 import { useBookingsPage } from './hooks/use-bookings';
 import { useCanCreateBooking } from './hooks/use-can-create-booking';
@@ -82,10 +82,14 @@ import {
 } from './rental-stages';
 import type { BookingListItem, BookingSort } from './api';
 
-/** Ô "Tất cả" xem trước chừng này chuyến mỗi nhóm — `ALL_VIEW_GROUP_LIMIT` của web. */
-const ALL_VIEW_GROUP_LIMIT = 3;
-/** Cỡ trang của một nhóm đầy đủ — 10 như `Pagination` mặc định bên web. */
-const STAGE_PAGE_LIMIT = 10;
+/**
+ * Cỡ trang của một nhóm trên điện thoại - CÙNG một số cho chip "Tất cả" (danh sách liền mọi nhóm)
+ * và từng chip nhóm, nên đổi chip đọc thẳng cache (không gọi lại, không khung chờ). 50 đủ hiện hết
+ * việc đang mở của một gian hàng thường; nhóm dài hơn có link "Xem tất cả" ở cuối (20/11/2026).
+ */
+const STAGE_PAGE_LIMIT = 50;
+/** Bảng Kanban iPad: mỗi cột 10 thẻ, "Tải thêm" nới 10 một lượt (web 10/trang). */
+const BOARD_PAGE_LIMIT = 10;
 /** Truy vấn chỉ để lấy SỐ ĐẾM của thực thể kia (web: "một truy vấn một-dòng"). */
 const COUNT_ONLY_LIMIT = 1;
 const SKELETON_ROWS = 3;
@@ -108,7 +112,9 @@ type Row =
   | { kind: 'request'; stage: RentalStage; item: BookingRequestItem }
   | { kind: 'booking'; stage: RentalStage; item: BookingListItem }
   | { kind: 'groupError'; stage: RentalStage }
-  | { kind: 'stageEmpty'; stage: RentalStage };
+  | { kind: 'stageEmpty'; stage: RentalStage }
+  /** "Tất cả": nhóm còn đơn chưa tải - link mở chip của nhóm đó. */
+  | { kind: 'more'; stage: RentalStage; count: number };
 
 const keyOf = (row: Row) =>
   row.kind === 'request' || row.kind === 'booking' ? `${row.kind}:${row.item.id}` : `${row.kind}:${row.stage}`;
@@ -148,6 +154,7 @@ export function RentalsScreen({
   const colors = useColors();
   const t = useTranslations('Bookings.board');
   const tList = useTranslations('Bookings.list');
+  const tApp = useTranslations('Bookings.board.kanban.partnerApp');
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
@@ -159,12 +166,16 @@ export function RentalsScreen({
   /** Tuyến hoa hồng: chuyến chỉ đến từ chợ — câu trống nói khác, nút "Xem xe của tôi". */
   const marketOnly = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
   const decisions = useBookingRequestDecisions();
+  /*
+   * Lấy RIÊNG từng hàm ổn định: object `decisions` mới sau mỗi render, đưa nó vào deps là mọi
+   * callback của thẻ (và `renderItem`) đổi theo - `memo` của thẻ vô tác dụng, mỗi phím gõ ô tìm vẽ
+   * lại cả danh sách. `openX` là setter của `useState`, `decisionActionFor` là `useCallback`.
+   */
+  const { openApprove, openReject, openCancel, decisionActionFor } = decisions;
 
   const canViewRequests = permissions.has(PERMISSION.BOOKING_REQUEST_VIEW);
   const canViewBookings = permissions.has(PERMISSION.BOOKING_VIEW);
-  const canExtend = permissions.has(PERMISSION.BOOKING_UPDATE);
   const canHandle = permissions.has(PERMISSION.HANDOVER_CONFIRM);
-  const canNoShow = permissions.has(PERMISSION.BOOKING_UPDATE);
 
   usePaymentArrivalToast({ enabled: canViewRequests, canOpenBooking: canViewBookings });
 
@@ -201,10 +212,10 @@ export function RentalsScreen({
   }, []);
   /** Số thẻ đã tải của mỗi cột Kanban — "Tải thêm" nới 10 thẻ một lượt (web 10/trang). */
   const [boardLimits, setBoardLimits] = useState<Record<RentalStage, number>>({
-    needs_action: STAGE_PAGE_LIMIT,
-    awaiting_payment: STAGE_PAGE_LIMIT,
-    awaiting_pickup: STAGE_PAGE_LIMIT,
-    renting: STAGE_PAGE_LIMIT,
+    needs_action: BOARD_PAGE_LIMIT,
+    awaiting_payment: BOARD_PAGE_LIMIT,
+    awaiting_pickup: BOARD_PAGE_LIMIT,
+    renting: BOARD_PAGE_LIMIT,
   });
 
   const [rail, setRail] = useState<Rail>(initialStage ?? ALL);
@@ -238,11 +249,14 @@ export function RentalsScreen({
     ...(vehicleId ? { vehicleId } : {}),
     ...(q ? { q } : {}),
   };
-  const sizeFor = (stage: RentalStage, primary: boolean) =>
-    isBoard
-      ? boardLimits[stage]
-      : isAll
-        ? ALL_VIEW_GROUP_LIMIT : rail === stage ? STAGE_PAGE_LIMIT : primary ? COUNT_ONLY_LIMIT : 0;
+  /*
+   * Ô "Tất cả" tải ĐÚNG trang đầu của nhóm (10 thẻ - cùng khoá cache với khi chọn nhóm đó) rồi chỉ
+   * HIỆN 3 thẻ đầu. Bấm chip nhóm đọc thẳng cache, không gọi API mới + khung chờ (người dùng báo
+   * lag khi đổi chip 20/11/2026); quay về "Tất cả" cũng vậy.
+   */
+  // Truy vấn chỉ-để-đếm của nhóm khác cũng giữ cỡ trang này: đổi cỡ là đổi khoá, số trên chip nháy.
+  const sizeFor = (stage: RentalStage, _primary: boolean) =>
+    isBoard ? boardLimits[stage] : STAGE_PAGE_LIMIT;
   const pageFor = (stage: RentalStage) => (!isBoard && rail === stage ? page : FIRST_PAGE);
 
   /*
@@ -381,35 +395,37 @@ export function RentalsScreen({
   const startApprove = useCallback(
     (r: BookingRequestItem) => {
       setDetail(null);
-      decisions.openApprove(r);
+      openApprove(r);
     },
-    [decisions],
+    [openApprove],
   );
   const startReject = useCallback(
     (r: BookingRequestItem) => {
       setDetail(null);
-      decisions.openReject(r);
+      openReject(r);
     },
-    [decisions],
+    [openReject],
   );
   const startCancel = useCallback(
     (r: BookingRequestItem) => {
       setDetail(null);
-      decisions.openCancel(r);
+      openCancel(r);
     },
-    [decisions],
+    [openCancel],
   );
 
-  /* ── Hành động trên thẻ đơn ──────────────────────────────────────────────────────────────── */
-  const [extending, setExtending] = useState<BookingListItem | null>(null);
+  /*
+   * ── Hành động trên thẻ đơn ─────────────────────────────────────────────────────────────────
+   * Thẻ v2 chỉ là bản TÓM TẮT như Figma (người dùng chốt 20/11/2026): "Khách không đến" và
+   * "Gia hạn" không còn trên thẻ - làm ở màn chi tiết đơn (cùng quyền, cùng tấm).
+   */
   const openBooking = useCallback(
-    (booking: BookingListItem) => navigateOnce(ROUTES.manage.bookingDetail(booking.id)),
-    [navigateOnce],
-  );
-  /* "Khách không đến" mở thẳng tấm ghi nhận — tấm cần dữ liệu chi tiết đơn nên đi qua màn chi tiết. */
-  const openNoShow = useCallback(
     (booking: BookingListItem) =>
-      navigateOnce(ROUTES.manage.bookingDetail(booking.id, { noShow: true })),
+      navigateOnce(
+        ROUTES.manage.bookingDetail(booking.id, {
+          preview: { code: booking.code, status: booking.status, createdAt: booking.createdAt },
+        }),
+      ),
     [navigateOnce],
   );
   const receiveBooking = useCallback(
@@ -443,6 +459,7 @@ export function RentalsScreen({
               label: tList('sortLabel'),
               value: sort ?? DEFAULT_BOOKING_SORT[rail as 'awaiting_pickup' | 'renting'],
               resetValue: DEFAULT_BOOKING_SORT[rail as 'awaiting_pickup' | 'renting'],
+              display: 'prefixed' as const,
               options: BOOKING_SORT_VALUES.map((value) => ({
                 value,
                 label: sortLabel(tList, value),
@@ -498,11 +515,14 @@ export function RentalsScreen({
         stage === RENTAL_STAGE.NEEDS_ACTION || stage === RENTAL_STAGE.AWAITING_PAYMENT
           ? (singleItems as BookingRequestItem[]).map((item) => ({ kind: 'request' as const, stage, item }))
           : (singleItems as BookingListItem[]).map((item) => ({ kind: 'booking' as const, stage, item }));
-      return [
-        { kind: 'head', stage, count: countOf(stage), more: null },
-        ...(items.length === 0 && !filtered ? [{ kind: 'stageEmpty' as const, stage }] : items),
-      ];
+      // Chip đã nói nhóm nào - không lặp dải tiêu đề nhóm (20/11/2026).
+      return items.length === 0 && !filtered ? [{ kind: 'stageEmpty' as const, stage }] : items;
     }
+    /*
+     * "Tất cả" trên điện thoại = MỘT danh sách liền mọi đơn, theo thứ tự nhóm, KHÔNG chia dải "Cần
+     * xử lý / Chờ khách thanh toán…" (người dùng chốt 20/11/2026) - lọc thì bấm chip. Nhóm lỗi vẫn
+     * có dải tên để biết phần nào thiếu; nhóm dài hơn trang có link mở chip của nó ở cuối nhóm.
+     */
     const out: Row[] = [];
     for (const stage of visibleStages) {
       const query = stageQuery(stage);
@@ -514,12 +534,12 @@ export function RentalsScreen({
       const items = itemsOf(stage);
       if (items.length === 0) continue;
       const total = countOf(stage) ?? items.length;
-      out.push({ kind: 'head', stage, count: total, more: total > items.length ? total : null });
       out.push(...items);
+      if (total > items.length) out.push({ kind: 'more', stage, count: total });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `stageQuery` đọc bốn truy vấn đã có trong deps.
-  }, [isAll, rail, singleItems, visibleStages, countOf, filtered, needsQ.data, payQ.data, pickupQ.data, rentingQ.data, needsQ.isError, payQ.isError, pickupQ.isError, rentingQ.isError]);
+  }, [isAll, isBoard, rail, singleItems, visibleStages, countOf, filtered, needsQ.data, payQ.data, pickupQ.data, rentingQ.data, needsQ.isError, payQ.isError, pickupQ.isError, rentingQ.isError]);
 
   const activeQueries = isAll ? visibleStages.map(stageQuery) : [stageQuery(rail as RentalStage)];
   const pending = activeQueries.length > 0 && activeQueries.every((query) => query.isPending);
@@ -537,17 +557,22 @@ export function RentalsScreen({
       switch (item.kind) {
         case 'head':
           return (
-            <StageHeading
-              stage={item.stage}
-              count={item.count}
-              {...(item.more !== null ? { onViewAll: () => selectRail(item.stage) } : {})}
-              more={item.more}
-            />
+            <StageHeading stage={item.stage} count={item.count} more={item.more} onViewAll={selectRail} />
+          );
+        case 'more':
+          return (
+            <YStack ai="flex-end" pb={space.md}>
+              <LinkArrow
+                label={`${t(`stage.${item.stage}`)} - ${t('viewAll', { count: item.count })}`}
+                onPress={() => selectRail(item.stage)}
+              />
+            </YStack>
           );
         case 'groupError':
           return (
-            <YStack pb={space.md}>
+            <YStack pb={space.sm}>
               <ScreenMessage
+                compact
                 icon="cloud-offline-outline"
                 title={t('groupError')}
                 description={tCommon('states.errorHint')}
@@ -559,6 +584,7 @@ export function RentalsScreen({
         case 'stageEmpty':
           return (
             <ScreenMessage
+              compact
               icon="checkmark-done-outline"
               title={t(`stageEmpty.${item.stage}.title`)}
               description={t(`stageEmpty.${item.stage}.body`)}
@@ -573,7 +599,7 @@ export function RentalsScreen({
                 onReject={startReject}
                 onCancel={startCancel}
                 onOpenDetail={openRequest}
-                pendingAction={decisions.decisionActionFor(item.item.id)}
+                pendingAction={decisionActionFor(item.item.id)}
               />
             </YStack>
           );
@@ -584,16 +610,14 @@ export function RentalsScreen({
                 booking={item.item}
                 group={item.stage as 'awaiting_pickup' | 'renting'}
                 onPress={openBooking}
-                {...(canExtend ? { onExtend: setExtending } : {})}
                 {...(canHandle ? { onReceive: receiveBooking } : {})}
-                {...(canNoShow ? { onNoShow: openNoShow } : {})}
               />
             </YStack>
           );
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `stageQuery` đổi mỗi render nhưng chỉ đọc truy vấn.
-    [t, tCommon, selectRail, decisions, startApprove, startReject, startCancel, openRequest, openBooking, canExtend, canHandle, canNoShow, receiveBooking, openNoShow],
+    [t, tCommon, selectRail, decisionActionFor, startApprove, startReject, startCancel, openRequest, openBooking, canHandle, receiveBooking],
   );
 
   if (!permissions.isLoading && visibleStages.length === 0) {
@@ -638,16 +662,14 @@ export function RentalsScreen({
               onReject={startReject}
               onCancel={startCancel}
               onOpenDetail={openRequest}
-              pendingAction={decisions.decisionActionFor(item.id)}
+              pendingAction={decisionActionFor(item.id)}
             />
           ) : (
             <BookingCard
               booking={item as BookingListItem}
               group={stage as 'awaiting_pickup' | 'renting'}
               onPress={openBooking}
-              {...(canExtend ? { onExtend: setExtending } : {})}
               {...(canHandle ? { onReceive: receiveBooking } : {})}
-              {...(canNoShow ? { onNoShow: openNoShow } : {})}
             />
           ),
         }));
@@ -661,7 +683,7 @@ export function RentalsScreen({
           hasMore: items.length < total,
           loadingMore: query.isFetching && !query.isPending,
           onLoadMore: () =>
-            setBoardLimits((limits) => ({ ...limits, [stage]: limits[stage] + STAGE_PAGE_LIMIT })),
+            setBoardLimits((limits) => ({ ...limits, [stage]: limits[stage] + BOARD_PAGE_LIMIT })),
           onRetry: () => void query.refetch(),
         };
       })
@@ -708,7 +730,7 @@ export function RentalsScreen({
         <ManageListShell
           variant="page"
           title={t('title')}
-          subtitle={t('subtitle')}
+          // Figma "Header MB" không có dòng mô tả dưới tiêu đề (người dùng 20/11/2026).
           summary={
             isTablet && !initialStage ? (
             <XStack px={layout.screenX} gap={space.sm} ai="center" flexWrap="wrap">
@@ -734,7 +756,8 @@ export function RentalsScreen({
           branchFilter={{ filter: branchFilter, value: branchId }}
           searchValue={search}
           searchLabel={tList('searchLabel')}
-          searchPlaceholder={tList('searchPlaceholder')}
+          // App: câu ngắn không chữ "Tìm" - ô tìm hẹp cạnh nút "Lọc" (Figma, người dùng 20/11/2026).
+          searchPlaceholder={tApp('searchPlaceholder')}
           onSearchChange={changeSearch}
           {...(isBoard
             ? {}
@@ -800,13 +823,7 @@ export function RentalsScreen({
                     onAction={clearFilters}
                   />
                 ) : filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={tList('emptyFilteredTitle')}
-                    description={tList('emptyFilteredBody')}
-                    actionLabel={tCommon('actions.clear')}
-                    onAction={clearFilters}
-                  />
+                  <NoResults />
                 ) : (
                   <ScreenMessage
                     icon="document-text-outline"
@@ -846,7 +863,6 @@ export function RentalsScreen({
         </ManageListShell>
       </Screen>
       {decisions.sheets}
-      {extending ? <ExtendBookingSheet booking={extending} onClose={() => setExtending(null)} /> : null}
     </>
   );
 }
@@ -914,9 +930,10 @@ function StageRail({
 
 /**
  * Dải tiêu đề một nhóm — bản native của `RentalStageHeading` web: vạch màu trái · tên · số đếm;
- * bên phải "Xem tất cả (n)" ở ô "Tất cả".
+ * bên phải "Xem tất cả (n)" ở ô "Tất cả". `memo` + `onViewAll` nhận NHÓM (hàm ổn định của màn) để
+ * dòng tiêu đề không vẽ lại khi danh sách gọi lại `renderItem`.
  */
-function StageHeading({
+const StageHeading = memo(function StageHeading({
   stage,
   count,
   more,
@@ -925,8 +942,9 @@ function StageHeading({
   stage: RentalStage;
   count: number | undefined;
   more: number | null;
-  onViewAll?: () => void;
+  onViewAll: (stage: Rail) => void;
 }) {
+  const viewAll = useCallback(() => onViewAll(stage as Rail), [onViewAll, stage]);
   const colors = useColors();
   const t = useTranslations('Bookings.board');
   const dots = useStageDots();
@@ -955,16 +973,14 @@ function StageHeading({
           </YStack>
         )}
       </XStack>
-      {more !== null && onViewAll ? (
-        <LinkArrow label={t('viewAll', { count: more })} onPress={onViewAll} />
-      ) : null}
+      {more !== null ? <LinkArrow label={t('viewAll', { count: more })} onPress={viewAll} /> : null}
     </XStack>
   );
-}
+});
 
-/** Dải tên nhóm: cao ≥ 32, cách khối dưới 12; chấm 6. */
-const HEADING_MIN_HEIGHT = 32;
-const HEADING_GAP = 12;
+/** Dải tên nhóm: cao theo dòng chữ 24, cách khối dưới 8; chấm 6 (gọn lại lần hai 20/11/2026). */
+const HEADING_MIN_HEIGHT = 24;
+const HEADING_GAP = 8;
 const DOT = 6;
 
 /** Liệt kê tường minh — khoá i18n ghép động lọt qua typecheck của `use-intl`. */

@@ -18,6 +18,7 @@ import { FeatureReadOnlyNotice } from '@/components/feedback/FeatureReadOnlyNoti
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -419,17 +420,7 @@ export function MemberListScreen() {
             ) : items.length === 0 ? (
               inStateScroll(
                 filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('roster.emptyFiltered')}
-                    actionLabel={tActions('clear')}
-                    onAction={() => {
-                      setRoleKey(FILTER_ALL);
-                      setStatus(FILTER_ALL);
-                      setSearch('');
-                      setPage(FIRST_PAGE);
-                    }}
-                  />
+                  <NoResults />
                 ) : (
                   <ScreenMessage
                     icon="people-outline"

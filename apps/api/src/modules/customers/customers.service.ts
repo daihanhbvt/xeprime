@@ -409,7 +409,15 @@ export class CustomersService {
       ? await this.address.resolveOptional(
           {
             provinceCode: dto.provinceCode ?? current.provinceCode,
-            wardCode: dto.wardCode ?? current.wardCode,
+            /*
+             * Đổi TỈNH mà không gửi xã ⇒ xã cũ thuộc tỉnh cũ, KHÔNG được giữ lại (nếu giữ, FK tổ hợp
+             * (ward_code, province_code) từ chối "xã không thuộc tỉnh"). Xã để trống là hợp lệ.
+             */
+            wardCode:
+              dto.wardCode ??
+              (dto.provinceCode !== undefined && dto.provinceCode !== current.provinceCode
+                ? null
+                : current.wardCode),
             addressLine: dto.addressLine ?? dto.address ?? current.addressLine,
           },
           { requireSelectable: false },

@@ -43,8 +43,8 @@ import { fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 
 /** Figma "Vehicle Image" 76×48 bo 8. */
 const THUMB = { width: 76, height: 48 } as const;
-/** Figma "Avatar" 32 viền `stroke/gray-low200`. */
-const IDENTITY_AVATAR = 32;
+/** Figma "Avatar" 32 viền `stroke/gray-low200` - app nâng 40 cho bằng khối tên + SĐT (người dùng 20/11/2026). */
+const IDENTITY_AVATAR = 40;
 /** Figma: thẻ đệm 16, các khối cách 12; đầu thẻ cách dòng 8, đáy đầu thẻ đệm 12. */
 const CARD_PAD = 16;
 const BLOCK_GAP = 12;
@@ -57,6 +57,9 @@ const PANEL_PAD = 12;
 const MONEY_GAP = 12;
 /** Figma "Vehicle row": ảnh cách chữ 8; viên biển số đệm 8 bo 6. */
 const VEHICLE_GAP = 8;
+/** Viên biển số bo 6, cách thông số 6. */
+const PLATE_RADIUS = 6;
+const PLATE_GAP = 6;
 
 const useStyles = makeStyles((colors) => ({
   // Figma "Vehicle Image": bo `num/8`, nền xám khi chưa có ảnh.
@@ -114,7 +117,13 @@ function RentalCardImpl({
   footerStatus,
   actions,
   onOpenDetail,
+  alert = false,
 }: {
+  /**
+   * Thẻ CẦN XỬ LÝ GẤP (đơn quá giờ giao xe) - Figma thẻ thứ tư `24486:61072`: cả thẻ nền đỏ nhạt,
+   * viền đỏ; ô lịch đổi sang nền trắng để vẫn tách khỏi nền thẻ.
+   */
+  alert?: boolean;
   /** Tên thẻ cho trình đọc màn hình (tên xe · mã). */
   accessibilityLabel: string;
   busy?: boolean;
@@ -150,13 +159,18 @@ function RentalCardImpl({
 }) {
   const colors = useColors();
   const t = useTranslations('Common.actions');
-  // Web `RentalBoardCard`: khách + hàng tiền THU GỌN mặc định, ô lịch luôn hiện.
+  // Khách + hàng tiền THU GỌN mặc định (người dùng chốt lại 20/11/2026, như web `RentalBoardCard`);
+  // mũi tên mở ra. Ô lịch và chân thẻ luôn hiện.
   const [expanded, setExpanded] = useState(false);
   const toggle = useCallback(() => setExpanded((open) => !open), []);
   const hasMoney = money !== undefined && money.length > 0;
 
   return (
-    <Card padded={false} {...(onOpenDetail ? { onPress: onOpenDetail, accessibilityLabel } : {})}>
+    <Card
+      padded={false}
+      {...(alert ? { tone: 'danger' as const } : {})}
+      {...(onOpenDetail ? { onPress: onOpenDetail, accessibilityLabel } : {})}
+    >
       <YStack p={CARD_PAD} gap={BLOCK_GAP} opacity={busy ? 0.85 : 1}>
         {/* Figma "Header": mã · trạng thái / dịch vụ · tiền; vạch `stroke/gray-100` đóng đáy. */}
         <YStack gap={HEAD_GAP} pb={BLOCK_GAP} borderBottomWidth={1} borderBottomColor={colors.borderSubtle}>
@@ -179,12 +193,13 @@ function RentalCardImpl({
             </YStack>
             {status ? (
               <YStack flexShrink={1} ai="flex-end">
-                <Pill label={status.label} tone={status.tone} shape="tag" />
+                {/* Figma: nhãn trạng thái KHÔNG viền (bo 6); viên dịch vụ thì có viền. */}
+                <Pill label={status.label} tone={status.tone} shape="tag" borderless />
               </YStack>
             ) : null}
           </XStack>
           <XStack ai="center" jc="space-between" gap={HEAD_GAP}>
-            <ServiceTypeChip value={serviceType} variant="v2" />
+            <ServiceTypeChip value={serviceType} />
             {price ? (
               <Text
                 col={colors.brandLink}
@@ -242,7 +257,7 @@ function RentalCardImpl({
         ) : null}
 
         {/* Figma "Rental Details": ô xám bo 12, đệm 12, dòng cách 8. */}
-        <YStack p={PANEL_PAD} gap={space.sm} br={radius.control} bg={colors.background}>
+        <YStack p={PANEL_PAD} gap={space.sm} br={radius.control} bg={alert ? colors.surface : colors.background}>
           {schedule}
         </YStack>
 
@@ -382,23 +397,38 @@ function RentalVehicle({
         >
           {vehicle.name}
         </Text>
-        {/* Biển số + thông số trên MỘT dòng, cắt "..." khi dài (người dùng 16/11/2026). */}
+        {/*
+          Figma: biển số trong viên xám "_Badge" (`bg/gray-50`, bo 6, đệm 8/2, 12/18 đậm vừa) · thông
+          số 12/18 cách 6 - vẫn MỘT dòng, thông số cắt "..." khi dài (người dùng 16/11/2026).
+        */}
         {vehicle.plateLine || vehicle.specs.length > 0 ? (
-          <Text
-            col={colors.textMuted}
-            fos={typeScale.label.fontSize}
-            lh={typeScale.label.lineHeight}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
+          <XStack ai="center" gap={PLATE_GAP} maxWidth="100%">
             {vehicle.plateLine ? (
-              <Text col={colors.text} fow={fontWeight.medium}>
-                {vehicle.plateLine}
+              <YStack flexShrink={0} px={space.sm} py={2} br={PLATE_RADIUS} bg={colors.background}>
+                <Text
+                  col={colors.textMuted}
+                  fos={typeScale.label.fontSize}
+                  lh={typeScale.label.lineHeight}
+                  fow={fontWeight.medium}
+                  numberOfLines={1}
+                >
+                  {vehicle.plateLine}
+                </Text>
+              </YStack>
+            ) : null}
+            {vehicle.specs.length > 0 ? (
+              <Text
+                flexShrink={1}
+                col={colors.textMuted}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {vehicle.specs.join(LIST_SEPARATOR)}
               </Text>
             ) : null}
-            {vehicle.plateLine && vehicle.specs.length > 0 ? ' - ' : ''}
-            {vehicle.specs.join(LIST_SEPARATOR)}
-          </Text>
+          </XStack>
         ) : null}
         {vehicle.schedule ? (
           <Pressable

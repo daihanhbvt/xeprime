@@ -1,5 +1,21 @@
 {
   "title": "Tổng quan",
+  "partnerApp": {
+    "greeting": {
+      "morning": "Chào buổi sáng,",
+      "afternoon": "Chào buổi chiều,",
+      "evening": "Chào buổi tối,"
+    },
+    "nextPickup": "Giao gần nhất {time}",
+    "nextReturn": "Nhận lại sớm nhất {time}",
+    "awaitingPaymentNone": "Không có chuyến chờ",
+    "monthTitle": "Tháng {month} vs tháng trước",
+    "report": "Báo cáo",
+    "vsPrevious": "vs tháng trước ({value})",
+    "vsPreviousBare": "vs tháng trước",
+    "utilization": "Tỷ lệ lấp đầy",
+    "acceptKeepLow": "Tỷ lệ thấp, hạn chế hủy chuyến đã nhận để tăng tỷ lệ"
+  },
   "stats": {
     "available": "Xe sẵn sàng",
     "renting": "Đang cho thuê",

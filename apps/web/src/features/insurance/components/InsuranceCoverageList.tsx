@@ -32,10 +32,16 @@ export function InsuranceCoverageList({
   headingLevel = 2,
   className,
   pdfHref,
+  phoneCards = false,
 }: {
   coverage: readonly InsuranceCoverage[];
   headingLevel?: 2 | 3;
   className?: string;
+  /**
+   * Khổ điện thoại (≤ 640px) theo design app Partner - không tiêu đề nhìn thấy (vẫn còn cho trình
+   * đọc màn hình), mỗi sản phẩm một thẻ nền xanh nhạt. Desktop không đổi. Chi tiết đơn bật.
+   */
+  phoneCards?: boolean;
   /** Đường tải GCN PDF (ADR 0088) — khách và gian hàng có endpoint riêng. */
   pdfHref?: (certificateId: string) => string;
 }) {
@@ -44,7 +50,7 @@ export function InsuranceCoverageList({
   const Heading = headingLevel === 3 ? 'h3' : 'h2';
 
   return (
-    <section className={cx(styles.block, className)}>
+    <section className={cx(styles.block, phoneCards && styles.phoneCards, className)}>
       <Heading className={styles.title}>
         <SafetyCertificateOutlined aria-hidden /> {t('coverage.title')}
       </Heading>
@@ -72,7 +78,7 @@ function CoverageItem({ item }: { item: InsuranceCoverage }) {
   const status = item.status as InsuranceCoverageStatus;
 
   return (
-    <li className={styles.item}>
+    <li className={cx(styles.item, styles.coverageItem)}>
       <div className={styles.head}>
         <span className={styles.product}>{productName}</span>
         <Tag color={INSURANCE_COVERAGE_STATUS_COLOR[status]} className={styles.testTag}>

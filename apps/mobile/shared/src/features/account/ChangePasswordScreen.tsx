@@ -1,48 +1,27 @@
 import { Ionicons } from '@/components/icons/Ionicons';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import * as yup from 'yup';
-import { API_ERROR_CODE, SUPPORT_CASE_CATEGORY } from '@xeprime/types';
-import { getErrorCode } from '@xeprime/api-client';
-import {
-  PASSWORD_MIN,
-  PASSWORD_RULES,
-  buildPasswordSchema,
-  type PasswordRuleKey,
-} from '@xeprime/validators';
+import { SUPPORT_CASE_CATEGORY } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { RevealStack } from '@/components/motion/RevealStack';
-import { BottomSheet } from '@/components/ui/BottomSheet';
+import { SuccessSheet } from '@/components/ui/SuccessSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { TextField } from '@/components/ui/TextField';
-import { changeAccountPassword, setAccountPassword } from '@/features/auth/api';
-import { useAuthSchemaLabels } from '@/features/auth/use-auth-schema-labels';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { SUPPORT_SURFACE, useSupportCases } from '@/features/support-cases/hooks/use-support-cases';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { queryKeys } from '@/queries/query-keys';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
-
-interface ChangePasswordValues {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
+import { useChangePasswordForm } from './hooks/use-change-password-form';
 
 /**
  * Đổi mật khẩu ở khu tài khoản — MỘT form cho hai tình huống, phân nhánh theo `MeDto.hasPassword`.
@@ -79,21 +58,11 @@ export function ChangePasswordScreen({
   const domainLabel = useDomainLabel();
   const router = useRouter();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
-  const queryClient = useQueryClient();
-  const labels = useAuthSchemaLabels();
-  const { data: user } = useCurrentUser();
-  /*
-   * Phiên chưa về thì mặc định "đã có mật khẩu" — nhánh AN TOÀN hơn (đòi thêm bằng chứng), chứ
-   * không phải nhánh bỏ qua bước xác minh.
-   */
-  const hasPassword = user?.hasPassword ?? true;
-  const [formError, setFormError] = useState<string | null>(null);
-  /** Câu báo thành công đang hiện trong hộp (chỉ `variant="security"`) — `null` là hộp đóng. */
+  /** Câu báo thành công đang hiện trong hộp (chỉ `variant="security"`) - `null` là hộp đóng. */
   const [successNote, setSuccessNote] = useState<string | null>(null);
   const tCommonActions = useTranslations('Common.actions');
   /*
-   * Yêu cầu xoá đang mở (nếu có) — CÙNG khoá truy vấn với `DeleteAccountScreen`, nên hai màn đọc
+   * Yêu cầu xoá đang mở (nếu có) - CÙNG khoá truy vấn với `DeleteAccountScreen`, nên hai màn đọc
    * một bản cache. Chỉ hỏi ở biến thể bảo mật.
    */
   const deletionQuery = useSupportCases(
@@ -103,88 +72,14 @@ export function ChangePasswordScreen({
   );
   const pendingDeletion = deletionQuery.data?.items[0];
 
-  const schema = useMemo(
-    () =>
-      yup.object({
-        // MỘT schema cho cả hai nhánh, chỉ đổi LUẬT: hai schema khác nhau theo nhánh làm kiểu suy
-        // ra của `yupResolver` thành hợp của hai shape và form mất bảo chứng khoá.
-        currentPassword: yup
-          .string()
-          .defined()
-          .test(
-            'currentRequired',
-            labels.passwordRequired,
-            (value) => !hasPassword || Boolean(value),
-          ),
-        newPassword: buildPasswordSchema(labels).test(
-          'notSameAsCurrent',
-          t('unchanged'),
-          function notSameAsCurrent(value) {
-            const current = (this.parent as ChangePasswordValues).currentPassword;
-            return !hasPassword || !current || value !== current;
-          },
-        ),
-        confirmPassword: yup
-          .string()
-          .required(labels.confirmRequired)
-          .oneOf([yup.ref('newPassword')], labels.confirmMismatch),
-      }),
-    [hasPassword, labels, t],
-  );
-
-  const { control, handleSubmit, reset, setError, formState } = useForm<ChangePasswordValues>({
-    resolver: yupResolver(schema),
-    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
-  });
-  const newPassword = useWatch({ control, name: 'newPassword' }) ?? '';
-  const currentPassword = useWatch({ control, name: 'currentPassword' }) ?? '';
-  const requirements = [
-    ...PASSWORD_RULES.map((rule) => ({
-      key: rule.key as string,
-      label: requirementLabel(t, rule.key),
-      met: rule.test(newPassword),
-    })),
-    // Chỉ khi đã có mật khẩu: lần đặt đầu không có gì để trùng.
-    ...(hasPassword
-      ? [
-          {
-            key: 'notSameAsCurrent',
-            label: t('requirements.notSameAsCurrent'),
-            met: Boolean(newPassword) && newPassword !== currentPassword,
-          },
-        ]
-      : []),
-  ];
-
-  const save = useMutation({
-    mutationFn: (values: ChangePasswordValues) =>
-      hasPassword
-        ? changeAccountPassword(values.currentPassword, values.newPassword)
-        : setAccountPassword(values.newPassword),
-    onSuccess: () => {
-      const note = hasPassword ? t('success') : t('successFirstTime');
+  /* Luật, lượt gọi API và cách báo lỗi trên ô sống ở `useChangePasswordForm` (dùng chung với Partner). */
+  const { form, onSubmit, hasPassword, formError, saving, requirements } = useChangePasswordForm({
+    onSuccess: (note) => {
       if (isSecurity) setSuccessNote(note);
       else toast.showSuccess(note);
-      reset();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-    },
-    onError: (err) => {
-      if (getErrorCode(err) === API_ERROR_CODE.CURRENT_PASSWORD_INCORRECT) {
-        setError('currentPassword', { type: 'server', message: errorMessage(err) });
-        return;
-      }
-      if (getErrorCode(err) === API_ERROR_CODE.PASSWORD_UNCHANGED) {
-        setError('newPassword', { type: 'server', message: errorMessage(err) });
-        return;
-      }
-      setFormError(errorMessage(err));
     },
   });
-
-  const onSubmit = handleSubmit((values) => {
-    setFormError(null);
-    save.mutate(values);
-  });
+  const { control, formState } = form;
 
   return (
     <>
@@ -215,7 +110,7 @@ export function ChangePasswordScreen({
                   secureTextEntry
                   autoCapitalize="none"
                   autoComplete="current-password"
-                  editable={!save.isPending}
+                  editable={!saving}
                   required
                 />
               ) : null}
@@ -228,7 +123,7 @@ export function ChangePasswordScreen({
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete="new-password"
-                editable={!save.isPending}
+                editable={!saving}
                 required
               />
               <TextField
@@ -242,15 +137,15 @@ export function ChangePasswordScreen({
                 autoComplete="new-password"
                 returnKeyType="go"
                 onSubmitEditing={() => void onSubmit()}
-                editable={!save.isPending}
+                editable={!saving}
                 required
               />
 
               <Button
                 label={hasPassword ? t('submit') : t('submitFirstTime')}
                 icon="checkmark-outline"
-                loading={save.isPending}
-                disabled={!formState.isDirty && !save.isPending}
+                loading={saving}
+                disabled={!formState.isDirty && !saving}
                 onPress={() => void onSubmit()}
               />
             </YStack>
@@ -323,62 +218,15 @@ export function ChangePasswordScreen({
         dấu tích tròn vành xanh, tiêu đề, câu báo, nút Xác nhận trọn bề ngang. Màn Partner giữ toast.
       */}
       {isSecurity ? (
-        <BottomSheet
+        <SuccessSheet
           open={successNote !== null}
-          onClose={() => setSuccessNote(null)}
-          footer={
-            <Button
-              label={tCommonActions('confirm')}
-              variant="gradient"
-              onPress={() => setSuccessNote(null)}
-            />
-          }
-        >
-          <YStack ai="center" gap={space.md} pt={space.xs} accessibilityRole="summary">
-            <YStack
-              w={SUCCESS_ICON}
-              h={SUCCESS_ICON}
-              br={radius.pill}
-              bw={6}
-              bc={colors.successSubtle}
-              bg={colors.successSurface}
-              ai="center"
-              jc="center"
-            >
-              <Ionicons name="checkmark-circle-outline" size={SUCCESS_GLYPH} color={colors.success} />
-            </YStack>
-            <YStack gap={2} ai="center">
-              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.semibold} ta="center">
-                {t('successTitle')}
-              </Text>
-              <Text col={colors.placeholder} fos={fontSize.body} ta="center">
-                {successNote}
-              </Text>
-            </YStack>
-          </YStack>
-        </BottomSheet>
+          title={t('successTitle')}
+          body={successNote}
+          actionLabel={tCommonActions('confirm')}
+          onAction={() => setSuccessNote(null)}
+        />
       ) : null}
     </>
   );
 }
 
-/** Ô dấu tích 56×56 + glyph 26px của hộp thành công web (`.successIcon`). */
-const SUCCESS_GLYPH = 26;
-const SUCCESS_ICON = 56;
-
-/**
- * Nhãn của một quy tắc. Khoá của `t()` phải TĨNH, nên mã quy tắc đi qua bảng tra này chứ không
- * ghép chuỗi. `Record` đầy đủ chứ không phải `switch`: thêm một quy tắc vào `PASSWORD_RULES` mà
- * quên viết nhãn thì đỏ ngay ở đây, thay vì lặng lẽ rơi xuống một nhánh mặc định.
- */
-function requirementLabel(
-  t: ReturnType<typeof useTranslations<'Account.changePassword'>>,
-  key: PasswordRuleKey,
-): string {
-  const labels: Record<PasswordRuleKey, string> = {
-    passwordTooShort: t('requirements.passwordTooShort', { min: PASSWORD_MIN }),
-    passwordNeedsLetter: t('requirements.passwordNeedsLetter'),
-    passwordNeedsDigit: t('requirements.passwordNeedsDigit'),
-  };
-  return labels[key];
-}

@@ -3,9 +3,6 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  MARKETPLACE_VISIBILITY_REASON,
-  MARKETPLACE_VISIBILITY_REASON_META,
-  type MarketplaceVisibilityReason,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
@@ -16,15 +13,14 @@ import {
   type VehiclePublicStatus,
   type VehicleSourceType,
 } from '@xeprime/types';
-import { isNegativeMoney, subtractMoney, LIST_SEPARATOR } from '@xeprime/domain';
+import { isNegativeMoney, subtractMoney } from '@xeprime/domain';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { CheckGlyph } from '@/components/icons/CheckGlyph';
+import { LineIcon } from '@/components/icons/LineIcon';
 import type { IconName } from '@/components/ui/Chip';
-import { BadgeRows } from '@/components/ui/BadgeRows';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import type { CardAction } from '@/components/ui/CardActionBar';
-import { DiscountTag } from '@/components/ui/DiscountTag';
 import { Pill, pillToneOfStatusColor, usePillSkin } from '@/components/ui/Pill';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { VehicleThumb } from '@/components/ui/VehicleThumb';
@@ -32,15 +28,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
-import { discountedPriceVnd } from '../pricing';
-import { useVehicleAlertBadges } from './vehicle-alert-badges';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../api';
-
-/** Hai lý do "đã duyệt nhưng công tắc đang tắt" — chủ xe tự cất, hoặc hệ thống ẩn vì hết suất gói. */
-const PAUSED_REASONS: readonly MarketplaceVisibilityReason[] = [
-  MARKETPLACE_VISIBILITY_REASON.PLAN_PAUSED,
-  MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED,
-];
 
 /** Biểu tượng của trạng thái kiểm duyệt — cùng bộ với web `REVIEW_ICON` (`VehicleCardParts`). */
 const REVIEW_ICON: Readonly<Record<VehiclePublicStatus, IconName>> = {
@@ -53,12 +41,6 @@ const REVIEW_ICON: Readonly<Record<VehiclePublicStatus, IconName>> = {
   [VEHICLE_PUBLIC_STATUS.ARCHIVED]: 'ban-outline',
 };
 
-/** Số viên "việc cần làm" hiện trên THẺ; phần dư gộp thành `+N` (server đã sắp theo ưu tiên). */
-const ALERT_CHIP_LIMIT = 2;
-
-/** Mảng rỗng ở module scope: `[]` viết tại chỗ gọi là một tham chiếu mới mỗi lần render. */
-const NO_ALERTS: readonly [] = [];
-
 /*
  * Số đo Figma "Vehicle Summary" (Danh sách xe MB `24158:103762`): thẻ đệm 12, khối cách 8, viền
  * `stroke/gray-low200`, bo 16; ảnh 63×40 cách cột chữ 12; nút mở/thu tròn 24; khối số liệu nền
@@ -68,10 +50,13 @@ const CARD_PAD = 12;
 const BLOCK_GAP = 8;
 const THUMB_GAP = 12;
 const TOGGLE = 24;
-/** Mũi tên 11.5×5.5 của Figma nằm trong khung 20 - glyph Ionicons 14 cho cùng độ lớn nét. */
-const TOGGLE_GLYPH = 14;
-const REVIEW_GLYPH = 10;
-const STATUS_GAP = space.xs;
+/** Figma "Down 2" / "Up 2" khung 20 (`LineIcon chevron-down-md`; "Up 2" = cùng nét lật dọc). */
+const TOGGLE_GLYPH = 20;
+/** Figma "Check Icon" xs: tròn 20, nền `status/*-low`, glyph 12; cách chữ 6; khối cách viên vận hành 32. */
+const REVIEW_BADGE = 20;
+const REVIEW_GLYPH = 12;
+const REVIEW_TEXT_GAP = 6;
+const ROTATE_UP = [{ rotate: '180deg' }] as const;
 const METRICS_PAD = 8;
 const METRICS_GAP = 6;
 const DOT = 4;
@@ -83,7 +68,7 @@ interface VehicleCardProps {
    * Hàng nút ở chân thẻ, do MÀN quyết định — bản tương đương `rowActions` web truyền vào
    * `VehicleCardGrid`. Nút CUỐI là nút chính (dải vàng), các nút trước là nút viền.
    */
-  actions: (vehicle: VehicleListItem) => readonly CardAction[];
+  actions?: (vehicle: VehicleListItem) => readonly CardAction[];
   /** Chỉ số của xe này; `undefined` khi chưa tải xong HOẶC khi tải hỏng — hai cờ dưới nói rõ ca nào. */
   stats?: VehicleStats | undefined;
   statsLoading: boolean;
@@ -136,29 +121,21 @@ function VehicleCardImpl({
 
   // Nguồn xe (sở hữu / hợp tác…) — viên cạnh tên như thẻ web `VehicleCardParts`; thiếu = sở hữu.
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
-  // Lý do kiểm duyệt CHỈ hiện khi xe bị trả về / từ chối — việc chủ xe phải sửa (như web).
-  const reviewReason =
-    vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.NEEDS_REVISION ||
-    vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.REJECTED
-      ? (vehicle.latestPublicReview?.reason ?? null)
-      : null;
-  /* Hook nên gọi VÔ ĐIỀU KIỆN — `alerts` vắng mặt khi chưa tải xong hoặc tải hỏng. */
-  const alertBadges = useVehicleAlertBadges(alerts?.alerts ?? NO_ALERTS, ALERT_CHIP_LIMIT);
 
   const operation = vehicle.operationStatus as VehicleOperationStatus;
   const review = vehicle.publicStatus as VehiclePublicStatus;
   const operationTone = pillToneOfStatusColor(VEHICLE_OPERATION_STATUS_META[operation].color);
   const reviewSkin = pillSkin[pillToneOfStatusColor(VEHICLE_PUBLIC_STATUS_META[review].color)];
-  const pausedReason = PAUSED_REASONS.find((reason) => reason === vehicle.marketplaceVisibilityReason);
 
-  /* Khuyến mãi CHỈ áp cho tự lái (ADR 0011) — viên "-N%" chỉ khi xe bán dịch vụ đó. */
-  const selfDrive = vehicle.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE);
-  const discountPercent = selfDrive ? (vehicle.discountPercent ?? 0) : 0;
-  const weekdayPrice =
-    (discountPercent > 0 ? discountedPriceVnd(vehicle.weekdayPrice, discountPercent) : null) ??
-    vehicle.weekdayPrice;
+  /* Viên "-N%" cạnh tên (Figma 24158:103997) - khuyến mãi CHỈ áp cho tự lái (ADR 0011). */
+  const discountPercent = vehicle.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE)
+    ? (vehicle.discountPercent ?? 0)
+    : 0;
+  /* Giá GỐC như thẻ web (`VehicleCardParts` - `weekdayPrice`). */
+  const weekdayPrice = vehicle.weekdayPrice;
 
-  const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR);
+  /* Figma chỉ vẽ biển số (người dùng chốt 25/11/2026); xe chưa có biển thì rơi về mã xe. */
+  const identity = vehicle.plateNumber || vehicle.code;
   const kinds = [
     domainLabel('vehicleType', vehicle.vehicleType),
     ...vehicle.serviceTypes.map((service) => domainLabel('serviceType', service as ServiceType)),
@@ -221,7 +198,7 @@ function VehicleCardImpl({
       : [weekday, weekend];
   const metrics = expanded ? allMetrics : collapsedMetrics;
 
-  const cardActions = actions(vehicle);
+  const cardActions = actions ? actions(vehicle) : [];
 
   return (
     <Card onPress={open} accessibilityLabel={vehicle.name} padded={false} lift="flat">
@@ -242,18 +219,9 @@ function VehicleCardImpl({
                 >
                   {vehicle.name}
                 </Text>
-                <YStack px={space.sm} py={2} br={radius.card} bg={colors.background} flexShrink={0}>
-                  <Text
-                    col={colors.textMuted}
-                    fos={typeScale.label.fontSize}
-                    lh={typeScale.label.lineHeight}
-                    fow={fontWeight.medium}
-                    numberOfLines={1}
-                  >
-                    {domainLabel('vehicleSourceType', sourceType)}
-                  </Text>
-                </YStack>
-                {discountPercent > 0 ? <DiscountTag percent={discountPercent} size="sm" /> : null}
+                {discountPercent > 0 ? (
+                  <Pill label={`-${discountPercent}%`} tone="success" borderless />
+                ) : null}
               </XStack>
               <Pressable
                 onPress={toggle}
@@ -270,11 +238,13 @@ function VehicleCardImpl({
                   jc="center"
                   bg={expanded ? colors.brandLow : colors.surfaceMuted}
                 >
-                  <Ionicons
-                    name={expanded ? 'chevron-up' : 'chevron-down'}
-                    size={TOGGLE_GLYPH}
-                    color={expanded ? colors.brandLink : colors.textMuted}
-                  />
+                  <YStack transform={expanded ? ROTATE_UP : undefined}>
+                    <LineIcon
+                      name="chevron-down-md"
+                      size={TOGGLE_GLYPH}
+                      color={expanded ? colors.brandLink : colors.textMuted}
+                    />
+                  </YStack>
                 </YStack>
               </Pressable>
             </XStack>
@@ -308,49 +278,47 @@ function VehicleCardImpl({
           </YStack>
         </XStack>
 
-        {/* Kiểm duyệt: biểu tượng + chữ nằm TRONG một chip, cùng dáng chip vận hành (người dùng chốt 19/11/2026). */}
-        <XStack ai="center" flexWrap="wrap" columnGap={STATUS_GAP} rowGap={space.xs}>
-          <Pill
-            label={t(`review.${review}`)}
-            tone={pillToneOfStatusColor(VEHICLE_PUBLIC_STATUS_META[review].color)}
-            size="caption"
-            shape="tag"
-            leading={
-              review === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
-                <CheckGlyph color={reviewSkin.fg} />
+        {/*
+          Figma "Vehicle Status": kiểm duyệt = icon tròn + chữ TRẦN màu trạng thái (người dùng chốt
+          25/11/2026, thay chip 19/11). Hàng dàn đều: Sở hữu · Kiểm duyệt · Vận hành. Việc cần làm, lý do
+          bị trả về, viên tạm ẩn đã bỏ khỏi thẻ - màn chi tiết xe hiện đủ.
+        */}
+        <XStack ai="center" jc="space-between" flexWrap="wrap" columnGap={space.sm} rowGap={space.xs}>
+          {/* Figma 24158:103997: viên nguồn xe xuống hàng trạng thái, đứng đầu. */}
+          {/* Figma `24599:137389`: nền `bg/gray-100`. */}
+          <YStack px={space.sm} py={2} br={radius.card} bg={colors.surfaceMuted} flexShrink={0}>
+            <Text
+              col={colors.textMuted}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fow={fontWeight.medium}
+              numberOfLines={1}
+            >
+              {domainLabel('vehicleSourceType', sourceType)}
+            </Text>
+          </YStack>
+          <XStack ai="center" gap={REVIEW_TEXT_GAP}>
+            <YStack w={REVIEW_BADGE} h={REVIEW_BADGE} br={radius.pill} ai="center" jc="center" bg={reviewSkin.bg}>
+              {review === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
+                <CheckGlyph size={REVIEW_GLYPH} color={reviewSkin.fg} />
               ) : (
+                /* Figma chỉ vẽ ca "Đã kiểm duyệt"; các trạng thái khác giữ glyph cũ trong cùng khuôn. */
                 <Ionicons name={REVIEW_ICON[review]} size={REVIEW_GLYPH} color={reviewSkin.fg} />
-              )
-            }
-          />
-          <XStack ai="center" gap={space.xs}>
-            <Pill label={t(`operation.${operation}`)} tone={operationTone} size="caption" shape="tag" />
-            {pausedReason ? (
-              <Pill
-                label={domainLabel('marketplaceVisibility', pausedReason)}
-                tone={pillToneOfStatusColor(MARKETPLACE_VISIBILITY_REASON_META[pausedReason].color)}
-                size="caption"
-                shape="tag"
-              />
-            ) : null}
+              )}
+            </YStack>
+            <Text
+              col={reviewSkin.fg}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fow={fontWeight.regular}
+              numberOfLines={1}
+            >
+              {t(`review.${review}`)}
+            </Text>
           </XStack>
+          {/* Viên vận hành bo TRÒN (người dùng chốt 25/11/2026, Figma vẽ bo 6). */}
+          <Pill label={t(`operation.${operation}`)} tone={operationTone} />
         </XStack>
-
-        {/* Việc cần làm + lý do bị trả về (web `VehicleCardNotices`) — chỉ khi có. */}
-        {alertsLoading ? (
-          <Skeleton width="60%" height={18} />
-        ) : alertsFailed ? (
-          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-            {tCard('alertsUnavailable')}
-          </Text>
-        ) : alertBadges.length > 0 ? (
-          <BadgeRows items={alertBadges} />
-        ) : null}
-        {reviewReason ? (
-          <Text col={colors.danger} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={3}>
-            {reviewReason}
-          </Text>
-        ) : null}
 
         {/* Figma "Vehicle Metrics": nền `bg/gray-50`, bo 12, đệm 8, dòng 12/18 cách 6. */}
         <YStack p={METRICS_PAD} gap={METRICS_GAP} br={radius.control} bg={colors.background}>
@@ -391,7 +359,7 @@ const MetricRow = memo(function MetricRow({ metric }: { metric: Metric }) {
   const colors = useColors();
   return (
     <XStack jc="space-between" ai="center" gap={space.sm}>
-      <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
+      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1}>
         {metric.label}
       </Text>
       {metric.value == null ? (
@@ -399,8 +367,8 @@ const MetricRow = memo(function MetricRow({ metric }: { metric: Metric }) {
       ) : (
         <Text
           col={metric.tone ?? colors.text}
-          fos={typeScale.label.fontSize}
-          lh={typeScale.label.lineHeight}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
           fow={metric.strong ? fontWeight.semibold : fontWeight.medium}
           numberOfLines={1}
         >

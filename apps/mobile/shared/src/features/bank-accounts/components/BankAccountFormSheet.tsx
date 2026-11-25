@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import { VIETNAM_BANKS } from '@xeprime/domain';
@@ -18,7 +18,7 @@ import {
   type BankAccount,
   type BankAccountScope,
 } from '@/api/bank-accounts/api';
-import { useCreateBankAccount } from '../hooks/use-bank-accounts';
+import { useCreateBankAccount, useCreateChangeRequest } from '../hooks/use-bank-accounts';
 import { BankAccountSavedSheet } from './BankAccountSavedSheet';
 import { BankLogo } from './BankLogo';
 
@@ -30,6 +30,7 @@ const BANK_CODE_MAX = 20;
 const ACCOUNT_NUMBER_MAX = 40;
 const ACCOUNT_NAME_MAX = 160;
 const LABEL_MAX = 60;
+const NOTE_MAX = 500;
 
 /**
  * Khai một tài khoản nhận tiền — bản native của `BankAccountForm`.
@@ -80,6 +81,13 @@ export function BankAccountFormSheet({
   const errorMessage = useErrorMessage();
   const create = useCreateBankAccount(scope);
   /*
+   * Đã có tài khoản ⇒ tài khoản KHOÁ (biên bản họp 19/11/2026, `BANK_ACCOUNT_LOCKED`): form gửi YÊU
+   * CẦU đổi để XePrime gọi xác minh, không thay thẳng nữa - web `BankAccountForm` `requesting`.
+   */
+  const requesting = replacing != null;
+  const request = useCreateChangeRequest(scope);
+  const pending = create.isPending || request.isPending;
+  /*
    * Lọc TẠI CHỖ, khác ô xã/phường.
    *
    * Danh mục ngân hàng là hằng nằm sẵn trong bundle (35 dòng), nên không có gì để hỏi server;
@@ -127,6 +135,7 @@ export function BankAccountFormSheet({
           .required(t('validation.nameRequired'))
           .max(ACCOUNT_NAME_MAX),
         label: yup.string().trim().max(LABEL_MAX).default(''),
+        note: yup.string().trim().max(NOTE_MAX).default(''),
       }),
     [t],
   );
@@ -138,6 +147,7 @@ export function BankAccountFormSheet({
       accountNumber: '',
       accountName: '',
       label: '',
+      note: '',
     },
   });
 
@@ -147,6 +157,26 @@ export function BankAccountFormSheet({
   };
 
   const onSubmit = handleSubmit((values) => {
+    if (pending) return;
+    if (requesting) {
+      request.mutate(
+        {
+          bankCode: values.bankCode,
+          accountNumber: values.accountNumber,
+          accountName: values.accountName,
+          ...(values.label ? { label: values.label } : {}),
+          ...(values.note ? { note: values.note } : {}),
+        },
+        {
+          onSuccess: () => {
+            toast.showSuccess(t('requestSent'));
+            close();
+          },
+          onError: (error) => toast.showError(errorMessage(error)),
+        },
+      );
+      return;
+    }
     create.mutate(
       {
         bankCode: values.bankCode,
@@ -183,11 +213,46 @@ export function BankAccountFormSheet({
 
   return (
     <>
-      <BottomSheet open={open} onClose={close} title={replacing ? t('changeTitle') : t('title')}>
+      {/*
+        Figma "Đổi tài khoản nhận tiền" (`24228:102833`): ô theo thứ tự Ngân hàng - Họ tên người
+        thụ hưởng - Số tài khoản - Tên gợi nhớ, icon nét trong ô, chân tấm cố định hai nút Hủy /
+        Xác nhận chia đôi. Luồng vẫn là YÊU CẦU đổi khi tài khoản đã khoá (giữ ô "Lý do đổi").
+      */}
+      <BottomSheet
+        open={open}
+        onClose={close}
+        title={requesting ? t('requestTitle') : t('title')}
+        footer={
+          <XStack gap={space.sm}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <Button
+                label={tCommon('cancel')}
+                variant="secondary"
+                disabled={pending}
+                onPress={close}
+              />
+            </YStack>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <Button
+                variant="gradient"
+                label={
+                  requesting
+                    ? t('requestSubmit')
+                    : scope === BANK_ACCOUNT_SCOPE.SHOP
+                      ? t('addSubmit')
+                      : t('submit')
+                }
+                loading={pending}
+                onPress={() => void onSubmit()}
+              />
+            </YStack>
+          </XStack>
+        }
+      >
         <YStack gap={space.md}>
           {replacing ? (
             <Callout tone="warning">
-              {t('replaces', { account: bankAccountSummary(replacing) })}
+              {t('requestIntro', { account: bankAccountSummary(replacing) })}
             </Callout>
           ) : null}
           {/* Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn, đúng `showSearch` của web. */}
@@ -204,16 +269,9 @@ export function BankAccountFormSheet({
           />
           <TextField
             control={control}
-            name="accountNumber"
-            label={t('accountNumber')}
-            placeholder={t('accountNumberPlaceholder')}
-            keyboardType="number-pad"
-            required
-          />
-          <TextField
-            control={control}
             name="accountName"
             label={t('accountName')}
+            icon="person-outline"
             hint={t('accountNameHint')}
             placeholder={t('accountNamePlaceholder')}
             autoCapitalize="characters"
@@ -221,30 +279,29 @@ export function BankAccountFormSheet({
           />
           <TextField
             control={control}
+            name="accountNumber"
+            label={t('accountNumber')}
+            icon="scan-outline"
+            placeholder={t('accountNumberPlaceholder')}
+            keyboardType="number-pad"
+            required
+          />
+          <TextField
+            control={control}
             name="label"
             label={t('label')}
+            icon="text-outline"
             placeholder={t('labelPlaceholder')}
           />
-          <YStack gap={space.sm}>
-            <Button
-              icon="checkmark-outline"
-              label={
-                scope === BANK_ACCOUNT_SCOPE.SHOP
-                  ? replacing
-                    ? tCommon('confirm')
-                    : t('addSubmit')
-                  : t('submit')
-              }
-              loading={create.isPending}
-              onPress={() => void onSubmit()}
+          {requesting ? (
+            <TextField multiline scrollable rows={3}
+              control={control}
+              name="note"
+              label={t('requestNote')}
+              placeholder={t('requestNotePlaceholder')}
+              maxLength={NOTE_MAX}
             />
-            <Button
-              label={tCommon('cancel')}
-              variant="ghost"
-              disabled={create.isPending}
-              onPress={close}
-            />
-          </YStack>
+          ) : null}
         </YStack>
       </BottomSheet>
       {/* Hộp đứng NGOÀI tấm form: tấm đã đóng sau khi lưu, hộp vẫn phải còn để báo. */}

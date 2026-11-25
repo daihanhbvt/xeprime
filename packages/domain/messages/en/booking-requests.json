@@ -97,6 +97,21 @@
     "viewBookingFor": "View the booking for {vehicle}"
   },
   "detail": {
+    "partnerApp": {
+      "statusShort": {
+        "pending_host_approval": "Pending",
+        "approved_by_host": "Approved",
+        "rejected_by_host": "You declined",
+        "cancelled_by_customer": "Customer cancelled",
+        "expired": "Expired",
+        "converted_to_booking": "Booked",
+        "awaiting_hold": "Awaiting payment",
+        "hold_paid": "Paid",
+        "hold_expired": "Payment expired",
+        "slot_taken": "Slot taken",
+        "cancelled_by_host": "You cancelled"
+      }
+    },
     "title": "Rental request detail",
     "openVehicle": "View vehicle profile",
     "openCustomer": "View customer profile",
@@ -185,6 +200,9 @@
     "wishLegacy": "Legacy request - the guest did not state a preference"
   },
   "reject": {
+    "partnerApp": {
+      "title": "Decline request"
+    },
     "title": "Decline booking request",
     "context": "{customer} · {vehicle}",
     "reasonLabel": "Note to the customer",
@@ -644,6 +662,9 @@
     "differentPhone": "The renter left a contact number that differs from their account number. The account number {phone} is verified; the contact number is not."
   },
   "approvalPreview": {
+    "partnerApp": {
+      "paymentWindow": "The customer has <b>{duration}</b> (until {time}) to pay the hold; after that the request is cancelled automatically."
+    },
     "title": "If you approve now",
     "estimate": "Estimate",
     "noHold": "This trip has no online reservation payment - the booking is created as soon as you approve, with no QR code.",

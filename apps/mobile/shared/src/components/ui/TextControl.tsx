@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { TextInput, type TextInputProps } from 'react-native';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, sizing, space } from '@/theme/tokens';
@@ -29,6 +29,7 @@ export function TextControl({
   maxLength,
   multiline = false,
   rows = 3,
+  scrollable = false,
   editable = true,
   autoCapitalize,
   keyboardType,
@@ -43,6 +44,8 @@ export function TextControl({
   maxLength?: number;
   multiline?: boolean;
   rows?: number;
+  /** Cao đúng `rows` dòng, dài hơn thì cuộn trong ô. Cần `multiline`. */
+  scrollable?: boolean;
   editable?: boolean;
   autoCapitalize?: TextInputProps['autoCapitalize'];
   keyboardType?: TextInputProps['keyboardType'];
@@ -62,13 +65,14 @@ export function TextControl({
       fontFamily: FONT_FAMILY.body,
       minHeight: multiline ? rows * lineHeight : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
+      ...(multiline && scrollable ? { maxHeight: rows * lineHeight + space.sm * 2 } : {}),
     }),
-    [colors, multiline, rows, lineHeight],
+    [colors, multiline, rows, scrollable, lineHeight],
   );
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} hint={inLabelHint(hint)} />
 
       <FieldShell
         focused={focused}
@@ -89,6 +93,7 @@ export function TextControl({
           placeholderTextColor={colors.placeholder}
           editable={editable}
           multiline={multiline}
+          {...(multiline && scrollable ? { scrollEnabled: true } : {})}
           textAlignVertical={multiline ? 'top' : 'center'}
           {...(maxLength === undefined ? {} : { maxLength })}
           {...(autoCapitalize === undefined ? {} : { autoCapitalize })}
@@ -108,7 +113,7 @@ export function TextControl({
 
       <FieldMessage
         {...(error === undefined ? {} : { error })}
-        {...(hint === undefined ? {} : { hint })}
+        hint={belowHint(hint)}
       />
     </YStack>
   );

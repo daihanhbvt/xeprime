@@ -533,7 +533,10 @@
       "notShop": "Tên và ảnh đại diện dùng cho tài khoản cá nhân. Thông tin tên, logo và số điện thoại hiển thị với khách hàng được quản lý tại <strong>Cài đặt gian hàng</strong>.",
       "personalStorefront": "Ảnh và họ tên này chính là thông tin khách thấy trên <strong>trang chủ xe</strong> của bạn.",
       "shopSettingsLink": "Xem cài đặt gian hàng",
-      "ownerProfileLink": "Xem hồ sơ chủ xe"
+      "ownerProfileLink": "Xem hồ sơ chủ xe",
+      "avatarSheetTitle": "Tải lên ảnh đại diện",
+      "avatarSheetHint": "Tải lên ảnh định dạng JPG, PNG hoặc WEBP.\nTối đa {max}MB.",
+      "workspacePartner": "Đối tác XePrime"
     }
   }
 }

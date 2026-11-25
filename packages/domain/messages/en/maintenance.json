@@ -211,7 +211,12 @@
     "scheduledOn": "Scheduled | {date}",
     "scheduled": "Scheduled",
     "inProgressSince": "In service | since {date}",
-    "inProgress": "In service"
+    "inProgress": "In service",
+    "partnerApp": {
+      "odometer": "Odo: {km}",
+      "nextDue": "Next: {km}",
+      "notYet": "No update needed"
+    }
   },
   "missingKmQueue": {
     "listLabel": "Missing return mileage tasks",

@@ -180,7 +180,6 @@ export function ResolveOdometerSheet({
       footer={
         <Button
           label={t('confirm')}
-          icon="speedometer-outline"
           loading={resolve.isPending}
           onPress={() => submit()}
         />
@@ -220,7 +219,6 @@ export function ResolveOdometerSheet({
           <Button
             label={t('decreaseOverride')}
             /* Cảnh báo, không phải dấu tích: đây là đường ghi ĐÈ một số đo đã bị chặn một lần. */
-            icon="warning-outline"
             variant="danger"
             loading={resolve.isPending}
             onPress={() => submit(true)}

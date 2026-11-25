@@ -851,7 +851,7 @@
   },
   "overview": {
     "odometerLabel": "Số KM:",
-    "actionsMenu": "Thao tác khác",
+    "actionsMenu": "Thao tác",
     "profileLabel": "Hồ sơ xe",
     "plate": "Biển số: <b>{value}</b>",
     "odometer": "Số KM: <b>{value}</b>",
@@ -859,22 +859,23 @@
     "axisPublic": "Kiểm duyệt",
     "edit": "Chỉnh sửa",
     "schedule": "Xem lịch",
-    "editMobile": "Chỉnh sửa xe",
-    "scheduleMobile": "Xem lịch biểu",
+    "editMobile": "Chỉnh sửa",
+    "scheduleMobile": "Xem lịch xe",
     "delete": "Xoá xe",
     "deleteConfirmTitle": "Xoá xe \"{name}\"?",
     "deleteConfirmBody": "Xe sẽ bị ẩn khỏi danh sách và gỡ khỏi sàn. Đơn thuê, phiếu thu/chi đã có vẫn được giữ để đối soát. Không xoá được nếu xe còn lịch thuê hiện tại hoặc tương lai.",
     "loadFailed": "Không tải được dữ liệu.",
     "metric": "{value} {unit}",
     "todo": {
-      "title": "Việc cần làm",
+      "title": "Việc cần làm", "notice": "{count, plural, other {# việc cần xử lý}}", "noticeStatus": "Trạng thái xét duyệt",
       "handleNow": "Xử lý ngay"
     },
     "schedules": {
       "title": "Lịch thuê sắp tới",
       "empty": "Không có lịch thuê sắp tới.",
       "item": "{customer} • {range}",
-      "sub": "{amount} • {status}"
+      "sub": "{amount} • {status}",
+      "subApp": "{amount} · {status}"
     },
     "performance": {
       "title": "Hiệu suất luỹ kế",
@@ -886,7 +887,9 @@
       "rating": "Đánh giá",
       "ratingValue": "{rating}/5 · {count, plural, other {# lượt}}",
       "ratingScore": "{rating}/5",
-      "ratingCount": "{count, plural, other {# lượt đánh giá}}"
+      "ratingCount": "{count, plural, other {# lượt đánh giá}}",
+      "ratingCountApp": "{count, plural, other {# đánh giá}}",
+      "noRatingApp": "Chưa có đánh giá"
     },
     "pricing": {
       "title": "Giá thuê & Chính sách",
@@ -981,7 +984,8 @@
       "empty": "Chưa có hoạt động nào cho xe này.",
       "item": "Đơn {code} · {status}",
       "sub": "{customer} • {range} • {amount}",
-      "bookingRange": "Đơn {code} • {range}"
+      "bookingRange": "Đơn {code} • {range}",
+      "bookingRangeApp": "Đơn {code} · {range}"
     },
     "dateRange": "{from} - {to}",
     "automation": {
@@ -991,6 +995,7 @@
       "toggle": "Tự động đồng ý nhận chuyến",
       "toggleFor": "Tự động nhận chuyến {service}",
       "toggleHint": "Tiết kiệm thời gian phản hồi khách hàng và gia tăng tỉ lệ chuyển đổi khách hàng thành công.",
+      "toggleHintApp": "Phản hồi khách ngay, tăng tỷ lệ chốt đơn",
       "driverRequired": "Cần ít nhất một tài xế sẵn sàng nhận chuyến mới bật được."
     },
     "repairListing": {
@@ -1015,9 +1020,11 @@
       "brandModel": "Hãng & mẫu xe",
       "viewAllLabel": "Xem đầy đủ thông số kỹ thuật",
       "odometer": "Số KM hiện tại",
-      "odometerInput": "Nhập dữ liệu"
+      "odometerInput": "Nhập dữ liệu",
+      "odometerInputApp": "Nhập dữ liệu →"
     },
     "scheduleFull": "Xem lịch xe",
+    "deleteShort": "Xóa xe",
     "deleteLabel": "Xoá xe {name}",
     "features": {
       "title": "Tiện ích trên xe",
@@ -1744,6 +1751,7 @@
     "registrationReminder": "Ô tô cần cà vẹt có tên chủ xe, số khung và số máy để được bán kèm bảo hiểm vật chất xe - tải ảnh và điền thông tin ở dòng Cà vẹt."
   },
   "maintenance": {
+    "app": {"odoTitle": "Chỉ số KM hiện tại (Odo)", "adjust": "Điều chỉnh", "oilTitle": "Theo dõi thay nhớt định kỳ", "intervalKm": "Chu kỳ thay nhớt", "lastServiceKm": "KM thay gần nhất", "nextMilestone": "Mốc tiếp theo:", "add": "Thêm", "cost": "Chi phí: {value}", "odo": "Odo: {value}", "completedCount": "{count, plural, other {# lần hoàn tất}}", "notesPlaceholder": "Nhập ghi chú..."},
     "title": "Bảo dưỡng",
     "noPermission": "Không có quyền xem bảo dưỡng",
     "loadError": "Không tải được thông tin bảo dưỡng",
@@ -1832,6 +1840,9 @@
       }
     },
     "board": {
+      "partnerApp": {
+        "filterAll": "Tất cả việc bảo dưỡng"
+      },
       "title": "Trung tâm bảo dưỡng",
       "searchLabel": "Tìm xe",
       "searchPlaceholder": "Tên xe, mã xe hoặc biển số…",

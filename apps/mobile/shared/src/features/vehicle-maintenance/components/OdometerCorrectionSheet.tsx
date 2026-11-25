@@ -7,6 +7,7 @@ import {
   type OdometerCorrectionFormValues,
 } from '@xeprime/validators';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -126,12 +127,12 @@ export function OdometerCorrectionSheet({
       open={open}
       onClose={close}
       title={t('correctTitle')}
+      // Ghi chú nhật ký vào dấu (!) sát tiêu đề - không kéo dài thân tấm.
+      titleAdornment={<InfoHint label={t('correctTitle')} content={t('auditNote')} />}
       footer={
         <Button
           variant="gradient"
           label={isDecrease && !canDecrease ? t('submitApproval') : t('submit')}
-          /* Hình đi theo VIỆC: ghi số mới là cập nhật KM, còn thiếu quyền giảm thì là GỬI ĐI. */
-          icon={isDecrease && !canDecrease ? 'send-outline' : 'speedometer-outline'}
           loading={correct.isPending}
           disabled={isDecrease && !canDecrease}
           onPress={submit}
@@ -199,9 +200,7 @@ export function OdometerCorrectionSheet({
           >
             {canDecrease ? t('decreaseAllowed') : t('decreaseForbidden')}
           </Callout>
-        ) : (
-          <Callout tone="info" title={t('auditNote')} />
-        )}
+        ) : null}
       </YStack>
     </BottomSheet>
   );

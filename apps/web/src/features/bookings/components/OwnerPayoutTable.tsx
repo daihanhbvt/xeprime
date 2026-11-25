@@ -40,11 +40,17 @@ export function OwnerPayoutTable({
   payout,
   label,
   className,
+  phoneCard = false,
 }: {
   payout: OwnerPayout;
   /** Tên khả truy cập của bảng — tiêu đề của khối chứa nó. */
   label?: string;
   className?: string;
+  /**
+   * Khổ điện thoại (≤ 640px) theo design app Partner - chữ 14/20, không vạch nhóm, dòng cộng ví
+   * sau một đường kẻ liền, số màu xanh thay cho nền nổi. Desktop không đổi. Chỉ chi tiết đơn bật.
+   */
+  phoneCard?: boolean;
 }) {
   const t = useTranslations('Bookings.ownerPayout');
   const fmt = useAppFormat();
@@ -69,7 +75,7 @@ export function OwnerPayoutTable({
         : t('tax');
 
   return (
-    <dl className={cx(styles.root, className)} aria-label={label}>
+    <dl className={cx(styles.root, phoneCard && styles.phoneCard, className)} aria-label={label}>
       {payout.unitAmount != null && payout.rentalDays > 0 ? (
         <>
           <Row label={t('unitPrice')} value={fmt.pricePerDay(payout.unitAmount)} />

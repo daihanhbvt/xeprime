@@ -1,3 +1,4 @@
+import { HEADER_SHADOW, IS_PARTNER_APP } from '@/lib/app-kind';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { ReactNode } from 'react';
 import { Image, StyleSheet } from 'react-native';
@@ -8,8 +9,11 @@ import { images } from '@/assets';
 import { IconButton } from '@/components/ui/IconButton';
 import { APP_NAME } from '@/lib/app-name';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
+
+/** Mũi tên lui trên thanh trần: đúng khung 24 của Figma "Left 1". Nút tròn nổi giữ cỡ 20 của `IconButton`. */
+const BACK_ICON_SIZE = 24;
 
 export const APP_HEADER_HEIGHT = 56;
 const APP_HEADER_COMPACT_HEIGHT = 44;
@@ -126,7 +130,7 @@ export function AppHeader({
   onBack,
   left,
   title,
-  subtitle,
+  subtitle: subtitleProp,
   badge,
   context,
   avatar,
@@ -144,8 +148,14 @@ export function AppHeader({
   const insets = useSafeAreaInsets();
   const overlay = variant === 'overlay';
   const brand = tone === 'brand';
+  /*
+   * App Partner (feedback thiết kế 20/11/2026, bảng feedback dòng 2 "All Page"): thanh trắng, lề
+   * 16/12, tiêu đề 18 semibold, bóng mảnh Figma, KHÔNG vạch vàng đáy, KHÔNG câu mô tả dưới tiêu đề.
+   */
+  const figma = IS_PARTNER_APP && !overlay && !brand;
+  const subtitle = IS_PARTNER_APP ? undefined : subtitleProp;
 
-  const bg = brand ? colors.primary : colors.background;
+  const bg = brand ? colors.primary : figma ? colors.surface : colors.background;
   const fg = brand ? colors.onPrimary : colors.text;
   const fgMuted = brand ? colors.onPrimary : colors.textMuted;
 
@@ -159,8 +169,8 @@ export function AppHeader({
     <XStack
       ai="center"
       gap={space.xs}
-      px={edgeInset}
-      py={below ? 0 : space.xs}
+      px={figma ? FIGMA_PAD_X : edgeInset}
+      py={figma ? FIGMA_PAD_Y : below ? 0 : space.xs}
       // Khuôn trang (có prop below) gọn hơn: thanh 48 thay vì 56 — người dùng 04/11/2026 thấy header
       // + khối tiến trình chiếm gần 1/3 màn chi tiết chuyến.
       minHeight={below ? APP_HEADER_COMPACT_HEIGHT : APP_HEADER_HEIGHT}
@@ -170,6 +180,9 @@ export function AppHeader({
       {onBack ? (
         <IconButton
           icon="arrow-back"
+          // Mũi tên Figma "Left 1" (khung 24, Partner-XePrime `24464:25569`) - không dùng glyph Ionicons.
+          lineIcon="arrow-left"
+          {...(overlay || below ? {} : { size: BACK_ICON_SIZE })}
           label={t('back')}
           onPress={onBack}
           // Nền tròn ở biến thể nổi: mũi tên trần biến mất trên ảnh sáng.
@@ -207,8 +220,9 @@ export function AppHeader({
                 <Text
                   flexShrink={1}
                   col={fg}
-                  fos={fontSize.body}
-                  fow={below ? fontWeight.bold : fontWeight.semibold}
+                  fos={figma ? typeScale.heading.fontSize : fontSize.body}
+                  {...(figma ? { lh: typeScale.heading.lineHeight } : {})}
+                  fow={below && !figma ? fontWeight.bold : fontWeight.semibold}
                   numberOfLines={1}
                 >
                   {title}
@@ -250,6 +264,18 @@ export function AppHeader({
       Nền gold (`brand`) dùng sắc gold ĐẬM hơn: cùng `colors.primary` đặt trên chính nó thì vạch
       biến mất, và thanh lại trôi vào nội dung đúng như trước.
     */
+    if (figma) {
+      return (
+        <YStack bg={bg} zi={1} style={HEADER_SHADOW}>
+          {bar}
+          {below ? (
+            <YStack px={FIGMA_PAD_X} pb={FIGMA_PAD_Y}>
+              {below}
+            </YStack>
+          ) : null}
+        </YStack>
+      );
+    }
     return (
       <YStack bg={bg}>
         {bar}
@@ -290,6 +316,9 @@ export function AppHeader({
 
 /** Cao xấp xỉ một dòng chữ `body` để logo và tiêu đề cùng đường chân. */
 const BRAND_LOGO = 24;
+/** Figma "Page Header": lề ngang 16, dọc 12. */
+const FIGMA_PAD_X = 16;
+const FIGMA_PAD_Y = 12;
 
 const styles = StyleSheet.create({
   mark: { width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm },

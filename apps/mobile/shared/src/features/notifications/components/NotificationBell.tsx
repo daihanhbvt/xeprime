@@ -1,8 +1,9 @@
-import { Ionicons } from '@/components/icons/Ionicons';
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { FlatList, Pressable, RefreshControl, type ListRenderItemInfo } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { nowInAppTz, toAppTz } from '@xeprime/domain';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { HeaderChip } from '@/components/layout/HeaderChip';
 import { LineIcon } from '@/components/icons/LineIcon';
@@ -13,12 +14,13 @@ import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useBadges } from '@/features/badges/hooks/use-badges';
-import { useAppFormat } from '@/i18n/use-app-format';
+import { PartnerMenuIcon } from '@/features/shell/PartnerMenuIcon';
+import { useRelativeTimeLabel } from '@/i18n/use-relative-time';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { useAppStyles } from '@/theme/styles';
-import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { makeStyles, useAppScheme, useColors } from '@/theme/ThemeProvider';
+import { fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
 import type { NotificationItem } from '@/features/notifications/api';
 import {
   useMarkAllNotificationsRead,
@@ -28,26 +30,41 @@ import {
 import {
   NOTIFICATION_CONTEXT,
   notificationHref,
-  notificationIcon,
+  notificationLook,
   type NotificationContext,
+  type NotificationLook,
 } from '../notification-display';
-import { layout } from '@/theme/layout';
 
 const SKELETON_ROWS = 5;
 
 /** Tấm trượt chiếm nhiều màn hơn mặc định: đây là một DANH SÁCH, không phải một menu ba dòng. */
 const SHEET_MAX_RATIO = 0.85;
 
-/** Chấm "chưa đọc" ở mép phải một dòng — cùng vai với `.dot` của web. */
-const UNREAD_DOT = 8;
-
-/**
- * Đường kẻ giữa hai dòng — dày hơn 1dp và dùng `border` thay `borderSubtle`: trên một danh sách
- * hai-ba dòng chữ, nét quá nhạt làm các dòng dính vào nhau thành một khối.
+/*
+ * Số đo Figma "Notification Item" (tấm Thông báo `24512:124878`, người dùng chốt 20/11/2026 cho
+ * cả hai app): dòng đệm 16, cách 12, kẻ đáy 1 `stroke/gray-100`; ô icon trắng đệm 8 bo 12 bóng
+ * `0 1 1 /5%`, icon 20; tiêu đề 14/20 semibold; nội dung 14/20 `text/gray/medium` tối đa 2 dòng;
+ * giờ 14/20 NGHIÊNG `text/gray/very-low`; chấm chưa đọc 6 `status/success`. Dòng CHƯA đọc nền
+ * `bg/gray-50`, đã đọc nền trắng. Nhóm "HÔM NAY" / "TRƯỚC ĐÂY" 12/18 semibold `text/gray/very-low`.
  */
-const ROW_DIVIDER = 1.5;
+const UNREAD_DOT = 6;
+const ROW_PAD = 16;
+const ROW_GAP = 12;
+const TILE_PAD = 8;
+const TILE_ICON = 20;
+const BODY_LINES = 2;
+const GROUP_PAD_TOP_FIRST = 20;
+const GROUP_PAD = 16;
+const TILE_SHADOW = { boxShadow: '0px 1px 1px 0px rgba(10, 13, 18, 0.05)' } as const;
+/** `Status/warning-500` - icon cam của Figma (token `color-warning` #e07b26 là sắc khác). */
+const FIGMA_ORANGE = '#f79009';
+const FIGMA_ORANGE_DARK = '#fdb022';
 
-const notificationKey = (item: NotificationItem) => item.id;
+type SheetEntry =
+  | { kind: 'group'; key: string; label: string; first: boolean }
+  | { kind: 'item'; key: string; item: NotificationItem };
+
+const entryKey = (entry: SheetEntry) => entry.key;
 
 /**
  * Chuông thông báo (COM-04) — badge số chưa đọc + tấm trượt danh sách.
@@ -69,18 +86,20 @@ export function NotificationBell({
   context,
   compact = false,
   chip = false,
+  chipShape = 'round',
 }: {
   context: NotificationContext;
   /** Vẽ nhỏ lại, vùng chạm giữ nguyên — cho thanh trên CHẬT của khu quản lý. */
   compact?: boolean;
   /** Vòng tròn có viền + bóng như `HeaderIconButton` web — thanh trên khu khách. */
   chip?: boolean;
+  /** Dạng chip: `square` - ô 42 bo 12 của đầu Tổng quan app Partner (Figma Overview MB). */
+  chipShape?: 'round' | 'square';
 }) {
   const appStyles = useAppStyles();
   const colors = useColors();
   const styles = useStyles();
   const t = useTranslations('Notifications');
-  const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
 
   const [open, setOpen] = useState(false);
@@ -125,24 +144,52 @@ export function NotificationBell({
     [context, markRead, navigateOnce],
   );
 
+  /** Giờ của một dòng - "3 phút trước" / "Hôm qua 08h30" (`useRelativeTimeLabel`). */
+  const timeLabel = useRelativeTimeLabel();
+
+  // Hai nhóm "HÔM NAY" / "TRƯỚC ĐÂY" (Figma) - server đã xếp mới trước.
+  const entries = useMemo<SheetEntry[]>(() => {
+    const now = nowInAppTz();
+    const today: NotificationItem[] = [];
+    const earlier: NotificationItem[] = [];
+    for (const item of items) {
+      (toAppTz(item.createdAt).isSame(now, 'day') ? today : earlier).push(item);
+    }
+    const out: SheetEntry[] = [];
+    const push = (key: string, label: string, group: NotificationItem[]) => {
+      if (group.length === 0) return;
+      out.push({ kind: 'group', key, label, first: out.length === 0 });
+      for (const item of group) out.push({ kind: 'item', key: item.id, item });
+    };
+    push('group-today', t('groupToday'), today);
+    push('group-earlier', t('groupEarlier'), earlier);
+    return out;
+  }, [items, t]);
+
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<NotificationItem>) => (
-      <NotificationRow
-        item={item}
-        timeLabel={fmt.dateTime(item.createdAt)}
-        unreadLabel={t('unreadMark')}
-        onPress={handleItem}
-      />
-    ),
-    [fmt, handleItem, t],
+    ({ item: entry }: ListRenderItemInfo<SheetEntry>) =>
+      entry.kind === 'group' ? (
+        <GroupLabel label={entry.label} first={entry.first} />
+      ) : (
+        <NotificationRow
+          item={entry.item}
+          timeLabel={timeLabel(entry.item.createdAt)}
+          unreadLabel={t('unreadMark')}
+          onPress={handleItem}
+        />
+      ),
+    [handleItem, t, timeLabel],
   );
+
+  const canMarkAll = unreadCount > 0 && !markAll.isPending;
 
   return (
     <>
       {chip ? (
         <HeaderChip
           // Khu khách vẽ chuông bằng bộ icon nét design v2 (web `LineIcon name="bell"`).
-          icon={{ line: 'bell' }}
+          icon={{ line: chipShape === 'square' ? 'notification' : 'bell' }}
+          shape={chipShape}
           onPress={() => setOpen(true)}
           accessibilityLabel={
             unreadCount > 0 ? t('bellWithCount', { count: unreadCount }) : t('title')
@@ -185,6 +232,28 @@ export function NotificationBell({
         title={t('title')}
         maxRatio={SHEET_MAX_RATIO}
         padded={false}
+        chrome="v2"
+        headerDivider
+        headerAction={
+          // Figma không vẽ - người dùng chốt: link chữ nhỏ cạnh ✕ (20/11/2026).
+          <Pressable
+            onPress={() => markAll.mutate()}
+            disabled={!canMarkAll}
+            accessibilityRole="button"
+            accessibilityLabel={t('markAllRead')}
+            accessibilityState={{ disabled: !canMarkAll }}
+            hitSlop={space.sm}
+          >
+            <Text
+              col={canMarkAll ? colors.accentText : colors.textDisabled}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.medium}
+            >
+              {t('markAllShort')}
+            </Text>
+          </Pressable>
+        }
         /*
           Danh sách thông báo là `FlatList` — nó phải tự cuộn, không nằm trong vùng cuộn của tấm
           trượt. Lồng vào đó là cảnh báo "VirtualizedList should never be nested inside plain
@@ -193,24 +262,6 @@ export function NotificationBell({
         */
         scroll={false}
       >
-        <XStack ai="center" jc="flex-end" px={layout.padX} pb={space.xs}>
-          <Pressable
-            onPress={() => markAll.mutate()}
-            disabled={unreadCount === 0 || markAll.isPending}
-            accessibilityRole="button"
-            accessibilityLabel={t('markAllRead')}
-            accessibilityState={{ disabled: unreadCount === 0 || markAll.isPending }}
-            hitSlop={space.xs}
-          >
-            <Text
-              col={unreadCount === 0 ? colors.textDisabled : colors.accentText}
-              fos={fontSize.bodySm}
-              fow={fontWeight.semibold}
-            >
-              {t('markAllRead')}
-            </Text>
-          </Pressable>
-        </XStack>
 
         {list.isPending ? (
           <YStack>
@@ -228,8 +279,8 @@ export function NotificationBell({
           <ScreenMessage icon="notifications-outline" title={t('empty')} />
         ) : (
           <FlatList
-            data={items}
-            keyExtractor={notificationKey}
+            data={entries}
+            keyExtractor={entryKey}
             renderItem={renderItem}
             /*
               `flex: 1` để danh sách nhận đúng phần chiều cao còn lại của tấm trượt: không có nó
@@ -246,7 +297,7 @@ export function NotificationBell({
               />
             }
             ListFooterComponent={
-              list.isFetchingNextPage ? ListRowSkeleton : list.hasNextPage ? null : ListEnd
+              list.isFetchingNextPage ? ListLoadingFooter : list.hasNextPage ? null : ListEnd
             }
             {...LIST_TUNING}
           />
@@ -256,7 +307,26 @@ export function NotificationBell({
   );
 }
 
-function NotificationRow({
+/** Tên nhóm VIẾT HOA "HÔM NAY" / "TRƯỚC ĐÂY". */
+const GroupLabel = memo(function GroupLabel({ label, first }: { label: string; first: boolean }) {
+  const colors = useColors();
+  return (
+    <YStack px={ROW_PAD} pt={first ? GROUP_PAD_TOP_FIRST : GROUP_PAD} pb={GROUP_PAD}>
+      <Text
+        col={colors.textPlaceholder}
+        fos={typeScale.label.fontSize}
+        lh={typeScale.label.lineHeight}
+        fow={fontWeight.semibold}
+        textTransform="uppercase"
+        accessibilityRole="header"
+      >
+        {label}
+      </Text>
+    </YStack>
+  );
+});
+
+const NotificationRow = memo(function NotificationRow({
   item,
   timeLabel,
   unreadLabel,
@@ -276,70 +346,79 @@ function NotificationRow({
       onPress={() => onPress(item)}
       accessibilityRole="button"
       accessibilityLabel={isUnread ? `${item.title}, ${unreadLabel}` : item.title}
-      /*
-       * Dòng CHƯA ĐỌC có nền gold rất nhạt — chữ đậm thôi thì không đủ.
-       *
-       * Trên một danh sách dày chữ, khác biệt duy nhất là nét chữ buộc người dùng so từng dòng
-       * với dòng bên cạnh mới biết cái nào mới; một mảng nền đọc ra ngay trong một cái liếc. Dùng
-       * đúng `primaryLight` mà `ConversationRow` dùng làm nền chạm, nên hai màn cùng một tông.
-       *
-       * Nền khi CHẠM phải khác nền "chưa đọc", không thì chạm vào một dòng chưa đọc trông như
-       * không có gì xảy ra — nên chạm dùng `surfaceMuted`.
-       */
+      // Nền chạm khác nền "chưa đọc", không thì chạm vào một dòng chưa đọc trông như không có gì.
       style={({ pressed }) => [
         styles.row,
         isUnread ? styles.rowUnread : null,
         pressed ? styles.rowPressed : null,
       ]}
     >
-      <XStack ai="flex-start" gap={space.sm}>
-        <YStack
-          w={sizing.touchTarget}
-          h={sizing.touchTarget}
-          br={radius.pill}
-          // Viên `gold-soft` + icon `gold-deep` như web, đọc hay chưa đọc như nhau (web không có
-          // bản tối của gold-soft ⇒ `primaryMuted`, bậc gần nhất).
-          bg={colors.primaryMuted}
-          ai="center"
-          jc="center"
-        >
-          <Ionicons
-            name={notificationIcon(item.type)}
-            size={iconSize.sm}
-            color={colors.accentText}
-          />
+      <XStack ai="flex-start" gap={ROW_GAP}>
+        <YStack p={TILE_PAD} br={radius.control} bg={colors.surface} style={TILE_SHADOW}>
+          <NotificationGlyph look={notificationLook(item.type)} />
         </YStack>
 
-        <YStack f={1} gap={2}>
-          <Text
-            col={colors.text}
-            fos={fontSize.bodySm}
-            fow={isUnread ? fontWeight.bold : fontWeight.semibold}
-          >
-            {item.title}
-          </Text>
-          {item.body ? (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {item.body}
+        <YStack f={1} minWidth={0} gap={4}>
+          <XStack ai="flex-start" gap={space.sm}>
+            <Text
+              f={1}
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {item.title}
             </Text>
-          ) : null}
-          <Text col={colors.placeholder} fos={fontSize.label}>
-            {timeLabel}
-          </Text>
+            {isUnread ? (
+              <YStack w={UNREAD_DOT} h={UNREAD_DOT} br={radius.pill} bg={colors.success} mt={space.xs} />
+            ) : null}
+          </XStack>
+          <XStack ai="flex-start" gap={space.sm}>
+            {item.body ? (
+              <Text
+                f={1}
+                col={colors.textMuted}
+                fos={typeScale.body.fontSize}
+                lh={typeScale.body.lineHeight}
+                numberOfLines={BODY_LINES}
+              >
+                {item.body}
+              </Text>
+            ) : (
+              <YStack f={1} />
+            )}
+            <Text
+              col={colors.textPlaceholder}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fontStyle="italic"
+              numberOfLines={1}
+            >
+              {timeLabel}
+            </Text>
+          </XStack>
         </YStack>
-
-        {isUnread ? (
-          <YStack
-            w={UNREAD_DOT}
-            h={UNREAD_DOT}
-            br={radius.pill}
-            bg={colors.primaryActive}
-            mt={space.xs}
-          />
-        ) : null}
       </XStack>
     </Pressable>
   );
+});
+
+/** Bốn hình Figma + ví (xem `notificationLook`). */
+function NotificationGlyph({ look }: { look: NotificationLook }) {
+  const colors = useColors();
+  const orange = useAppScheme().scheme === 'dark' ? FIGMA_ORANGE_DARK : FIGMA_ORANGE;
+  switch (look) {
+    case 'urgent':
+      return <PartnerMenuIcon name="doc-left" color={colors.danger} size={TILE_ICON} />;
+    case 'car':
+      return <PartnerMenuIcon name="car-profile" color={colors.success} size={TILE_ICON} />;
+    case 'chat':
+      return <PartnerMenuIcon name="sms" color={orange} size={TILE_ICON} />;
+    case 'money':
+      return <PartnerMenuIcon name="wallet" color={orange} size={TILE_ICON} />;
+    default:
+      return <PartnerMenuIcon name="doc-left" color={orange} size={TILE_ICON} />;
+  }
 }
 
 const useStyles = makeStyles((colors) => ({
@@ -356,14 +435,13 @@ const useStyles = makeStyles((colors) => ({
     width: sizing.compactBox,
   },
   row: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: ROW_DIVIDER,
-    minHeight: sizing.touchTarget,
-    paddingHorizontal: layout.padX,
-    paddingVertical: space.sm,
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.borderSubtle,
+    borderBottomWidth: 1,
+    padding: ROW_PAD,
   },
   rowUnread: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.background,
   },
   rowPressed: {
     backgroundColor: colors.surfaceMuted,

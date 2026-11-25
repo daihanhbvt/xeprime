@@ -51,7 +51,16 @@ export async function AppBanner({ className }: { className?: string }) {
         width={216}
         height={68}
         unoptimized
-        className={styles.logo}
+        className={cx(styles.logo, styles.logoLight)}
+      />
+      {/* Bản chữ "xe" trắng cho giao diện tối - SVG nạp bằng img nên CSS không đổi được màu path. */}
+      <Image
+        src="/home/app-logo-dark.svg"
+        alt=""
+        width={216}
+        height={68}
+        unoptimized
+        className={cx(styles.logo, styles.logoDark)}
       />
       <h2 id="home-app" className={styles.title}>
         {t.rich('title', { br: () => <br /> })}

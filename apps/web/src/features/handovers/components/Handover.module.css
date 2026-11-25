@@ -172,7 +172,8 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px dashed var(--xp-color-border);
+  /* Ô trống KHÔNG viền, nền xám nhạt - Figma `24158:103039` (20/11/2026); viền chỉ hiện khi rê chuột. */
+  border: 1px solid transparent;
   border-radius: var(--xp-border-radius-md);
   aspect-ratio: 4 / 3;
   background: var(--xp-color-bg-layout);
@@ -311,29 +312,8 @@
   flex: none;
   width: auto;
   max-width: 70%;
-  height: 46%;
-  color: var(--xp-color-text-tertiary);
-  opacity: 0.6;
+  height: 100%;
   pointer-events: none;
-}
-
-.slotUploadPill {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-6);
-  padding: var(--xp-space-6) var(--xp-space-12);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  white-space: nowrap;
-  transition:
-    border-color 0.2s,
-    color 0.2s;
 }
 
 .slotBox:has(.slotAction) {
@@ -346,18 +326,3 @@
   border-color: var(--xp-color-primary);
 }
 
-.slotAction:hover .slotUploadPill,
-.slotAction:focus-visible .slotUploadPill {
-  border-color: var(--xp-color-primary);
-  color: var(--xp-color-primary-strong);
-}
-
-.slotAction:hover .slotSample {
-  opacity: 0.85;
-}
-
-/* Lưới nhỏ (hộp bổ sung biên bản, ô ~84px): nút gọn lại cho vừa. */
-.slotGrid .slotUploadPill {
-  padding: 2px var(--xp-space-sm);
-  font-size: 12px;
-}

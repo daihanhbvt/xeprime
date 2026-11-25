@@ -307,7 +307,7 @@ function OwnerProfileSections({
                   size="md"
                   shape="square"
                   block={false}
-                  onPress={() => void Linking.openURL(`${resolveWebBaseUrl()}/shops/${shop.slug}`)}
+                  onPress={() => void Linking.openURL(`${resolveWebBaseUrl()}/${shop.slug}`)}
                 />
               </XStack>
             ) : null}

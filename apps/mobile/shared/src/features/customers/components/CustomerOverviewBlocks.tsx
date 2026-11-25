@@ -1,13 +1,12 @@
-import { useState, type ReactNode } from 'react';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { useState } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isZeroMoney, LIST_SEPARATOR, toAppTz } from '@xeprime/domain';
+import { isZeroMoney, LIST_SEPARATOR } from '@xeprime/domain';
 import { BOOKING_STATUS, BOOKING_STATUS_META, PERMISSION, PLAN_FEATURE } from '@xeprime/types';
-import { SectionHeader } from '@/components/ui/CardTitle';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { VehicleThumb } from '@/components/ui/VehicleThumb';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -19,12 +18,21 @@ import { useDomainLabel } from '@/i18n/domain';
 import { metaColor } from '@/lib/status-meta';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
+import { formatDayTime } from '../day-time';
 import type { CustomerBooking, TenantCustomerDetail } from '../api';
 
+/** Figma "Users / Details" `24486:59791`: đệm/khe 12 (thang `space` không có 12), ô khối bo 10, ô ví 40. */
+const GAP = 12;
+const BLOCK_RADIUS = 10;
+const WALLET_BOX = 40;
+const WALLET_ICON = 24;
+
 /**
- * Đầu tab "Tổng quan" của chi tiết khách (web `CustomerOverviewTab`, 02/11/2026): banner công nợ
- * (khoản cũ nhất + nút Thu tiền) và thẻ "Chuyến hiện tại" kèm ba mốc (chặng · thanh toán · lịch trả).
+ * Đầu tab "Tổng quan" của chi tiết khách (web `CustomerOverviewTab`) theo Figma `24486:59791`: khối
+ * công nợ (khoản cũ nhất + nút Thu tiền) và thẻ "Đơn thuê hiện tại". Khối "Tiến trình đơn thuê",
+ * số đơn đang chạy trên đầu thẻ và ba dòng thời lượng / đã thu / còn lại Figma không vẽ nên đã bỏ
+ * (người dùng chốt 25/11/2026); số còn nợ và đã thu vẫn có ở khối công nợ và tab Thu chi.
  */
 export function CustomerOverviewBlocks({
   customer,
@@ -36,8 +44,10 @@ export function CustomerOverviewBlocks({
   canViewFinance: boolean;
 }) {
   const t = useTranslations('Customers.profile');
+  const tApp = useTranslations('Customers.app.detail.overview');
   const colors = useColors();
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
   const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
@@ -47,90 +57,107 @@ export function CustomerOverviewBlocks({
   const receivable = customer.receivable;
   const oldest = receivable?.oldest ?? null;
   const current = customer.currentBooking ?? null;
+  const otherUnpaid = (receivable?.count ?? 1) - 1;
 
   return (
-    <YStack gap={space.md}>
+    <YStack gap={space.lg}>
       {canViewFinance && oldest && !isZeroMoney(customer.debtAmount) ? (
-        // Web `.debtBanner`: viền đỏ nhạt, ô biểu tượng, chữ; khổ hẹp thì nút "Thu tiền" xuống hàng, trải ngang.
+        // Figma "Outstanding payment notice": viền đỏ nhạt; hàng ô ví + nút "Thu tiền", rồi hai dòng chữ.
         <YStack
-          gap={space.md}
-          p={space.md}
-          br={radius.lg}
+          gap={GAP}
+          p={space.lg}
+          br={radius.card}
           bw={1}
           bc={colors.dangerBorder}
           bg={colors.dangerSurface}
           accessibilityRole="summary"
         >
-          <XStack ai="flex-start" gap={space.sm}>
-            <YStack w={40} h={40} br={radius.md} ai="center" jc="center" bg={colors.surface}>
-              <Ionicons name="wallet-outline" size={20} color={colors.danger} />
+          <XStack ai="flex-start" jc="space-between" gap={space.sm}>
+            <YStack
+              w={WALLET_BOX}
+              h={WALLET_BOX}
+              br={radius.control}
+              ai="center"
+              jc="center"
+              bg={colors.surface}
+            >
+              <LineIcon name="wallet" size={WALLET_ICON} color={colors.danger} />
             </YStack>
-            <YStack f={1} minWidth={0} gap={2}>
-              <Text col={colors.danger} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.bold}>
-                {t('debtBanner.title', { amount: fmt.money(customer.debtAmount) })}
-              </Text>
-              <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
-                {(receivable?.count ?? 0) > 1
-                  ? t('debtBanner.bodyMore', {
-                      code: oldest.code,
-                      count: (receivable?.count ?? 1) - 1,
-                      paid: fmt.money(oldest.paidAmount),
-                    })
-                  : t('debtBanner.body', { code: oldest.code, paid: fmt.money(oldest.paidAmount) })}
-              </Text>
-            </YStack>
+            {canCollect ? (
+              <Button
+                label={t('debtBanner.collect')}
+                variant="gradient"
+                size="compact"
+                onPress={() => setPaying(oldest)}
+              />
+            ) : null}
           </XStack>
-          {canCollect ? (
-            <Button label={t('debtBanner.collect')} variant="gradient" size="compact" onPress={() => setPaying(oldest)} />
-          ) : null}
+          <YStack gap={5}>
+            <Text
+              col={colors.dangerStrong}
+              fos={typeScale.title.fontSize}
+              lh={typeScale.title.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {t('debtBanner.title', { amount: fmt.money(customer.debtAmount) })}
+            </Text>
+            <Text
+              col={colors.textMuted}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+            >
+              {otherUnpaid > 0
+                ? tApp('debtBodyMore', {
+                    code: oldest.code,
+                    count: otherUnpaid,
+                    paid: fmt.money(oldest.paidAmount),
+                  })
+                : tApp('debtBody', { code: oldest.code, paid: fmt.money(oldest.paidAmount) })}
+            </Text>
+          </YStack>
         </YStack>
       ) : null}
 
-      {/*
-        Web `CustomerOverviewTab`: thẻ "Đơn thuê hiện tại" = `BookingPreview` (xe · biển số · mã · dịch
-        vụ · chặng; nhận/trả, thời lượng, ba dòng tiền khi có `finance.view`; bước tiếp theo + "Xem
-        chi tiết đơn"), rồi khối "Tiến trình đơn thuê" riêng với ba mốc.
-      */}
       {canViewBookings ? (
         <Card>
-          <YStack gap={space.sm}>
+          <YStack gap={GAP}>
             <XStack ai="center" jc="space-between" gap={space.sm}>
-              <YStack f={1} minWidth={0}>
-                <SectionHeader icon="car-outline">{t('current.title')}</SectionHeader>
-              </YStack>
+              <Text
+                f={1}
+                minWidth={0}
+                col={colors.text}
+                fos={typeScale.title.fontSize}
+                lh={typeScale.title.lineHeight}
+                fow={fontWeight.semibold}
+                numberOfLines={1}
+              >
+                {t('current.title')}
+              </Text>
               {current ? (
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('current.count', { count: customer.activeBookingCount })}
-                </Text>
+                <Pill
+                  label={domainLabel('bookingStatus', current.status)}
+                  tone={pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, current.status))}
+                  size="lg"
+                />
               ) : null}
             </XStack>
             {current ? (
               <CurrentBookingPreview
                 booking={current}
                 canViewFinance={canViewFinance}
+                canCollect={canCollect}
+                onCollect={() => setPaying(current)}
                 onOpen={() => navigateOnce(ROUTES.manage.bookingDetail(current.id))}
               />
             ) : (
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              <Text
+                col={colors.textMuted}
+                fos={typeScale.body.fontSize}
+                lh={typeScale.body.lineHeight}
+              >
                 {t('current.empty')}
               </Text>
             )}
-          </YStack>
-        </Card>
-      ) : null}
-
-      {current && canViewBookings ? (
-        <Card>
-          <YStack gap={space.sm}>
-            <XStack ai="center" jc="space-between" gap={space.sm}>
-              <YStack f={1} minWidth={0}>
-                <SectionHeader icon="git-commit-outline">{t('timeline.title')}</SectionHeader>
-              </YStack>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                #{current.code}
-              </Text>
-            </XStack>
-            <BookingTimeline booking={current} canViewFinance={canViewFinance} />
           </YStack>
         </Card>
       ) : null}
@@ -147,169 +174,126 @@ export function CustomerOverviewBlocks({
   );
 }
 
-/** Ba mốc của đơn hiện tại: chặng · thanh toán · lịch trả — web `BookingTimeline`. */
-function BookingTimeline({
-  booking,
-  canViewFinance,
-}: {
-  booking: CustomerBooking;
-  canViewFinance: boolean;
-}) {
-  const t = useTranslations('Customers.profile.timeline');
-  const colors = useColors();
-  const fmt = useAppFormat();
-  const renting = booking.status === BOOKING_STATUS.ACTIVE;
-  const debt = booking.debtAmount;
-  const bold = (chunks: ReactNode) => <Text fow={fontWeight.bold}>{chunks}</Text>;
-
-  const steps: {
-    key: string;
-    icon: 'time-outline' | 'document-text-outline' | 'calendar-outline';
-    color: string;
-    title: string;
-    body: ReactNode;
-  }[] = [
-    {
-      key: 'stage',
-      icon: 'time-outline',
-      color: colors.warning,
-      title: renting ? t('renting') : t('awaiting'),
-      body: renting
-        ? t('rentingBody', { time: fmt.rentalAt(booking.pickupAt) })
-        : t('awaitingBody', { time: fmt.rentalAt(booking.pickupAt) }),
-    },
-    ...(canViewFinance && debt != null
-      ? [
-          {
-            key: 'payment',
-            icon: 'document-text-outline' as const,
-            color: isZeroMoney(debt) ? colors.success : colors.textMuted,
-            title: isZeroMoney(debt) ? t('paid') : t('unpaid'),
-            body: isZeroMoney(debt)
-              ? t('paidBody')
-              : t.rich('unpaidBody', { amount: fmt.money(debt), b: bold }),
-          },
-        ]
-      : []),
-    {
-      key: 'return',
-      icon: 'calendar-outline',
-      color: colors.textMuted,
-      title: t('returnPlan'),
-      body: t('returnPlanBody', { time: fmt.rentalAt(booking.returnAt) }),
-    },
-  ];
-
-  return (
-    <YStack gap={space.sm}>
-      {steps.map((step) => (
-        <XStack key={step.key} gap={space.sm} ai="flex-start">
-          <Ionicons name={step.icon} size={18} color={step.color} />
-          <YStack f={1} gap={2}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {step.title}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {step.body}
-            </Text>
-          </YStack>
-        </XStack>
-      ))}
-    </YStack>
-  );
-}
-
-/** Thân thẻ "Đơn thuê hiện tại" - web `BookingPreview`. */
+/** Thân thẻ "Đơn thuê hiện tại" - Figma `24486:63328` (web `BookingPreview`). */
 function CurrentBookingPreview({
   booking,
   canViewFinance,
+  canCollect,
+  onCollect,
   onOpen,
 }: {
   booking: CustomerBooking;
   canViewFinance: boolean;
+  canCollect: boolean;
+  onCollect: () => void;
   onOpen: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Customers.profile');
+  const tApp = useTranslations('Customers.app.detail.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const status = booking.status;
   const awaiting = status === BOOKING_STATUS.RESERVED || status === BOOKING_STATUS.CONFIRMED;
   const renting = status === BOOKING_STATUS.ACTIVE;
-  const facts: { key: string; label: string; value: string; danger?: boolean }[] = [
-    { key: 'pickup', label: t('current.pickup'), value: fmt.shortDateTime(booking.pickupAt) },
-    { key: 'return', label: t('current.return'), value: fmt.shortDateTime(booking.returnAt) },
-    {
-      key: 'duration',
-      label: t('history.duration'),
-      value: fmt.rentalDuration(toAppTz(booking.pickupAt), toAppTz(booking.returnAt)),
-    },
-    ...(canViewFinance
-      ? [
-          { key: 'total', label: t('current.total'), value: fmt.money(booking.totalAmount) },
-          { key: 'paid', label: t('history.paid'), value: fmt.money(booking.paidAmount) },
-          {
-            key: 'remaining',
-            label: t('history.remaining'),
-            value: fmt.money(booking.debtAmount),
-            danger: !isZeroMoney(booking.debtAmount ?? '0'),
-          },
-        ]
-      : []),
-  ];
+  // Chỉ mời "Thu tiền" khi còn nợ VÀ người xem được phép ghi nhận tiền - còn lại là "Chi tiết".
+  const owing = canViewFinance && booking.debtAmount != null && !isZeroMoney(booking.debtAmount);
+  const collect = owing && canCollect;
+  const label = {
+    col: colors.placeholder,
+    fos: typeScale.label.fontSize,
+    lh: typeScale.label.lineHeight,
+  } as const;
+  const value = {
+    col: colors.text,
+    fos: typeScale.label.fontSize,
+    lh: typeScale.label.lineHeight,
+    fow: fontWeight.semibold,
+  } as const;
 
   return (
-    <YStack gap={space.sm}>
-      <XStack ai="center" gap={space.sm}>
-        {/* Ảnh xe như thẻ đơn thuê. */}
-        <VehicleThumb uri={booking.vehicleImageUrl ?? null} accessibilityLabel={booking.vehicleName} />
-        <YStack f={1} minWidth={0} gap={2}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+    <YStack gap={GAP}>
+      <XStack ai="center" gap={GAP}>
+        <VehicleThumb
+          size="card"
+          uri={booking.vehicleImageUrl ?? null}
+          accessibilityLabel={booking.vehicleName}
+        />
+        <YStack f={1} minWidth={0} gap={3}>
+          <Text
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.semibold}
+            numberOfLines={1}
+          >
             {booking.vehicleName}
           </Text>
-          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-            {[booking.vehiclePlate, booking.code, domainLabel('serviceType', booking.serviceType)]
+          <Text {...label} numberOfLines={1}>
+            {[booking.vehiclePlate, `#${booking.code}`, domainLabel('serviceType', booking.serviceType)]
               .filter(Boolean)
               .join(LIST_SEPARATOR)}
           </Text>
         </YStack>
-        <Pill
-          label={domainLabel('bookingStatus', status)}
-          tone={pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, status))}
-        />
       </XStack>
-      <YStack gap={space.xs}>
-        {facts.map((fact) => (
-          <XStack key={fact.key} jc="space-between" gap={space.sm}>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {fact.label}
-            </Text>
-            <Text
-              col={fact.danger ? colors.danger : colors.text}
-              fos={fontSize.bodySm}
-              fow={fontWeight.medium}
-              ta="right"
-            >
-              {fact.value}
-            </Text>
-          </XStack>
-        ))}
-      </YStack>
-      {awaiting || renting ? (
-        <Text col={colors.text} fos={fontSize.bodySm}>
-          <Text col={colors.textMuted}>{t('current.next')}</Text>{' '}
-          {awaiting ? t('current.nextAwaiting') : t('current.nextRenting')}
-        </Text>
-      ) : null}
-      <Text
-        col={colors.primaryActive}
-        fos={fontSize.bodySm}
-        fow={fontWeight.semibold}
-        accessibilityRole="link"
-        onPress={onOpen}
+
+      {/* Nhận xe → Trả xe · Tổng tiền (khối xám). Tổng tiền chỉ có khi được xem tiền. */}
+      <XStack
+        ai="center"
+        jc="space-between"
+        gap={space.sm}
+        px={GAP}
+        py={BLOCK_RADIUS}
+        br={BLOCK_RADIUS}
+        bg={colors.background}
       >
-        {t('current.viewBooking')}
-      </Text>
+        <YStack gap={2}>
+          <Text {...label}>{t('current.pickup')}</Text>
+          <Text {...value}>{formatDayTime(booking.pickupAt)}</Text>
+        </YStack>
+        <Text
+          col={colors.placeholder}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.medium}
+        >
+          →
+        </Text>
+        <YStack gap={2}>
+          <Text {...label}>{t('current.return')}</Text>
+          <Text {...value}>{formatDayTime(booking.returnAt)}</Text>
+        </YStack>
+        {canViewFinance ? (
+          <YStack gap={2} ai="flex-end">
+            <Text {...label}>{tApp('total')}</Text>
+            <Text {...value}>{fmt.money(booking.totalAmount)}</Text>
+          </YStack>
+        ) : null}
+      </XStack>
+
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <Text f={1} minWidth={0} {...label} numberOfLines={2}>
+          {awaiting ? tApp('nextAwaiting') : renting ? t('current.nextRenting') : ''}
+        </Text>
+        <Pressable
+          onPress={collect ? onCollect : onOpen}
+          accessibilityRole="link"
+          accessibilityLabel={collect ? tApp('collect') : tApp('detail')}
+          hitSlop={8}
+        >
+          <XStack ai="center" gap={6}>
+            <Text
+              col={colors.brandLink}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {collect ? tApp('collect') : tApp('detail')}
+            </Text>
+            <LineIcon name="arrow-right" size={20} color={colors.brandShape} />
+          </XStack>
+        </Pressable>
+      </XStack>
     </YStack>
   );
 }

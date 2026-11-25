@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -7,27 +7,28 @@ import { REGISTRATION_TRACK, TENANT_TYPE, type RegistrationTrack } from '@xeprim
 import { partnerSignupSchema, type PartnerSignupValues } from '@xeprime/validators';
 import { AddressFields } from '@/components/form/AddressFields';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
+import { BackArrow } from '@/components/ui/BackArrow';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { FieldAppearanceProvider } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
 import { setAccountPassword, type CurrentUser } from '@/features/auth/api';
-import { AuthSwitchLink } from '@/features/auth/components/AuthSwitchLink';
 import { useCurrentUser, useRegister } from '@/features/auth/hooks/use-auth';
 import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
 import { LegalConsentCheckbox } from '@/features/legal/components/LegalConsentCheckbox';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { uploadImageToR2, type PickedImage } from '@/lib/r2-image-upload';
 import { queryKeys } from '@/queries/query-keys';
 import { useColors } from '@/theme/ThemeProvider';
 import { layout } from '@/theme/layout';
 import { fontWeight, space, typeScale } from '@/theme/tokens';
-import { tenantsApi } from './api';
+import { tenantsApi, uploadsApi, type MyShop } from './api';
 import { PartnerAccountFields } from './components/PartnerAccountFields';
 import { PartnerTrackChooser } from './components/PartnerTrackChooser';
+import { ShopLogoPicker } from './components/ShopLogoPicker';
 
 const ADDRESS_FIELD_NAMES = {
   provinceCode: 'provinceCode',
@@ -55,8 +56,6 @@ export function PartnerSignupScreen({
   initialTrack = null,
   lockTrack = false,
   onExit,
-  onSwitchToLogin,
-  footer,
 }: {
   initialTrack?: RegistrationTrack | null;
   /**
@@ -64,47 +63,28 @@ export function PartnerSignupScreen({
    * đúng web ẩn "Đổi cách cho thuê" khi tới từ site khách (`source=market`). Nút lui khi đó là `onExit`.
    */
   lockTrack?: boolean;
-  /** Lối lui của form khi `lockTrack` — vắng thì header không có nút lui. */
+  /**
+   * Lối lui khỏi luồng đăng ký (về Đăng nhập): mũi tên của màn chọn tuyến khi CHƯA có phiên, và của
+   * form khi `lockTrack`. Vắng = không có mũi tên ở đó. Đã đăng nhập mà chưa có gian hàng thì không
+   * có màn nào để lui về (người dùng chốt 20/11/2026).
+   */
   onExit?: () => void;
-  /** Có ⇒ hiện "Đã có tài khoản? Đăng nhập" (chỉ khi chưa có phiên). */
-  onSwitchToLogin?: () => void;
-  /** Đuôi riêng của màn chọn tuyến (vd. Đăng xuất cho người đã đăng nhập). */
-  footer?: ReactNode;
 }) {
-  const t = useTranslations('ShopOnboarding');
   const { data: user } = useCurrentUser();
   const [track, setTrack] = useState<RegistrationTrack | null>(initialTrack);
 
-  const loginHint =
-    !user && onSwitchToLogin ? (
-      <AuthSwitchLink
-        prompt={t('signup.hasAccount')}
-        actionLabel={t('signup.login')}
-        onPress={onSwitchToLogin}
-      />
-    ) : null;
-
+  /*
+   * Figma "Signup - Plan" / "Signup - Personal" không có dòng "Đã có tài khoản? Đăng nhập" hay
+   * "Đăng xuất" (người dùng chốt bỏ 20/11/2026) - lối ra duy nhất là mũi tên lui.
+   */
   if (!track) {
-    return (
-      <PartnerTrackChooser
-        onChoose={setTrack}
-        footer={
-          loginHint || footer ? (
-            <YStack gap={space.xs}>
-              {loginHint}
-              {footer}
-            </YStack>
-          ) : null
-        }
-      />
-    );
+    return <PartnerTrackChooser onChoose={setTrack} {...(!user && onExit ? { onBack: onExit } : {})} />;
   }
 
   return (
     <PartnerSignupForm
       track={track}
       onBack={lockTrack && initialTrack ? onExit : () => setTrack(null)}
-      loginHint={loginHint}
     />
   );
 }
@@ -123,12 +103,10 @@ export function PartnerSignupScreen({
 export function PartnerSignupForm({
   track,
   onBack,
-  loginHint,
 }: {
   track: RegistrationTrack;
   /** Mũi tên lui: đổi tuyến (mặc định) hoặc thoát khi tuyến bị khoá. Vắng = không có nút lui. */
   onBack?: (() => void) | undefined;
-  loginHint?: ReactNode;
 }) {
   const colors = useColors();
   const t = useTranslations('ShopOnboarding');
@@ -143,6 +121,16 @@ export function PartnerSignupForm({
   const busy = useRef(false);
 
   const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
+  /*
+   * Logo gian hàng - bắt buộc ở tuyến gói (ADR 0103, web `PartnerSignupForm`). Ảnh giữ ở máy cho tới
+   * khi gian hàng có (đường ký URL ảnh gian hàng cần gian hàng), rồi `PATCH /tenants/current/profile`.
+   * Bước logo hỏng thì gian hàng ĐÃ có: bấm lại bỏ qua `POST /tenants` (`createdShop`) và chỉ tải lại
+   * logo. Rời màn lúc đó vẫn bị màn chờ đòi logo. Tuyến hoa hồng KHÔNG có ô này (ADR 0040 điều 7).
+   */
+  const [logo, setLogo] = useState<PickedImage | null>(null);
+  const [logoMissing, setLogoMissing] = useState(false);
+  const createdShop = useRef<MyShop | null>(null);
+  const needsLogo = isPackageTrack && logo == null;
   /** Chưa có phiên ⇒ form tạo luôn tài khoản (DỮ LIỆU của schema, `.when`). */
   const withAccount = !user;
 
@@ -203,6 +191,11 @@ export function PartnerSignupForm({
 
   const submitValues = async (values: PartnerSignupValues) => {
     if (busy.current) return;
+    // Tuyến gói: chưa có logo thì chưa gửi gì lên server (ADR 0103).
+    if (needsLogo) {
+      setLogoMissing(true);
+      return;
+    }
     /*
      * Tạo tài khoản mà SĐT CHƯA xác thực: mở sheet nhập mã (gửi mã như nút "Xác thực"). Đúng mã thì
      * `PartnerAccountFields` gọi `submit` và form tự gửi tiếp — người dùng chỉ bấm một lần.
@@ -214,7 +207,9 @@ export function PartnerSignupForm({
     busy.current = true;
     setPending(true);
     try {
-      if (values.withAccount) {
+      if (createdShop.current) {
+        // Lượt trước đã tạo xong tài khoản + gian hàng, chỉ hỏng ở bước logo.
+      } else if (values.withAccount) {
         await registerAccount.mutateAsync({
           displayName: values.displayName.trim(),
           phone: values.phone.trim(),
@@ -229,7 +224,9 @@ export function PartnerSignupForm({
       }
       // Tuyến hoa hồng tạo tài khoản mới: họ tên CHÍNH LÀ tên hồ sơ chủ xe — không hỏi lại.
       const name = values.name.trim() || values.displayName.trim() || user?.displayName || '';
-      const shop = await tenantsApi.register({
+      let shop =
+        createdShop.current ??
+        (await tenantsApi.register({
         name,
         registrationTrack: track,
         tenantType: TENANT_TYPE.INDIVIDUAL,
@@ -243,7 +240,22 @@ export function PartnerSignupForm({
         ...(values.locationSource ? { locationSource: values.locationSource } : {}),
         phone: values.phone.trim(),
         email: values.email.trim(),
-      });
+      }));
+      createdShop.current = shop;
+      if (logo && !shop.profile?.logoUrl) {
+        try {
+          const logoUrl = await uploadImageToR2(logo, uploadsApi.shopMedia);
+          shop = await tenantsApi.updateProfile({ logoUrl });
+        } catch (error) {
+          // Gian hàng đã có - nói đúng điều đó; bấm lại chỉ tải lại logo. Vẫn nạp hồ sơ + phiên mới:
+          // rời màn rồi quay lại thì màn chờ đòi logo (`ShopLogoRequiredCard`), không gọi
+          // `POST /tenants` lần hai (một tài khoản một gian hàng).
+          toast.showError(t('signup.logoUploadFailed', { error: errorMessage(error) }));
+          queryClient.setQueryData(queryKeys.shop.current(), shop);
+          void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+          return;
+        }
+      }
       queryClient.setQueryData(queryKeys.shop.current(), shop);
       void queryClient.invalidateQueries({ queryKey: queryKeys.branches.all });
       // Scope MỚI (đã có gian hàng) trước khi vào app — scope cũ sẽ đưa ngược về màn đăng ký.
@@ -258,7 +270,11 @@ export function PartnerSignupForm({
   };
 
   // `handleSubmit` gọi lúc bấm: callback đọc `busy` (ref) không bị coi là đọc lúc render.
-  const submit = () => void handleSubmit(submitValues)();
+  const submit = () => {
+    // Báo thiếu logo CÙNG LÚC với lỗi của các ô khác (web `onSubmit`).
+    if (needsLogo) setLogoMissing(true);
+    void handleSubmit(submitValues)();
+  };
 
   const contactFields = (
     <>
@@ -267,7 +283,7 @@ export function PartnerSignupForm({
         name="phone"
         required
         label={t('signup.fields.phone.label')}
-        placeholder={t('signup.fields.phone.placeholder')}
+        placeholder={t('signup.partnerApp.phonePlaceholder')}
         icon="call-outline"
         keyboardType="phone-pad"
         autoComplete="tel"
@@ -279,13 +295,25 @@ export function PartnerSignupForm({
         name="email"
         required
         label={t('signup.fields.email.label')}
-        placeholder={t('signup.fields.email.placeholder')}
+        placeholder={t('signup.partnerApp.emailPlaceholder')}
         icon="mail-outline"
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
       />
     </>
+  );
+
+  /** Chữ ô địa chỉ theo nguyên văn Figma (khoá riêng của app, web giữ `Address.*`). */
+  const addressLabels = useMemo(
+    () => ({
+      province: t('signup.partnerApp.provinceLabel'),
+      ward: t('signup.partnerApp.wardLabel'),
+      wardPlaceholder: t('signup.partnerApp.wardPlaceholder'),
+      addressLine: t('signup.partnerApp.addressLineLabel'),
+      addressLinePlaceholder: t('signup.partnerApp.addressLinePlaceholder'),
+    }),
+    [t],
   );
 
   /** Tiêu đề khối 18/28 (Figma "Vehicle Specifications Header"). */
@@ -306,21 +334,47 @@ export function PartnerSignupForm({
     tác" 20/30 + lời dẫn 14/20 · hai khối phẳng trên nền trang ("Thông tin tài khoản", "Khu vực cho
     thuê"/"Thông tin gian hàng") tiêu đề 18/28, khe ô 12, khe khối 24 · ô đồng ý · nút gradient cao 44
     có mũi tên sau chữ · chú thích 14/20 căn giữa. Bộ ô `v2` cho mọi ô bên trong (kể cả địa chỉ, SĐT).
-    Nút nằm CUỐI form như bản vẽ (không còn dính đáy); dòng "Đã có tài khoản? Đăng nhập" giữ ngay dưới.
+    Mũi tên lui riêng một hàng + tiêu đề trong nội dung như bản vẽ (người dùng chốt 20/11/2026, thay
+    thanh trên của 19/11); không có dòng "Đã có tài khoản? Đăng nhập".
+
+    Nút "Đăng ký & …" là hành động DUY NHẤT của màn ⇒ DÍNH ĐÁY (`Screen footer`, người dùng chốt
+    20/11/2026); chú thích "Sau khi đăng ký…" ở cuối nội dung. Ẩn thanh đáy khi bàn phím mở để ô
+    đang gõ không bị che.
   */
   return (
-    <>
-      {/*
-        "Tạo tài khoản đối tác" là THANH TRÊN (← + tiêu đề) như trang chi tiết, người dùng chốt
-        19/11/2026; dòng mô tả ở ngay đầu nội dung.
-      */}
-      <AppHeader {...(onBack ? { onBack } : {})} title={t('signup.formTitle')} />
-    <Screen padded={false} edges={['left', 'right', 'bottom']}>
+    <Screen
+      padded={false}
+      hideFooterWhileTyping
+      footer={
+        <Button
+          label={t(`signup.submit.${track}`)}
+          variant="gradient"
+          size="lg"
+          icon="arrow-forward"
+          iconEnd
+          onPress={submit}
+          loading={pending}
+          disabled={submitBlocked}
+        />
+      }
+    >
       <FieldAppearanceProvider value="v2">
         <YStack gap={space.xl} px={layout.padXLg} py={space.lg}>
-          <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
-            {t('signup.formSub')}
-          </Text>
+          {onBack ? <BackArrow onPress={onBack} /> : null}
+          <YStack gap={2}>
+            <Text
+              col={colors.text}
+              fos={FORM_TITLE.fontSize}
+              lh={FORM_TITLE.lineHeight}
+              fow={fontWeight.bold}
+              accessibilityRole="header"
+            >
+              {t('signup.formTitle')}
+            </Text>
+            <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+              {t('signup.formSub')}
+            </Text>
+          </YStack>
 
           {withAccount || attachToAccount ? (
             <YStack gap={space.md}>
@@ -355,6 +409,17 @@ export function PartnerSignupForm({
                 icon={isPackageTrack ? 'storefront-outline' : 'person-outline'}
               />
             ) : null}
+            {isPackageTrack ? (
+              <ShopLogoPicker
+                value={logo}
+                onChange={(next) => {
+                  setLogo(next);
+                  if (next) setLogoMissing(false);
+                }}
+                error={logoMissing && !logo ? t('signup.fields.logo.required') : null}
+                disabled={pending}
+              />
+            ) : null}
             <AddressFields
               control={control}
               names={ADDRESS_FIELD_NAMES}
@@ -362,6 +427,7 @@ export function PartnerSignupForm({
               required
               provinceRequired
               prefillRememberedProvince
+              labels={addressLabels}
             />
             {withAccount || attachToAccount ? null : contactFields}
           </YStack>
@@ -369,6 +435,8 @@ export function PartnerSignupForm({
           {withAccount ? (
             <LegalConsentCheckbox
               size="md"
+              // Câu của đối tác như web `PartnerSignupForm` (`consent.shopCheck`) + Figma `24464:25550`.
+              statement="shop"
               checked={consented}
               onToggle={() => setConsented((agreed) => !agreed)}
             />
@@ -376,31 +444,20 @@ export function PartnerSignupForm({
             <LegalConsentNote place="shop" />
           )}
 
-          <YStack gap={space.sm}>
-            <Button
-              label={t(`signup.submit.${track}`)}
-              variant="gradient"
-              size="lg"
-              icon="arrow-forward"
-              iconEnd
-              onPress={submit}
-              loading={pending}
-              disabled={submitBlocked}
-            />
-            <Text
-              col={colors.textPlaceholder}
-              fos={typeScale.body.fontSize}
-              lh={typeScale.body.lineHeight}
-              ta="center"
-            >
-              {t('signup.footnote')}
-            </Text>
-            {loginHint}
-          </YStack>
+          <Text
+            col={colors.textPlaceholder}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            ta="center"
+          >
+            {t('signup.footnote')}
+          </Text>
         </YStack>
       </FieldAppearanceProvider>
     </Screen>
-    </>
   );
 }
+
+/** Figma `20px/Bold` - tiêu đề "Tạo tài khoản đối tác" (`24464:25296`). */
+const FORM_TITLE = { fontSize: 20, lineHeight: 30 } as const;
 

@@ -10,20 +10,28 @@ import {
   cancellationReasonNeedsText,
   type CancellationReasonCategory,
 } from '@xeprime/types';
-import { LIST_SEPARATOR, isZeroMoney } from '@xeprime/domain';
-import { FieldLabel } from '@/components/ui/Field';
+import { isZeroMoney } from '@xeprime/domain';
 import { InfoHint } from '@/components/ui/InfoHint';
-import { richBold } from '@/features/booking-requests/components/DecisionSheetParts';
+import {
+  DecisionDanger,
+  DecisionDangerText,
+  richBold,
+  richBoldInherit,
+} from '@/features/booking-requests/components/DecisionSheetParts';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Chip } from '@/components/ui/Chip';
+import { SelectControl, type SelectControlOption } from '@/components/ui/SelectControl';
+import { SheetConfirmFooter } from '@/components/ui/SheetConfirmFooter';
 import { TextField } from '@/components/ui/TextField';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { BookingDetail } from '../api';
+
+const SUMMARY_PAD_X = 20;
+const SUMMARY_PAD_Y = 12;
+const SUMMARY_GAP = 12;
+const SUMMARY_DOT = 6;
 
 /** Trần lý do — khớp DTO backend. */
 const REASON_MAX = 500;
@@ -130,6 +138,15 @@ export function BookingStatusSheet({
     [t, noteForCustomer, textRequired],
   );
 
+  const reasonOptions = useMemo<SelectControlOption[]>(
+    () =>
+      CANCELLATION_REASON_CATEGORY_VALUES.map((value) => ({
+        value,
+        label: domainLabel('cancellationReasonCategory', value),
+      })),
+    [domainLabel],
+  );
+
   const { control, handleSubmit } = useForm<{ reason: string }>({
     resolver: yupResolver(schema),
     defaultValues: { reason: '' },
@@ -164,30 +181,39 @@ export function BookingStatusSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
+      chrome="v2"
+      headerDivider
       title={
         cancelling
           ? t('cancelTitle', { code: booking.code })
           : t('noShowTitle', { code: booking.code })
       }
+      // Đơn đã ghi nhận tiền thu: nói ở dấu (!) cạnh tiêu đề (người dùng chốt 20/11/2026).
+      {...(isZeroMoney(booking.collectedAmount)
+        ? {}
+        : {
+            titleAdornment: (
+              <InfoHint
+                label={t('paidTitle', { amount: fmt.money(booking.collectedAmount) })}
+                content={`${t('paidTitle', { amount: fmt.money(booking.collectedAmount) })}
+${t('paidDescription')}`}
+              />
+            ),
+          })}
       footer={
-        // Một hàng như tấm huỷ chuyến của app khách: lối thoát co vừa chữ bên trái, hành động chính bên phải.
-        <XStack gap={space.sm}>
-          <YStack flexShrink={0}>
-            <Button label={t('back')} variant="ghost" onPress={onClose} />
-          </YStack>
-          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-            <Button
-              label={cancelling ? t('cancelOk') : t('noShowOk')}
-              icon="close-circle-outline"
-              variant="danger"
-              loading={loading}
-              onPress={pressConfirm}
-            />
-          </YStack>
-        </XStack>
+        // Khuôn chân tấm chuẩn (tấm Từ chối yêu cầu - người dùng chốt 20/11/2026).
+        <SheetConfirmFooter
+          backLabel={t('back')}
+          onBack={onClose}
+          confirmLabel={cancelling ? t('cancelOk') : t('noShowOk')}
+          onConfirm={pressConfirm}
+          loading={loading}
+        />
       }
     >
-      <Text col={colors.text} fos={fontSize.bodySm}>
+      {/* Nói rõ đang đụng vào ĐƠN NÀO: khách · xe · biển số, rồi khung giờ. */}
+      {/* Câu dẫn trạng thái - chữ xám 14/20 ở đầu thân tấm (người dùng chốt 20/11/2026). */}
+      <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
         {cancelling
           ? t.rich('cancelSubtitle', {
               b: richBold,
@@ -196,62 +222,52 @@ export function BookingStatusSheet({
           : t('noShowLead')}
       </Text>
 
-      {/* Nói rõ đang đụng vào ĐƠN NÀO: khách · xe · biển số, rồi khung giờ. */}
-      <Card tone="muted" lift="flat">
-        <YStack gap={space.xs}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {[booking.customerName, booking.vehicleName, booking.vehiclePlate]
-              .filter(Boolean)
-              .join(LIST_SEPARATOR)}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
-          </Text>
-        </YStack>
-      </Card>
+      {/* Figma "Vehicle Summary": một hàng "tên khách • tên xe", nền xám nhạt, đệm 12/20, bo 16. */}
+      <XStack ai="center" gap={SUMMARY_GAP} px={SUMMARY_PAD_X} py={SUMMARY_PAD_Y} br={radius.card} bg={colors.background}>
+        <Text
+          col={colors.text}
+          fos={typeScale.title.fontSize}
+          lh={typeScale.title.lineHeight}
+          fow={fontWeight.medium}
+          numberOfLines={1}
+          flexShrink={1}
+        >
+          {booking.customerName}
+        </Text>
+        <YStack w={SUMMARY_DOT} h={SUMMARY_DOT} br={radius.pill} bg={colors.borderInput} />
+        <Text
+          col={colors.textMuted}
+          fos={typeScale.title.fontSize}
+          lh={typeScale.title.lineHeight}
+          numberOfLines={1}
+          flexShrink={1}
+        >
+          {booking.vehicleName}
+        </Text>
+      </XStack>
 
       {/*
         Đơn đã ghi nhận tiền thu: XePrime KHÔNG tự hoàn tiền và cũng không xoá khoản đã ghi.
         Nói thẳng ra trước khi bấm, vì sau khi đơn khép lại thì không sửa được nữa (ADR 0013).
       */}
-      {isZeroMoney(booking.collectedAmount) ? null : (
-        <YStack bg={colors.warningSurface} p={space.md} br={radius.md} gap={space.xs}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {t('paidTitle', { amount: fmt.money(booking.collectedAmount) })}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('paidDescription')}
-          </Text>
-        </YStack>
-      )}
-
       {/*
         NHÓM lý do — chỉ ở lượt HUỶ. Chip chọn-MỘT chứ không phải chip gợi-ý-gõ-nhanh: lựa chọn ở
         đây đi THẲNG vào dữ liệu, cùng hình thái với tấm huỷ yêu cầu thuê.
       */}
       {cancelling ? (
-        <YStack gap={space.sm} p={space.md} br={radius.md} bg={colors.surfaceMuted}>
-          <FieldLabel label={t('cancelReasonLabel')} required />
-          <XStack gap={space.xs} flexWrap="wrap">
-            {CANCELLATION_REASON_CATEGORY_VALUES.map((value) => (
-              <Chip
-                key={value}
-                label={domainLabel('cancellationReasonCategory', value)}
-                size="sm"
-                selected={category === value}
-                onPress={() => {
-                  setCategory(value);
-                  setCategoryTouched(true);
-                }}
-              />
-            ))}
-          </XStack>
-          {categoryTouched && category === null ? (
-            <Text col={colors.danger} fos={fontSize.label}>
-              {t('cancelReasonRequired')}
-            </Text>
-          ) : null}
-        </YStack>
+        // Ô CHỌN như tấm Từ chối (người dùng chốt 20/11/2026) - cùng nhóm lý do, cùng luật bắt buộc.
+        <SelectControl
+          label={t('cancelReasonLabel')}
+          required
+          value={category}
+          options={reasonOptions}
+          placeholder={t('cancelReasonPlaceholder')}
+          onChange={(next) => {
+            setCategory(next as CancellationReasonCategory);
+            setCategoryTouched(true);
+          }}
+          {...(categoryTouched && category === null ? { error: t('cancelReasonRequired') } : {})}
+        />
       ) : null}
 
       <TextField
@@ -276,29 +292,17 @@ export function BookingStatusSheet({
         đặt qua CHỢ: đơn tự lập không vào mẫu số chỉ số uy tín và không có tiền giữ chỗ để hoàn.
       */}
       {cancelling && fromMarketplace ? (
-        <YStack
-          gap={space.xs}
-          p={space.md}
-          br={radius.md}
-          bw={1}
-          bc={colors.danger}
-          bg={colors.dangerSurface}
-          accessibilityRole="text"
-        >
+        <DecisionDanger>
           <XStack ai="flex-start" gap={space.xs}>
-            <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-              {t.rich('cancelWarning', { b: richBold })}
-            </Text>
+            <DecisionDangerText>{t.rich('cancelWarning', { b: richBoldInherit })}</DecisionDangerText>
             <InfoHint
               label={tRequestCancel('effects.metricsHintLabel')}
               content={tRequestCancel('effects.metricsHint')}
               size={fontSize.bodySm}
             />
           </XStack>
-          <Text col={colors.text} fos={fontSize.bodySm}>
-            {t('cancelWarningMoney')}
-          </Text>
-        </YStack>
+          <DecisionDangerText>{t('cancelWarningMoney')}</DecisionDangerText>
+        </DecisionDanger>
       ) : null}
     </BottomSheet>
   );

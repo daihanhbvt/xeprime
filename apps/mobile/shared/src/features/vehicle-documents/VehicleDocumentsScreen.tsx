@@ -15,6 +15,8 @@ import {
   VEHICLE_DOCUMENT_PRESENTATION_VALUES,
   VEHICLE_DOCUMENT_PRESET_VALUES,
   VEHICLE_DOCUMENT_TYPE,
+  INSURANCE_ELIGIBILITY_GAP,
+  VEHICLE_TYPE,
   type StatusColor,
   type VehicleDocumentPresentation,
   type VehicleDocumentType,
@@ -76,6 +78,7 @@ import {
   useVehicleDocument,
   useVehicleDocumentVersions,
   useVehicleDocuments,
+  useVehicleInsuranceStatus,
 } from './hooks/use-documents';
 import {
   vehicleDocumentsApi,
@@ -247,6 +250,17 @@ export function VehicleDocumentsScreen({
 
   const vehicle = useVehicle(vehicleId, has(PERMISSION.VEHICLE_VIEW));
   const documents = useVehicleDocuments(vehicleId, canView);
+  /*
+   * Ô tô thiếu cà vẹt (hoặc cà vẹt thiếu số khung / tên chủ xe) thì chưa được bán kèm bảo hiểm vật
+   * chất xe (ADR 0088 · 0089) - nhắc ngay trên màn này, không chặn gì (web). Chỉ khi nền tảng đang
+   * bán bảo hiểm theo bậc (`applies`).
+   */
+  const isCar = vehicle.data?.vehicleType === VEHICLE_TYPE.CAR;
+  const insurance = useVehicleInsuranceStatus(vehicleId, isCar);
+  const registrationReminder =
+    isCar &&
+    insurance.data?.applies === true &&
+    insurance.data.gaps.includes(INSURANCE_ELIGIBILITY_GAP.REGISTRATION_MISSING);
   const invalidate = useInvalidateVehicleDocuments(vehicleId);
   const archive = useArchiveVehicleDocument(vehicleId);
 
@@ -458,6 +472,9 @@ export function VehicleDocumentsScreen({
               <VehicleEditSummaryCard vehicleId={vehicleId} tab={VEHICLE_EDIT_TAB.DOCUMENTS} />
             )}
             {!canManage ? <Callout tone="info">{t('readOnly')}</Callout> : null}
+            {registrationReminder ? (
+              <Callout tone="warning">{t('registrationReminder')}</Callout>
+            ) : null}
 
             {/* Figma `24231:107422`: mỗi giấy tờ là MỘT thẻ riêng (đệm 16, bo 16), cách nhau 12. */}
             <YStack gap={CARD_GAP}>
@@ -1629,7 +1646,7 @@ function DocumentDetailSheet({
             control={control}
             name="notes"
             label={t('metadata.notes')}
-            multiline
+            multiline scrollable
             rows={3}
             maxLength={4000}
           />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { nowInAppTz } from '@xeprime/domain';
@@ -19,15 +19,23 @@ import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { WALLET_SCOPE, type WalletScope, type WalletStatementFilters } from '@/api/wallet/api';
 import { WalletActivityPanel } from './components/WalletActivityPanel';
-import { WalletMonthSummary, WalletStatementPanel } from './components/WalletStatementPanel';
+import {
+  WalletMonthSummary,
+  WalletStatementPanel,
+  WalletStatsCard,
+} from './components/WalletStatementPanel';
 import { WalletSummaryCard } from './components/WalletSummaryCard';
 import { WithdrawSheet } from './components/WithdrawSheet';
 import { useWalletSummary } from './hooks/use-wallet';
 
 /** Kỳ mặc định của bảng tổng hợp: tháng đang chạy, theo giờ Việt Nam - đúng như web. */
 const STATEMENT_PERIOD_FORMAT = 'YYYY-MM';
+
+/** `num/12` của Figma - khe/đệm của thẻ ví. */
+const SPACE_12 = toPx(XP_TOKENS['space-12']);
 
 /**
  * Ví điểm - bản native của `WalletView`. Dùng chung khu cá nhân và khu gian hàng, khác nhau đúng ở
@@ -161,6 +169,12 @@ export function WalletScreen({
   }, [walletSummary.isSuccess, scrollToPayout]);
 
   const isShop = scope === WALLET_SCOPE.SHOP;
+  /*
+   * Kỳ của thẻ chỉ số + Tổng hợp tháng: trang 1 của kỳ đang xem. Ở tab tổng hợp dùng đúng bộ lọc
+   * của bảng (trùng khoá cache, không thêm request).
+   */
+  const monthFilters: WalletStatementFilters =
+    tab === BALANCE_TAB.STATEMENT ? statementFilters : { period: statementFilters.period, page: 1 };
   // Trang gian hàng là "Quản lý ví" của web (ledger 09 §3.10); ví tài khoản khách giữ tên cũ.
   const title = isShop ? t('manage.title') : t('title.user');
 
@@ -191,7 +205,8 @@ export function WalletScreen({
           khe `subtitle` mà `/manage/balance` bên web dùng. Nó thay cho dòng "1 điểm = 1đ" đã bị gỡ
           khi ví đổi tên từ "Ví điểm" sang "Số dư".
         */}
-        {manageShell ? (
+        {/* Trang gian hàng: Figma `24228:102177` không có câu mô tả dưới tiêu đề (người dùng chốt bỏ 25/11/2026). */}
+        {manageShell && !isShop ? (
           <YStack pb={space.sm}>
             {/* Nút "Rút về ngân hàng" nằm TRONG thẻ số dư như web — hàng tiêu đề không lặp nó. */}
             {/*
@@ -200,7 +215,7 @@ export function WalletScreen({
               biến hai dòng thành bốn dòng trên máy 360dp.
             */}
             <Text px={layout.screenX} col={colors.textMuted} fos={fontSize.label}>
-              {isShop ? t('manage.subtitle') : t('page.subtitle')}
+              {t('page.subtitle')}
             </Text>
           </YStack>
         ) : null}
@@ -213,13 +228,23 @@ export function WalletScreen({
         <YStack
           gap={layout.section}
           px={manageShell ? layout.screenX : 0}
+          // Figma "Container" đệm 16 cả bốn phía - trang gian hàng không còn câu mô tả đứng trên.
+          pt={manageShell && isShop ? space.md : 0}
           pb={manageShell ? layout.section : 0}
           onLayout={onColumnLayout}
         >
           {isShop ? (
             <ScrollReveal index={0}>
-              <Card lift="flat">
-                <YStack gap={space.sm}>
+              {/* Figma "Wallet Card" `24228:102180`: thẻ trắng bo 16, đệm 8 (đáy 12), khe 12. */}
+              <YStack
+                bg={colors.surface}
+                br={radius.card}
+                pt={space.sm}
+                px={space.sm}
+                pb={SPACE_12}
+                gap={SPACE_12}
+                overflow="hidden"
+              >
                   <WalletSummaryCard
                     scope={scope}
                     onWithdraw={() => setWithdrawOpen(true)}
@@ -231,10 +256,10 @@ export function WalletScreen({
                       scope={BANK_ACCOUNT_SCOPE.SHOP}
                       title={tBank('title')}
                       hint={t('payout.hint')}
+                      appearance="wallet"
                     />
                   </YStack>
-                </YStack>
-              </Card>
+              </YStack>
             </ScrollReveal>
           ) : (
             <>
@@ -267,16 +292,12 @@ export function WalletScreen({
 
           {isShop ? (
             <>
-              {/* Thẻ Tổng hợp tháng - hiện ở CẢ HAI tab, như cột bên của web. */}
-              <SectionCard>
-                <WalletMonthSummary
-                  filters={
-                    tab === BALANCE_TAB.STATEMENT
-                      ? statementFilters
-                      : { period: statementFilters.period, page: 1 }
-                  }
-                />
-              </SectionCard>
+              {/*
+                Thẻ ba chỉ số (Figma "Vehicle Summary" `24228:102201`) rồi thẻ Tổng hợp tháng - cả
+                hai hiện ở CẢ HAI tab, đọc chung một kỳ.
+              */}
+              <WalletStatsCard filters={monthFilters} />
+              <WalletMonthSummary filters={monthFilters} />
 
               {/*
                 Ô ghi chú thuế (web `TaxNote`, design `23948:94510`): ô nền xanh thông tin, "Chi tiết"
@@ -304,19 +325,31 @@ export function WalletScreen({
                 </Text>
               </YStack>
 
-              {/* Hàng tab có khung viền (`segmented.module.css` của web) đứng ngay trên nội dung. */}
-              <XStack accessibilityLabel={t('tabs.label')}>
-                <UnderlineTabs
-                  items={BALANCE_TABS.map((value) => ({ key: value, label: t(`tabs.${value}`) }))}
-                  value={tab}
-                  onChange={(value) => {
-                    setTab(value);
-                    setStatementFilters((prev) => ({ ...prev, page: 1 }));
-                  }}
-                />
-              </XStack>
-
-              <SectionCard>
+              {/*
+                Figma `24612:145584`: MỘT thẻ trắng viền bo 16, đệm 16, khe 12 - hàng tab chia đôi
+                (16/24, gạch vàng 2px), ô tháng trải ngang, rồi nội dung của tab (người dùng chốt
+                cùng một khung cho cả hai tab, 25/11/2026).
+              */}
+              <YStack
+                bg={colors.surface}
+                bw={1}
+                bc={colors.border}
+                br={radius.card}
+                p={space.md}
+                gap={SPACE_12}
+              >
+                <YStack accessibilityLabel={t('tabs.label')}>
+                  <UnderlineTabs
+                    stretch
+                    size="lg"
+                    items={BALANCE_TABS.map((value) => ({ key: value, label: t(`tabs.${value}`) }))}
+                    value={tab}
+                    onChange={(value) => {
+                      setTab(value);
+                      setStatementFilters((prev) => ({ ...prev, page: 1 }));
+                    }}
+                  />
+                </YStack>
                 {tab === BALANCE_TAB.ACTIVITY ? (
                   <WalletActivityPanel
                     filters={statementFilters}
@@ -332,7 +365,7 @@ export function WalletScreen({
                     }
                   />
                 )}
-              </SectionCard>
+              </YStack>
             </>
           ) : null}
         </YStack>

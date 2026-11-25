@@ -14,6 +14,8 @@ import { STATE_ART, type StateKind } from './state-art';
  */
 const ART = 200;
 const ART_STYLE = { width: ART, height: ART };
+/** Hình của bản gọn (`compact`). */
+const ART_STYLE_COMPACT = { width: 88, height: 88 };
 
 /** Tiêu đề 20/30 semibold · mô tả 14/20 - cùng thang với web khổ điện thoại. */
 const TITLE_SIZE = toPx(XP_TOKENS['font-size-lead']);
@@ -45,6 +47,17 @@ interface ScreenMessageProps {
   /** Biểu tượng cho nút hành động - đặt khi hành động là một ĐỘNG TÁC rõ ràng. */
   actionIcon?: IconName;
   onAction?: () => void;
+  /**
+   * Bản GỌN cho trạng thái của MỘT NHÓM nằm giữa danh sách (vd nhóm "Chờ giao xe" rỗng trong ô
+   * "Tất cả" của Đơn thuê xe): hình nhỏ, đệm dọc hẹp, không giãn hết chiều cao - người dùng báo
+   * khoảng trống dọc quá rộng 20/11/2026.
+   */
+  compact?: boolean;
+  /**
+   * `top` - đứng gần ĐẦU vùng nội dung (đệm trên `space.xl`) thay vì giữa màn: trạng thái "không có
+   * kết quả" ngay dưới thanh lọc, mắt không phải lướt xuống giữa màn (`NoResults`, 20/11/2026).
+   */
+  placement?: 'center' | 'top';
 }
 
 /**
@@ -60,14 +73,26 @@ export function ScreenMessage({
   actionLabel,
   actionIcon,
   onAction,
+  compact = false,
+  placement = 'center',
 }: ScreenMessageProps) {
   const colors = useColors();
   return (
-    <YStack f={1} ai="center" jc="center" gap={space.md} p={space.lg}>
+    <YStack
+      {...(compact ? {} : { f: 1 })}
+      ai="center"
+      jc={placement === 'top' ? 'flex-start' : 'center'}
+      gap={compact ? space.sm : space.md}
+      {...(compact
+        ? { px: space.lg, py: space.sm }
+        : placement === 'top'
+          ? { px: space.lg, pt: space.xl, pb: space.lg }
+          : { p: space.lg })}
+    >
       <Floating>
         <Image
           source={art ?? STATE_ART[kind]}
-          style={ART_STYLE}
+          style={compact ? ART_STYLE_COMPACT : ART_STYLE}
           resizeMode="contain"
           accessible={false}
         />

@@ -1,14 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Pressable, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from './BottomSheet';
-import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, useFieldAppearance } from './Field';
+import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, useFieldAppearance, inLabelHint, belowHint } from './Field';
 import { MenuOption, MenuOptionList } from './MenuOption';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
+import { fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
 /**
@@ -122,7 +123,7 @@ export function SelectControl({
   return (
     <YStack gap={v2 ? FIELD_V2.labelGap : space.xs}>
       {hideLabel ? null : (
-        <FieldLabel label={label} required={required} publishRequired={publishRequired} />
+        <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint)} />
       )}
 
       {/*
@@ -142,7 +143,7 @@ export function SelectControl({
           <Text
             f={1}
             col={current ? colors.text : v2 ? colors.textPlaceholder : colors.placeholder}
-            fos={v2 ? typeScale.title.fontSize : fieldFontSize.value}
+            fos={v2 ? FIELD_V2.selectFontSize : fieldFontSize.value}
             numberOfLines={1}
           >
             {current?.label ?? placeholder ?? t('choose')}
@@ -162,15 +163,24 @@ export function SelectControl({
               <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
             </Pressable>
           ) : null}
-          <Ionicons
-            name="chevron-down"
-            size={v2 ? FIELD_V2.icon : iconSize.sm}
-            color={disabled ? colors.textDisabled : v2 ? colors.placeholder : colors.textMuted}
-          />
+          {v2 ? (
+            // Figma "Down 2" (khung 20) - bộ ô `v2` vẽ bằng nét Figma, không bằng Ionicons.
+            <LineIcon
+              name="chevron-down-md"
+              size={FIELD_V2.icon}
+              color={disabled ? colors.textDisabled : colors.placeholder}
+            />
+          ) : (
+            <Ionicons
+              name="chevron-down"
+              size={iconSize.sm}
+              color={disabled ? colors.textDisabled : colors.textMuted}
+            />
+          )}
         </FieldShell>
       </Pressable>
 
-      <FieldMessage error={error} hint={hint} />
+      <FieldMessage error={error} hint={belowHint(hint)} />
 
       <BottomSheet
         open={open}

@@ -14,12 +14,14 @@ import { ManageShellNotices } from './ManageShellNotices';
  */
 export function ManagePageHeader({
   title,
+  titleSuffix,
   actions,
   onBack,
   subtitle,
   below,
 }: {
   title: string;
+  titleSuffix?: string;
   subtitle?: ReactNode;
   below?: ReactNode;
   actions?: ReactNode;
@@ -27,7 +29,7 @@ export function ManagePageHeader({
 }) {
   return (
     <>
-      <PageTopBar title={title} actions={actions} onBack={onBack} subtitle={subtitle} below={below} />
+      <PageTopBar title={title} titleSuffix={titleSuffix} actions={actions} onBack={onBack} subtitle={subtitle} below={below} />
       <ManageShellNotices />
     </>
   );

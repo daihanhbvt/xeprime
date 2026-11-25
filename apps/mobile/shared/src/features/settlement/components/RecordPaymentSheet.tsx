@@ -26,7 +26,29 @@ const REFERENCE_MAX = 255;
 /** Suy từ CHÍNH schema — `yup.oneOf` thu hẹp kiểu, interface viết tay sẽ lệch với resolver. */
 type PaymentFormValues = yup.InferType<ReturnType<typeof buildPaymentSchema>>;
 
-function buildPaymentSchema(amountLabel: string) {
+/** Trần một lần thu TIỀN THUÊ - `null` = không có trần (thu cọc). Web `RecordPaymentCap`. */
+interface PaymentCap {
+  amount: number;
+  /** Số trần đã định dạng tiền, để câu lỗi nói đúng con số ở dòng dẫn. */
+  label: string;
+}
+
+type PaymentTranslate = ReturnType<typeof useTranslations<'Bookings.payments'>>;
+
+function buildPaymentSchema(t: PaymentTranslate, cap: PaymentCap | null) {
+  /*
+   * Tiền THUÊ có trần = số khách còn phải đưa (web `recordPaymentSchema`, 18/11/2026): server từ
+   * chối phần vượt (`PAYMENT_EXCEEDS_DUE`), form chặn trước. Ô vẫn sửa được để thu TỪNG PHẦN.
+   */
+  let amount = yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null ? undefined : v))
+    .typeError(t('validation.amountRequired'))
+    .nullable()
+    .defined()
+    .moreThan(0, t('validation.amountPositive'))
+    .test('required', t('validation.amountRequired'), (v) => v != null);
+  if (cap) amount = amount.max(cap.amount, t('validation.amountOverDue', { amount: cap.label }));
   return yup.object({
     /*
      * Cùng luật với `recordPaymentSchema` của web: bắt buộc và LỚN HƠN 0.
@@ -35,15 +57,8 @@ function buildPaymentSchema(amountLabel: string) {
      * `Decimal(14,2)`, nên một khoản 50.000,50 hợp lệ ở server lại bị chặn ở app: hai client
      * nhận hai tập giá trị khác nhau cho cùng một ô.
      */
-    amount: yup
-      .number()
-      .transform((v, orig) => (orig === '' || orig === null ? undefined : v))
-      .typeError(amountLabel)
-      .nullable()
-      .defined()
-      .moreThan(0, amountLabel)
-      .test('required', amountLabel, (v) => v != null),
-    method: yup.string().oneOf(PAYMENT_METHOD_VALUES).required(),
+    amount,
+    method: yup.string().oneOf(PAYMENT_METHOD_VALUES).required(t('validation.methodRequired')),
     referenceCode: yup.string().trim().max(REFERENCE_MAX).default(''),
     description: yup.string().trim().max(NOTE_MAX).default(''),
   });
@@ -71,6 +86,7 @@ export function RecordPaymentSheet({
   bookingId,
   kind = PAYMENT_KIND.RENTAL,
   debtAmount,
+  counterDue = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -78,6 +94,11 @@ export function RecordPaymentSheet({
   kind?: RecordPaymentInput['kind'];
   /** Số gợi ý sẵn, dạng CHUỖI như mọi số tiền đi trên dây (ADR 0007). */
   debtAmount?: string;
+  /**
+   * `debtAmount` là phần khách còn đưa TẬN TAY (`counterDueAmount`), không phải cả công nợ - chỉ đổi
+   * nhãn dòng dẫn cho khớp "Còn phải thu của khách" của trang đơn (web `counterDue`).
+   */
+  counterDue?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.payments');
@@ -88,7 +109,15 @@ export function RecordPaymentSheet({
   const record = useRecordPayment(bookingId);
 
   const isDeposit = kind === PAYMENT_KIND.DEPOSIT;
-  const schema = useMemo(() => buildPaymentSchema(t('amountLabel')), [t]);
+  const schema = useMemo(() => {
+    const cap = Number(debtAmount);
+    return buildPaymentSchema(
+      t,
+      isDeposit || debtAmount == null || !Number.isFinite(cap)
+        ? null
+        : { amount: cap, label: fmt.money(debtAmount) },
+    );
+  }, [debtAmount, fmt, isDeposit, t]);
 
   /*
    * Số gợi ý chỉ để ĐIỀN SẴN ô nhập (ô tiền làm việc trên `number`); giá trị gửi đi vẫn hoá chuỗi.
@@ -134,7 +163,6 @@ export function RecordPaymentSheet({
       footer={
         <Button
           label={t('recordOk')}
-          icon="cash-outline"
           loading={record.isPending}
           onPress={() => void submit()}
         />
@@ -150,7 +178,7 @@ export function RecordPaymentSheet({
           bg={colors.primaryLight}
         >
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {isDeposit ? t('depositLead') : t('debtLead')}:
+            {isDeposit ? t('depositLead') : counterDue ? t('counterLead') : t('debtLead')}:
           </Text>
           <Text col={colors.price} fos={fontSize.body} fow={fontWeight.bold}>
             {fmt.money(debtAmount)}
@@ -193,7 +221,7 @@ export function RecordPaymentSheet({
         placeholder={t('referencePlaceholder')}
       />
 
-      <TextField control={control} name="description" label={t('descriptionLabel')} />
+      <TextField multiline scrollable rows={3} control={control} name="description" label={t('descriptionLabel')} />
     </BottomSheet>
   );
 }

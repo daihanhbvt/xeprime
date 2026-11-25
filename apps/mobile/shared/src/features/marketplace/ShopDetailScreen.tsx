@@ -15,6 +15,7 @@ import { SERVICE_TYPE, STOREFRONT_KIND } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenError } from '@/components/state/ScreenError';
 import { Button } from '@/components/ui/Button';
+import { DotsLoader } from '@/components/ui/DotsLoader';
 import { ShopDetailSkeleton, VehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
@@ -376,9 +377,10 @@ function ShopBody({
               <YStack
                 pt={layout.block}
                 px={layout.screenX}
+                pb={layout.block}
                 accessibilityLabel={tResults('loadingMore')}
               >
-                <VehicleCardSkeleton />
+                <DotsLoader />
               </YStack>
             ) : listings.hasNextPage ? (
               /*

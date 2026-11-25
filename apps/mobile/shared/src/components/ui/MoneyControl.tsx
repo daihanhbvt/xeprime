@@ -3,7 +3,7 @@ import { TextInput } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { themed, useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
@@ -71,7 +71,7 @@ export function MoneyControl({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
+      <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint)} />
 
       <FieldShell
         focused={focused}
@@ -108,7 +108,7 @@ export function MoneyControl({
         </Text>
       </FieldShell>
 
-      <FieldMessage error={error} hint={hint} />
+      <FieldMessage error={error} hint={belowHint(hint)} />
     </YStack>
   );
 }

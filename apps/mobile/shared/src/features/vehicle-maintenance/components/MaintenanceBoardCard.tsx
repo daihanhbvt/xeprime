@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, type ReactNode } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -9,27 +9,28 @@ import {
   STATUS_COLOR,
   type MaintenanceDueStatus,
 } from '@xeprime/types';
-import { maintenanceCyclePercent } from '@xeprime/domain';
+import { LIST_SEPARATOR, maintenanceCyclePercent } from '@xeprime/domain';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { IconButton } from '@/components/ui/IconButton';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { RemoteImage } from '@/components/ui/RemoteImage';
-import { FactRow } from '@/components/ui/FactRow';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { BoardAction } from './BoardActionSheets';
 import type { MaintenanceBoardItem } from '../api';
-import { layout } from '@/theme/layout';
 
-/** Ảnh xe 80 × 52 - cùng thẻ Lịch sử đơn thuê. */
-const THUMB_W = 80;
-const THUMB_H = 52;
-const body = { fos: typeScale.body.fontSize, lh: typeScale.body.lineHeight } as const;
+/** Ảnh xe 60 × 42 - Figma 24512:121709. */
+const THUMB_W = 60;
+const THUMB_H = 42;
+/** Cỡ chữ 14/20 và 12/18 của Figma. */
+const body = { fos: 14, lh: 20 } as const;
+const small = { fos: 12, lh: 18 } as const;
 
 /**
  * Một xe trên bảng bảo dưỡng — bản native của `MaintenanceBoardRow` web (sổ redesign §3.8).
@@ -66,21 +67,14 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
   const dueMeta = MAINTENANCE_DUE_STATUS_META[status];
   const tone = status === MAINTENANCE_DUE_STATUS.OK ? STATUS_COLOR.INFO : dueMeta.color;
   const overdue = status === MAINTENANCE_DUE_STATUS.OVERDUE;
-  const barColor =
-    tone === STATUS_COLOR.DANGER
-      ? colors.danger
-      : tone === STATUS_COLOR.WARNING || tone === STATUS_COLOR.WAITING
-        ? colors.warning
-        : colors.info;
+  /* Màu theo hạn - Figma 24512:121616 / 121733 / 121921: đỏ · cam · xanh lá. */
+  const dueSoon = status === MAINTENANCE_DUE_STATUS.DUE_SOON;
+  const barColor = overdue ? colors.danger : dueSoon ? colors.warningVivid : colors.successVivid;
+  const remainingColor = overdue ? colors.danger : dueSoon ? colors.warningHigh : colors.success;
   const record = item.activeRecord;
   const percent = maintenanceCyclePercent(item.oilChangeIntervalKm, item.remainingKm);
   const subtitle = item.plateNumber || item.vehicleCode;
   const open = useCallback(() => onPress(item), [onPress, item]);
-  const bold = (chunks: ReactNode) => (
-    <Text col={colors.text} fow={fontWeight.semibold}>
-      {chunks}
-    </Text>
-  );
 
   const menu = [
     { key: 'detail', label: t('actions.detail'), danger: false, show: true, write: false },
@@ -109,122 +103,126 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
 
   return (
     /*
-      Khuôn thẻ của app KHÁCH: không vạch màu mép trái - mức khẩn đã nói bằng viên hạn + thanh %
-      chu kỳ (cùng `tone`). Người dùng chốt 10/11/2026: màn quản lý lấy phong cách app khách.
+      Khuôn thẻ Figma `_Kanban Items` (24512:121616): viền đỏ khi quá hạn, đầu thẻ ảnh 60×42 +
+      tên + "biển số · ngày bảo dưỡng gần nhất" + viên hạn; ô xám Odo/mốc/thanh %; ô lịch; hai nút.
+      Thao tác phụ (xem xe, hoàn tất, huỷ lịch) mở bằng NHẤN GIỮ thẻ - người dùng chốt 25/11/2026.
     */
-    <Card onPress={open} accessibilityLabel={item.vehicleName}>
-      <YStack minWidth={0} gap={space.sm}>
-        {/* Đầu thẻ như thẻ Đơn thuê: biển số / mã xe trái, viên hạn + nút ⋯ phải. */}
-        <XStack ai="center" jc="space-between" gap={space.sm}>
-          <Text col={colors.text} {...body} fow={fontWeight.medium} numberOfLines={1} flexShrink={1}>
-            {subtitle ? `#${subtitle}` : item.vehicleName}
-          </Text>
-          <XStack ai="center" gap={space.xs}>
-            <Pill
-              label={domainLabel('maintenanceDueStatus', status, dueMeta.label)}
-              tone={pillToneOfStatusColor(tone)}
-            />
-            <IconButton
-              icon="ellipsis-horizontal"
-              label={t('board.more', { name: item.vehicleName })}
-              compact
-              onPress={() => setMenuOpen(true)}
-            />
+    <Card
+      onPress={open}
+      onLongPress={() => setMenuOpen(true)}
+      accessibilityLabel={item.vehicleName}
+      {...(overdue ? { borderColor: colors.danger } : {})}
+    >
+      <YStack minWidth={0} gap={12}>
+        <XStack ai="flex-start" jc="space-between" gap={space.sm}>
+          <XStack ai="center" gap={6} f={1} minWidth={0}>
+            <YStack w={THUMB_W} h={THUMB_H} br={radius.sm} ov="hidden" bg={colors.surfaceMuted} flexShrink={0}>
+              <RemoteImage
+                uri={item.mainImageUrl}
+                recyclingKey={item.vehicleId}
+                radius={radius.sm}
+                fallback={<Ionicons name="car-outline" size={iconSize.md} color={colors.placeholder} />}
+              />
+            </YStack>
+            <YStack f={1} minWidth={0} gap={2}>
+              <Text col={colors.text} {...body} fontFamily={FONT_FAMILY.semibold} fow={fontWeight.semibold} numberOfLines={1}>
+                {item.vehicleName}
+              </Text>
+              <Text col={colors.textMuted} {...small} fontFamily={FONT_FAMILY.body} numberOfLines={1}>
+                {[subtitle, item.lastCompletedAt ? fmt.date(item.lastCompletedAt) : null]
+                  .filter(Boolean)
+                  .join(LIST_SEPARATOR)}
+              </Text>
+            </YStack>
           </XStack>
+          <Pill
+            label={domainLabel('maintenanceDueStatus', status, dueMeta.label)}
+            tone={pillToneOfStatusColor(tone)}
+          />
         </XStack>
 
-        {/* Xe: ảnh 80 × 52 + tên + lần bảo dưỡng gần nhất. */}
-        <XStack gap={12} ai="center">
-          <YStack w={THUMB_W} h={THUMB_H} br={radius.sm} ov="hidden" bg={colors.surfaceMuted} flexShrink={0}>
-            <RemoteImage
-              uri={item.mainImageUrl}
-              recyclingKey={item.vehicleId}
-              radius={radius.sm}
-              fallback={<Ionicons name="car-outline" size={iconSize.md} color={colors.placeholder} />}
-            />
-          </YStack>
-          <YStack f={1} minWidth={0} gap={2}>
-            <Text col={colors.text} {...body} fow={fontWeight.semibold} numberOfLines={1}>
-              {item.vehicleName}
+        {/* Ô xám: Odo · mốc tới / thanh 6pt / còn-quá · % chu kỳ. */}
+        <YStack px={12} py={space.sm} br={radius.control} bg={colors.background} gap={6}>
+          <XStack jc="space-between" gap={space.sm}>
+            <Text
+              col={item.currentOdometerKm == null ? colors.warningStrong : colors.text}
+              {...small}
+              fontFamily={FONT_FAMILY.semibold}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+              flexShrink={1}
+            >
+              {item.currentOdometerKm == null
+                ? t('board.missingOdometer')
+                : t('board.partnerApp.odometer', { km: fmt.km(item.currentOdometerKm) })}
             </Text>
-            <Text col={colors.textMuted} {...body} numberOfLines={1}>
-              {item.lastCompletedAt
-                ? t.rich('board.lastService', { date: fmt.date(item.lastCompletedAt), b: bold })
-                : t('board.noLastService')}
+            <Text col={colors.textMuted} {...small} fontFamily={FONT_FAMILY.body} numberOfLines={1} flexShrink={1}>
+              {item.nextMaintenanceKm != null
+                ? t('board.partnerApp.nextDue', { km: fmt.km(item.nextMaintenanceKm) })
+                : t('board.noNextDue')}
             </Text>
-          </YStack>
-        </XStack>
-
-        {/* Các dòng nhãn/giá trị cùng khuôn thẻ danh sách. */}
-        <FactRow
-          label={t('board.odometer')}
-          {...(item.currentOdometerKm == null ? { tone: colors.warningStrong } : {})}
-          sub={
-            item.nextMaintenanceKm != null
-              ? t('board.nextDueShort', { km: fmt.km(item.nextMaintenanceKm) })
-              : t('board.noNextDue')
-          }
-        >
-          {item.currentOdometerKm == null
-            ? t('board.missingOdometer')
-            : `${fmt.kmNumber(item.currentOdometerKm)} ${t('board.kmUnit')}`}
-        </FactRow>
-        {status === MAINTENANCE_DUE_STATUS.UNKNOWN ? null : (
-          <FactRow label={t('board.remaining')} {...(overdue ? { tone: colors.danger } : {})}>
-            {fmt.remainingKm(item.remainingKm)}
-          </FactRow>
-        )}
-        <YStack gap={space.xs}>
-          {/* Màu thanh theo hạn như web (`--tone`): trong chu kỳ = xanh da trời, sắp đến hạn = cam, quá hạn = đỏ; cao 8 như web. */}
-          <ProgressBar percent={percent ?? 0} size="md" color={barColor} />
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {item.currentOdometerKm == null
-              ? t('board.needsOdometer')
-              : percent != null && item.oilChangeIntervalKm
-                ? t('board.cycle', {
-                    percent: Math.round(percent),
-                    interval: fmt.km(item.oilChangeIntervalKm),
-                  })
-                : t('board.noCycle')}
-          </Text>
+          </XStack>
+          <ProgressBar percent={percent ?? 0} size="xs" color={barColor} />
+          <XStack jc="space-between" gap={space.sm}>
+            {status === MAINTENANCE_DUE_STATUS.UNKNOWN ? null : (
+              <Text
+                col={remainingColor}
+                {...small}
+                fontFamily={FONT_FAMILY.semibold}
+                fow={fontWeight.semibold}
+                numberOfLines={1}
+              >
+                {fmt.remainingKm(item.remainingKm)}
+              </Text>
+            )}
+            <Text col={colors.textMuted} {...small} fontFamily={FONT_FAMILY.body} numberOfLines={1} flexShrink={1} ml="auto">
+              {item.currentOdometerKm == null
+                ? t('board.needsOdometer')
+                : percent != null && item.oilChangeIntervalKm
+                  ? t('board.cycle', {
+                      percent: Math.round(percent),
+                      interval: fmt.km(item.oilChangeIntervalKm),
+                    })
+                  : t('board.noCycle')}
+            </Text>
+          </XStack>
         </YStack>
 
         <ScheduleBox item={item} />
 
-        {/* Hai nút một hàng, vàng + icon (chuẩn tấm "Thao tác"). */}
+        {/* Vạch ngăn + hai nút: Cập nhật ODO (viền xám) · Lên lịch (vàng), không icon - Figma `_Modal actions`. */}
         {canCorrectOdometer || canManage ? (
-          <XStack gap={space.sm} pt={space.xs}>
-            {canCorrectOdometer ? (
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
-                <Button
-                  label={t('actions.updateOdometer')}
-                  icon="speedometer-outline"
-                  variant="gradient"
-                  size="compact"
-                  disabled={writeLocked}
-                  onPress={() => onAction({ kind: 'odometer', row: item })}
-                />
-              </YStack>
-            ) : null}
-            {canManage ? (
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
-                <Button
-                  label={
-                    record
-                      ? t('actions.editSchedule')
-                      : overdue
-                        ? t('actions.scheduleNow')
-                        : t('actions.schedule')
-                  }
-                  icon="calendar-outline"
-                  variant="gradient"
-                  size="compact"
-                  disabled={writeLocked}
-                  onPress={() => onAction({ kind: 'schedule', row: item })}
-                />
-              </YStack>
-            ) : null}
-          </XStack>
+          <YStack gap={12}>
+            <YStack h={1} bg={colors.border} />
+            <XStack gap={12}>
+              {canCorrectOdometer ? (
+                <YStack f={1} minWidth={0}>
+                  <Button
+                    label={t('actions.updateOdometer')}
+                    variant="neutral"
+                    size="compact"
+                    disabled={writeLocked}
+                    onPress={() => onAction({ kind: 'odometer', row: item })}
+                  />
+                </YStack>
+              ) : null}
+              {canManage ? (
+                <YStack f={1} minWidth={0}>
+                  <Button
+                    label={
+                      // Một chữ "Lên lịch ngay" cho mọi xe chưa có lịch - người dùng chốt 25/11/2026.
+                      record ? t('actions.editSchedule') : t('actions.scheduleNow')
+                    }
+                    // Figma 24512:121982: "Sửa lịch" là nút viền xám, chỉ "Lên lịch" mới vàng.
+                    variant={record ? 'neutral' : 'gradient'}
+                    size="compact"
+                    disabled={writeLocked}
+                    onPress={() => onAction({ kind: 'schedule', row: item })}
+                  />
+                </YStack>
+              ) : null}
+            </XStack>
+          </YStack>
         ) : null}
       </YStack>
 
@@ -245,7 +243,11 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
   );
 });
 
-/** Ô lịch: phiếu đang mở hoặc lời nhắc theo tình trạng chu kỳ — `ScheduleBox` của web. */
+/**
+ * Ô lịch - Figma 24512:121669 / 121887 / 121978: MỘT dòng 12/18.
+ * Có phiếu: "Đã lên lịch | ngày" trái + hạng mục phải. Chưa có mà quá hạn / sắp hạn:
+ * "Chưa có lịch · mức cần" kèm icon (i) trên nền đỏ / cam nhạt; còn lại: hai đầu trái-phải.
+ */
 function ScheduleBox({ item }: { item: MaintenanceBoardItem }) {
   const colors = useColors();
   const t = useTranslations('Maintenance');
@@ -258,49 +260,77 @@ function ScheduleBox({ item }: { item: MaintenanceBoardItem }) {
     const inProgress = record.status === MAINTENANCE_STATUS.IN_PROGRESS;
     const date = record.plannedStartAt ? fmt.date(record.plannedStartAt) : null;
     return (
-      <YStack px={layout.padX} py={space.sm} br={radius.lg} bg={colors.infoSurface} gap={2}>
-        <Text col={colors.infoStrong} fos={fontSize.body} fow={fontWeight.semibold}>
-          {inProgress
+      <SplitRow
+        bg={colors.infoLow}
+        leftColor={colors.infoStrong}
+        rightColor={colors.infoStrong}
+        left={
+          inProgress
             ? date
               ? t('board.inProgressSince', { date })
               : t('board.inProgress')
             : date
               ? t('board.scheduledOn', { date })
-              : t('board.scheduled')}
-        </Text>
-        <Text col={colors.infoStrong} fos={typeScale.body.fontSize}>
-          {domainLabel('maintenanceType', record.type)}
-        </Text>
-      </YStack>
+              : t('board.scheduled')
+        }
+        right={domainLabel('maintenanceType', record.type)}
+      />
     );
   }
 
   const urgent = status === MAINTENANCE_DUE_STATUS.OVERDUE;
-  return (
-    <YStack
-      px={layout.padX}
-      py={space.sm}
-      br={radius.lg}
-      bw={1}
-      borderStyle="dashed"
-      bc={urgent ? colors.danger : colors.border}
-      bg={urgent ? colors.dangerSurface : colors.background}
-      gap={2}
-    >
-      <Text
-        col={urgent ? colors.danger : colors.text}
-        fos={fontSize.body}
-        fow={fontWeight.semibold}
+  if (urgent || status === MAINTENANCE_DUE_STATUS.DUE_SOON) {
+    const tint = urgent ? colors.danger : colors.warningVivid;
+    return (
+      <XStack
+        px={12}
+        py={space.sm}
+        br={radius.sm}
+        bg={urgent ? colors.dangerSurfaceStrong : colors.warningSubtle}
+        ai="center"
+        gap={6}
       >
-        {t('board.noSchedule')}
+        <LineIcon name="info-circle" size={16} color={tint} />
+        <Text col={tint} {...small} fontFamily={FONT_FAMILY.body} numberOfLines={1} flexShrink={1}>
+          {[t('board.noSchedule'), urgent ? t('board.needNow') : t('board.needSoon')].join(LIST_SEPARATOR)}
+        </Text>
+      </XStack>
+    );
+  }
+
+  return (
+    <SplitRow
+      bg={colors.surfaceMuted}
+      leftColor={colors.textMuted}
+      rightColor={colors.textMuted}
+      left={t('board.noSchedule')}
+      right={t('board.partnerApp.notYet')}
+    />
+  );
+}
+
+/** Ô một dòng: chữ trái + chữ phải, nền/màu theo trạng thái (Figma 24512:121887 / 121978). */
+function SplitRow({
+  left,
+  right,
+  bg,
+  leftColor,
+  rightColor,
+}: {
+  left: string;
+  right: string;
+  bg: string;
+  leftColor: string;
+  rightColor: string;
+}) {
+  return (
+    <XStack px={12} py={space.sm} br={radius.sm} bg={bg} jc="space-between" gap={space.sm}>
+      <Text col={leftColor} {...small} fontFamily={FONT_FAMILY.body} numberOfLines={1} flexShrink={1}>
+        {left}
       </Text>
-      <Text col={urgent ? colors.danger : colors.textMuted} fos={typeScale.body.fontSize}>
-        {urgent
-          ? t('board.needNow')
-          : status === MAINTENANCE_DUE_STATUS.DUE_SOON
-            ? t('board.needSoon')
-            : t('board.notYet')}
+      <Text col={rightColor} {...small} fontFamily={FONT_FAMILY.body} numberOfLines={1} flexShrink={1}>
+        {right}
       </Text>
-    </YStack>
+    </XStack>
   );
 }

@@ -851,7 +851,7 @@
   },
   "overview": {
     "odometerLabel": "Odometer:",
-    "actionsMenu": "More actions",
+    "actionsMenu": "Actions",
     "profileLabel": "Vehicle profile",
     "plate": "Licence plate: <b>{value}</b>",
     "odometer": "Odometer: <b>{value}</b>",
@@ -859,22 +859,23 @@
     "axisPublic": "Review",
     "edit": "Edit",
     "schedule": "View calendar",
-    "editMobile": "Edit vehicle",
-    "scheduleMobile": "View calendar",
+    "editMobile": "Edit",
+    "scheduleMobile": "View vehicle calendar",
     "delete": "Delete vehicle",
     "deleteConfirmTitle": "Delete \"{name}\"?",
     "deleteConfirmBody": "The vehicle will be hidden from the list and removed from the marketplace. Existing bookings and receipts are kept for reconciliation. It cannot be deleted while it still has current or future rentals.",
     "loadFailed": "Could not load the data.",
     "metric": "{value} {unit}",
     "todo": {
-      "title": "To do",
+      "title": "To do", "notice": "{count, plural, one {# item needs attention} other {# items need attention}}", "noticeStatus": "Review status",
       "handleNow": "Handle now"
     },
     "schedules": {
       "title": "Upcoming rentals",
       "empty": "No upcoming rentals.",
       "item": "{customer} • {range}",
-      "sub": "{amount} • {status}"
+      "sub": "{amount} • {status}",
+      "subApp": "{amount} · {status}"
     },
     "performance": {
       "title": "All-time performance",
@@ -886,7 +887,9 @@
       "rating": "Rating",
       "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}",
       "ratingScore": "{rating}/5",
-      "ratingCount": "{count, plural, one {# review} other {# reviews}}"
+      "ratingCount": "{count, plural, one {# review} other {# reviews}}",
+      "ratingCountApp": "{count, plural, one {# review} other {# reviews}}",
+      "noRatingApp": "No reviews yet"
     },
     "pricing": {
       "title": "Pricing & policies",
@@ -981,7 +984,8 @@
       "empty": "No activity for this vehicle yet.",
       "item": "Booking {code} · {status}",
       "sub": "{customer} • {range} • {amount}",
-      "bookingRange": "Booking {code} • {range}"
+      "bookingRange": "Booking {code} • {range}",
+      "bookingRangeApp": "Booking {code} · {range}"
     },
     "dateRange": "{from} - {to}",
     "automation": {
@@ -991,6 +995,7 @@
       "toggle": "Auto-accept trips",
       "toggleFor": "Auto-accept {service} trips",
       "toggleHint": "Save response time and convert more customers into confirmed trips.",
+      "toggleHintApp": "Reply instantly and close more bookings",
       "driverRequired": "You need at least one driver available to take trips before turning this on."
     },
     "repairListing": {
@@ -1015,9 +1020,11 @@
       "brandModel": "Make & model",
       "viewAllLabel": "View all specifications",
       "odometer": "Current odometer",
-      "odometerInput": "Enter reading"
+      "odometerInput": "Enter reading",
+      "odometerInputApp": "Enter data →"
     },
     "scheduleFull": "View schedule",
+    "deleteShort": "Delete vehicle",
     "deleteLabel": "Delete vehicle {name}",
     "features": {
       "title": "Features on this vehicle",
@@ -1744,6 +1751,7 @@
     "registrationReminder": "Cars need a registration certificate with owner name, chassis and engine numbers to be sold with vehicle damage insurance - upload it and fill in the details on the Registration row."
   },
   "maintenance": {
+    "app": {"odoTitle": "Current odometer (Odo)", "adjust": "Adjust", "oilTitle": "Oil change tracking", "intervalKm": "Oil change interval", "lastServiceKm": "Last change at", "nextMilestone": "Next milestone:", "add": "Add", "cost": "Cost: {value}", "odo": "Odo: {value}", "completedCount": "{count, plural, one {# completed} other {# completed}}", "notesPlaceholder": "Enter a note..."},
     "title": "Maintenance",
     "noPermission": "No permission to view maintenance",
     "loadError": "Could not load the maintenance details",
@@ -1832,6 +1840,9 @@
       }
     },
     "board": {
+      "partnerApp": {
+        "filterAll": "All maintenance"
+      },
       "title": "Maintenance centre",
       "searchLabel": "Find a vehicle",
       "searchPlaceholder": "Vehicle name, code or plate…",

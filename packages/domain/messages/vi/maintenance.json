@@ -211,7 +211,12 @@
     "scheduledOn": "Đã lên lịch | {date}",
     "scheduled": "Đã lên lịch",
     "inProgressSince": "Đang bảo dưỡng | từ {date}",
-    "inProgress": "Đang bảo dưỡng"
+    "inProgress": "Đang bảo dưỡng",
+    "partnerApp": {
+      "odometer": "Odo: {km}",
+      "nextDue": "Mốc tới: {km}",
+      "notYet": "Chưa cần cập nhật"
+    }
   },
   "missingKmQueue": {
     "listLabel": "Việc thiếu KM trả",

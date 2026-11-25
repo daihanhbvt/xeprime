@@ -57,7 +57,8 @@ export const MetricTile = memo(function MetricTile({
   const body = (
     <YStack
       f={1}
-      p={PAD}
+      py={PAD}
+      px={PAD_X}
       gap={GAP}
       br={radius.control}
       bg={colors.surface}
@@ -65,8 +66,13 @@ export const MetricTile = memo(function MetricTile({
       bc={dark ? colors.border : colors.surface}
       style={dark ? undefined : elevation.ambient}
     >
-      <XStack ai="center" gap={HEAD_GAP} flexWrap="wrap" rowGap={4}>
-        <XStack ai="center" gap={HEAD_GAP}>
+      {/*
+        Chip "7 quá hạn" LUÔN cùng hàng với con số và LUÔN đọc trọn (người dùng báo rớt hàng rồi bị cắt
+        "13 quá…" ở ô "Chờ giao xe", 20/11/2026): không `flexWrap`, chip không co. Chỗ cho chip lấy từ
+        khe icon ↔ số ↔ chip (hạ từ 12 của Figma); máy quá hẹp thì CON SỐ nhỏ lại, chip giữ nguyên.
+      */}
+      <XStack ai="center" gap={BADGE_GAP}>
+        <XStack ai="center" gap={HEAD_GAP} flexShrink={1} minWidth={0}>
           <YStack p={ICON_PAD} br={ICON_RADIUS} bg={skin.bg}>
             <LineIcon name={icon} color={skin.fg} size={ICON} />
           </YStack>
@@ -76,11 +82,19 @@ export const MetricTile = memo(function MetricTile({
             lh={typeScale.display.lineHeight}
             fow={fontWeight.semibold}
             fontVariant={TABULAR}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            flexShrink={1}
           >
             {value}
           </Text>
         </XStack>
-        {badge ? <Pill label={badge} tone="danger" borderless /> : null}
+        {badge ? (
+          <YStack flexShrink={0}>
+            <Pill label={badge} tone="danger" borderless />
+          </YStack>
+        ) : null}
       </XStack>
       <YStack gap={2}>
         <Text
@@ -120,10 +134,17 @@ export const MetricTile = memo(function MetricTile({
   );
 });
 
-/** Figma: thẻ `p 12 · gap 6`, hàng đầu `gap 12`, ô icon `p 6 · r 8` quanh icon 16. */
+/**
+ * Figma: thẻ `p 12 · gap 6`, hàng đầu `gap 12`, ô icon `p 6 · r 8` quanh icon 16. Đệm ngang thẻ và
+ * hai khe của hàng đầu hạ xuống để chip "13 quá hạn" đọc trọn trong ô hẹp (máy 360dp).
+ */
 const PAD = 12;
+const PAD_X = 10;
 const GAP = 6;
-const HEAD_GAP = 12;
+/** Khe ô icon ↔ con số (Figma 12). */
+const HEAD_GAP = 8;
+/** Khe con số ↔ chip quá hạn (Figma 12). */
+const BADGE_GAP = 6;
 const ICON_PAD = 6;
 const ICON_RADIUS = 8;
 const ICON = 16;

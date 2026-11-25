@@ -18,7 +18,7 @@ import { duration, easing, pressScale } from '@/theme/motion';
 import { themed, useAppScheme, useDarkAccentBorder } from '@/theme/ThemeProvider';
 import { radius } from '@/theme/tokens';
 
-type Tone = 'surface' | 'muted' | 'accent' | 'layout';
+type Tone = 'surface' | 'muted' | 'accent' | 'layout' | 'danger';
 type Lift = 'flat' | 'card' | 'raised';
 
 const useTone = themed<Record<Tone, { bg: string; border: string }>>((colors) => ({
@@ -27,6 +27,8 @@ const useTone = themed<Record<Tone, { bg: string; border: string }>>((colors) =>
   accent: { bg: colors.primaryLight, border: colors.primaryLight },
   /** Nền TRANG (`--xp-color-bg-layout`) - ô "yên" của Tổng quan partner (web `ActionTile .calm`). */
   layout: { bg: colors.background, border: colors.borderSubtle },
+  /** Thẻ cần xử lý GẤP (Figma thẻ đơn quá giờ giao xe: nền `destructive-low`, viền `error-high`). */
+  danger: { bg: colors.dangerSurface, border: colors.danger },
 }));
 
 interface CardProps {
@@ -35,6 +37,8 @@ interface CardProps {
   lift?: Lift;
   padded?: boolean;
   onPress?: () => void;
+  /** Nhấn giữ - menu thao tác phụ của thẻ (chỉ khi có `onPress`). */
+  onLongPress?: () => void;
   accessibilityLabel?: string;
   /**
    * Bo góc riêng cho thẻ này — mặc định `radius.lg`.
@@ -83,6 +87,7 @@ export function Card({
   lift = 'card',
   padded = true,
   onPress,
+  onLongPress,
   accessibilityLabel,
   radius: cornerRadius = radius.card,
   seamless = false,
@@ -139,6 +144,7 @@ export function Card({
     <AutoScrollReveal>
     <PressableCard
       onPress={onPress}
+      {...(onLongPress ? { onLongPress } : {})}
       label={accessibilityLabel}
       fill={fill}
       {...(pressHighlight ? { onPressedChange: setPressed } : {})}
@@ -166,12 +172,14 @@ const PRESS_IN_DURATION_RATIO = 0.6;
 function PressableCard({
   children,
   onPress,
+  onLongPress,
   label,
   onPressedChange,
   fill = false,
 }: {
   children: ReactNode;
   onPress: () => void;
+  onLongPress?: () => void;
   label?: string;
   fill?: boolean;
   /** Báo ra ngoài lúc ngón tay chạm/rời — `Card` dùng cho `pressHighlight`. */
@@ -196,6 +204,7 @@ function PressableCard({
   return (
     <Pressable
       onPress={onPress}
+      {...(onLongPress ? { onLongPress } : {})}
       accessibilityRole="button"
       {...(label ? { accessibilityLabel: label } : {})}
       {...(fill ? { style: FILL_STYLE } : {})}

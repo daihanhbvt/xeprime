@@ -3,10 +3,17 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isPositiveMoney, isZeroMoney, payAtPickupAmount } from '@xeprime/domain';
+import {
+  customerFeeLines,
+  isPositiveMoney,
+  isZeroMoney,
+  payAtPickupAmount,
+  type CustomerFeeLine,
+} from '@xeprime/domain';
 import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { InfoHint } from './InfoHint';
+import { InsuranceFeeHint } from './InsuranceFeeHint';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -182,7 +189,14 @@ export function PriceBreakdown({
    */
   // So tiền trên CHUỖI (ADR 0007) — không `Number()`: tiền có thể vượt độ chính xác của float.
   const visibleRows = rows.filter((row) => !isZeroMoney(row.amount));
-  const visibleFeeLines = feeLines.filter((line) => !isZeroMoney(line.amount));
+  /*
+   * Khách đọc phí thu hộ bảo hiểm GỘP vào dòng bảo hiểm vật chất xe, ⓘ tách hai số (ADR 0091 điều 3,
+   * web `PriceBreakdown`); chủ xe thấy hai dòng riêng như dữ liệu.
+   */
+  const visibleFeeLines: CustomerFeeLine<(typeof feeLines)[number]>[] =
+    audience === 'customer'
+      ? customerFeeLines(fees?.lines ?? [])
+      : feeLines.filter((line) => !isZeroMoney(line.amount));
   const promoDiscount = fees?.promoDiscountAmount ?? null;
   const hasPromo = isPositiveMoney(promoDiscount);
   /*
@@ -326,9 +340,14 @@ export function PriceBreakdown({
                 return (
                   <XStack key={line.key} ai="flex-start" jc="space-between" gap={space.sm}>
                     <YStack f={1} gap={2}>
-                      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                        {domainLabel('feeLine', line.key)}
-                      </Text>
+                      <XStack ai="center" gap={space.xs}>
+                        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                          {domainLabel('feeLine', line.key)}
+                        </Text>
+                        {line.includedServiceFee ? (
+                          <InsuranceFeeHint fee={line.includedServiceFee} size={fontSize.bodySm} />
+                        ) : null}
+                      </XStack>
                       <Text col={colors.placeholder} fos={fontSize.label}>
                         {ownerBorne
                           ? tCommon('ownerNet') + (line.partnerName ? ` · ${line.partnerName}` : '')

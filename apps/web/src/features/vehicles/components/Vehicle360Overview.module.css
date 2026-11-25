@@ -175,6 +175,11 @@
 }
 
 /* Ảnh 212×134, bo 12 (Figma `23664:32012`). */
+.profileMedia[hidden] {
+  /* `display: flex` bên dưới đè thuộc tính `hidden` - khổ điện thoại đã có gallery, ảnh này phải ẩn thật (25/11/2026). */
+  display: none;
+}
+
 .profileMedia {
   position: relative;
   display: flex;

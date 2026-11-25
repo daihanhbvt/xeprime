@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import {
@@ -9,18 +9,22 @@ import {
   type CancellationReasonCategory,
 } from '@xeprime/types';
 import { REASON_MAX } from '@/lib/reason';
-import { FieldLabel } from '@/components/ui/Field';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
-import { Chip } from '@/components/ui/Chip';
+import { SelectControl, type SelectControlOption } from '@/components/ui/SelectControl';
+import { SheetConfirmFooter } from '@/components/ui/SheetConfirmFooter';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { BookingRequestDecisionTarget } from '../api';
-import { DecisionFooter, DecisionLead, DecisionWarning, richBold } from './DecisionSheetParts';
+import {
+  DecisionDanger,
+  DecisionDangerText,
+  DecisionSummaryCard,
+  richBoldInherit,
+  richBold,
+  useDecisionCodeLine,
+} from './DecisionSheetParts';
 
 type CancelValues = { reason: string };
 
@@ -55,10 +59,10 @@ export function CancelRequestSheet({
   onConfirm: (input: { reasonCategory: CancellationReasonCategory; reason?: string }) => void;
   loading: boolean;
 }) {
-  const colors = useColors();
   const t = useTranslations('BookingRequests.cancel');
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
+  const codeLine = useDecisionCodeLine(request);
 
   const [category, setCategory] = useState<CancellationReasonCategory | null>(null);
   const [categoryTouched, setCategoryTouched] = useState(false);
@@ -91,68 +95,67 @@ export function CancelRequestSheet({
     () => setCategoryTouched(true),
   );
 
+  const reasonOptions = useMemo<SelectControlOption[]>(
+    () =>
+      CANCELLATION_REASON_CATEGORY_VALUES.map((value) => ({
+        value,
+        label: domainLabel('cancellationReasonCategory', value),
+      })),
+    [domainLabel],
+  );
+
   return (
+    /*
+      Cùng khung với tấm Từ chối (Figma `24145:97092`, người dùng chốt 20/11/2026): chrome v2, "#mã"
+      dưới tiêu đề, thẻ tóm tắt khách + xe, chân "Quay lại" + nút đỏ đặc. Nhóm lý do, câu dẫn hạn
+      thanh toán và cảnh báo trừ điểm uy tín giữ nguyên.
+    */
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={t('title')}
-      subtitle={t('context', { customer: request.customerName, vehicle: request.vehicleName })}
+      chrome="v2"
+      headerDivider
+      // Figma web `23930:44688`: "#mã" nối vào tiêu đề, câu dẫn nằm ngay dưới trong đầu tấm.
+      title={request.bookingCode && codeLine ? `${t('title')} ${codeLine}` : t('title')}
+      subtitle={
+        holdExpiresAt
+          ? t.rich('subtitleWithDeadline', { b: richBold, time: fmt.dateTime(holdExpiresAt) })
+          : t.rich('subtitle', { b: richBold })
+      }
       footer={
-        <DecisionFooter
+        <SheetConfirmFooter
           backLabel={t('back')}
           onBack={onClose}
-          confirm={
-            <Button
-              label={t('confirm')}
-              icon="close-circle-outline"
-              variant="danger"
-              loading={loading}
-              onPress={() => void submit()}
-            />
-          }
+          confirmLabel={t('confirm')}
+          onConfirm={() => void submit()}
+          loading={loading}
         />
       }
     >
-      <DecisionLead>
-        {holdExpiresAt
-          ? t.rich('subtitleWithDeadline', { b: richBold, time: fmt.dateTime(holdExpiresAt) })
-          : t.rich('subtitle', { b: richBold })}
-      </DecisionLead>
+      <DecisionSummaryCard
+        request={request}
+        label={t('context', { customer: request.customerName, vehicle: request.vehicleName })}
+      />
 
-      <YStack gap={space.sm}>
-        <FieldLabel label={t('categoryLabel')} required />
-        {category === null ? (
-          <Text col={colors.placeholder} fos={fontSize.bodySm}>
-            {t('categoryPlaceholder')}
-          </Text>
-        ) : null}
-        <XStack gap={space.xs} flexWrap="wrap">
-          {CANCELLATION_REASON_CATEGORY_VALUES.map((value) => (
-            <Chip
-              key={value}
-              label={domainLabel('cancellationReasonCategory', value)}
-              size="sm"
-              selected={category === value}
-              onPress={() => {
-                setCategory(value);
-                setCategoryTouched(true);
-              }}
-            />
-          ))}
-        </XStack>
-        {categoryTouched && category === null ? (
-          <Text col={colors.danger} fos={fontSize.label}>
-            {t('categoryRequired')}
-          </Text>
-        ) : null}
-      </YStack>
+      {/* Ô CHỌN như tấm Từ chối (người dùng chốt 20/11/2026). */}
+      <SelectControl
+        label={t('categoryLabel')}
+        required
+        value={category}
+        options={reasonOptions}
+        placeholder={t('categoryPlaceholder')}
+        onChange={(next) => {
+          setCategory(next as CancellationReasonCategory);
+          setCategoryTouched(true);
+        }}
+        {...(categoryTouched && category === null ? { error: t('categoryRequired') } : {})}
+      />
 
       <TextField
         control={control}
         name="reason"
         label={t('reasonLabel')}
         placeholder={t('reasonPlaceholder')}
-        hint={t('reasonHint')}
         multiline
         rows={4}
         maxLength={REASON_MAX}
@@ -163,17 +166,13 @@ export function CancelRequestSheet({
         Hệ quả là chữ chính trên nền cảnh báo, không phải tooltip — người chạm nút đỏ cần biết
         điểm uy tín và tiền đi đâu TRƯỚC khi chạm (web `.warning`, 05/11/2026).
       */}
-      <DecisionWarning>
-        <XStack ai="center" gap={4}>
-          <Text col={colors.text} fos={fontSize.bodySm} flexShrink={1}>
-            {t.rich('warning', { b: richBold })}
-          </Text>
+      <DecisionDanger>
+        <XStack ai="flex-start" gap={4}>
+          <DecisionDangerText>{t.rich('warning', { b: richBoldInherit })}</DecisionDangerText>
           <InfoHint label={t('effects.metricsHintLabel')} content={t('effects.metricsHint')} />
         </XStack>
-        <Text col={colors.text} fos={fontSize.bodySm}>
-          {t('effects.money')}
-        </Text>
-      </DecisionWarning>
+        <DecisionDangerText>{t('effects.money')}</DecisionDangerText>
+      </DecisionDanger>
     </BottomSheet>
   );
 }

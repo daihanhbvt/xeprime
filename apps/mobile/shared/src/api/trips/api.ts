@@ -185,6 +185,16 @@ export const tripsApi = {
     );
   },
 
+  /**
+   * Khách báo "Tôi chưa trả xe" — ADR 0105: chủ xe xác nhận nhận lại xe sớm mà khách vẫn giữ xe.
+   * Server mở một tranh chấp khẩn (idempotent) và trả về chính chuyến (`notReturnedReportOpen = true`).
+   */
+  reportNotReturned(id: string): Promise<CustomerTripDetail> {
+    return getApiClient().post<CustomerTripDetail>(
+      `/trips/${encodeURIComponent(id)}/report-not-returned`,
+    );
+  },
+
   /** Khách xác nhận "Đã nhận xe" — ADR 0081. Đơn sang đang thuê ngay; server trả về chính chuyến đó. */
   confirmPickup(id: string): Promise<CustomerTripDetail> {
     return getApiClient().post<CustomerTripDetail>(`/trips/${encodeURIComponent(id)}/confirm-pickup`);

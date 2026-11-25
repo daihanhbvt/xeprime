@@ -405,5 +405,67 @@
     "edit": "Chỉnh sửa",
     "editInfo": "Chỉnh sửa thông tin",
     "viewTrips": "Xem chuyến"
+  },
+  "app": {
+    "searchPlaceholder": "Tìm tên, SĐT, tài khoản...",
+    "chips": {
+      "all": "Tất cả",
+      "active": "Liên kết",
+      "invited": "Chờ duyệt",
+      "licenceCheck": "Đối chiếu",
+      "suspended": "Tạm khoá",
+      "closed": "Đã đóng"
+    },
+    "licence": {
+      "verified": "Đã xác thực bằng lái",
+      "classes": "Hạng {classes}",
+      "none": "Tài xế chưa cập nhật bằng lái",
+      "pending": "Đang đọc ảnh bằng lái",
+      "mismatch": "Cần đối chiếu tên trên bằng lái",
+      "invited": "Đang chờ tài xế xác nhận",
+      "classesUpper": "HẠNG {classes}",
+      "verifiedShort": "Đã xác thực",
+      "expiry": "HSD {date}",
+      "noExpiry": "Không thời hạn"
+    },
+    "noTrips": "Chưa có chuyến",
+    "detail": {
+      "call": "Gọi",
+      "zalo": "Zalo",
+      "wageTitle": "TIỀN CÔNG GHI NHẬN",
+      "month": "Tháng {month}",
+      "deltaUp": "+{pct}% tháng trước",
+      "deltaDown": "-{pct}% tháng trước",
+      "completed": "Hoàn thành",
+      "averageDaily": "TB / ngày lái",
+      "upcoming": "Sắp chạy",
+      "reliability": "Độ tin cậy",
+      "window": "{days} ngày gần nhất",
+      "rateLine": "Tỉ lệ nhận chuyến · {accepted}/{decided} chuyến được gán",
+      "response": "Trả lời trung bình",
+      "declined": "Từ chối",
+      "times": "{count, plural, other {# lần}}",
+      "expired": "Không phản hồi",
+      "trips": "{count, plural, other {# chuyến}}",
+      "pending": "Đang chờ trả lời",
+      "barMonth": "T{month}",
+      "upcomingTitle": "Chuyến sắp tới",
+      "noteTitle": "Ghi chú nội bộ",
+      "noteEdit": "Chỉnh sửa",
+      "unlink": "Hủy liên kết",
+      "linkInfo": "Thông tin liên kết",
+      "edit": "Chỉnh sửa thông tin"
+    },
+    "trips": {
+      "total": "Tổng ghi nhận · {month}",
+      "statement": "Bảng kê",
+      "rangeDays": "{range} · {days, plural, other {# ngày}}"
+    },
+    "invite": {
+      "title": "Thêm tài xế mới",
+      "subtitle": "Kiểm tra lại thông tin trước khi gửi cho XePrime",
+      "submit": "Mời tài xế",
+      "cancel": "Hủy"
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { focusManager, QueryClient } from '@tanstack/react-query';
-import { AppState } from 'react-native';
+import { AppState, Keyboard } from 'react-native';
 import { STALE_TIME } from '@xeprime/api-client';
 import { isRetriableError } from '@/lib/api-client';
 import { notifyOffline, wireOnlineManager } from '@/lib/network';
@@ -52,4 +52,14 @@ queryClient.getQueryCache().subscribe((event) => {
 });
 queryClient.getMutationCache().subscribe((event) => {
   if (event.type === 'updated' && event.action.type === 'pause') notifyOffline();
+});
+
+/*
+ * Mutation THÀNH CÔNG ⇒ cất bàn phím (người dùng 25/11/2026). Lưu / duyệt / huỷ / gửi xong mà bàn phím
+ * còn nằm đó là lỗi người dùng không có đường tắt để chữa. Làm ở đây một lần cho MỌI mutation của cả
+ * hai app thay vì dặn từng màn tự gọi `Keyboard.dismiss()`. Thất bại thì KHÔNG cất: người dùng còn
+ * đang sửa để gửi lại. No-op khi không có bàn phím.
+ */
+queryClient.getMutationCache().subscribe((event) => {
+  if (event.type === 'updated' && event.action.type === 'success') Keyboard.dismiss();
 });

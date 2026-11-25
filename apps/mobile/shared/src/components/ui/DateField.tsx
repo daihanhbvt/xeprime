@@ -6,10 +6,11 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { useTranslations } from 'use-intl';
 import { dayjs } from '@xeprime/domain';
 import { DatePickerSheet } from './DatePickerSheet';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, iconSize, space } from '@/theme/tokens';
+import { iconSize, space } from '@/theme/tokens';
 
 /**
  * Sàn ngày MẶC ĐỊNH của mọi ô ngày trong form.
@@ -59,7 +60,7 @@ export function DateField<T extends FieldValues>({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} hint={inLabelHint(hint)} />
 
       <Pressable
         onPress={() => setOpen(true)}
@@ -69,7 +70,7 @@ export function DateField<T extends FieldValues>({
         accessibilityState={{ disabled }}
       >
         <FieldShell focused={open} invalid={Boolean(error)} disabled={disabled} align="center">
-          <Text f={1} col={value ? colors.text : colors.placeholder} fos={fieldFontSize.value}>
+          <Text f={1} col={value ? colors.text : colors.textPlaceholder} fos={FIELD_V2.selectFontSize}>
             {value ? fmt.dateKey(value) : (placeholder ?? t('labels.selectDate'))}
           </Text>
 
@@ -89,12 +90,12 @@ export function DateField<T extends FieldValues>({
               </XStack>
             </Pressable>
           ) : (
-            <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.textMuted} />
+            <LineIcon name="calendar" size={FIELD_V2.icon} color={colors.placeholder} />
           )}
         </FieldShell>
       </Pressable>
 
-      <FieldMessage error={error} hint={hint} />
+      <FieldMessage error={error} hint={belowHint(hint)} />
 
       <DatePickerSheet
         open={open}

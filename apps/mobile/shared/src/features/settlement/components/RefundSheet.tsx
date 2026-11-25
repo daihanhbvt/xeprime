@@ -185,7 +185,6 @@ export function RefundSheet({
          */
         <Button
           label={correcting ? t('saveCorrection') : t('confirm')}
-          icon={correcting ? 'create-outline' : 'arrow-undo-outline'}
           loading={record.isPending || correct.isPending}
           onPress={() => void submit()}
         />
@@ -244,8 +243,8 @@ export function RefundSheet({
         control={control}
         name="note"
         label={t('noteLabel')}
-        multiline
-        rows={2}
+        multiline scrollable
+        rows={3}
         maxLength={NOTE_MAX}
       />
 

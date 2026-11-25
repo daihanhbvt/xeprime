@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Pressable } from 'react-native';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
@@ -30,13 +32,11 @@ import { OdometerCorrectionSheet } from './components/OdometerCorrectionSheet';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { BlockLink } from '@/components/ui/BlockTitle';
-import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Divider } from '@/components/ui/DataRow';
 import { NumberField } from '@/components/ui/NumberField';
 import { Pagination } from '@/components/ui/Pagination';
-import { ProgressBar } from '@/components/ui/ProgressBar';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { TextField } from '@/components/ui/TextField';
@@ -57,7 +57,7 @@ import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import {
   useMaintenanceProfile,
   useMaintenanceRecords,
@@ -178,7 +178,8 @@ export function VehicleMaintenanceWorkspace({ vehicleId }: { vehicleId: string }
 
   return (
     <>
-      <YStack gap={layout.section}>
+      {/* Figma "Tab Content - Bảo dưỡng & số KM" `24620:34510`: các thẻ cách nhau 12. */}
+      <YStack gap={CARD_GAP}>
         {!canManage ? <Callout tone="info" title={t('readOnly')} /> : null}
 
         <OdometerCard vehicleId={vehicleId} profile={profile.data} />
@@ -218,6 +219,7 @@ export function VehicleMaintenanceWorkspace({ vehicleId }: { vehicleId: string }
 function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: MaintenanceProfile }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.odometer');
+  const tApp = useTranslations('Vehicles.maintenance.app');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -247,41 +249,45 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
 
   return (
     <Card lift="flat">
-      <YStack gap={space.sm}>
-        <SectionHeader>{t('title')}</SectionHeader>
+      <YStack gap={CARD_GAP}>
+        {/* Figma `24620:34543`: tiêu đề + "Điều chỉnh" (bút) ở mép phải - cùng thao tác nút cũ, cùng quyền. */}
+        <CardHeader
+          title={tApp('odoTitle')}
+          {...(has(PERMISSION.VEHICLE_ODOMETER_CORRECT)
+            ? { action: { label: tApp('adjust'), icon: 'edit' as const, onPress: () => setCorrecting(true) } }
+            : {})}
+        />
 
-        {/*
-          Số lớn bên trái, liên kết lịch sử bên phải — đúng `odometerRow` bên web. Liên kết đứng
-          cùng hàng với CON SỐ chứ không nhét vào hàng tiêu đề: tiêu đề khối này đã dài
-          ("CHỈ SỐ KILOMETER HIỆN TẠI (ODO)") nên thêm gì vào đó cũng vỡ ở màn 375pt.
-        */}
-        <XStack ai="center" jc="space-between" gap={space.sm}>
-          {/* Chưa có số thì nói "chưa có" — KHÔNG dựng "0 km". */}
-          <Text flexShrink={1} col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
-            {currentKm == null ? tLabels('notAvailable') : fmt.km(currentKm)}
-          </Text>
-          <BlockLink label={t('history')} onPress={() => setHistoryOpen(true)} />
+        {/* Figma "Odo Summary": nền `bg/gray-50` bo 12 đệm 12 - số 20/30 đậm + dòng cập nhật 12/18; nút "Lịch sử KM". */}
+        <XStack ai="center" gap={CARD_GAP} p={CARD_GAP} br={radius.control} bg={colors.background}>
+          <YStack f={1} minWidth={0} gap={2}>
+            {/* Chưa có số thì nói "chưa có" - KHÔNG dựng "0 km". */}
+            <Text col={colors.text} fos={typeScale.lead.fontSize} lh={typeScale.lead.lineHeight} fow={fontWeight.semibold} numberOfLines={1}>
+              {currentKm == null ? tLabels('notAvailable') : fmt.km(currentKm)}
+            </Text>
+            <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+              {meta}
+            </Text>
+          </YStack>
+          <Pressable
+            onPress={() => setHistoryOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('history')}
+            style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}
+          >
+            <XStack ai="center" gap={4} px={space.sm} py={6} br={HISTORY_CHIP_RADIUS} bw={1} bc={colors.border} bg={colors.surface}>
+              <LineIcon name="rotate-right" size={14} color={colors.infoStrong} />
+              <Text col={colors.infoStrong} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} fow={fontWeight.semibold}>
+                {t('history')}
+              </Text>
+            </XStack>
+          </Pressable>
         </XStack>
-
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {meta}
-        </Text>
 
         {currentKm == null ? (
           <Callout tone="warning" title={t('noDataTitle')}>
             {t('noDataBody')}
           </Callout>
-        ) : null}
-
-        {has(PERMISSION.VEHICLE_ODOMETER_CORRECT) ? (
-          <Button
-            label={t('correct')}
-            icon="add-outline"
-            variant="neutral"
-            size="compact"
-            block={false}
-            onPress={() => setCorrecting(true)}
-          />
         ) : null}
       </YStack>
 
@@ -367,6 +373,7 @@ const LAST_SERVICE_PLACEHOLDER_KM = 40000;
 function OilCard({ vehicleId, profile }: { vehicleId: string; profile: MaintenanceProfile }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.oil');
+  const tApp = useTranslations('Vehicles.maintenance.app');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
@@ -418,43 +425,49 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
 
   return (
     <Card lift="flat">
-      <YStack gap={space.sm}>
-        <SectionHeader>{t('title')}</SectionHeader>
+      <YStack gap={CARD_GAP}>
+        {/* Figma `24620:34561`: tiêu đề + nhãn hạn (viên bo tròn) cùng một hàng. */}
+        <XStack ai="center" jc="space-between" gap={space.sm}>
+          <Text flexShrink={1} col={colors.text} fos={typeScale.title.fontSize} lh={typeScale.title.lineHeight} fow={fontWeight.semibold}>
+            {tApp('oilTitle')}
+          </Text>
+          <Pill
+            label={domainLabel(
+              'maintenanceDueStatus',
+              dueStatus,
+              metaLabel(MAINTENANCE_DUE_STATUS_META, dueStatus),
+            )}
+            tone={pillToneOfStatusColor(metaColor(MAINTENANCE_DUE_STATUS_META, dueStatus))}
+          />
+        </XStack>
 
-        {/*
-          Nhãn hạn đứng RIÊNG một hàng, không nhét vào hàng tiêu đề như `extra` bên web: tiêu đề
-          viết hoa ở đây dài gần trọn bề ngang, mà nhãn dài nhất ("Chưa đủ dữ liệu") lại là nhãn
-          hay gặp nhất khi xe mới nhập.
-        */}
-        <Pill
-          label={domainLabel(
-            'maintenanceDueStatus',
-            dueStatus,
-            metaLabel(MAINTENANCE_DUE_STATUS_META, dueStatus),
-          )}
-          tone={pillToneOfStatusColor(metaColor(MAINTENANCE_DUE_STATUS_META, dueStatus))}
-        />
-
-        <NumberField
-          control={control}
-          name="oilChangeIntervalKm"
-          label={t('intervalKm')}
-          placeholder={fmt.kmNumber(INTERVAL_PLACEHOLDER_KM)}
-          suffix="km"
-          min={1}
-          integer
-          editable={canManage}
-        />
-        <NumberField
-          control={control}
-          name="lastServiceKm"
-          label={t('lastServiceKm')}
-          placeholder={fmt.kmNumber(LAST_SERVICE_PLACEHOLDER_KM)}
-          suffix="km"
-          min={0}
-          integer
-          editable={canManage}
-        />
+        {/* Figma "KM Inputs": hai ô cạnh nhau, cách 12. */}
+        <XStack gap={CARD_GAP}>
+          <YStack f={1} minWidth={0}>
+            <NumberField
+              control={control}
+              name="oilChangeIntervalKm"
+              label={tApp('intervalKm')}
+              placeholder={fmt.kmNumber(INTERVAL_PLACEHOLDER_KM)}
+              suffix="km"
+              min={1}
+              integer
+              editable={canManage}
+            />
+          </YStack>
+          <YStack f={1} minWidth={0}>
+            <NumberField
+              control={control}
+              name="lastServiceKm"
+              label={tApp('lastServiceKm')}
+              placeholder={fmt.kmNumber(LAST_SERVICE_PLACEHOLDER_KM)}
+              suffix="km"
+              min={0}
+              integer
+              editable={canManage}
+            />
+          </YStack>
+        </XStack>
         <DateField
           control={control}
           name="lastServiceAt"
@@ -462,51 +475,60 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
           disabled={!canManage}
         />
 
-        {/*
-          Khối mốc bảo dưỡng — `scheduleBlock` bên web dựng lại cho bề ngang hẹp.
-          KHÔNG dùng `DataRow` ở đây: nhãn "Mốc bảo dưỡng tiếp theo" dài gấp đôi giá trị
-          "50.000 km", mà `DataRow` chia cột 3:7 nên nhãn rơi xuống ba dòng còn cột phải bỏ
-          trống. Nhãn xuống dòng RIÊNG, giá trị đứng dưới, "còn bao nhiêu" nằm bên phải.
-        */}
-        <YStack gap={space.xs} pt={space.xs}>
-          <XStack ai="flex-end" jc="space-between" gap={space.sm}>
-            <YStack flexShrink={1} gap={2}>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {t('nextDueKm')}
+        {/* Figma "Milestone Progress": nền `bg/gray-50` bo 12 đệm 12 - "Mốc tiếp theo: X" · "Còn N km", thanh 8. */}
+        <YStack gap={space.sm} p={CARD_GAP} br={radius.control} bg={colors.background}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <XStack flexShrink={1} ai="center" gap={4}>
+              <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                {tApp('nextMilestone')}
               </Text>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+              <Text col={colors.text} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} fow={fontWeight.semibold}>
                 {profile.nextMaintenanceKm == null
                   ? tLabels('insufficientData')
                   : fmt.km(profile.nextMaintenanceKm)}
               </Text>
-            </YStack>
+            </XStack>
+            {/* Chưa có mốc thì vế trái đã nói "Chưa đủ dữ liệu" - không lặp lại bên phải. */}
+            {profile.remainingKm == null ? null : (
             <Text
               flexShrink={1}
-              col={overdue ? colors.danger : colors.textMuted}
-              fos={fontSize.bodySm}
+              col={overdue ? colors.danger : colors.infoStrong}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
               fow={fontWeight.medium}
               ta="right"
             >
               {fmt.remainingKm(profile.remainingKm)}
             </Text>
+            )}
           </XStack>
 
           {hasSchedule ? (
-            <ProgressBar
-              percent={profile.usedPercent as number}
-              tone={overdue ? 'exception' : 'active'}
-              label={t('usedOfInterval', {
+            <YStack
+              h={MILESTONE_BAR}
+              br={radius.pill}
+              bg={colors.border}
+              ov="hidden"
+              accessibilityRole="progressbar"
+              accessibilityLabel={t('usedOfInterval', {
                 used: fmt.kmNumber(profile.usedKm ?? 0),
                 total: fmt.km(profile.oilChangeIntervalKm),
               })}
-            />
+            >
+              <YStack
+                h={MILESTONE_BAR}
+                br={radius.pill}
+                w={`${Math.min(Math.max(profile.usedPercent as number, 0), 100)}%`}
+                bg={overdue ? colors.danger : colors.info}
+              />
+            </YStack>
           ) : (
-            <Callout tone="info" title={tLabels('insufficientData')}>
+            <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
               {t('insufficientBody')}
-            </Callout>
+            </Text>
           )}
-
-          <Text col={colors.placeholder} fos={fontSize.label}>
+          {/* Không có trong Figma - giữ để không mất ngưỡng "sắp đến hạn" của gian hàng. */}
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
             {t('dueSoonThreshold', { value: fmt.km(profile.dueSoonKm) })}
           </Text>
         </YStack>
@@ -515,23 +537,79 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
           control={control}
           name="notes"
           label={t('notes')}
-          multiline
+          placeholder={tApp('notesPlaceholder')}
+          multiline scrollable
           rows={3}
           maxLength={2000}
           editable={canManage}
         />
 
+        {/* Figma "Save Row": nút vàng co theo chữ, căn phải, icon Tick. */}
         {canManage ? (
-          <Button
-            label={tActions('saveChanges')}
-            icon="save-outline"
-            loading={save.isPending}
-            disabled={!formState.isDirty}
-            onPress={submit}
-          />
+          <XStack jc="flex-end">
+            <Button
+              label={tActions('saveChanges')}
+              lineIcon="tick"
+              variant="gradient"
+              block={false}
+              loading={save.isPending}
+              disabled={!formState.isDirty}
+              onPress={submit}
+            />
+          </XStack>
         ) : null}
       </YStack>
     </Card>
+  );
+}
+
+/** Figma "Nhóm thông tin": thẻ đệm 16 (Card), các khối cách 12. */
+const CARD_GAP = 12;
+/** Figma "Lịch sử KM": nút viền bo 8. */
+const HISTORY_CHIP_RADIUS = 8;
+/** Figma "Milestone Progress": thanh cao 8. */
+const MILESTONE_BAR = 8;
+
+/**
+ * Hàng tiêu đề "Nhóm thông tin" của tab Bảo dưỡng (Figma `23664:32461`): tiêu đề 16/24 đậm, mép phải
+ * là một liên kết vàng 14/20 kèm icon nét 20 (Điều chỉnh · Thêm) hoặc một ghi chú xám (N lần hoàn tất).
+ */
+function CardHeader({
+  title,
+  action,
+  note,
+}: {
+  title: string;
+  action?: { label: string; icon: LineIconName; onPress: () => void };
+  note?: string;
+}) {
+  const colors = useColors();
+  return (
+    <XStack ai="center" jc="space-between" gap={space.sm}>
+      <Text f={1} minWidth={0} col={colors.text} fos={typeScale.title.fontSize} lh={typeScale.title.lineHeight} fow={fontWeight.semibold}>
+        {title}
+      </Text>
+      {action ? (
+        <Pressable
+          onPress={action.onPress}
+          hitSlop={space.sm}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+          style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}
+        >
+          <XStack ai="center" gap={6}>
+            <LineIcon name={action.icon} size={iconSize.lg} color={colors.brandLink} />
+            <Text col={colors.brandLink} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
+              {action.label}
+            </Text>
+          </XStack>
+        </Pressable>
+      ) : note ? (
+        <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+          {note}
+        </Text>
+      ) : null}
+    </XStack>
   );
 }
 
@@ -555,21 +633,29 @@ function RecordsCard({
 }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.records');
+  const tApp = useTranslations('Vehicles.maintenance.app');
   const tActions = useTranslations('Common.actions');
   const navigateOnce = useNavigateOnce();
   const { has } = usePermissions();
   const canManage = has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
+  const completedCount = records.filter((record) => record.status === MAINTENANCE_STATUS.COMPLETED).length;
 
   return (
     <Card lift="flat">
-      <YStack gap={space.sm}>
+      <YStack gap={CARD_GAP}>
         {/*
-          "Thêm bảo dưỡng" nằm CUỐI thẻ, không phải ở hàng tiêu đề như `extra` bên web: tiêu đề
-          viết hoa ("LỊCH BẢO DƯỠNG SẮP TỚI") đã ăn gần trọn bề ngang thẻ ở màn 375pt, nên nhãn
-          nút bị đẩy xuống dòng và hàng tiêu đề cao gấp đôi hàng của ba thẻ còn lại. Đặt dưới
-          cùng cũng cho nó vùng chạm 44pt thật, thay vì một liên kết chữ nhỏ.
+          Figma `24612:146449`: "+ Thêm" ở mép phải hàng tiêu đề (nhóm sắp tới, cùng quyền nút cũ);
+          nhóm lịch sử ghi "N lần hoàn tất" xám ở đó.
         */}
-        <SectionHeader>{title}</SectionHeader>
+        <CardHeader
+          title={title}
+          {...(actionable && canManage
+            ? { action: { label: tApp('add'), icon: 'add' as const, onPress: () => onOpenSheet({ mode: 'create' }) } }
+            : {})}
+          {...(!actionable && !loading && !failed && completedCount > 0
+            ? { note: tApp('completedCount', { count: completedCount }) }
+            : {})}
+        />
 
         {loading ? (
           <SkeletonText lines={3} />
@@ -606,21 +692,13 @@ function RecordsCard({
               <RecordRow
                 record={record}
                 canManage={actionable && canManage}
+                spread={!actionable}
                 onOpenSheet={onOpenSheet}
               />
             </YStack>
           ))
         )}
 
-        {actionable && canManage ? (
-          <Button
-            label={t('add')}
-            icon="add-outline"
-            variant="outline"
-            size="sm"
-            onPress={() => onOpenSheet({ mode: 'create' })}
-          />
-        ) : null}
       </YStack>
     </Card>
   );
@@ -636,14 +714,18 @@ function RecordsCard({
 function RecordRow({
   record,
   canManage,
+  spread,
   onOpenSheet,
 }: {
   record: MaintenanceRecord;
   canManage: boolean;
+  /** Nhóm lịch sử: "Chi phí" trái · "Odo" phải (Figma `24612:146681`); nhóm sắp tới xếp liền. */
+  spread: boolean;
   onOpenSheet: (state: RecordSheetMode) => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.maintenance.records');
+  const tApp = useTranslations('Vehicles.maintenance.app');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const { has } = usePermissions();
@@ -684,63 +766,66 @@ function RecordRow({
       ? fmt.date(record.plannedStartAt)
       : null;
 
-  const line = [
-    when,
-    record.odometerKm != null ? fmt.km(record.odometerKm) : null,
+  const detail = [
+    record.cost != null ? tApp('cost', { value: fmt.money(record.cost) }) : null,
+    record.odometerKm != null ? tApp('odo', { value: fmt.km(record.odometerKm) }) : null,
     record.providerName,
-    record.cost != null ? fmt.money(record.cost) : null,
     has(PERMISSION.VEHICLE_MAINTENANCE_FILE_VIEW) && record.attachmentCount > 0
       ? t('attachmentCount', { count: record.attachmentCount })
       : null,
-  ]
-    .filter(Boolean)
-    .join(LIST_SEPARATOR);
+  ].filter((part): part is string => Boolean(part));
 
   return (
-    <YStack gap={space.xs}>
+    <YStack gap={space.sm}>
+      {/* Figma "Title & Badge": tiêu đề 14/20 đậm + viên trạng thái (bo tròn, chữ 14). */}
       <XStack ai="center" jc="space-between" gap={space.sm}>
-        <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+        <Text f={1} col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
           {record.title || domainLabel('maintenanceType', record.type)}
         </Text>
-        <Pill label={domainLabel('maintenanceStatus', status, meta.label)} tone={pillToneOfStatusColor(meta.color)} />
+        <Pill size="lg" label={domainLabel('maintenanceStatus', status, meta.label)} tone={pillToneOfStatusColor(meta.color)} />
       </XStack>
 
-      {line ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {line}
+      {when ? (
+        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+          {when}
         </Text>
       ) : null}
+      {/* Figma "Cost & Odo": "Chi phí: …" · "Odo: …" 12/18 đậm vừa; nơi thực hiện + chứng từ đi tiếp cùng hàng. */}
+      {detail.length > 0 ? (
+        <XStack flexWrap="wrap" columnGap={space.sm} rowGap={2} jc={spread ? 'space-between' : 'flex-start'}>
+          {detail.map((part) => (
+            <Text key={part} col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} fow={fontWeight.medium}>
+              {part}
+            </Text>
+          ))}
+        </XStack>
+      ) : null}
       {record.notes ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
           {record.notes}
         </Text>
       ) : null}
 
       {canManage ? (
         /*
-          ĐÚNG hai nút của `RecordRow` bên web, cùng thứ bậc: "Hoàn tất" là hành động chính
-          (`type="primary"`), "Chỉnh sửa" là phụ.
-
-          `Bắt đầu` và `Huỷ phiếu` KHÔNG nằm ở đây — bên web chúng thuộc tấm `MaintenanceEventDialog`
-          mở từ màn Lịch, không thuộc tab hồ sơ xe. App chưa có màn Lịch, nên tới khi có thì hai
-          thao tác đó chỉ làm được trên web (quyết định của người dùng 04/09/2026).
+          Figma "Actions": "Chỉnh sửa" (viền xám) trái · "Hoàn tất" (viền vàng nhạt, chữ vàng) phải,
+          chia đều. Cùng hai thao tác như web; `Bắt đầu`/`Huỷ phiếu` vẫn thuộc màn Lịch (04/09/2026).
         */
-        <XStack gap={space.xs} jc="space-between">
-          <YStack w="48%">
-            <Button
-              label={t('complete')}
-              icon="checkmark-outline"
-              size="sm"
-              onPress={() => onOpenSheet({ mode: 'complete', record })}
-            />
-          </YStack>
-          <YStack w="48%">
+        <XStack gap={space.sm}>
+          <YStack f={1} flexBasis={0}>
             <Button
               label={t('edit')}
-              icon="create-outline"
-              variant="outline"
-              size="sm"
+              lineIcon="edit"
+              variant="neutral"
               onPress={() => onOpenSheet({ mode: 'edit', record })}
+            />
+          </YStack>
+          <YStack f={1} flexBasis={0}>
+            <Button
+              label={t('complete')}
+              lineIcon="tick"
+              variant="brandOutline"
+              onPress={() => onOpenSheet({ mode: 'complete', record })}
             />
           </YStack>
         </XStack>

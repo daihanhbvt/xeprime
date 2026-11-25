@@ -498,6 +498,7 @@ const REPUTATION_LOW_PERCENT = 60;
 export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undefined }) {
   const t = useTranslations('Dashboard.reputation');
   const tm = useTranslations('Shops.metrics');
+  const tApp = useTranslations('Dashboard.partnerApp');
   const colors = useColors();
 
   const rows = useMemo(() => {
@@ -511,6 +512,15 @@ export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undef
         percent: metrics.responseRatePercent,
       });
     }
+    if (metrics.acceptKeepRatePercent !== null) {
+      list.push({
+        key: 'acceptKeep',
+        label: tm('acceptKeep'),
+        value: tm('acceptKeepValue', { percent: metrics.acceptKeepRatePercent }),
+        percent: metrics.acceptKeepRatePercent,
+      });
+    }
+    // Thời gian phản hồi đứng CUỐI, sau "Nhận và giữ chuyến" (người dùng chốt 20/11/2026).
     const speed = responseSpeedOf(metrics.responseMinutesMedian);
     if (speed !== null) {
       list.push({
@@ -533,14 +543,6 @@ export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undef
         label: tm('responseTime'),
         value: t('responseTimeEmpty'),
         percent: null,
-      });
-    }
-    if (metrics.acceptKeepRatePercent !== null) {
-      list.push({
-        key: 'acceptKeep',
-        label: tm('acceptKeep'),
-        value: tm('acceptKeepValue', { percent: metrics.acceptKeepRatePercent }),
-        percent: metrics.acceptKeepRatePercent,
       });
     }
     return list;
@@ -592,10 +594,25 @@ export function ReputationPanel({ metrics }: { metrics: HostMetricsShape | undef
                     }
                   />
                 ) : null}
+                {/*
+                  Figma "Trip acceptance details" (`24175:52580`): câu nhắc 12/18 dưới thanh "Nhận và
+                  giữ chuyến" CHỈ khi chỉ số đang ở mức cảnh báo (cùng ngưỡng tô cam ở trên). Thay ghi
+                  chú chung cũ (người dùng chốt 20/11/2026).
+                */}
+                {row.key === 'acceptKeep' &&
+                row.percent !== null &&
+                row.percent < REPUTATION_LOW_PERCENT ? (
+                  <Text
+                    col={colors.placeholder}
+                    fos={typeScale.label.fontSize}
+                    lh={typeScale.label.lineHeight}
+                  >
+                    {tApp('acceptKeepLow')}
+                  </Text>
+                ) : null}
               </YStack>
             ))
           )}
-          <Note text={t('note')} />
         </Stack>
       ) : null}
     </DashboardPanel>
@@ -716,11 +733,7 @@ export function WalletPanel({ showIncome, href }: { showIncome: boolean; href: H
               </LinearGradient>
             </Pressable>
             {frozen ? <Note text={t('frozen')} warn /> : null}
-            {!withdrawable && !frozen ? (
-              <Note
-                text={tWallet('withdraw.belowMinimum', { min: fmt.money(data.minWithdrawAmount) })}
-              />
-            ) : null}
+            {/* App bỏ dòng "Rút tối thiểu …" dưới nút (người dùng chốt 20/11/2026) - nút vẫn tắt khi chưa đủ mức. */}
           </YStack>
         </YStack>
       )}

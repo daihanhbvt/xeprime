@@ -767,8 +767,8 @@ function StaffBookingTrip({
                   name="note"
                   label={t('review.customer.noteLabel')}
                   placeholder={t('review.customer.notePlaceholder')}
-                  multiline
-                  rows={2}
+                  multiline scrollable
+                  rows={3}
                   maxLength={STAFF_BOOKING_NOTE_MAX}
                 />
               </YStack>

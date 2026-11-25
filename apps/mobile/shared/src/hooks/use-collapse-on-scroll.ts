@@ -7,6 +7,8 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { useTabBarAutoHide } from './use-tab-bar-auto-hide';
+
 export interface CollapseOnScroll {
   /** Gắn vào `Animated.ScrollView` / `Animated.FlatList`, kèm `scrollEventThrottle`. */
   onScroll: ReturnType<typeof useAnimatedScrollHandler>;
@@ -76,9 +78,11 @@ export function useCollapseOnScroll(edges: ScrollEdges = {}): CollapseOnScroll {
     [],
   );
 
+  const autoHideTabBar = useTabBarAutoHide();
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
       const y = event.contentOffset.y;
+      autoHideTabBar?.(y);
       const delta = y - lastOffset.value;
       lastOffset.value = y;
 

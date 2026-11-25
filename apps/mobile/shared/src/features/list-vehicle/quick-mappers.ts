@@ -30,7 +30,8 @@ const money = (value: number | null | undefined): string | undefined =>
  */
 export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVehicleInput {
   return {
-    name: values.name.trim(),
+    // Không hỏi tên: server ghép "Hãng Dòng Phiên bản Năm" (ADR 0102). Trống ⇒ không gửi.
+    name: values.name.trim() || undefined,
     branchId: values.branchId,
     vehicleType: values.vehicleType,
     serviceTypes: [...QUICK_VEHICLE_FIXED.serviceTypes],
@@ -119,16 +120,4 @@ export function quickVehicleToPolicyInput(
         ? String(Math.round(values.excessDistanceFeePerKm))
         : null,
   } as SaveRentalPolicyInput;
-}
-
-/** Gợi ý tên hiển thị từ hãng + mẫu + năm — người dùng vẫn sửa được, không có tên ẩn nào. */
-export function suggestVehicleName(values: {
-  brandLabel?: string | null;
-  model?: string | null;
-  manufactureYear?: number | null;
-}): string {
-  return [values.brandLabel, values.model, values.manufactureYear]
-    .map((part) => (part == null ? '' : String(part).trim()))
-    .filter(Boolean)
-    .join(' ');
 }

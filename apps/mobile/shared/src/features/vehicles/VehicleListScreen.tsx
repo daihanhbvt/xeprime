@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, RefreshControl, type ListRenderItem } from 'react-native';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
+import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -12,13 +13,12 @@ import {
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
-import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
 import { Callout } from '@/components/ui/Callout';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
 import { LineIcon } from '@/components/icons/LineIcon';
-import type { CardAction } from '@/components/ui/CardActionBar';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
@@ -33,22 +33,22 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
-import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { useCardGrid, useResponsive } from '@/theme/use-responsive';
+import { useCardGrid } from '@/theme/use-responsive';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { AccountTrackNotice } from '@/features/account/components/AccountTrackNotice';
 import { VehicleCard } from './components/VehicleCard';
-import { useFleetSummary, useInfiniteVehicles, useVehicleAlerts, useVehicleStats } from './hooks/use-vehicles';
+import { useInfiniteVehicles, useVehicleAlerts, useVehicleStats } from './hooks/use-vehicles';
 import { useVehicleAlertView } from './hooks/use-vehicle-alert-view';
 import type { VehicleAlertGroup, VehicleListItem, VehicleSort } from './api';
 import { DEFAULT_VEHICLE_SORT, VEHICLE_SORT_VALUES, useVehicleSortLabel } from './vehicle-sort';
 
-const SKELETON_ROWS = 3;
+/** Đủ phủ kín màn điện thoại lúc tải lần đầu (người dùng chốt 25/11/2026). */
+const SKELETON_ROWS = 5;
 const SEARCH_DEBOUNCE_MS = 350;
 
 /** Sentinel "mọi giá trị" của giao diện — không endpoint nào nhận `vehicleType=all`. */
@@ -82,7 +82,6 @@ export type VehicleListScope = 'shop' | 'owner';
 
 export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope } = {}) {
   const isOwner = scope === 'owner';
-  const tAccount = useTranslations('Account.vehicles');
   const tPermission = useTranslations('ManageCommon.permission');
   const colors = useColors();
   const t = useTranslations('Vehicles.list');
@@ -119,32 +118,6 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
     navigateOnce(withBranchReturn(ROUTES.manage.vehicleNew(), branchId));
   }, [branchId, isOwner, navigateOnce]);
 
-  const { gutter } = useResponsive();
-  const fleet = useFleetSummary(!isOwner, branchId);
-  /* Figma/Đơn thuê: dải tab trạng thái (Tất cả · Sẵn sàng · Đang thuê…) - số đếm lấy từ tổng hợp đội xe. */
-  const statusTabs = useMemo<ChipTabItem<string>[]>(
-    () => [
-      { value: ALL, label: tLabels('all'), count: fleet.data?.total },
-      ...VEHICLE_OPERATION_STATUS_VALUES.map((value) => ({
-        value,
-        label: domainLabel('vehicleOperationStatus', value),
-        count:
-          value === 'available'
-            ? fleet.data?.available
-            : value === 'renting'
-              ? fleet.data?.renting
-              : undefined,
-      })),
-    ],
-    [domainLabel, fleet.data, tLabels],
-  );
-  const serviceTabs = useMemo<ChipTabItem<string>[]>(
-    () => [
-      { value: ALL, label: tLabels('all') },
-      ...SERVICE_TYPE_VALUES.map((value) => ({ value, label: domainLabel('serviceType', value) })),
-    ],
-    [domainLabel, tLabels],
-  );
 
   const query = useInfiniteVehicles({
     ...(branchId && !isOwner ? { branchId } : {}),
@@ -246,18 +219,23 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
       },
       {
         key: 'publicStatus',
-        label: t('filters.publicStatus'),
+        // Chưa lọc thì ô ghi "Trạng thái" như Figma (người dùng chốt 25/11/2026).
+        label: t('filters.reviewStatus'),
         value: publicStatus,
         resetValue: ALL,
-        options: all(VEHICLE_PUBLIC_STATUS_VALUES, 'vehiclePublicStatus'),
+        display: 'label' as const,
+        options: [
+          { value: ALL, label: tLabels('all') },
+          ...VEHICLE_PUBLIC_STATUS_VALUES.map((value) => ({ value, label: domainLabel('vehiclePublicStatus', value) })),
+        ],
       },
       {
         key: 'sort',
         label: t('sort.label'),
         value: sort,
         resetValue: DEFAULT_VEHICLE_SORT,
-        // Figma "_Filter Modal": "Sắp xếp: Mới nhất" - chiều luôn có giá trị.
-        display: 'prefixed',
+        // Chỉ hiện lựa chọn ("Mới nhất"), bỏ tiền tố "Sắp xếp:" (người dùng chốt 25/11/2026).
+        display: 'option',
         options: VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(value) })),
       },
     ];
@@ -286,79 +264,6 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
     [navigateOnce, branchId, isOwner],
   );
 
-  /* Tuyến hoa hồng "Quản lý xe" mở KHÔNG GIAN của xe; gian hàng "Sửa" mở trang sửa xe — như web. */
-  const editVehicle = useCallback(
-    (vehicle: VehicleListItem) =>
-      navigateOnce(
-        isOwner
-          ? ROUTES.account.vehicleManage(vehicle.id)
-          : ROUTES.manage.vehicleEdit(vehicle.id),
-      ),
-    [navigateOnce, isOwner],
-  );
-
-  /*
-   * "Lịch" là nút THỨ BA của web, và nó dẫn tới màn lịch ĐÃ LỌC SẴN theo chiếc xe vừa chạm —
-   * cùng cách `vehicleSchedulePath` bên web dựng đường đi (`?q=<biển số || tên>`).
-   *
-   * Ưu tiên biển số vì nó phân biệt tốt hơn tên xe trùng lặp; không có biển thì rơi về tên.
-   */
-  const openSchedule = useCallback(
-    (vehicle: VehicleListItem) =>
-      navigateOnce(
-        vehicleSchedulePath(vehicle, { back: true, ...(isOwner ? {} : { branchId }) }),
-      ),
-    [navigateOnce, isOwner, branchId],
-  );
-
-  const canEdit = permissions.has(PERMISSION.VEHICLE_UPDATE);
-
-  /*
-   * Ba thao tác của web ở CỔNG QUẢN LÝ (`useVehicleRowActions`): Lịch · Sửa · Xem — cùng thứ
-   * tự, cùng luật ẩn. Khu tài khoản dựng bộ KHÁC (`AccountVehiclesScreen`), đúng như web cho hai
-   * màn đó hai hàm `rowActions` riêng.
-   *
-   * "Xem" thay luôn vai mũi tên `>`: giữ cả hai là ba lối vào cùng một màn (thân thẻ, mũi tên,
-   * nút) trên một bề mặt chỉ rộng 390pt.
-   */
-  const rowActions = useCallback(
-    (vehicle: VehicleListItem): readonly CardAction[] => [
-      {
-        key: 'schedule',
-        label: t('actions.schedule'),
-        icon: 'calendar-outline',
-        onPress: () => openSchedule(vehicle),
-      },
-      /*
-        Cả hai tuyến cùng gác `VEHICLE_UPDATE` như web `useVehicleRowActions` (`hidden: !canEdit`);
-        chỉ khác NHÃN: chủ xe tuyến hoa hồng "Quản lý xe", gian hàng "Chỉnh sửa".
-      */
-      ...(canEdit
-        ? [
-            isOwner
-              ? {
-                  key: 'manage',
-                  label: tAccount('manage'),
-                  icon: 'construct-outline' as const,
-                  onPress: () => editVehicle(vehicle),
-                }
-              : {
-                  key: 'edit',
-                  label: t('actions.editFull'),
-                  icon: 'create-outline' as const,
-                  onPress: () => editVehicle(vehicle),
-                },
-          ]
-        : []),
-      {
-        key: 'view',
-        label: t('actions.detail'),
-        icon: 'eye-outline',
-        onPress: () => openVehicle(vehicle),
-      },
-    ],
-    [t, tAccount, isOwner, canEdit, openVehicle, editVehicle, openSchedule],
-  );
 
   /*
    * `renderItem` khai NGOÀI JSX, cùng lý do với `keyExtractor`: một hàm mới mỗi render là FlatList
@@ -370,7 +275,6 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
       <VehicleCard
         vehicle={item}
         onPress={openVehicle}
-        actions={rowActions}
         stats={stats.byId.get(item.id)}
         statsLoading={stats.pendingIds.has(item.id)}
         statsFailed={stats.isError}
@@ -381,7 +285,6 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
     ),
     [
       openVehicle,
-      rowActions,
       stats.byId,
       stats.pendingIds,
       stats.isError,
@@ -400,13 +303,6 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
     publicStatus !== ALL ||
     debouncedSearch.trim().length > 0;
   // Web `VehicleCardGrid` rỗng-do-lọc: "Xoá bộ lọc" gỡ mọi ô lọc + tìm kiếm (giữ sắp xếp).
-  const clearFilters = () => {
-    setVehicleType(ALL);
-    setServiceType(ALL);
-    setOperationStatus(ALL);
-    setPublicStatus(ALL);
-    setSearch('');
-  };
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái lỗi của nó, không đá về đăng nhập.
   if (!permissions.isLoading && !permissions.has(PERMISSION.VEHICLE_VIEW)) {
@@ -458,15 +354,6 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
         <ManageListShell
           variant="page"
           filterLayout="grid"
-          tabs={
-            <ChipTabs
-              label={t('page.title')}
-              items={isOwner ? serviceTabs : statusTabs}
-              value={isOwner ? serviceType : operationStatus}
-              onSelect={isOwner ? setServiceType : setOperationStatus}
-              gutter={gutter}
-            />
-          }
           title={t('page.title')}
           {...(isOwner ? {} : { branchFilter: { filter: branchFilter, value: branchId } })}
           searchValue={search}
@@ -526,13 +413,7 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
                     description={branchEmpty.hint}
                   />
                 ) : filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('grid.noResultsTitle')}
-                    description={t('grid.noResultsBody')}
-                    actionLabel={tActions('clear')}
-                    onAction={clearFilters}
-                  />
+                  <NoResults />
                 ) : (
                   /*
                     Màn rỗng giữ nút "Thêm xe đầu tiên" như web (ledger §3.5 #1): nút ở tiêu đề
@@ -654,9 +535,5 @@ function ListFooter({
     );
   }
   if (!loading) return null;
-  return (
-    <YStack py={layout.section} ai="center">
-      <ActivityIndicator color={colors.primary} />
-    </YStack>
-  );
+  return <ListLoadingFooter />;
 }

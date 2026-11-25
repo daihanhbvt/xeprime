@@ -1,21 +1,19 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, Switch } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
   PERMISSION,
-  STATUS_COLOR,
   BOOKING_STATUS_META,
-  BOOKING_STATUS,
   SERVICE_TYPE,
   VEHICLE_ALERT_KIND,
   VEHICLE_ALERT_SEVERITY,
   topVehicleAlertSeverity,
-  type VehicleAlertSeverity,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
@@ -27,29 +25,27 @@ import {
   type VehicleSourceType,
 } from '@xeprime/types';
 import { toAppTz } from '@xeprime/domain';
-import { metaColor, metaLabel } from '@/lib/status-meta';
+import { metaColor } from '@/lib/status-meta';
 import { getErrorCode } from '@/lib/api-client';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckGlyph } from '@/components/icons/CheckGlyph';
-import { LineIcon } from '@/components/icons/LineIcon';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Pill, pillToneOfStatusColor, usePillSkin } from '@/components/ui/Pill';
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
+import { ActionSheetButtons } from '@/components/ui/ActionSheetButtons';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { GlassIconButton } from '@/components/ui/GlassIconButton';
+import { CountBadge } from '@/components/ui/CountBadge';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import { BlockLink } from '@/components/ui/BlockTitle';
-import { SectionHeader } from '@/components/ui/CardTitle';
-import { FeatureItem } from '@/features/marketplace/components/FeatureChip';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Chip } from '@/components/ui/Chip';
-import { CountBadge } from '@/components/ui/CountBadge';
-import { DataRow, Divider } from '@/components/ui/DataRow';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { MiniRowsSkeleton, Skeleton, SkeletonText } from '@/components/ui/Skeleton';
-import { StatusBadge, statusTone } from '@/components/ui/StatusBadge';
+import { statusTone } from '@/components/ui/StatusBadge';
 import type { IconName } from '@/components/ui/Chip';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -61,12 +57,13 @@ import { useDomainLabel } from '@/i18n/domain';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import { goBackOr } from '@/navigation/go-back-or';
+import { queryKeys } from '@/queries/query-keys';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { themed, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space, typeScale, type AppColors } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, fontWeight, iconSize, market, radius, space, typeScale } from '@/theme/tokens';
 import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleAlertList } from './components/VehicleAlertList';
 import { publicStatusPresentation, todoLeadAlert, vehiclePublicationTask } from './publication';
@@ -76,7 +73,6 @@ import { VehiclePublicationTaskItem } from './components/VehiclePublicationTaskI
 import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/VehicleMaintenanceScreen';
 import { vehicleSchedulePath } from './calendar-link';
 import { vehicleGalleryItems } from './display-media';
-import { VehicleGallery } from '@/components/vehicle/VehicleGallery';
 import {
   useImageSlotLabel,
   useVehicleSpecItems,
@@ -85,7 +81,6 @@ import {
 import {
   OVERVIEW_VIEW,
   overviewViews,
-  vehicleModuleLinks,
   vehicleProfileHref,
   type OverviewView,
 } from './module-links';
@@ -96,7 +91,6 @@ import {
   vehicleOptimizationHref,
   vehiclePricingHref,
 } from './workspace-links';
-import { discountedPriceVnd } from './pricing';
 import {
   useDeleteVehicle,
   useVehicle,
@@ -140,7 +134,7 @@ interface VehicleDetailScreenProps {
   backTo?: Href;
   /**
    * Mở từ KHU KHÁCH — ẩn mọi lối dẫn sang `/manage` và đổi đích của các mục còn lại sang không
-   * gian quản lý xe của chính khu tài khoản. Xem docblock của `ModuleLinks`.
+   * gian quản lý xe của chính khu tài khoản (lối tắt nằm trong tấm ⋮ Thao tác).
    */
   customerScope?: boolean;
 }
@@ -169,7 +163,7 @@ export function VehicleDetailScreen({
     return (
       <>
         <ManagePageHeader title={t('title')} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('forbiddenTitle')}
@@ -184,7 +178,7 @@ export function VehicleDetailScreen({
     return (
       <>
         <ManagePageHeader title={t('title')} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal={false} edges={['left', 'right', 'bottom']}>
           <YStack gap={layout.section}>
             <Skeleton height={HERO_HEIGHT} />
             <SkeletonText lines={4} />
@@ -209,7 +203,7 @@ export function VehicleDetailScreen({
     return (
       <>
         <ManagePageHeader title={t('title')} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} edges={['left', 'right', 'bottom']} scroll={false}>
           {notFound ? (
             <ScreenMessage
               icon="car-outline"
@@ -233,6 +227,8 @@ export function VehicleDetailScreen({
   return (
     <VehicleDetailBody
       vehicle={query.data}
+      vehicleRefetching={query.isRefetching}
+      onRefetchVehicle={() => void query.refetch()}
       onBack={back}
       listHref={listHref}
       customerScope={customerScope}
@@ -242,16 +238,20 @@ export function VehicleDetailScreen({
 
 /** Figma `24231:107728`: các thẻ nhóm thông tin cách nhau 12. */
 const CONTENT_GAP = 12;
-/** Hai nút một hàng trong tấm "Thao tác khác" (khe 8). */
-const MENU_CELL = '48.5%';
+
 
 function VehicleDetailBody({
   vehicle,
+  vehicleRefetching,
+  onRefetchVehicle,
   onBack,
   listHref,
   customerScope,
 }: {
   vehicle: VehicleDetail;
+  /** Hồ sơ xe đang tải lại (kéo-làm-mới tải CẢ hồ sơ lẫn tóm tắt - 25/11/2026). */
+  vehicleRefetching: boolean;
+  onRefetchVehicle: () => void;
   onBack: () => void;
   listHref: Href;
   customerScope: boolean;
@@ -267,9 +267,11 @@ function VehicleDetailBody({
   const { has } = usePermissions();
 
   const summary = useVehicleSummary(vehicle.id);
+  const queryClient = useQueryClient();
   const remove = useDeleteVehicle();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [todoOpen, setTodoOpen] = useState(false);
 
   /*
    * "Xem đầy đủ" ở thẻ Thông số chính đổi sang mục Thông số TẠI CHỖ và cuộn lên đầu — web đổi tab
@@ -281,10 +283,14 @@ function VehicleDetailBody({
   const can = useVehicleCapabilities();
   const [view, setView] = useState<OverviewView>(OVERVIEW_VIEW.OVERVIEW);
   const views = overviewViews(can);
-  const showSpecs = () => {
-    setView(OVERVIEW_VIEW.SPECS);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  const todoArgs = {
+    vehicle,
+    summary: summary.data,
+    loading: summary.isPending,
+    failed: summary.isError,
+    customerScope,
   };
+  const todoSignal = useTodoSignal(todoArgs);
   // Hai danh sách đơn chỉ có khi người xem có `bookings.view` — backend BỎ HẲN trường, không trả
   // rỗng. Đang tải/tải hỏng thì chưa biết, nên vẫn dựng thẻ để nó tự báo trạng thái (web
   // `Vehicle360Aside`).
@@ -309,11 +315,16 @@ function VehicleDetailBody({
 
   return (
     <>
-      <Screen scrollReveal
+      <Screen scrollReveal={false}
         edges={['left', 'right', 'bottom']}
         padded={false}
-        refreshing={summary.isRefetching}
-        onRefresh={() => void summary.refetch()}
+        refreshing={vehicleRefetching || summary.isRefetching}
+        onRefresh={() => {
+          onRefetchVehicle();
+          void summary.refetch();
+          // Thẻ "Tự động nhận chuyến" có truy vấn riêng - làm mới cùng lượt kéo.
+          void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.serviceSettings(vehicle.id) });
+        }}
         scrollRef={scrollRef}
       >
         {/* Figma "Vehicle Image" `24158:107062`: ảnh trọn bề ngang cao 246, ← và ⋮ phủ trên ảnh. */}
@@ -321,6 +332,7 @@ function VehicleDetailBody({
           vehicle={vehicle}
           onBack={onBack}
           onMenu={() => setMenuOpen(true)}
+          todo={todoSignal.visible ? { ...todoSignal, onOpen: () => setTodoOpen(true) } : null}
           menuLabel={t('actionsMenu')}
         />
         <ProfileCard
@@ -376,38 +388,17 @@ function VehicleDetailBody({
           {view === OVERVIEW_VIEW.OVERVIEW ? (
             <>
               {/*
-                Thứ tự ĐÚNG web (03/11/2026) ở khổ hẹp: tab Tổng quan (việc cần làm → thông số
-                chính → ảnh → nguồn xe (cổng quản lý) → tối ưu nhận chuyến), rồi cột phụ xếp xuống
-                dưới (giá & chính sách → lịch sắp tới → hoạt động gần đây → lối tắt).
-
-                Thẻ "Giấy tờ" đã gỡ (ledger §3.6 D5): cảnh báo giấy tờ nằm trong "Việc cần làm",
-                có lối xử lý. "Hiệu suất lũy kế" đã vào thẻ xe (D2).
+                Thứ tự theo Figma `24158:108502` (25/11/2026): Thông số chính → Thư viện ảnh → Giá thuê &
+                Chính sách → Nguồn xe & Tài chính (cổng quản lý) → Lịch thuê sắp tới → Tự động nhận
+                chuyến → Hoạt động gần đây.
               */}
-              <TodoCard
-                vehicle={vehicle}
-                summary={summary.data}
-                loading={summary.isPending}
-                failed={summary.isError}
-                customerScope={customerScope}
-              />
-
-              {/* Thứ tự theo Figma `24158:106582`: Giá thuê & Chính sách → Lịch thuê sắp tới → Tự động nhận chuyến. */}
-              <PricingCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
-
-              {showSchedule ? (
-                <ScheduleCard
-                  bookings={summary.data?.upcomingBookings}
-                  loading={summary.isPending}
-                  failed={summary.isError}
-                />
-              ) : null}
-
-              <AutomationCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
-
               <KeySpecsCard
                 vehicle={vehicle}
                 summary={summary.data}
-                onViewAll={showSpecs}
+                onViewAll={() => {
+                  setView(OVERVIEW_VIEW.SPECS);
+                  scrollRef.current?.scrollTo({ y: 0, animated: true });
+                }}
                 onOdometer={
                   can.maintenance
                     ? () => {
@@ -420,9 +411,20 @@ function VehicleDetailBody({
 
               <MediaCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
 
-              {/* Nguồn xe & tài chính là của gian hàng — chủ xe tuyến hoa hồng không có. */}
+              <PricingCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
+
+              {/* Nguồn xe & tài chính là của gian hàng - chủ xe tuyến hoa hồng không có. */}
               {customerScope ? null : <SourceCard vehicle={vehicle} />}
 
+              {showSchedule ? (
+                <ScheduleCard
+                  bookings={summary.data?.upcomingBookings}
+                  loading={summary.isPending}
+                  failed={summary.isError}
+                />
+              ) : null}
+
+              <AutomationCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
 
               {showActivity ? (
                 <ActivityCard
@@ -431,15 +433,13 @@ function VehicleDetailBody({
                   failed={summary.isError}
                 />
               ) : null}
-
-              <ModuleLinks vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
             </>
           ) : null}
 
         </YStack>
       </Screen>
 
-      {/* Figma ⋮ "Thao tác" (ledger §3.6 D1): Chỉnh sửa · Xem lịch xe · Xoá - mỗi nút một hàng. */}
+      {/* Figma ⋮ "Thao tác" `24486:80205`: Xóa xe · Chỉnh sửa (viền, một hàng), "Xem lịch xe" vàng trải hàng. */}
       <BottomSheet
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -447,57 +447,50 @@ function VehicleDetailBody({
         chrome="v2"
         headerDivider
       >
-        {/* Dạng lưới hai cột nút vàng + "Đóng" như tấm "Thao tác khác" của chi tiết đơn. */}
-        <YStack gap={space.md} alignSelf="stretch">
-          <XStack flexWrap="wrap" gap={space.sm}>
-            {canEdit ? (
-              <YStack w={MENU_CELL}>
-                <Button
-                  icon="create-outline"
-                  label={t('editMobile')}
-                  variant="gradient"
-                  size="compact"
-                  onPress={() => {
-                    setMenuOpen(false);
-                    navigateOnce(vehicleProfileHref(vehicle.id, customerScope));
-                  }}
-                />
-              </YStack>
-            ) : null}
-            <YStack w={MENU_CELL}>
-              <Button
-                icon="calendar-outline"
-                label={t('scheduleMobile')}
-                variant="gradient"
-                size="compact"
-                onPress={() => {
-                  setMenuOpen(false);
-                  navigateOnce(vehicleSchedulePath(vehicle, { back: true, customerScope }));
-                }}
-              />
-            </YStack>
-            {canDelete ? (
-              <YStack w={MENU_CELL}>
-                <Button
-                  icon="trash-outline"
-                  label={t('delete')}
-                  variant="dangerOutline"
-                  size="compact"
-                  onPress={() => {
-                    setMenuOpen(false);
-                    setConfirmingDelete(true);
-                  }}
-                />
-              </YStack>
-            ) : null}
-          </XStack>
-          <Button
-            label={tActions('close')}
-            variant="ghost"
-            onPress={() => setMenuOpen(false)}
-          />
-        </YStack>
+        <ActionSheetButtons
+          actions={[
+            ...(canDelete
+              ? [
+                  {
+                    key: 'delete',
+                    label: t('deleteShort'),
+                    icon: 'trash' as const,
+                    danger: true,
+                    onPress: () => {
+                      setMenuOpen(false);
+                      setConfirmingDelete(true);
+                    },
+                  },
+                ]
+              : []),
+            ...(canEdit
+              ? [
+                  {
+                    key: 'edit',
+                    label: t('editMobile'),
+                    icon: 'edit' as const,
+                    onPress: () => {
+                      setMenuOpen(false);
+                      navigateOnce(vehicleProfileHref(vehicle.id, customerScope));
+                    },
+                  },
+                ]
+              : []),
+            {
+              key: 'schedule',
+              label: t('scheduleMobile'),
+              icon: 'calendar' as const,
+              primary: true,
+              onPress: () => {
+                setMenuOpen(false);
+                navigateOnce(vehicleSchedulePath(vehicle, { back: true, customerScope }));
+              },
+            },
+          ]}
+        />
       </BottomSheet>
+
+      <TodoSheet {...todoArgs} open={todoOpen} onClose={() => setTodoOpen(false)} />
 
       <AlertDialog
         open={confirmingDelete}
@@ -523,8 +516,6 @@ function VehicleDetailBody({
  * xuống hai–ba dòng và cả hai thẻ vỡ bố cục. Giờ nhận/trả chính xác thuộc về màn ĐƠN, không
  * thuộc một danh sách tóm tắt.
  */
-/** Ô tròn đựng biểu tượng hoạt động — đủ to để hình 16px không dính mép. */
-const ACTIVITY_ICON_BOX = 28;
 
 function useShortRange(): (from: string, to: string) => string {
   const t = useTranslations('Vehicles.overview');
@@ -536,25 +527,6 @@ function useShortRange(): (from: string, to: string) => string {
     });
 }
 
-/**
- * Biểu tượng của một hoạt động, MÀU theo trạng thái đơn — đúng `activityIcon` của web.
- *
- * Một cột biểu tượng bên trái biến ba dòng chữ rời thành một dòng thời gian đọc được, và màu
- * cho biết chuyện gì đã xảy ra trước khi mắt kịp đọc chữ.
- */
-function activityIcon(status: string, colors: AppColors): { name: IconName; color: string } {
-  switch (status) {
-    case BOOKING_STATUS.COMPLETED:
-      return { name: 'checkmark-circle', color: colors.success };
-    case BOOKING_STATUS.ACTIVE:
-      return { name: 'car', color: colors.info };
-    case BOOKING_STATUS.CANCELLED:
-    case BOOKING_STATUS.NO_SHOW:
-      return { name: 'close-circle-outline', color: colors.danger };
-    default:
-      return { name: 'time-outline', color: colors.textMuted };
-  }
-}
 
 function Muted({ children }: { children: string }) {
   const colors = useColors();
@@ -565,15 +537,6 @@ function Muted({ children }: { children: string }) {
   );
 }
 
-/** Phần `<b>` của một message rich — giá trị được nhấn, chữ dẫn quanh nó vẫn mờ. */
-function Strong({ children }: { children: ReactNode }) {
-  const colors = useColors();
-  return (
-    <Text col={colors.text} fow={fontWeight.semibold}>
-      {children}
-    </Text>
-  );
-}
 
 /** Bốn trạng thái có dải trên thẻ hồ sơ — đúng `needsBanner` của `Vehicle360Overview` bên web. */
 const BANNER_STATUSES: ReadonlySet<string> = new Set([
@@ -602,8 +565,8 @@ const HERO_BUTTON_SIDE = 16;
 const HERO_ICON = '#ffffff';
 const SUMMARY_PAD = 16;
 const SUMMARY_GAP = 12;
-const STATUS_GAP = space.sm;
-const REVIEW_GLYPH = 10;
+const STATUS_GAP = 32;
+const REVIEW_GLYPH = 12;
 const METRIC_PAD = 12;
 
 /** Biểu tượng của trạng thái kiểm duyệt — cùng bộ với thẻ danh sách và web `REVIEW_ICON`. */
@@ -627,16 +590,21 @@ function DetailHero({
   onBack,
   onMenu,
   menuLabel,
+  todo,
 }: {
   vehicle: VehicleDetail;
   onBack: () => void;
   onMenu: () => void;
   menuLabel: string;
+  /** Nút "!" cạnh ⋮ - cảnh báo xét duyệt + việc cần làm (thay dòng noti, 25/11/2026). Vắng = không có chuyện gì. */
+  todo: { count: number; danger: boolean; onOpen: () => void } | null;
 }) {
+  const t = useTranslations('Vehicles.overview');
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const tActions = useTranslations('Common.actions');
   const slotLabel = useImageSlotLabel();
+  // Figma `24158:107062`: MỘT ảnh bìa tĩnh (25/11/2026 - bỏ dải ảnh nhỏ, bộ đếm, vuốt); đủ ảnh ở thẻ "Thư viện ảnh".
   const cover = vehicleGalleryItems(vehicle, slotLabel)[0]?.url ?? vehicle.mainImageUrl ?? null;
   return (
     <YStack bg={colors.surface}>
@@ -648,53 +616,31 @@ function DetailHero({
           accessibilityLabel={vehicle.name}
           fallback={<Ionicons name="car-outline" size={iconSize.lg * 2} color={colors.placeholder} />}
         />
-        <HeroButton side="left" label={tActions('back')} onPress={onBack}>
-          <Ionicons name="arrow-back" size={iconSize.md} color={HERO_ICON} />
-        </HeroButton>
-        <HeroButton side="right" label={menuLabel} onPress={onMenu}>
-          <Ionicons name="ellipsis-vertical" size={iconSize.md} color={HERO_ICON} />
-        </HeroButton>
+        {/* Figma "Button" `24175:60983`: kính trắng 20% + blur 6, icon "Left 1" / "Menu Kebab" 20. */}
+        <XStack pos="absolute" top={HERO_BUTTON_INSET} left={HERO_BUTTON_SIDE}>
+          <GlassIconButton label={tActions('back')} onPress={onBack}>
+            <LineIcon name="arrow-left" size={iconSize.lg} color={HERO_ICON} />
+          </GlassIconButton>
+        </XStack>
+        <XStack pos="absolute" top={HERO_BUTTON_INSET} right={HERO_BUTTON_SIDE} gap={space.sm}>
+          {todo ? (
+            <GlassIconButton
+              label={t('todo.notice', { count: todo.count })}
+              onPress={todo.onOpen}
+              badge={todo.count > 0 ? <CountBadge count={todo.count} tone={todo.danger ? 'danger' : 'primary'} size="sm" /> : undefined}
+            >
+              <Ionicons name="alert-circle-outline" size={iconSize.lg} color={HERO_ICON} />
+            </GlassIconButton>
+          ) : null}
+          <GlassIconButton label={menuLabel} onPress={onMenu}>
+            <LineIcon name="menu-kebab" size={iconSize.lg} color={HERO_ICON} />
+          </GlassIconButton>
+        </XStack>
       </YStack>
     </YStack>
   );
 }
 
-function HeroButton({
-  side,
-  label,
-  onPress,
-  children,
-}: {
-  side: 'left' | 'right';
-  label: string;
-  onPress: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      hitSlop={space.sm}
-      style={[heroStyles.button, side === 'left' ? heroStyles.left : heroStyles.right]}
-    >
-      {children}
-    </Pressable>
-  );
-}
-
-const heroStyles = StyleSheet.create({
-  button: {
-    position: 'absolute',
-    top: HERO_BUTTON_INSET,
-    padding: 8,
-    borderRadius: radius.control,
-    // Nền đen mờ để icon luôn đọc được trên mọi ảnh (người dùng chốt 16/11/2026: bản kính trắng bị chìm).
-    backgroundColor: 'rgba(0, 0, 0, 0.32)',
-  },
-  left: { left: HERO_BUTTON_SIDE },
-  right: { right: HERO_BUTTON_SIDE },
-});
 
 function ProfileCard({
   vehicle,
@@ -711,7 +657,6 @@ function ProfileCard({
 }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.overview');
-  const tPublish = useTranslations('Vehicles.publish');
   const tLabels = useTranslations('Common.labels');
   const tList = useTranslations('Vehicles.list');
   const fmt = useAppFormat();
@@ -719,9 +664,6 @@ function ProfileCard({
   const pillSkin = usePillSkin();
 
   const operationStatus = vehicle.operationStatus as VehicleOperationStatus;
-  const banner = BANNER_STATUSES.has(vehicle.publicStatus)
-    ? publicStatusPresentation(vehicle.publicStatus as VehiclePublicStatus)
-    : null;
   const publicStatus = vehicle.publicStatus as VehiclePublicStatus;
   const reviewSkin =
     pillSkin[pillToneOfStatusColor(metaColor(VEHICLE_PUBLIC_STATUS_META, publicStatus))];
@@ -807,41 +749,33 @@ function ProfileCard({
           Hai trục trạng thái ĐỘC LẬP (vận hành ≠ kiểm duyệt): hai chip đứng cạnh nhau, cách 8.
           (Bản Figma "Vehicle Status" để kiểm duyệt là đĩa biểu tượng + chữ trần - đã gộp vào chip.)
         */}
+        {/* Figma "Vehicle Status" `24158:107101`: đĩa 20 + chữ trần 12/18, cách viên vận hành (bo tròn, 10/14) 32. */}
         <XStack ai="center" flexWrap="wrap" columnGap={STATUS_GAP} rowGap={space.xs}>
-          {/* Biểu tượng + chữ kiểm duyệt nằm TRONG một chip, cùng dáng chip vận hành (người dùng chốt 19/11/2026). */}
-          <Pill
-            label={tList(`review.${publicStatus}`)}
-            tone={pillToneOfStatusColor(metaColor(VEHICLE_PUBLIC_STATUS_META, publicStatus))}
-            size="caption"
-            shape="tag"
-            leading={
-              publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
-                <CheckGlyph color={reviewSkin.fg} />
+          <XStack ai="center" gap={6}>
+            <YStack w={20} h={20} br={radius.pill} ai="center" jc="center" bg={reviewSkin.bg}>
+              {publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC ? (
+                <CheckGlyph size={REVIEW_GLYPH} color={reviewSkin.fg} />
               ) : (
+                /* Figma chỉ vẽ ca "Đã kiểm duyệt"; trạng thái khác giữ glyph trong cùng khuôn. */
                 <Ionicons name={REVIEW_ICON[publicStatus]} size={REVIEW_GLYPH} color={reviewSkin.fg} />
-              )
-            }
-          />
+              )}
+            </YStack>
+            <Text col={reviewSkin.fg} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
+              {tList(`review.${publicStatus}`)}
+            </Text>
+          </XStack>
           <Pill
             label={tList(`operation.${operationStatus}`)}
             tone={pillToneOfStatusColor(metaColor(VEHICLE_OPERATION_STATUS_META, operationStatus))}
             size="caption"
-            shape="tag"
           />
         </XStack>
+
 
         {performance ? (
           <YStack p={METRIC_PAD} br={radius.control} bg={colors.background}>
             {performance}
           </YStack>
-        ) : null}
-
-        {banner ? (
-          <Callout tone={CALLOUT_TONE[banner.type]} title={tPublish(`status.${banner.key}.message`)}>
-            {banner.useReason && vehicle.latestPublicReview?.reason
-              ? vehicle.latestPublicReview.reason
-              : tPublish(`status.${banner.key}.description`)}
-          </Callout>
         ) : null}
       </YStack>
 
@@ -872,72 +806,58 @@ const PUBLICATION_ALERT_KINDS: readonly string[] = [
   VEHICLE_ALERT_KIND.MISSING_VEHICLE_INFO,
 ];
 
-/** Biểu tượng theo mức nặng nhất — web `TODO_TONE_ICON`. */
-const useTodoToneIcon = themed<
-  Readonly<Record<VehicleAlertSeverity, { name: IconName; color: string }>>
->((colors) => ({
-  [VEHICLE_ALERT_SEVERITY.CRITICAL]: { name: 'alert-circle', color: colors.danger },
-  [VEHICLE_ALERT_SEVERITY.WARNING]: { name: 'alert-circle', color: colors.warning },
-  [VEHICLE_ALERT_SEVERITY.INFO]: { name: 'information-circle', color: colors.info },
-}));
-/** Đã biết chắc không còn việc gì (tải xong và rỗng). Đang tải/hỏng thì KHÔNG có biểu tượng. */
-const useTodoClearIcon = themed<{ name: IconName; color: string }>((colors) => ({
-  name: 'checkmark-circle',
-  color: colors.success,
-}));
-
-/**
- * Việc cần làm — cảnh báo vận hành TỪ SERVER (`VehicleAlertsService`, cùng phép tính với thẻ xe
- * ngoài danh sách) cộng MỘT việc "đưa xe lên chợ" dựng tại chỗ từ bản ghi xe (ADR 0048).
- *
- * Cảnh báo vận hành vẫn đến nguyên vẹn từ server và KHÔNG bị sắp xếp lại; phần thêm vào là đúng
- * một việc, và nó THAY hai cảnh báo server nói trùng thay vì cộng thêm.
- *
- * Thứ tự: việc lên chợ mức `critical`/`warning` lên ĐẦU (xe không bán được thì mọi việc khác là
- * thứ yếu); mức `info` — lời nhắc "xe đang tạm ẩn", "đang chờ duyệt" — xuống CUỐI, vì một gợi ý
- * không được đẩy một chuyến sắp phải giao ra khỏi ba dòng đầu.
- */
-function TodoCard({
-  vehicle,
-  summary,
-  loading,
-  failed,
-  customerScope,
-}: {
+interface TodoArgs {
   vehicle: VehicleDetail;
   summary: Vehicle360Summary | undefined;
   loading: boolean;
   failed: boolean;
-  /** Mở từ khu tài khoản — đích "Liên hệ hỗ trợ" là hỗ trợ của khu đó. */
+  /** Mở từ khu tài khoản - đích "Liên hệ hỗ trợ" là hỗ trợ của khu đó. */
   customerScope: boolean;
-}) {
-  const TODO_TONE_ICON = useTodoToneIcon();
-  const TODO_CLEAR_ICON = useTodoClearIcon();
-  const t = useTranslations('Vehicles.overview');
-  const navigateOnce = useNavigateOnce();
+}
+
+/**
+ * Trạng thái "Việc cần làm" - một chỗ tính cho cả dòng noti lẫn tấm chi tiết (phương án A 25/11/2026).
+ * Cảnh báo vận hành đến nguyên vẹn từ server; việc "đưa xe lên chợ" dựng tại chỗ (ADR 0048) THAY hai
+ * cảnh báo server nói trùng. Việc lên chợ mức `critical`/`warning` lên ĐẦU, mức `info` xuống CUỐI.
+ */
+function useVehicleTodo({ vehicle, summary, loading, failed, customerScope }: TodoArgs) {
   const task = vehiclePublicationTask(vehicle);
   const alertView = useVehicleAlertView(customerScope);
-  // Lọc theo năng lực + đổi đích về đúng khu TRƯỚC, rồi bỏ hai cảnh báo nói trùng với việc lên chợ.
   const alerts = alertView(vehicle.id, summary?.alerts ?? []).filter(
     (alert) => !task || !PUBLICATION_ALERT_KINDS.includes(alert.kind),
   );
   const taskLeads = task !== null && task.tone !== VEHICLE_ALERT_SEVERITY.INFO;
-  // Gợi ý không phải "việc cần làm" nên không vào số đếm — viên đếm là số việc thật.
+  // Gợi ý không phải "việc cần làm" nên không vào số đếm - viên đếm là số việc thật.
   const count = alerts.length + (taskLeads ? 1 : 0);
-  const taskItem = task ? (
-    <VehiclePublicationTaskItem vehicle={vehicle} task={task} customerScope={customerScope} />
-  ) : null;
   const listReady = !loading && !failed && summary !== undefined;
-  // Mức nặng nhất của những gì ĐANG hiện — tô biểu tượng tiêu đề (web đổi nền thẻ theo nó).
   const tone = topVehicleAlertSeverity([
     ...(listReady ? alerts : []),
     ...(task ? [{ severity: task.tone }] : []),
   ]);
-  /*
-   * "Xử lý ngay" dẫn tới việc ĐẦU BẢNG của server (đã sắp theo ưu tiên) và đứng NGAY TRONG chính
-   * việc đó — đúng web 02/10/2026. Chỉ dựng khi việc đầu bảng là việc phải làm (không phải lời
-   * nhắc `info`), có đích, và việc lên chợ không đứng trên nó (việc đó có nút riêng).
-   */
+  // Web `Vehicle360Cards`: không có việc thì không có thẻ; đang tải chưa biết thì cũng chưa dựng.
+  const hidden = !task && (loading || (listReady && alerts.length === 0));
+  return { task, alerts, taskLeads, count, listReady, tone, hidden };
+}
+
+/**
+ * Nội dung "Việc cần làm" - nằm TRONG tấm mở từ dòng noti (không còn là thẻ trên tab Tổng quan).
+ * "Xử lý ngay" dẫn tới việc ĐẦU BẢNG của server và đứng ngay trong việc đó (web 02/10/2026).
+ */
+function TodoContent({
+  todo,
+  vehicle,
+  loading,
+  failed,
+  summary,
+  customerScope,
+  onNavigate,
+}: TodoArgs & { todo: ReturnType<typeof useVehicleTodo>; onNavigate: () => void }) {
+  const t = useTranslations('Vehicles.overview');
+  const navigateOnce = useNavigateOnce();
+  const { task, alerts, taskLeads, listReady, tone } = todo;
+  const taskItem = task ? (
+    <VehiclePublicationTaskItem vehicle={vehicle} task={task} customerScope={customerScope} />
+  ) : null;
   const lead = todoLeadAlert({ alerts, listReady, taskLeads });
   const leadTarget = lead?.target ?? null;
   const leadAction = leadTarget ? (
@@ -946,60 +866,67 @@ function TodoCard({
       size="sm"
       variant={tone === VEHICLE_ALERT_SEVERITY.CRITICAL ? 'danger' : 'primary'}
       block={false}
-      onPress={() => navigateOnce(leadTarget)}
+      onPress={() => {
+        onNavigate();
+        navigateOnce(leadTarget);
+      }}
     />
   ) : null;
-  const toneIcon = tone ? TODO_TONE_ICON[tone] : listReady ? TODO_CLEAR_ICON : null;
-
-  /*
-   * Web `Vehicle360Cards`: không có việc thì không có thẻ; đang tải mà chưa biết có việc gì cũng
-   * không dựng (khung xương to rồi biến mất làm trang nhảy). Tải hỏng thì vẫn nói một dòng.
-   */
-  if (!task && (loading || (listReady && alerts.length === 0))) return null;
-
+  if (todo.hidden) return null;
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        {/*
-          Viên đếm CHỈ hiện khi có việc — đúng điều kiện của web. Biểu tượng mức nặng nhất đứng
-          cạnh nó; màu không bao giờ là kênh duy nhất — từng việc vẫn nói mức bằng chữ.
-        */}
-        <SectionHeader
-          {...(count > 0 || toneIcon
-            ? {
-                action: (
-                  <XStack ai="center" gap={space.xs}>
-                    {toneIcon ? (
-                      <Ionicons
-                        name={toneIcon.name}
-                        size={iconSize.sm}
-                        color={toneIcon.color}
-                        accessible={false}
-                      />
-                    ) : null}
-                    {count > 0 ? <CountBadge count={count} tone="danger" /> : null}
-                  </XStack>
-                ),
-              }
-            : {})}
-        >
-          {t('todo.title')}
-        </SectionHeader>
-        {taskLeads ? taskItem : null}
-        {loading ? (
-          <SkeletonText lines={2} />
-        ) : failed || !summary ? (
-          <Muted>{t('loadFailed')}</Muted>
-        ) : (
-          /*
-            `showEmpty` tắt khi đã có việc lên chợ: "Không có việc cần làm" ngay dưới một việc
-            đang hiện là đúng câu tự mâu thuẫn mà ADR 0048 điều 6 sửa.
-          */
-          <VehicleAlertList alerts={alerts} showEmpty={!task} leadAction={leadAction} />
-        )}
-        {task && !taskLeads ? taskItem : null}
+    <YStack gap={space.sm}>
+      {taskLeads ? taskItem : null}
+      {loading ? (
+        <SkeletonText lines={2} />
+      ) : failed || !summary ? (
+        <Muted>{t('loadFailed')}</Muted>
+      ) : (
+        <VehicleAlertList alerts={alerts} showEmpty={!task} leadAction={leadAction} />
+      )}
+      {task && !taskLeads ? taskItem : null}
+    </YStack>
+  );
+}
+
+/**
+ * Có chuyện cần báo trên màn không: cảnh báo xét duyệt (bị từ chối / cần bổ sung / ẩn / chờ duyệt -
+ * web `needsBanner`) hoặc "Việc cần làm". Nút "!" cạnh ⋮ trên ảnh (25/11/2026) đọc từ đây.
+ */
+function useTodoSignal(args: TodoArgs): { visible: boolean; count: number; danger: boolean } {
+  const todo = useVehicleTodo(args);
+  const banner = BANNER_STATUSES.has(args.vehicle.publicStatus)
+    ? publicStatusPresentation(args.vehicle.publicStatus as VehiclePublicStatus)
+    : null;
+  const visible = Boolean(banner) || (!todo.hidden && (todo.count > 0 || todo.task !== null));
+  return {
+    visible,
+    count: todo.count + (banner ? 1 : 0),
+    danger: banner?.type === 'error' || todo.tone === VEHICLE_ALERT_SEVERITY.CRITICAL,
+  };
+}
+
+/** Tấm mở từ dòng noti: dải cảnh báo xét duyệt (nếu có) + danh sách việc cần làm. */
+function TodoSheet({ open, onClose, ...args }: TodoArgs & { open: boolean; onClose: () => void }) {
+  const t = useTranslations('Vehicles.overview');
+  const tPublish = useTranslations('Vehicles.publish');
+  const todo = useVehicleTodo(args);
+  const { vehicle } = args;
+  const banner = BANNER_STATUSES.has(vehicle.publicStatus)
+    ? publicStatusPresentation(vehicle.publicStatus as VehiclePublicStatus)
+    : null;
+  return (
+    <BottomSheet open={open} onClose={onClose} title={t('todo.title')} chrome="v2" headerDivider>
+      <YStack gap={space.md}>
+        {banner ? (
+          <Callout tone={CALLOUT_TONE[banner.type]} title={tPublish(`status.${banner.key}.message`)}>
+            {banner.useReason && vehicle.latestPublicReview?.reason
+              ? vehicle.latestPublicReview.reason
+              : tPublish(`status.${banner.key}.description`)}
+          </Callout>
+        ) : null}
+        <TodoContent {...args} todo={todo} onNavigate={onClose} />
       </YStack>
-    </Card>
+    </BottomSheet>
   );
 }
 
@@ -1058,7 +985,7 @@ function ScheduleCard({
                     ta="right"
                     numberOfLines={1}
                   >
-                    {t('schedules.sub', {
+                    {t('schedules.subApp', {
                       amount: fmt.money(booking.totalAmount),
                       status: domainLabel('bookingStatus', booking.status),
                     })}
@@ -1072,68 +999,6 @@ function ScheduleCard({
           ))}
         </YStack>
       )}
-    </GroupCard>
-  );
-}
-
-/**
- * "Lối tắt" của hồ sơ xe — bản native của `ModuleLinks` bên web (`Vehicle360Aside`). Danh sách,
- * quyền và đích theo khu nằm ở `vehicleModuleLinks` (hàm thuần, có test).
- */
-function ModuleLinks({
-  vehicle,
-  canEdit,
-  customerScope,
-}: {
-  vehicle: VehicleDetail;
-  canEdit: boolean;
-  /**
-   * Mở từ KHU TÀI KHOẢN (chủ xe tuyến hoa hồng) hay từ cổng quản lý. Chủ xe tuyến hoa hồng không
-   * vào được `/manage` (ADR 0038 điều 4) — mọi mục đổi đích sang khu của họ hoặc không hiện.
-   */
-  customerScope: boolean;
-}) {
-  const colors = useColors();
-  const t = useTranslations('Vehicles.overview.links');
-  const { has } = usePermissions();
-  const navigateOnce = useNavigateOnce();
-
-  const can = useVehicleCapabilities();
-  const links = vehicleModuleLinks({ vehicle, canEdit, customerScope, has, can });
-  if (links.length === 0) return null;
-
-  return (
-    /*
-      Web `ModuleLinks` (`Vehicle360Aside`): thẻ "Lối tắt", mỗi lối một DÒNG cao tối thiểu 44 - icon
-      vàng · nhãn · mũi tên `›` - xếp dọc, không phải viên xuống dòng.
-    */
-    <GroupCard title={t('shortcuts')}>
-      <YStack accessibilityLabel={t('ariaLabel')} gap={space.xs}>
-        {links.map((link) => (
-          <Pressable
-            key={link.key}
-            onPress={() => navigateOnce(link.href)}
-            accessibilityRole="link"
-            accessibilityLabel={t(link.key)}
-            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-          >
-            <XStack ai="center" gap={space.sm} minHeight={44} px={space.sm}>
-              <Ionicons name={link.icon} size={iconSize.md} color={colors.brandLink} />
-              <Text
-                f={1}
-                minWidth={0}
-                col={colors.text}
-                fos={typeScale.body.fontSize}
-                lh={typeScale.body.lineHeight}
-                numberOfLines={1}
-              >
-                {t(link.key)}
-              </Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.placeholder} />
-            </XStack>
-          </Pressable>
-        ))}
-      </YStack>
     </GroupCard>
   );
 }
@@ -1154,7 +1019,6 @@ function PerformanceBlock({
   loading: boolean;
   failed: boolean;
 }) {
-  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const stats = summary?.stats;
@@ -1164,7 +1028,8 @@ function PerformanceBlock({
   if (loading) return <SkeletonText lines={2} />;
   if (failed || !stats) return <Muted>{t('loadFailed')}</Muted>;
   return (
-    <XStack jc="space-between" ai="flex-start" gap={space.sm} accessibilityLabel={t('performance.title')}>
+    /* Các ô chia ĐỀU bề ngang - 2 ô 50/50, 3 ô 33/33/33 (người dùng chốt 25/11/2026). */
+    <XStack ai="flex-start" gap={space.sm} accessibilityLabel={t('performance.title')}>
       <StatTile
         label={t('performance.rentals')}
         value={t('performance.tripCount', { count: stats.completedBookings })}
@@ -1173,13 +1038,16 @@ function PerformanceBlock({
         label={t('performance.active')}
         value={t('performance.activeCount', { count: stats.activeBookings })}
       />
-      {rated ? (
-        <StatTile
-          label={t('performance.ratingCount', { count: stats.ratingCount })}
-          value={t('performance.ratingScore', { rating: fmt.rating(Number(stats.ratingAvg)) })}
-          star
-        />
-      ) : null}
+      {/* Ô sao LUÔN có (25/11/2026): chưa ai chấm thì "-" + "Chưa có đánh giá", không bao giờ "0/5". */}
+      <StatTile
+        label={
+          rated
+            ? t('performance.ratingCountApp', { count: stats.ratingCount })
+            : t('performance.noRatingApp')
+        }
+        value={rated ? t('performance.ratingScore', { rating: fmt.rating(Number(stats.ratingAvg)) }) : '-'}
+        star
+      />
     </XStack>
   );
 }
@@ -1196,9 +1064,9 @@ function StatTile({
 }) {
   const colors = useColors();
   return (
-    <YStack f={1} gap={4} ai="center" minWidth={0}>
+    <YStack f={1} flexBasis={0} gap={4} ai="center" minWidth={0}>
       <XStack ai="center" gap={4}>
-        {star ? <Ionicons name="star" size={iconSize.md} color={colors.brandShape} /> : null}
+        {star ? <LineIcon name="star" size={iconSize.lg} color={market.star} /> : null}
         <Text
           col={colors.text}
           fos={typeScale.body.fontSize}
@@ -1230,10 +1098,13 @@ function GroupCard({
   title,
   onEdit,
   editLabel,
+  action,
   children,
 }: {
   title?: string;
   onEdit?: () => void;
+  /** Lối tắt ở góc tiêu đề ("Xem đầy đủ →", "+ Thêm ảnh") - thay cho bút sửa. */
+  action?: ReactNode;
   editLabel?: string;
   children: ReactNode;
 }) {
@@ -1254,14 +1125,15 @@ function GroupCard({
             >
               {title}
             </Text>
-            {onEdit ? (
+            {action ?? null}
+            {!action && onEdit ? (
               <Pressable
                 onPress={onEdit}
                 hitSlop={space.sm}
                 accessibilityRole="button"
                 accessibilityLabel={editLabel ?? title}
               >
-                <Ionicons name="create-outline" size={iconSize.md} color={colors.brandLink} />
+                <LineIcon name="edit" size={iconSize.lg} color={colors.brandLink} />
               </Pressable>
             ) : null}
           </XStack>
@@ -1291,8 +1163,9 @@ function AutomationCard({
   const navigateOnce = useNavigateOnce();
 
   const domainLabel = useDomainLabel();
-  const services = VEHICLE_SERVICE_SETTING_SERVICES.filter((service) =>
-    vehicle.serviceTypes.includes(service),
+  // Chỉ tự lái có "Nhận chuyến tự động" - có tài xế luôn duyệt tay (web `Vehicle360Cards`, PR #338).
+  const services = VEHICLE_SERVICE_SETTING_SERVICES.filter(
+    (service) => service === SERVICE_TYPE.SELF_DRIVE && vehicle.serviceTypes.includes(service),
   );
   const settings = useVehicleServiceSettings(vehicle.id, services.length > 0);
   if (services.length === 0) return null;
@@ -1346,20 +1219,38 @@ function AutoAcceptRow({
   const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const toggle = useAutoAcceptToggle({ vehicleId, setting, canEdit });
+  const [infoOpen, setInfoOpen] = useState(false);
   return (
     <XStack ai="center" gap={20}>
       <YStack f={1} minWidth={0} gap={2}>
-        <Text
-          col={colors.text}
-          fos={typeScale.body.fontSize}
-          lh={typeScale.body.lineHeight}
-          fow={fontWeight.medium}
-        >
-          {label}
-        </Text>
+        {/* Figma `24158:108493`: nhãn + ⓘ 14 (`text/gray/disable`) cách 4; chạm ⓘ mở lời giải thích. */}
+        <XStack ai="flex-start" gap={4}>
+          <Text
+            flexShrink={1}
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+          >
+            {label}
+          </Text>
+          <Pressable
+            onPress={() => setInfoOpen(true)}
+            hitSlop={space.sm}
+            accessibilityRole="button"
+            accessibilityLabel={t('automation.title')}
+          >
+            <LineIcon name="info-circle" size={14} color={colors.borderInput} />
+          </Pressable>
+        </XStack>
+        <BottomSheet open={infoOpen} onClose={() => setInfoOpen(false)} title={label} chrome="v2" headerDivider>
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+            {t('automation.hint')}
+          </Text>
+        </BottomSheet>
         {/* Có tài xế chưa đủ năng lực: nói lý do thay cho công tắc mờ câm — như tooltip của web. */}
         <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
-          {toggle.blocked ? t('automation.driverRequired') : t('automation.toggleHint')}
+          {toggle.blocked ? t('automation.driverRequired') : t('automation.toggleHintApp')}
         </Text>
       </YStack>
       <SettingSwitch
@@ -1372,9 +1263,7 @@ function AutoAcceptRow({
   );
 }
 
-/** Công tắc của thẻ chi tiết xe — cùng bảng màu rãnh với `PolicySwitch` (tắt đậm hơn nền thẻ). */
-const useSwitchTrack = themed((colors) => ({ false: colors.borderInput, true: colors.primary }));
-
+/** Công tắc của thẻ chi tiết xe - Figma `_Toggle base` 44×24 (cỡ md). */
 function SettingSwitch({
   label,
   checked,
@@ -1386,17 +1275,12 @@ function SettingSwitch({
   disabled: boolean;
   onToggle: () => void;
 }) {
-  const colors = useColors();
-  const track = useSwitchTrack();
   return (
-    <Switch
+    <ToggleSwitch
       value={checked}
       onValueChange={onToggle}
       disabled={disabled}
       accessibilityLabel={label}
-      trackColor={track}
-      thumbColor={colors.surface}
-      ios_backgroundColor={colors.borderInput}
     />
   );
 }
@@ -1452,7 +1336,6 @@ function PricingCard({
   const navigateOnce = useNavigateOnce();
 
   const empty = tLabels('emptyValue');
-  const discounted = discountedPriceVnd(vehicle.weekdayPrice, vehicle.discountPercent);
 
   return (
     <GroupCard
@@ -1480,27 +1363,6 @@ function PricingCard({
           value={vehicle.hourlyPrice ? fmt.money(vehicle.hourlyPrice) : empty}
         />
       </XStack>
-      {vehicle.discountPercent ? (
-        <DataRow label={t('pricing.discount')} value={`${vehicle.discountPercent}%`} />
-      ) : null}
-      {discounted != null ? (
-        <DataRow label={t('pricing.publicPrice')} value={fmt.money(discounted)} strong />
-      ) : null}
-      {/* Giá có tài xế / giá tháng — chỉ khi xe phục vụ dịch vụ đó và đã có giá (ledger §3.6 D8). */}
-      {vehicle.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER) && vehicle.withDriverDailyPrice ? (
-        <DataRow
-          labelWide
-          label={t('pricing.withDriver')}
-          value={fmt.pricePerDay(vehicle.withDriverDailyPrice)}
-        />
-      ) : null}
-      {vehicle.serviceTypes.includes(SERVICE_TYPE.LONG_TERM) && vehicle.monthlyPrice ? (
-        <DataRow
-          labelWide
-          label={t('pricing.monthly')}
-          value={t('pricing.perMonth', { price: fmt.money(vehicle.monthlyPrice) })}
-        />
-      ) : null}
       {/* Figma "Thông tin": nhãn 14/20 `text/gray/low` trái, dấu ✓ + "Có hỗ trợ" phải. */}
       <XStack ai="center" jc="space-between" gap={space.sm}>
         <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
@@ -1509,7 +1371,7 @@ function PricingCard({
         <XStack ai="center" gap={space.sm}>
           {vehicle.deliveryEnabled ? (
             <YStack w={20} h={20} br={radius.pill} bg={colors.successSurface} ai="center" jc="center">
-              <Ionicons name="checkmark-outline" size={12} color={colors.success} />
+              <CheckGlyph size={12} color={colors.success} />
             </YStack>
           ) : null}
           <Text
@@ -1526,22 +1388,83 @@ function PricingCard({
   );
 }
 
-/**
- * Lát cắt của thẻ "Thông số chính", theo thứ tự hiện — web `KEY_SPECS`. Ô nào ma trận
- * `vehicleFieldPolicy` ẩn cho xe này tự vắng — `useVehicleSpecItems` đã bỏ nó.
- */
-const KEY_SPECS: readonly VehicleSpecKey[] = [
-  'year',
-  'seats',
-  'motorbikeCategory',
-  'fuel',
-  'transmission',
-  'color',
-];
+/** Lối tắt ở góc tiêu đề thẻ (Figma "Button" của "Nhóm thông tin"): chữ 14/20 đậm `text/brand/primary-2` + icon 20, khe 6. */
+function CardLink({
+  label,
+  icon,
+  iconFirst = false,
+  onPress,
+  accessibilityLabel,
+}: {
+  label: string;
+  icon: LineIconName;
+  iconFirst?: boolean;
+  onPress: () => void;
+  accessibilityLabel?: string;
+}) {
+  const colors = useColors();
+  const glyph = <LineIcon name={icon} size={iconSize.lg} color={colors.brandLink} />;
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={space.sm}
+      accessibilityRole="link"
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+    >
+      <XStack ai="center" gap={6}>
+        {iconFirst ? glyph : null}
+        <Text
+          col={colors.brandLink}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.semibold}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        {iconFirst ? null : glyph}
+      </XStack>
+    </Pressable>
+  );
+}
+
+/** Một dòng nhãn ↔ giá trị của "Nhóm thông tin" (Figma "Thông tin"): nhãn 14/20 `text/gray/low`, giá trị 14/20 `text/gray/high`. */
+function InfoLine({ label, children }: { label: string; children: ReactNode }) {
+  const colors = useColors();
+  return (
+    <XStack ai="center" jc="space-between" gap={space.sm}>
+      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1}>
+        {label}
+      </Text>
+      {typeof children === 'string' ? (
+        <Text
+          flexShrink={1}
+          ta="right"
+          col={colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          numberOfLines={1}
+        >
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+    </XStack>
+  );
+}
+
+/** Lát cắt "Thông số chính", theo thứ tự hiện - web `KEY_SPECS`. Ô không áp dụng cho xe tự vắng. */
+const KEY_SPECS: readonly VehicleSpecKey[] = ['year', 'seats', 'motorbikeCategory', 'fuel', 'transmission', 'color'];
+
+/** Figma "Thông số chính" `24158:108333`: lưới 3 cột ô `bg/gray-50` bo 10 khe 8, nhãn 12/18, giá trị 14/20 đậm. */
+const SPEC_TILE_GAP = 8;
+const SPEC_TILE_RADIUS = 10;
 
 /**
- * Những thông số khách hỏi đầu tiên — bản ĐẦY ĐỦ ở mục "Thông số", "Xem đầy đủ" đổi mục tại chỗ.
- * Ô áp dụng mà chưa điền thì nói thiếu (`—`), để chủ xe thấy còn phải điền gì.
+ * Thông số chính (tab Tổng quan) - những thông số khách hỏi đầu tiên; bản ĐẦY ĐỦ ở tab Thông số,
+ * "Xem đầy đủ" đổi tab tại chỗ. Ô áp dụng mà chưa điền thì "-", để chủ xe thấy còn phải điền gì.
  */
 function KeySpecsCard({
   vehicle,
@@ -1560,13 +1483,12 @@ function KeySpecsCard({
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const specs = useVehicleSpecItems(vehicle);
+  const [gridWidth, setGridWidth] = useState(0);
 
   const empty = tLabels('emptyValue');
   const byKey = new Map(specs.map((item) => [item.key, item]));
   // Hãng + mẫu gộp một ô: "Toyota Vios" là cách người ta gọi chiếc xe, không phải hai thông số.
-  const brandModel = [byKey.get('brand')?.value, byKey.get('model')?.value]
-    .filter(Boolean)
-    .join(' ');
+  const brandModel = [byKey.get('brand')?.value, byKey.get('model')?.value].filter(Boolean).join(' ');
   const tiles = [
     { key: 'brand-model', label: t('keySpecs.brandModel'), value: brandModel || empty },
     ...KEY_SPECS.flatMap((key) => {
@@ -1574,162 +1496,158 @@ function KeySpecsCard({
       return item ? [{ key, label: item.label, value: item.value ?? empty }] : [];
     }),
   ];
+  const tile = Math.floor((gridWidth - SPEC_TILE_GAP * 2) / 3);
 
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <SectionHeader
-          action={
-            <BlockLink
-              label={t('keySpecs.viewAll')}
-              accessibilityLabel={t('keySpecs.viewAllLabel')}
-              onPress={onViewAll}
-            />
-          }
-        >
-          {t('keySpecs.title')}
-        </SectionHeader>
-        {/* Lưới hai cột ô nhỏ — ô "Hãng & mẫu" trải hết hàng vì tên xe thường dài. */}
-        <XStack flexWrap="wrap" gap={space.xs}>
-          {tiles.map((tile, index) => (
-            <YStack
-              key={tile.key}
-              w={index === 0 ? '100%' : '48%'}
-              f={index === 0 ? undefined : 1}
-              minWidth="45%"
-              gap={2}
-              p={space.sm}
-              br={radius.sm}
-              bg={colors.surfaceMuted}
-            >
-              <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                {tile.label}
-              </Text>
-              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                {tile.value}
-              </Text>
-            </YStack>
-          ))}
-        </XStack>
-        {/* Số KM hiện tại + "Nhập dữ liệu" — web `odometerRow` (ledger §3.6 D9). */}
-        <XStack ai="center" gap={space.xs} pt={space.xs}>
-          <Ionicons name="speedometer-outline" size={iconSize.sm} color={colors.textMuted} />
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+    <GroupCard
+      title={t('keySpecs.title')}
+      action={
+        <CardLink
+          label={t('keySpecs.viewAll')}
+          accessibilityLabel={t('keySpecs.viewAllLabel')}
+          icon="arrow-right"
+          onPress={onViewAll}
+        />
+      }
+    >
+      <XStack flexWrap="wrap" gap={SPEC_TILE_GAP} onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}>
+        {tile > 0
+          ? tiles.map((item) => (
+              <YStack
+                key={item.key}
+                w={tile}
+                ai="center"
+                gap={6}
+                py={6}
+                px={space.sm}
+                br={SPEC_TILE_RADIUS}
+                bg={colors.background}
+              >
+                {/* Figma một dòng: chữ dài co nhẹ (≥ 80%) thay vì cắt "…". */}
+                <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                  {item.label}
+                </Text>
+                <Text
+                  col={colors.text}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {item.value}
+                </Text>
+              </YStack>
+            ))
+          : null}
+      </XStack>
+      {/* Figma "Số KM hiện tại": nhãn + số (khe 10) bên trái, "Nhập dữ liệu →" vàng bên phải. */}
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <XStack ai="center" gap={10} flexShrink={1}>
+          <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
             {t('keySpecs.odometer')}
           </Text>
-          <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium}>
             {summary ? fmt.km(summary.currentOdometerKm ?? null) : empty}
           </Text>
-          {onOdometer ? (
-            <BlockLink label={t('keySpecs.odometerInput')} onPress={onOdometer} />
-          ) : null}
         </XStack>
-      </YStack>
-    </Card>
+        {onOdometer ? (
+          <Pressable onPress={onOdometer} hitSlop={space.sm} accessibilityRole="link">
+            <Text col={colors.brandLink} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium}>
+              {t('keySpecs.odometerInputApp')}
+            </Text>
+          </Pressable>
+        ) : null}
+      </XStack>
+    </GroupCard>
   );
 }
 
+/** Figma "Thông số kỹ thuật" `24612:141569`: bảng hai cột viền `stroke/gray-low200` bo 12, nhãn nền `bg/gray-50`, ô đệm 12, chữ 14/20. */
 function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
-  // Danh sách theo ma trận `vehicleFieldPolicy` — ô không áp dụng cho loại xe này VẮNG hẳn.
+  // Danh sách theo ma trận `vehicleFieldPolicy` - ô không áp dụng cho loại xe này VẮNG hẳn.
   const specs = useVehicleSpecItems(vehicle);
-
   const empty = tLabels('emptyValue');
   const rows = [
     ...specs.map((item) => ({ key: item.key, label: item.label, value: item.value ?? empty })),
-    { key: 'created', label: t('specs.createdAt'), value: fmt.dateTime(vehicle.createdAt) },
     { key: 'updated', label: t('specs.updatedAt'), value: fmt.dateTime(vehicle.updatedAt) },
+    { key: 'created', label: t('specs.createdAt'), value: fmt.dateTime(vehicle.createdAt) },
   ];
-
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <SectionHeader icon="settings-outline">{t('specs.title')}</SectionHeader>
-
-        {/*
-          `labelWide` cho CẢ bảng: nhãn dài, giá trị ngắn. Ô áp dụng mà chưa nhập vẫn có dòng "—"
-          (y như `Descriptions` của web); ô không áp dụng cho loại xe thì không có dòng.
-        */}
-        {rows.map((row) => (
-          <DataRow key={row.key} label={row.label} value={row.value} labelWide />
-        ))}
-
-      </YStack>
-    </Card>
-  );
-}
-
-/**
- * Tab "Tiện ích xe" — web `FeaturesCard` (ledger §3.6 D14–D15): danh sách tiện ích PHẲNG hai cột
- * có dấu tích (danh mục chưa có nhóm), rồi khối "Mô tả xe" ở cuối tab. Rỗng thì nói rõ, không ẩn.
- */
-function FeaturesCard({ vehicle }: { vehicle: VehicleDetail }) {
-  const colors = useColors();
-  const t = useTranslations('Vehicles.overview');
-  const { featureLabel } = useCatalogLabels();
-
-  return (
-    <YStack gap={layout.section}>
-      <Card>
-        <YStack gap={space.sm}>
-          <SectionHeader icon="checkmark-done-outline" lead={t('features.subtitle')}>
-            {t('features.title')}
-          </SectionHeader>
-          {vehicle.features.length > 0 ? (
-            /* Lưới 2 cột, khe 12, icon riêng từng tiện ích - khuôn khối tiện ích của app khách. */
-            <XStack flexWrap="wrap" rowGap={12}>
-              {vehicle.features.map((key) => (
-                <YStack key={key} w="50%" paddingRight={space.xs}>
-                  <FeatureItem featureKey={key} label={featureLabel(key)} />
-                </YStack>
-              ))}
-            </XStack>
-          ) : (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('features.empty')}
+    <YStack br={radius.control} bw={1} bc={colors.border} bg={colors.surface} ov="hidden" accessibilityLabel={t('specs.title')}>
+      {rows.map((row, index) => (
+        <XStack key={row.key} btw={index === 0 ? 0 : 1} bc={colors.border}>
+          <YStack f={1} flexBasis={0} p={12} bg={colors.background} brw={1} bc={colors.border}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+              {row.label}
             </Text>
-          )}
-        </YStack>
-      </Card>
-      <Card>
-        <YStack gap={space.sm}>
-          <SectionHeader icon="document-text-outline">{t('features.descriptionTitle')}</SectionHeader>
-          <Text
-            col={vehicle.description ? colors.text : colors.textMuted}
-            fos={fontSize.bodySm}
-          >
-            {vehicle.description || t('features.descriptionEmpty')}
-          </Text>
-        </YStack>
-      </Card>
+          </YStack>
+          <YStack f={1} flexBasis={0} p={12}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+              {row.value}
+            </Text>
+          </YStack>
+        </XStack>
+      ))}
     </YStack>
   );
 }
 
 /**
- * Tóm tắt nguồn xe. Chi tiết tài chính chỉ tải khi người xem có `finance.view` — người không có
- * quyền chỉ thấy HÌNH THỨC (đã nằm sẵn trên bản ghi xe), không thấy con số.
+ * Tab "Tiện ích xe" - Figma "Tiện ích trên xe" `24612:143174`: một cột, dấu ✓ xanh 12 + chữ 14/20
+ * `text/gray/medium`, dòng cách 12. Rỗng thì nói rõ. "Mô tả xe" giữ ở thẻ riêng bên dưới.
+ */
+function FeaturesCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const colors = useColors();
+  const t = useTranslations('Vehicles.overview');
+  const { featureLabel } = useCatalogLabels();
+  return (
+    <YStack gap={CONTENT_GAP}>
+      <GroupCard title={t('features.title')}>
+        {vehicle.features.length > 0 ? (
+          <YStack gap={12}>
+            {vehicle.features.map((key) => (
+              <XStack key={key} ai="center" gap={space.sm}>
+                <CheckGlyph size={12} color={colors.success} />
+                <Text f={1} col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                  {featureLabel(key)}
+                </Text>
+              </XStack>
+            ))}
+          </YStack>
+        ) : (
+          <Muted>{t('features.empty')}</Muted>
+        )}
+      </GroupCard>
+      <GroupCard title={t('features.descriptionTitle')}>
+        <Text col={vehicle.description ? colors.textMuted : colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+          {vehicle.description || t('features.descriptionEmpty')}
+        </Text>
+      </GroupCard>
+    </YStack>
+  );
+}
+
+/**
+ * Nguồn xe & Tài chính - Figma `24612:142363`. Con số chỉ tải khi người xem có `can.source`;
+ * người không có quyền chỉ thấy HÌNH THỨC. Con số đổi theo hình thức, đúng `SourceCard` web.
  */
 function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
-  const colors = useColors();
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  // Web: `can.source` (quyền ∧ cờ gói finance) — chỉ đọc permission thì tuyến không có gói
-  // nhận 403 cho `GET /vehicles/:id/source`.
   const canViewFinance = useVehicleCapabilities().source;
   const navigateOnce = useNavigateOnce();
   const source = useVehicleSource(vehicle.id, canViewFinance);
   const detail = source.data?.detail ?? null;
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
+  const goSource = () => navigateOnce(ROUTES.manage.vehicleEditTab(vehicle.id, VEHICLE_EDIT_TAB.SOURCE));
 
-  /*
-   * Con số đổi theo HÌNH THỨC, đúng `SourceCard` web: sở hữu - ngày mua · giá trị xe; trả góp -
-   * ngân hàng · phải đóng mỗi tháng; thuê lại - chủ xe · tiền thuê; hợp tác - chủ xe · % chia.
-   * Ô chưa khai thì không dựng.
-   */
   const rows: { key: string; label: string; value: string }[] = [];
   const push = (key: string, label: string, value: string | null | undefined) => {
     if (value) rows.push({ key, label, value });
@@ -1738,11 +1656,7 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
     switch (sourceType) {
       case VEHICLE_SOURCE_TYPE.FINANCED:
         push('bank', t('source.bank'), detail.bankName);
-        push(
-          'monthly',
-          t('source.monthlyPayment'),
-          detail.monthlyTotal ? fmt.money(detail.monthlyTotal) : null,
-        );
+        push('monthly', t('source.monthlyPayment'), detail.monthlyTotal ? fmt.money(detail.monthlyTotal) : null);
         break;
       case VEHICLE_SOURCE_TYPE.RENTED:
         push('owner', t('source.owner'), detail.ownerName);
@@ -1753,85 +1667,57 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
         push(
           'share',
           t('source.share'),
-          detail.commissionPercent
-            ? t('source.sharePercent', { percent: detail.commissionPercent })
-            : null,
+          detail.commissionPercent ? t('source.sharePercent', { percent: detail.commissionPercent }) : null,
         );
         break;
       default:
-        push(
-          'purchaseDate',
-          t('source.purchaseDate'),
-          detail.purchaseDate ? fmt.date(detail.purchaseDate) : null,
-        );
-        push(
-          'purchasePrice',
-          t('source.purchasePrice'),
-          detail.purchasePrice ? fmt.money(detail.purchasePrice) : null,
-        );
+        push('purchaseDate', t('source.purchaseDate'), detail.purchaseDate ? fmt.date(detail.purchaseDate) : null);
+        push('purchasePrice', t('source.purchasePrice'), detail.purchasePrice ? fmt.money(detail.purchasePrice) : null);
     }
   }
+  // Có hồ sơ ⇒ "Xem hồ sơ →"; chưa khai ⇒ lời mời "Bổ sung" - hai nhánh của web.
+  const showLinks = canViewFinance && !source.isPending && (detail || !source.isError);
 
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <SectionHeader icon="business-outline">{t('source.title')}</SectionHeader>
-
-        {/*
-          Hình thức nguồn xe là một CHIP vàng, đứng cùng hàng với nhãn — đúng `<Tag color="gold">`
-          của web. Trước đây nó đi qua `DataRow`, tức một nhãn dài cạnh một giá trị ngắn chia
-          nhau theo tỉ lệ 3:7 và "Trả góp" bị đẩy xuống hàng riêng cho một từ.
-        */}
-        <XStack ai="center" gap={space.sm}>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('source.kind')}
-          </Text>
-          <StatusBadge
-            label={domainLabel('vehicleSourceType', sourceType)}
-            color={STATUS_COLOR.ACCENT}
-          />
-        </XStack>
-
-        {source.isPending && canViewFinance ? (
-          <SkeletonText lines={2} />
-        ) : (
-          rows.map((row) => <DataRow key={row.key} label={row.label} value={row.value} />)
-        )}
-
-        {/*
-          Liên kết xuống hồ sơ nguồn xe & tài chính — web có, app thiếu cho tới giờ.
-          Chưa khai nguồn xe thì đổi thành lời mời bổ sung, đúng hai nhánh của web.
-        */}
-        {canViewFinance && !source.isPending && (detail || !source.isError) ? (
-          detail ? (
-            <BlockLink
-              label={t('source.viewLink')}
-              onPress={() =>
-                navigateOnce(ROUTES.manage.vehicleEditTab(vehicle.id, VEHICLE_EDIT_TAB.SOURCE))
-              }
-            />
-          ) : (
-            <YStack gap={space.xs}>
-              <Muted>{t('source.missing')}</Muted>
-              <BlockLink
-                label={t('source.missingLink')}
-                onPress={() =>
-                  navigateOnce(ROUTES.manage.vehicleEditTab(vehicle.id, VEHICLE_EDIT_TAB.SOURCE))
-                }
+    <GroupCard
+      title={t('source.title')}
+      {...(showLinks
+        ? {
+            action: (
+              <CardLink
+                label={detail ? t('source.viewLink') : t('source.addLink')}
+                icon={detail ? 'arrow-right' : 'add'}
+                iconFirst={!detail}
+                onPress={goSource}
               />
-            </YStack>
-          )
-        ) : null}
-      </YStack>
-    </Card>
+            ),
+          }
+        : {})}
+    >
+      <InfoLine label={t('source.kind')}>
+        <Pill label={domainLabel('vehicleSourceType', sourceType)} tone="success" />
+      </InfoLine>
+      {source.isPending && canViewFinance ? (
+        <SkeletonText lines={2} />
+      ) : (
+        rows.map((row) => (
+          <InfoLine key={row.key} label={row.label}>
+            {row.value}
+          </InfoLine>
+        ))
+      )}
+      {showLinks && !detail ? <Muted>{t('source.missing')}</Muted> : null}
+    </GroupCard>
   );
 }
 
+/** Figma "Thư viện ảnh" `24612:142219`: lưới 3 cột ô 100×64 bo 12, khe 12. */
+const MEDIA_TILE_RATIO = 64 / 100;
+const MEDIA_GAP = 12;
+
 /**
- * Thư viện ảnh — bản native của `MediaCard` web (02/10/2026): luôn có mặt (rỗng thì nói rỗng),
- * ảnh bìa đứng đầu kèm nhãn "Ảnh bìa", mỗi ô mang nhãn vị trí, tối đa 6 ô và ô thứ 6 đếm phần dư.
- *
- * Ảnh loại "Ảnh khác" KHÔNG trưng — luật của app, xem `vehicleGalleryItems`.
+ * Thư viện ảnh (tab Tổng quan) - tối đa 6 ô, ô thứ 6 đếm phần dư ("+N", chạm mở đủ lưới). Chạm ảnh
+ * xem toàn màn. "Chỉnh sửa" (✎) dẫn tới mục ảnh của màn sửa xe - chỉ khi người xem sửa được.
  */
 function MediaCard({
   vehicle,
@@ -1847,155 +1733,77 @@ function MediaCard({
   const tStates = useTranslations('Common.states');
   const navigateOnce = useNavigateOnce();
   const slotLabel = useImageSlotLabel();
-  // Bề ngang THẬT của lưới (đo lúc layout) — đệm thẻ đổi theo theme nên không suy từ màn hình được.
   const [gridWidth, setGridWidth] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
-  /*
-   * Web giữ ảnh dư trong nhóm xem trước để mũi tên lướt qua đủ mọi ảnh. `PhotoViewer` của app
-   * xem từng ảnh, nên chạm ô "+N" MỞ RỘNG lưới ra đủ ảnh — mọi ảnh vẫn tới được trình xem.
-   */
   const [expanded, setExpanded] = useState(false);
 
   const items = vehicleGalleryItems(vehicle, slotLabel);
   const overflow = items.length - GALLERY_VISIBLE;
   const visible = expanded ? items : items.slice(0, GALLERY_VISIBLE);
-  const manageHref = canEdit
-    ? vehicleEditPartHref(vehicle.id, VEHICLE_EDIT_TAB.MEDIA, customerScope)
-    : null;
-  // Lưới 3 cột phủ kín bề ngang thẻ: chia ba sau hai khe.
-  const tile = Math.floor((gridWidth - space.xs * (GALLERY_COLUMNS - 1)) / GALLERY_COLUMNS);
+  const manageHref = canEdit ? vehicleEditPartHref(vehicle.id, VEHICLE_EDIT_TAB.MEDIA, customerScope) : null;
+  const tileW = Math.floor((gridWidth - MEDIA_GAP * (GALLERY_COLUMNS - 1)) / GALLERY_COLUMNS);
+  const tileH = Math.round(tileW * MEDIA_TILE_RATIO);
 
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <SectionHeader
-          {...(manageHref
-            ? {
-                action: (
-                  <BlockLink
-                    label={t('media.manageLink')}
-                    onPress={() => navigateOnce(manageHref)}
-                  />
-                ),
-              }
-            : {})}
+    <GroupCard
+      title={t('media.title')}
+      {...(manageHref
+        ? {
+            // Figma `24612:146742`: "✎ Chỉnh sửa" mở mục ảnh của màn sửa xe.
+            action: <CardLink label={t('editMobile')} icon="edit" iconFirst onPress={() => navigateOnce(manageHref)} />,
+          }
+        : {})}
+    >
+      {items.length === 0 ? (
+        <Muted>{t('media.empty')}</Muted>
+      ) : (
+        <XStack
+          flexWrap="wrap"
+          gap={MEDIA_GAP}
+          accessibilityLabel={t('media.title')}
+          onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
         >
-          {t('media.title')}
-        </SectionHeader>
-        {items.length === 0 ? (
-          <XStack ai="center" gap={space.sm}>
-            <Ionicons name="image-outline" size={iconSize.md} color={colors.textMuted} />
-            <Muted>{t('media.empty')}</Muted>
-          </XStack>
-        ) : (
-          <XStack
-            flexWrap="wrap"
-            gap={space.xs}
-            accessibilityLabel={t('media.title')}
-            onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
-          >
-            {tile > 0 &&
-              visible.map((item, index) => {
-                const isMore = !expanded && index === GALLERY_VISIBLE - 1 && overflow > 0;
-                return (
-                  /*
-                  Chạm để xem TOÀN MÀN — ở cỡ ô nhỏ không nhìn ra vết xước hay móp, tức không dùng
-                  được vào đúng việc người ta mở thư viện ra để làm.
-                */
-                  <Pressable
-                    key={`${index}-${item.url}`}
-                    onPress={() => (isMore ? setExpanded(true) : setPreview(item.url))}
-                    accessibilityRole="imagebutton"
-                    accessibilityLabel={
-                      isMore
-                        ? t('media.more', { count: overflow })
-                        : (item.label ?? t('media.title'))
-                    }
-                  >
-                    <YStack
-                      w={tile}
-                      h={tile}
-                      br={radius.sm}
-                      overflow="hidden"
-                      bg={colors.surfaceMuted}
-                    >
-                      <Image
-                        source={{ uri: item.url }}
-                        style={StyleSheet.absoluteFill}
-                        cachePolicy="memory-disk"
-                        transition={150}
-                        accessible={false}
-                      />
-                      {index === 0 && item.url === vehicle.mainImageUrl ? (
-                        <XStack
-                          pos="absolute"
-                          top={space.xs}
-                          left={space.xs}
-                          ai="center"
-                          gap={2}
-                          px={space.xs}
-                          py={1}
-                          br={radius.pill}
-                          bg={colors.primary}
-                        >
-                          <Ionicons name="star" size={10} color={colors.text} />
-                          <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-                            {t('media.cover')}
-                          </Text>
-                        </XStack>
-                      ) : null}
-                      {item.label ? (
-                        <YStack
-                          pos="absolute"
-                          bottom={0}
-                          left={0}
-                          right={0}
-                          px={space.xs}
-                          py={2}
-                          bg={colors.overlay}
-                        >
-                          <Text col={colors.textInverse} fos={fontSize.label} numberOfLines={1}>
-                            {item.label}
-                          </Text>
-                        </YStack>
-                      ) : null}
-                      {isMore ? (
-                        <YStack
-                          pos="absolute"
-                          top={0}
-                          bottom={0}
-                          left={0}
-                          right={0}
-                          ai="center"
-                          jc="center"
-                          bg={colors.overlay}
-                        >
-                          <Text
-                            col={colors.textInverse}
-                            fos={fontSize.bodyLg}
-                            fow={fontWeight.bold}
-                          >
-                            {t('media.more', { count: overflow })}
-                          </Text>
-                        </YStack>
-                      ) : null}
-                    </YStack>
-                  </Pressable>
-                );
-              })}
-          </XStack>
-        )}
-      </YStack>
-
-      <PhotoViewer
-        url={preview}
-        unavailableLabel={tStates('imageUnavailable')}
-        onClose={() => setPreview(null)}
-      />
-    </Card>
+          {tileW > 0 &&
+            visible.map((item, index) => {
+              const isMore = !expanded && index === GALLERY_VISIBLE - 1 && overflow > 0;
+              return (
+                <Pressable
+                  key={`${index}-${item.url}`}
+                  onPress={() => (isMore ? setExpanded(true) : setPreview(item.url))}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={isMore ? t('media.more', { count: overflow }) : (item.label ?? t('media.title'))}
+                >
+                  <YStack w={tileW} h={tileH} br={radius.control} overflow="hidden" bg={colors.surfaceMuted}>
+                    <Image
+                      source={{ uri: item.url }}
+                      style={StyleSheet.absoluteFill}
+                      cachePolicy="memory-disk"
+                      recyclingKey={item.url}
+                      accessible={false}
+                    />
+                    {isMore ? (
+                      <YStack pos="absolute" top={0} bottom={0} left={0} right={0} ai="center" jc="center" bg={colors.overlay}>
+                        <Text col={colors.textInverse} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+                          {t('media.more', { count: overflow })}
+                        </Text>
+                      </YStack>
+                    ) : null}
+                  </YStack>
+                </Pressable>
+              );
+            })}
+        </XStack>
+      )}
+      <PhotoViewer url={preview} unavailableLabel={tStates('imageUnavailable')} onClose={() => setPreview(null)} />
+    </GroupCard>
   );
 }
 
+/**
+ * Hoạt động gần đây - Figma `24612:142748`: mỗi đơn một mục dòng thời gian - chấm 10 màu trạng thái ·
+ * khách (14 đậm) · số tiền (14 đậm `text/gray/medium`); vạch dọc 1px nối xuống; "Đơn X · khoảng ngày",
+ * mốc thời gian (xám) + viên trạng thái bo 6. Mục cách nhau 20.
+ */
 function ActivityCard({
   bookings,
   loading,
@@ -2010,79 +1818,55 @@ function ActivityCard({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const shortRange = useShortRange();
+  const pillSkin = usePillSkin();
 
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <SectionHeader icon="time-outline">{t('activity.title')}</SectionHeader>
-        {loading ? (
-          <SkeletonText lines={3} />
-        ) : failed || bookings === undefined ? (
-          <Muted>{t('loadFailed')}</Muted>
-        ) : bookings.length === 0 ? (
-          <Muted>{t('activity.empty')}</Muted>
-        ) : (
-          bookings.map((booking, index) => {
-            const icon = activityIcon(booking.status, colors);
+    <GroupCard title={t('activity.title')}>
+      {loading ? (
+        <SkeletonText lines={3} />
+      ) : failed || bookings === undefined ? (
+        <Muted>{t('loadFailed')}</Muted>
+      ) : bookings.length === 0 ? (
+        <Muted>{t('activity.empty')}</Muted>
+      ) : (
+        <YStack gap={20}>
+          {bookings.map((booking) => {
+            const tone = pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, booking.status));
             return (
-              <YStack key={booking.id} gap={space.xs}>
-                {index > 0 ? <Divider /> : null}
-                <XStack gap={space.sm} pt={index > 0 ? space.xs : 0}>
-                  {/* Cột biểu tượng như web: màu nói trạng thái, hình neo dòng thời gian. */}
-                  <YStack
-                    w={ACTIVITY_ICON_BOX}
-                    h={ACTIVITY_ICON_BOX}
-                    br={radius.pill}
-                    bg={colors.surfaceMuted}
-                    ai="center"
-                    jc="center"
-                  >
-                    <Ionicons name={icon.name} size={iconSize.sm} color={icon.color} />
+              <YStack key={booking.id} gap={6}>
+                <XStack ai="center" gap={space.sm}>
+                  <YStack w={10} h={10} br={radius.pill} bg={pillSkin[tone].fg} />
+                  <Text f={1} minWidth={0} col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold} numberOfLines={1}>
+                    {booking.customerName}
+                  </Text>
+                  <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
+                    {fmt.money(booking.totalAmount)}
+                  </Text>
+                </XStack>
+                <XStack gap={6}>
+                  <YStack w={10} ai="center">
+                    <YStack w={1} f={1} bg={colors.border} />
                   </YStack>
-
-                  {/*
-                    BA HÀNG chồng nhau, không phải "tiêu đề và mốc chia nhau một hàng".
-
-                    Hàng đó luôn hỏng: tiêu đề (`Đơn DH4WSDQ9 · Đã giữ xe`) và mốc thời gian đều
-                    là chuỗi không rút ngắn được, cộng lại đã sát bề ngang khả dụng ở cỡ chữ mặc
-                    định — chỉ cần người dùng phóng chữ hệ thống lên một nấc là một trong hai bị
-                    cắt. Xếp dọc thì mỗi mảnh có trọn bề ngang và không mảnh nào phải nhường.
-
-                    Đổi lại là mất một dòng cho mỗi mục, nên mốc thời gian dùng cỡ `label` và
-                    đứng CUỐI: nó là thứ ít được đọc nhất trong ba.
-                  */}
-                  <YStack f={1} gap={2}>
-                    <XStack gap={space.sm} ai="flex-start">
-                      <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                        {booking.customerName}
-                      </Text>
-                      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                        {fmt.money(booking.totalAmount)}
-                      </Text>
-                    </XStack>
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {t('activity.bookingRange', {
+                  <YStack f={1} minWidth={0} gap={6}>
+                    <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                      {t('activity.bookingRangeApp', {
                         code: booking.code,
                         range: shortRange(booking.pickupAt, booking.returnAt),
                       })}
                     </Text>
-                    <XStack ai="center" jc="space-between" gap={space.sm} flexWrap="wrap">
-                      <Text col={colors.textMuted} fos={fontSize.label}>
+                    <XStack ai="center" jc="space-between" gap={space.sm}>
+                      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
                         {fmt.shortDateTime(booking.updatedAt)}
                       </Text>
-                      <StatusBadge
-                        label={domainLabel('bookingStatus', booking.status)}
-                        color={metaColor(BOOKING_STATUS_META, booking.status)}
-                        size="sm"
-                      />
+                      <Pill label={domainLabel('bookingStatus', booking.status)} tone={tone} shape="tag" />
                     </XStack>
                   </YStack>
                 </XStack>
               </YStack>
             );
-          })
-        )}
-      </YStack>
-    </Card>
+          })}
+        </YStack>
+      )}
+    </GroupCard>
   );
 }

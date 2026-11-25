@@ -122,6 +122,75 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: 'time-outline',
 };
 
+/**
+ * HÌNH của một thông báo theo design v2 (Figma "Notification Item", tấm Thông báo `24512:124878`,
+ * người dùng chốt 20/11/2026 cho cả hai app): Figma chỉ có bốn hình - tờ đơn CAM (việc thường),
+ * tờ đơn ĐỎ (gấp/không thành), xe XANH (xe · chuyến · bàn giao), tin nhắn CAM (hỗ trợ · chat) -
+ * thêm ví cam cho các khoản tiền (icon ví của cùng file Figma). Chỉ là TRÌNH BÀY, đích bấm vẫn do
+ * `notificationHref` quyết.
+ *
+ * `Record` ĐẦY ĐỦ như `ICONS`: thêm loại mới mà quên xếp nhóm là lỗi biên dịch.
+ */
+export type NotificationLook = 'doc' | 'urgent' | 'car' | 'chat' | 'money';
+
+const LOOKS: Readonly<Record<NotificationType, NotificationLook>> = {
+  [NOTIFICATION_TYPE.BOOKING_CREATED]: 'doc',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED]: 'doc',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_APPROVED]: 'doc',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED]: 'doc',
+  [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: 'doc',
+  [NOTIFICATION_TYPE.SHOP_APPROVED]: 'doc',
+  [NOTIFICATION_TYPE.SHOP_NEEDS_REVISION]: 'doc',
+  [NOTIFICATION_TYPE.REVIEW_RECEIVED]: 'doc',
+  [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: 'doc',
+  [NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED]: 'doc',
+  [NOTIFICATION_TYPE.FREE_TRIPS_EXHAUSTED]: 'doc',
+  [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: 'doc',
+  [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: 'doc',
+  [NOTIFICATION_TYPE.SELLER_PROFILE_CHANGES_REQUESTED]: 'doc',
+  [NOTIFICATION_TYPE.DRIVER_INVITED]: 'doc',
+  [NOTIFICATION_TYPE.DRIVER_INVITE_ACCEPTED]: 'doc',
+  [NOTIFICATION_TYPE.DRIVER_LINK_ENDED]: 'doc',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: 'urgent',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: 'urgent',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: 'urgent',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: 'urgent',
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_TAKEN]: 'urgent',
+  [NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST]: 'urgent',
+  [NOTIFICATION_TYPE.SHOP_REJECTED]: 'urgent',
+  [NOTIFICATION_TYPE.VEHICLE_REJECTED]: 'urgent',
+  [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRED]: 'urgent',
+  [NOTIFICATION_TYPE.SUBSCRIPTION_LAPSED]: 'urgent',
+  [NOTIFICATION_TYPE.HOLD_EXPIRING]: 'urgent',
+  [NOTIFICATION_TYPE.HOLD_EXPIRED]: 'urgent',
+  [NOTIFICATION_TYPE.WITHDRAWAL_REJECTED]: 'urgent',
+  [NOTIFICATION_TYPE.WITHDRAWAL_REVERSED]: 'urgent',
+  [NOTIFICATION_TYPE.SELLER_PROFILE_REJECTED]: 'urgent',
+  [NOTIFICATION_TYPE.DRIVER_INVITE_DECLINED]: 'urgent',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: 'urgent',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: 'urgent',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_RESPONSE_EXPIRED]: 'urgent',
+  [NOTIFICATION_TYPE.BOOKING_DRIVER_MISSING]: 'urgent',
+  [NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED]: 'car',
+  [NOTIFICATION_TYPE.VEHICLE_APPROVED]: 'car',
+  [NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION]: 'car',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: 'car',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: 'car',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: 'car',
+  [NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED]: 'chat',
+  [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED]: 'chat',
+  [NOTIFICATION_TYPE.HOLD_REQUESTED]: 'money',
+  [NOTIFICATION_TYPE.HOLD_PAID]: 'money',
+  [NOTIFICATION_TYPE.HOLD_REFUNDED]: 'money',
+  [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: 'money',
+  [NOTIFICATION_TYPE.WITHDRAWAL_PAID]: 'money',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_WAGE_CHANGED]: 'money',
+};
+
+export function notificationLook(type: string): NotificationLook {
+  return LOOKS[type as NotificationType] ?? 'doc';
+}
+
 export function notificationIcon(type: string): IconName {
   return ICONS[type as NotificationType] ?? 'notifications-outline';
 }

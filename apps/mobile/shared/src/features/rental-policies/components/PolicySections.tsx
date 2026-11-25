@@ -463,6 +463,7 @@ export function PolicySections<T extends PolicyFormValues>({
   blocks = ALL_POLICY_BLOCKS,
   shopWorkspace,
   afterDelivery,
+  afterRules,
   onAnchorLayout,
 }: {
   /**
@@ -481,6 +482,8 @@ export function PolicySections<T extends PolicyFormValues>({
   shopWorkspace?: { vehicleType: VehicleType };
   /** Khối đứng ngay sau "Giao nhận xe" — màn gian hàng đặt "Thời gian chết" ở đó, như web. */
   afterDelivery?: ReactNode;
+  /** Khối nối vào CUỐI nhóm quy định (web: bảo hiểm Bắt buộc/Tuỳ chọn sau giới hạn - ADR 0091). */
+  afterRules?: ReactNode;
   /**
    * Đo vị trí ba đích của mục lục (web `POLICY_NAV`: quy định · giao nhận · dài hạn) — toạ độ tương
    * đối với khung của `PolicySections`. Chỉ màn gian hàng dùng.
@@ -599,6 +602,7 @@ export function PolicySections<T extends PolicyFormValues>({
           collateral,
           mileage,
           overtime,
+          afterRules,
         ])}
         {group(POLICY_ANCHOR.DELIVERY, tShopWorkspace('delivery.title'), [delivery, afterDelivery])}
         {group(POLICY_ANCHOR.LONG_TERM, tShopWorkspace('longTerm.title'), [discount])}
@@ -621,6 +625,7 @@ export function PolicySections<T extends PolicyFormValues>({
       {afterDelivery}
       {mileage}
       {overtime}
+      {afterRules}
       {discount ? (
         <YStack onLayout={(e) => onAnchorLayout?.(POLICY_ANCHOR.LONG_TERM, e.nativeEvent.layout.y)}>
           {discount}
@@ -1300,7 +1305,7 @@ function LongTermDiscountSection({
                     editable={!disabled}
                   />
                   {/* Ghi chú: chỗ gian hàng nhớ VÌ SAO đặt mốc này — web có, đừng bỏ. */}
-                  <TextField
+                  <TextField multiline scrollable rows={3}
                     control={control}
                     name={`discountTiers.${index}.note`}
                     label={t('tierNote')}

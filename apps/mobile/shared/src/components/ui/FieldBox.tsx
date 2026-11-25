@@ -1,6 +1,6 @@
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, YStack } from 'tamagui';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
 import type { IconName } from './Chip';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontWeight, iconSize, space } from '@/theme/tokens';
@@ -29,7 +29,7 @@ export function FieldBox({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} hint={inLabelHint(hint)} />
 
       <FieldShell
         onPress={onPress}
@@ -50,7 +50,7 @@ export function FieldBox({
         <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
       </FieldShell>
 
-      <FieldMessage error={error} hint={hint} />
+      <FieldMessage error={error} hint={belowHint(hint)} />
     </YStack>
   );
 }

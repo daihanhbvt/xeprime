@@ -4,6 +4,7 @@ import '@/lib/api-client';
 export { vehicleDocumentsApi } from '@/api/vehicle-documents/api';
 
 export type {
+  VehicleInsuranceStatus,
   ApplyOcrFieldsInput,
   DocumentDownload,
   SaveVehicleDocumentInput,

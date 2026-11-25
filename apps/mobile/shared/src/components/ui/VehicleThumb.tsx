@@ -15,8 +15,8 @@ export const VehicleThumb = memo(function VehicleThumb({
   accessibilityLabel,
   size = 'md',
 }: {
-  /** `md` 85×54 bo 12 (thẻ tóm tắt tấm duyệt) · `sm` 63×40 bo 8 (thẻ xe Danh sách xe - Figma "Vehicle Image"). */
-  size?: 'sm' | 'md';
+  /** `md` 85×54 bo 12 (thẻ tóm tắt tấm duyệt) · `sm` 63×40 bo 8 (thẻ xe Danh sách xe - Figma "Vehicle Image") · `card` 76×52 bo 10 (thẻ đơn của Chi tiết khách - Figma `24486:63334`). */
+  size?: 'sm' | 'md' | 'card';
   uri?: string | null;
   recyclingKey?: string;
   accessibilityLabel?: string;
@@ -39,4 +39,5 @@ export const VehicleThumb = memo(function VehicleThumb({
 const SIZE = {
   md: { width: 85, height: 54, radius: radius.control },
   sm: { width: 63, height: 40, radius: radius.thumb },
+  card: { width: 76, height: 52, radius: 10 },
 } as const;

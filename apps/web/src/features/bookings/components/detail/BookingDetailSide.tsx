@@ -196,6 +196,7 @@ export function PaymentSideCard() {
   const fmt = useAppFormat();
   const { has } = usePermissions();
   const { booking, closed, moneyClosed, openFee } = useBookingDetailActions();
+  const hasDeposit = !isZeroMoney(booking.depositAmount);
   const prepaid = isZeroMoney(booking.ownerShareOnlineAmount)
     ? null
     : booking.ownerShareOnlineAmount;
@@ -207,14 +208,31 @@ export function PaymentSideCard() {
   );
   const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
   const settled = isZeroMoney(booking.counterDueAmount);
+  const dueHint = settled
+    ? t('dueSettled')
+    : booking.actualPickupAt
+      ? t('dueAfterPickup')
+      : t('dueAtPickup');
   const unit = booking.ownerPayout?.unitAmount ?? null;
   const days = booking.ownerPayout?.rentalDays ?? null;
 
   return (
-    <section className={styles.sideCard} aria-label={t('payment')}>
-      <h2 className={styles.sideTitle}>{t('payment')}</h2>
+    <section className={cx(styles.sideCard, styles.paymentCard)} aria-label={t('payment')}>
+      <h2 className={styles.sideTitle}>
+        {t('payment')}
+        {/* "Chưa gồm cọc tài sản…" thành dấu "i" cạnh tiêu đề - rê chuột mới hiện (người dùng 20/11/2026). */}
+        {hasDeposit ? (
+          <>
+            {' '}
+            <InfoHint
+              label={t('payment')}
+              content={t('depositNote', { amount: fmt.money(booking.depositAmount) })}
+            />
+          </>
+        ) : null}
+      </h2>
       <dl className={styles.moneyRows}>
-        <div>
+        <div className={styles.moneyRowRent}>
           <dt>
             {t('rent')}
             {unit && days ? (
@@ -229,7 +247,7 @@ export function PaymentSideCard() {
             <dd className={styles.negative}>−{fmt.money(booking.discountAmount)}</dd>
           </div>
         ) : null}
-        <div>
+        <div className={styles.moneyRowDelivery}>
           <dt>{t('deliveryFee')}</dt>
           <dd className={styles.editable}>
             {isZeroMoney(booking.deliveryFee) ? t('free') : fmt.money(booking.deliveryFee)}
@@ -251,7 +269,7 @@ export function PaymentSideCard() {
             <dd>+{fmt.money(booking.surchargeTotal)}</dd>
           </div>
         ) : null}
-        <div className={styles.moneyStrong}>
+        <div className={cx(styles.moneyStrong, styles.moneyDesktopOnly)}>
           <dt>{t('amountDue')}</dt>
           <dd>{fmt.money(booking.amountDue)}</dd>
         </div>
@@ -303,27 +321,38 @@ export function PaymentSideCard() {
       */}
       {moneyClosed ? null : (
         <div
-          className={cx(styles.moneyDue, settled && styles.moneyDueSettled)}
+          className={cx(
+            styles.moneyDue,
+            styles.moneyDesktopOnly,
+            settled && styles.moneyDueSettled,
+          )}
           role="status"
           aria-label={`${t('dueTitle')}: ${fmt.money(booking.counterDueAmount)}`}
         >
           <span className={styles.moneyDueLabel}>{t('dueTitle')}</span>
           <strong className={styles.moneyDueAmount}>{fmt.money(booking.counterDueAmount)}</strong>
-          <span className={styles.moneyDueHint}>
-            {settled
-              ? t('dueSettled')
-              : booking.actualPickupAt
-                ? t('dueAfterPickup')
-                : t('dueAtPickup')}
-          </span>
+          <span className={styles.moneyDueHint}>{dueHint}</span>
         </div>
       )}
-      {/* Cọc tài sản là tiền GIỮ rồi trả lại — không cộng vào số phải thu ở trên. */}
-      {!isZeroMoney(booking.depositAmount) ? (
-        <p className={styles.moneyNote}>
-          {t('depositNote', { amount: fmt.money(booking.depositAmount) })}
-        </p>
-      ) : null}
+      {/*
+        Khổ điện thoại (Figma Partner): cùng số `counterDueAmount`, dựng thành một dòng sau đường kẻ
+        thay cho ô nổi bật; câu "thu lúc nào" chuyển vào dấu "i" cạnh nhãn. Desktop giữ ô ở trên.
+      */}
+      {moneyClosed ? null : (
+        <div
+          className={cx(styles.moneyDuePhone, settled && styles.moneyDuePhoneSettled)}
+          role="status"
+          aria-label={`${t('partnerApp.due')}: ${fmt.money(booking.counterDueAmount)}`}
+        >
+          <span className={styles.moneyLabel}>
+            {t('partnerApp.due')}
+            <InfoHint label={t('partnerApp.due')} content={dueHint} />
+          </span>
+          <strong className={styles.moneyDuePhoneAmount}>
+            {fmt.money(booking.counterDueAmount)}
+          </strong>
+        </div>
+      )}
     </section>
   );
 }

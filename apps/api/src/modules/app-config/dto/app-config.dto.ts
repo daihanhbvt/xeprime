@@ -37,12 +37,18 @@ export class PartnerAppConfigDto {
 
   @ApiProperty({ example: 3, description: 'Tăng 1 mỗi lần cấu hình đổi.' })
   version!: number;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '1900 1234',
+    description: 'Hotline hỗ trợ đối tác - Trung tâm hỗ trợ của app Partner hiện kèm nút gọi. `null` = ẩn dòng.',
+  })
+  supportHotline!: string | null;
 }
 
 /** Bản đầy đủ cho admin. */
 export class PartnerAppConfigAdminDto extends PartnerAppConfigDto {
-  @ApiProperty({ type: String, nullable: true, example: '1900 1234' })
-  supportHotline!: string | null;
 
   @ApiProperty({ type: String, nullable: true, example: '0901234567' })
   supportZalo!: string | null;

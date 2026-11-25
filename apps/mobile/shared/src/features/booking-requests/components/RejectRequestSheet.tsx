@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
-import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import { REASON_MAX } from '@/lib/reason';
@@ -9,11 +8,8 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { SelectControl, type SelectControlOption } from '@/components/ui/SelectControl';
 import { TextField } from '@/components/ui/TextField';
-import { VehicleThumb } from '@/components/ui/VehicleThumb';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontWeight, radius, typeScale } from '@/theme/tokens';
 import type { BookingRequestDecisionTarget } from '../api';
-import { DecisionFooter, richBold } from './DecisionSheetParts';
+import { DecisionFooter, DecisionSummaryCard, useDecisionCodeLine } from './DecisionSheetParts';
 
 const PRESET_KEYS = [
   'vehicleUnavailable',
@@ -61,8 +57,9 @@ export function RejectRequestSheet({
   onConfirm: (reason: string) => void;
   loading: boolean;
 }) {
-  const colors = useColors();
   const t = useTranslations('BookingRequests.reject');
+  const tApp = useTranslations('BookingRequests.reject.partnerApp');
+  const codeLine = useDecisionCodeLine(request);
 
   const schema = useRejectSchema();
   const { control, handleSubmit, setValue, getValues } = useForm<RejectValues>({
@@ -104,8 +101,9 @@ export function RejectRequestSheet({
       onClose={onClose}
       chrome="v2"
       headerDivider
-      title={t('title')}
-      subtitle={t.rich('subtitle', { b: richBold })}
+      // App: "Từ chối yêu cầu" · "#mã" như Figma `24145:97092` (web giữ câu dẫn dài).
+      title={tApp('title')}
+      {...(codeLine ? { subtitle: codeLine } : {})}
       footer={
         <DecisionFooter
           leading={
@@ -128,38 +126,10 @@ export function RejectRequestSheet({
         />
       }
     >
-      {/* Figma "Vehicle Summary" `24145:97095`: nền `bg/gray-50`, đệm 12, bo 16. */}
-      <XStack
-        ai="center"
-        gap={SUMMARY_GAP}
-        p={SUMMARY_PAD}
-        br={radius.card}
-        bg={colors.background}
-        accessibilityLabel={t('context', { customer: request.customerName, vehicle: request.vehicleName })}
-      >
-        <VehicleThumb uri={request.vehicleImageUrl ?? null} recyclingKey={request.vehicleId} />
-        <YStack f={1} minWidth={0} gap={4}>
-          <Text
-            col={colors.text}
-            fos={typeScale.title.fontSize}
-            lh={typeScale.title.lineHeight}
-            fow={fontWeight.semibold}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {request.customerName}
-          </Text>
-          <Text
-            col={colors.textBody}
-            fos={typeScale.body.fontSize}
-            lh={typeScale.body.lineHeight}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {request.vehicleName}
-          </Text>
-        </YStack>
-      </XStack>
+      <DecisionSummaryCard
+        request={request}
+        label={t('context', { customer: request.customerName, vehicle: request.vehicleName })}
+      />
 
       <SelectControl
         label={t('presetLabel')}
@@ -176,7 +146,6 @@ export function RejectRequestSheet({
         name="reason"
         label={t('reasonLabel')}
         placeholder={t('reasonPlaceholder')}
-        hint={t('reasonHint')}
         multiline
         rows={4}
         maxLength={REASON_MAX}
@@ -185,7 +154,3 @@ export function RejectRequestSheet({
     </BottomSheet>
   );
 }
-
-/** Figma thẻ tóm tắt: đệm 12, ảnh ↔ chữ 12. */
-const SUMMARY_PAD = 12;
-const SUMMARY_GAP = 12;

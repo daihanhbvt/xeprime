@@ -49,6 +49,7 @@ import {
   useSupportCase,
   useTransitionSupportCase,
 } from './hooks/use-support-cases';
+import { TenantCaseThread } from './components/TenantCaseThread';
 
 /**
  * Một yêu cầu hỗ trợ — bản native của `SupportCaseDetailPanel`, bề mặt KHÁCH và GIAN HÀNG.
@@ -130,6 +131,18 @@ export function SupportCaseDetailScreen({
           />
         </Screen>
       </>
+    );
+  }
+
+  // Gian hàng: bố cục hội thoại theo Figma Partner (`24232:118901`); khách giữ bố cục cũ.
+  if (surface === SUPPORT_SURFACE.TENANT) {
+    return (
+      <TenantCaseThread
+        row={query.data}
+        onBack={back}
+        refreshing={pull.refreshing}
+        onRefresh={pull.onRefresh}
+      />
     );
   }
 

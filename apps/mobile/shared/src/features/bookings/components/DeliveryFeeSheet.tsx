@@ -115,7 +115,7 @@ export function DeliveryFeeSheet({
         label={t('noteLabel')}
         placeholder={t('notePlaceholder')}
         hint={t('noteHint')}
-        multiline
+        multiline scrollable
         rows={3}
         maxLength={NOTE_MAX}
       />

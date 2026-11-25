@@ -117,7 +117,6 @@ export function PlanConsultationSheet({ open, onClose }: { open: boolean; onClos
         ) : (
           <Button
             label={t('submit')}
-            icon="send-outline"
             loading={submitMutation.isPending}
             onPress={() => void submit()}
           />

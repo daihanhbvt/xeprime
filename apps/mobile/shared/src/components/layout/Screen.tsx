@@ -1,3 +1,5 @@
+import { PartnerBackdrop } from '@/components/layout/PartnerBackdrop';
+import { useTabBarAutoHide } from '@/hooks/use-tab-bar-auto-hide';
 import { useBottomInsetConsumed, useTabBarInset } from './tab-bar-inset';
 import {
   useCallback,
@@ -281,9 +283,12 @@ export function Screen({
   const offsetRef = useRef(scrollOffset);
   offsetRef.current = scrollOffset;
   const readScrollY = () => (offsetRef.current ? offsetRef.current.value : scrollY.current);
+  // App Partner: cuộn xuống ẩn thanh menu đáy, cuộn lên hiện lại (feedback thiết kế 20/11/2026).
+  const autoHideTabBar = useTabBarAutoHide();
   const animatedScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       if (scrollOffset) scrollOffset.value = event.contentOffset.y;
+      autoHideTabBar?.(event.contentOffset.y);
     },
   });
 
@@ -432,6 +437,7 @@ export function Screen({
           ? animatedScrollHandler
           : (event: { nativeEvent: { contentOffset: { y: number } } }) => {
               scrollY.current = event.nativeEvent.contentOffset.y;
+              autoHideTabBar?.(event.nativeEvent.contentOffset.y);
             }
       }
       scrollEventThrottle={scrollOffset ? 16 : SCROLL_REPORT_MS}
@@ -472,6 +478,8 @@ export function Screen({
       style={surface ? [styles.flex, styles.surface] : styles.flex}
       {...(safeEdges ? { edges: safeEdges } : {})}
     >
+      {/* Nền gradient nhạt của app Partner (feedback thiết kế 20/11/2026) - màn nền trắng thì không. */}
+      {surface ? null : <PartnerBackdrop />}
       {/*
         CÙNG cơ chế với `BottomSheet` (`behavior="padding"` cho cả hai nền), cộng thêm thứ tấm
         trượt không cần: `keyboardVerticalOffset`.

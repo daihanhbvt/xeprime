@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Switch } from 'react-native';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isLogoOnlyGate, packageShopListingGateFrom } from '@xeprime/domain';
@@ -168,16 +169,27 @@ export function MarketplaceVisibilityRow({
           <MarketplaceState vehicle={vehicle} />
         )}
         {canManage ? (
-          <Switch
-            value={pending ?? vehicle.marketplaceEnabled}
-            onValueChange={onChange}
-            // Khoá trong lúc gọi để một cú chạm kép không bắn hai lượt ngược chiều nhau.
-            disabled={toggle.isPending}
-            accessibilityLabel={t('ariaLabel', { name: vehicle.name })}
-            trackColor={SWITCH_TRACK}
-            thumbColor={colors.surface}
-            ios_backgroundColor={colors.borderInput}
-          />
+          compact ? (
+            /* Chi tiết xe: Figma `_Toggle base` 36×20 (cỡ sm). */
+            <ToggleSwitch
+              size="sm"
+              value={pending ?? vehicle.marketplaceEnabled}
+              onValueChange={onChange}
+              disabled={toggle.isPending}
+              accessibilityLabel={t('ariaLabel', { name: vehicle.name })}
+            />
+          ) : (
+            <Switch
+              value={pending ?? vehicle.marketplaceEnabled}
+              onValueChange={onChange}
+              // Khoá trong lúc gọi để một cú chạm kép không bắn hai lượt ngược chiều nhau.
+              disabled={toggle.isPending}
+              accessibilityLabel={t('ariaLabel', { name: vehicle.name })}
+              trackColor={SWITCH_TRACK}
+              thumbColor={colors.surface}
+              ios_backgroundColor={colors.borderInput}
+            />
+          )
         ) : null}
       </XStack>
       <AlertDialog

@@ -427,8 +427,8 @@ function SourceForm({
                 name="notes"
                 label={t('contract.notes')}
                 placeholder={t('contract.notesPlaceholder')}
-                multiline
-                rows={4}
+                multiline scrollable
+                rows={3}
                 maxLength={4000}
                 editable={canEdit}
               />

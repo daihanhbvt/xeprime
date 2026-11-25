@@ -1,7 +1,13 @@
-import { Fragment, memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { bankDisplayName, nowInAppTz } from '@xeprime/domain';
+import {
+  absoluteMoney,
+  bankDisplayName,
+  isNegativeMoney,
+  isZeroMoney,
+  nowInAppTz,
+} from '@xeprime/domain';
 import {
   STATUS_COLOR,
   WALLET_ACTIVITY_SOURCE,
@@ -12,12 +18,14 @@ import {
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import { SectionHeader } from '@/components/ui/CardTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
-import { Divider } from '@/components/ui/DataRow';
-import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
+import {
+  MONTH_PERIOD_FORMAT,
+  MonthPeriodField,
+  periodLabel,
+} from '@/components/ui/MonthPeriodField';
 import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
@@ -27,7 +35,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
 import {
   WALLET_ACTIVITY_PAGE_SIZE,
   WALLET_SCOPE,
@@ -35,8 +43,6 @@ import {
   type WalletStatementFilters,
 } from '@/api/wallet/api';
 import { useCancelWithdrawal, useWalletActivity } from '../hooks/use-wallet';
-import { SignedAmount } from './WalletStatementPanel';
-import { layout } from '@/theme/layout';
 
 /**
  * Tab "Biến động số dư" của trang Số dư gian hàng — bản native của `WalletActivityPanel` (web,
@@ -65,9 +71,11 @@ export function WalletActivityPanel({
 
   return (
     <YStack gap={space.sm}>
-      <SectionHeader icon="swap-vertical-outline">{t('activity.title')}</SectionHeader>
-
+      {/* Ô tháng trải ngang "Tháng 10/2026" ngay dưới hàng tab (Figma `24612:145586`). */}
       <MonthPeriodField
+        variant="compact"
+        block
+        display={t('month.value', { month: periodLabel(filters.period) })}
         label={t('statement.period')}
         value={filters.period}
         maxPeriod={maxPeriod}
@@ -101,12 +109,9 @@ export function WalletActivityPanel({
             <Text pb={space.xs} fos={fontSize.label} col={colors.textMuted}>
               {t('activity.totalLabel', { count: data.total })}
             </Text>
-            <YStack mx={-space.md}>
+            <YStack gap={space.sm}>
               {data.items.map((row, index) => (
-                <Fragment key={row.id}>
-                  {index > 0 ? <Divider /> : null}
-                  <ActivityRow row={row} />
-                </Fragment>
+                <ActivityRow key={row.id} row={row} last={index === data.items.length - 1} />
               ))}
             </YStack>
             {data.total > (data.limit ?? WALLET_ACTIVITY_PAGE_SIZE) ? (
@@ -148,7 +153,7 @@ function isVoidWithdrawal(row: WalletActivity): boolean {
   );
 }
 
-function ActivityRowImpl({ row }: { row: WalletActivity }) {
+function ActivityRowImpl({ row, last }: { row: WalletActivity; last: boolean }) {
   const colors = useColors();
   const t = useTranslations('Wallet');
   const tCommon = useTranslations('Common');
@@ -187,47 +192,83 @@ function ActivityRowImpl({ row }: { row: WalletActivity }) {
 
   const muted = isVoidWithdrawal(row);
 
+  const negative = isNegativeMoney(row.amount);
+  const amountText = isZeroMoney(row.amount)
+    ? fmt.money('0')
+    : `${negative ? '-' : '+'}${fmt.money(absoluteMoney(row.amount) ?? '0')}`;
+
+  /*
+   * Figma "Transaction" `24612:145588`: hàng 1 mã (14 semibold) + viên trạng thái; hàng 2 loại
+   * giao dịch (14 medium) + giờ (12 `text/gray/low`) bên trái, số tiền (14 medium, màu chữ thường,
+   * có dấu) + "SD: …" bên phải. Kẻ đáy `stroke/gray-low200`, đệm đáy 8, khe 8. Các dòng phụ (ngân
+   * hàng, lý do, hạn chuyển) và nút huỷ lệnh rút giữ ở dưới (người dùng chốt 25/11/2026).
+   */
   return (
-    <YStack px={layout.padX} py={space.sm} gap={space.xs}>
-      <XStack ai="flex-start" gap={space.sm}>
+    <YStack
+      gap={space.sm}
+      pb={space.sm}
+      {...(last ? {} : { borderBottomWidth: 1, borderColor: colors.border })}
+    >
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <Text
+          f={1}
+          col={colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.semibold}
+          numberOfLines={1}
+          {...(row.bookingId
+            ? {
+                onPress: () => navigateOnce(ROUTES.manage.bookingDetail(row.bookingId!)),
+                accessibilityRole: 'link' as const,
+              }
+            : {})}
+        >
+          {row.code ?? ''}
+        </Text>
+        <Pill label={statusLabel} tone={pillToneOfStatusColor(statusColor)} />
+      </XStack>
+
+      <XStack ai="flex-start" jc="space-between" gap={space.sm}>
         <YStack f={1} minWidth={0} gap={2}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={2}>
+          <Text
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+            numberOfLines={2}
+          >
             {kind}
           </Text>
-          {row.code ? (
-            <Text
-              col={row.bookingId ? colors.primaryActive : colors.textMuted}
-              fos={fontSize.label}
-              numberOfLines={1}
-              {...(row.bookingId
-                ? {
-                    onPress: () => navigateOnce(ROUTES.manage.bookingDetail(row.bookingId!)),
-                    accessibilityRole: 'link' as const,
-                  }
-                : {})}
-            >
-              {row.code}
-            </Text>
-          ) : null}
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            {fmt.dateTime(row.occurredAt)}
+          </Text>
           {w ? (
-            <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+            <Text
+              col={colors.placeholder}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              numberOfLines={1}
+            >
               {`${bankDisplayName(w.bankCode)} · ${w.accountNumberMasked}`}
             </Text>
           ) : null}
-          <Text col={colors.placeholder} fos={fontSize.label}>
-            {fmt.dateTime(row.occurredAt)}
-          </Text>
         </YStack>
         <YStack ai="flex-end" gap={2}>
-          <YStack opacity={muted ? 0.5 : 1}>
-            <SignedAmount value={row.amount} strong />
-          </YStack>
+          <Text
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+            opacity={muted ? 0.5 : 1}
+          >
+            {amountText}
+          </Text>
           {row.balanceAfter == null ? null : (
-            <Text col={colors.textMuted} fos={fontSize.label}>
+            <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
               {t('activity.balanceAfter', { amount: fmt.money(row.balanceAfter) })}
             </Text>
           )}
-          <Pill label={statusLabel} tone={pillToneOfStatusColor(statusColor)} />
         </YStack>
       </XStack>
 

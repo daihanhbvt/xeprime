@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, RefreshControl, type ListRenderItemInfo } from 'react-native';
+import { RefreshControl, type ListRenderItemInfo } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -191,11 +192,7 @@ function FavoritesTab({ vehicleType }: { vehicleType: VehicleType }) {
               </Callout>
             ) : null}
             {/* App cuộn tới cuối là tự tải trang sau (người dùng chốt 28/10/2026) — không có nút "Xem thêm" như web. */}
-            {list.isFetchingNextPage ? (
-              <YStack ai="center" py={space.sm}>
-                <ActivityIndicator color={colors.accentText} />
-              </YStack>
-            ) : null}
+            {list.isFetchingNextPage ? <ListLoadingFooter /> : null}
           </YStack>
         ) : null
       }

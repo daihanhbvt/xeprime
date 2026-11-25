@@ -5,6 +5,10 @@ import { buildPeriodRange, dayjs, type PeriodKey } from '@xeprime/domain';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
+import { SelectTrigger } from '@/components/ui/SelectTrigger';
+import { BlockTitle } from '@/components/ui/BlockTitle';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { space } from '@/theme/tokens';
 
@@ -34,6 +38,7 @@ export function FinancePeriodBar({
   to,
   onChange,
   customRange = true,
+  compact = false,
 }: {
   readonly periods: readonly PeriodKey[];
   from: string | undefined;
@@ -45,11 +50,18 @@ export function FinancePeriodBar({
    * ngày vào một khối phụ là app đi trước web ở một bề mặt vốn để liếc.
    */
   customRange?: boolean;
+  /**
+   * MỘT ô "01/11 - 30/11" có icon lịch (Figma Tổng quan doanh thu `24228:98933`) thay dải tab +
+   * hai ô ngày. Bấm mở tấm chọn chứa CÙNG các kỳ dựng sẵn và hai ô Từ/Đến - không mất lựa chọn nào.
+   */
+  compact?: boolean;
 }) {
   const t = useTranslations('Finance.entity.periods');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
+  const tSheet = useTranslations('Finance.overview.periodSheet');
   const [picking, setPicking] = useState<'from' | 'to' | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const active = periods.find((period) => {
     const range = buildPeriodRange(period);
@@ -57,6 +69,86 @@ export function FinancePeriodBar({
   });
 
   const editingTo = picking === 'to';
+
+  const datePicker = (
+    <DatePickerSheet
+      open={picking !== null}
+      onClose={() => setPicking(null)}
+      value={(editingTo ? to : from) ?? ''}
+      title={editingTo ? tLabels('to') : tLabels('from')}
+      minDate={editingTo && from ? dayjs(from) : PERIOD_FLOOR}
+      onChange={(next) => {
+        onChange(
+          editingTo
+            ? { from: from ?? next, to: next }
+            : { from: next, to: to && to >= next ? to : next },
+        );
+        setPicking(null);
+      }}
+    />
+  );
+
+  if (compact) {
+    const label = from && to ? `${shortDate(from)} - ${shortDate(to)}` : tLabels('selectDate');
+    // Mở lịch SAU khi đóng tấm kỳ: hai tấm chồng nhau thì tấm dưới nuốt cử chỉ của tấm trên.
+    const pick = (end: 'from' | 'to') => {
+      setSheetOpen(false);
+      setPicking(end);
+    };
+    return (
+      <>
+        <SelectTrigger
+          label={label}
+          icon="calendar"
+          accessibilityLabel={`${tSheet('title')}: ${label}`}
+          onPress={() => setSheetOpen(true)}
+        />
+        <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={tSheet('title')}>
+          <YStack gap={space.md}>
+            <MenuOptionList>
+              {periods.map((period) => (
+                <MenuOption
+                  key={period}
+                  label={t(period)}
+                  selected={period === active}
+                  onPress={() => {
+                    onChange(buildPeriodRange(period));
+                    setSheetOpen(false);
+                  }}
+                />
+              ))}
+            </MenuOptionList>
+            {customRange ? (
+              <YStack gap={space.sm}>
+                <BlockTitle>{tSheet('custom')}</BlockTitle>
+                <XStack gap={space.sm}>
+                  <YStack f={1}>
+                    <FieldBox
+                      label={tLabels('from')}
+                      value={from ? fmt.dateKey(from) : ''}
+                      placeholder={tLabels('selectDate')}
+                      icon="calendar-outline"
+                      onPress={() => pick('from')}
+                    />
+                  </YStack>
+                  <YStack f={1}>
+                    <FieldBox
+                      label={tLabels('to')}
+                      value={to ? fmt.dateKey(to) : ''}
+                      placeholder={tLabels('selectDate')}
+                      icon="calendar-outline"
+                      onPress={() => pick('to')}
+                    />
+                  </YStack>
+                </XStack>
+              </YStack>
+            ) : null}
+          </YStack>
+        </BottomSheet>
+        {datePicker}
+      </>
+    );
+  }
 
   return (
     <YStack gap={space.sm}>
@@ -100,21 +192,13 @@ export function FinancePeriodBar({
         </>
       ) : null}
 
-      <DatePickerSheet
-        open={picking !== null}
-        onClose={() => setPicking(null)}
-        value={(editingTo ? to : from) ?? ''}
-        title={editingTo ? tLabels('to') : tLabels('from')}
-        minDate={editingTo && from ? dayjs(from) : PERIOD_FLOOR}
-        onChange={(next) => {
-          onChange(
-            editingTo
-              ? { from: from ?? next, to: next }
-              : { from: next, to: to && to >= next ? to : next },
-          );
-          setPicking(null);
-        }}
-      />
+      {datePicker}
     </YStack>
   );
+}
+
+/** "01/11" - năm hiện tại thì bỏ năm như Figma, năm khác thì kèm năm để khỏi đọc nhầm. */
+function shortDate(key: string): string {
+  const d = dayjs(key);
+  return d.format(d.year() === dayjs().year() ? 'DD/MM' : 'DD/MM/YYYY');
 }

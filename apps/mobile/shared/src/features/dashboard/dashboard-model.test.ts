@@ -68,6 +68,8 @@ describe('answerParts - câu trả lời đầu trang', () => {
           returnsToday: 1,
           returnsOverdue: 1,
           returnsDue: 2,
+          nextPickupAt: null,
+          nextReturnAt: null,
         },
         requests: { pending: 3, pendingUrgent: 0, nextRespondBy: null, awaitingPayment: 0 },
       }),

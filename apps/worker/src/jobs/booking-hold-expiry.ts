@@ -432,7 +432,7 @@ export async function sweepBookingHoldExpiry(
 
       await notifyTenantMembers(tx, hold.tenantId, {
         type: NOTIFICATION_TYPE.HOLD_EXPIRED,
-        title: 'Khách không thanh toán giữ chỗ — chỗ đã nhả',
+        title: 'Khách không thanh toán giữ chỗ',
         body: `${hold.vehicle.name} · ${hold.bookingRequest.customerName}`,
         tenantId: hold.tenantId,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,

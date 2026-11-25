@@ -686,12 +686,6 @@ a.vehicleName:hover {
   cursor: pointer;
 }
 
-.moneyNote {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: 12px;
-}
-
 .sideActions {
   display: flex;
   flex-direction: column;
@@ -772,4 +766,94 @@ a.vehicleName:hover {
 .alertContinue {
   padding-inline: 0;
   font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * ── Khổ điện thoại (≤ 640px) - Figma Partner "Chi tiết đơn" ────────────────────────────────────
+ * Thẻ "Thanh toán" và "Lợi nhuận chuyến" theo design app: thẻ trắng viền mảnh, bo 16, đệm 16.
+ * Desktop KHÔNG đổi - các biến thể chỉ-điện-thoại mặc định ẩn ở đây và chỉ bật trong media.
+ */
+.moneyDuePhone {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .paymentCard {
+    gap: var(--xp-space-sm);
+    padding: var(--xp-space-md);
+    border-color: var(--xp-color-border);
+    border-radius: var(--xp-border-radius-card);
+  }
+
+  /* Cùng kiểu tiêu đề `SectionCard` ("Lợi nhuận chuyến") - người dùng 20/11/2026. */
+  .paymentCard .sideTitle {
+    margin-bottom: var(--xp-space-xs);
+    font-size: var(--xp-font-size-h4);
+    font-weight: var(--xp-font-weight-bold);
+    line-height: 1.4;
+  }
+
+  .paymentCard .moneyRows {
+    gap: var(--xp-space-sm);
+  }
+
+  .paymentCard .moneyRows > div {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .paymentCard .moneyRows dt small {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+
+  /* Thứ tự của design: Tiền thuê · Phí giao nhận · (khuyến mãi / phát sinh) · trả trước · đã thu. */
+  .moneyRows > .moneyRowRent {
+    order: -2;
+  }
+
+  .moneyRows > .moneyRowDelivery {
+    order: -1;
+  }
+
+  .moneyRows > .moneyDesktopOnly,
+  .moneyDue.moneyDesktopOnly {
+    display: none;
+  }
+
+  /* "Còn lại (phải thu)" - đường kẻ 1px rồi một dòng, số 18/28 vàng thương hiệu; thu đủ ⇒ xanh. */
+  .moneyDuePhone {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--xp-space-md);
+    margin-top: var(--xp-space-xs);
+    padding-top: var(--xp-space-12);
+    border-top: 1px solid var(--xp-color-border);
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .moneyDuePhoneAmount {
+    color: var(--xp-color-price);
+    font-size: var(--xp-font-size-h3);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-h3);
+    white-space: nowrap;
+  }
+
+  .moneyDuePhoneSettled .moneyDuePhoneAmount {
+    color: var(--xp-color-success);
+  }
+
+  /* "Lợi nhuận chuyến" - cùng khung thẻ với "Thanh toán", tiêu đề 18/28. */
+  .main .profitCard {
+    padding: var(--xp-space-md);
+    border-color: var(--xp-color-border);
+    border-radius: var(--xp-border-radius-card);
+    box-shadow: none;
+    gap: var(--xp-space-12);
+  }
+
 }

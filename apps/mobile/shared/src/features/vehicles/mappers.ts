@@ -1,8 +1,10 @@
 import type { VehicleFormValues } from '@xeprime/validators';
 import {
+  SERVICE_TYPE,
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   vehicleFeatureAppliesTo,
+  vehicleFieldPolicy,
   vehicleImageTypeOf,
   type BodyType,
   type FuelType,
@@ -55,9 +57,14 @@ function insuredValueToInput(values: VehicleFormValues): string | null {
 }
 
 export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput {
+  const services = values.serviceTypes ?? [];
+  const selfDrive = services.includes(SERVICE_TYPE.SELF_DRIVE);
+  const withDriver = services.includes(SERVICE_TYPE.WITH_DRIVER);
+  const longTerm = services.includes(SERVICE_TYPE.LONG_TERM);
   return {
     code: textOrUndefined(values.code),
-    name: values.name.trim(),
+    // Form thêm xe không có ô tên: trống ⇒ server ghép từ hãng + dòng + phiên bản + năm (ADR 0102).
+    name: textOrUndefined(values.name),
     // Chi nhánh giữ xe — bắt buộc ở API. Form chọn sẵn chi nhánh mặc định nên thao tác không dài
     // thêm, nhưng giá trị vẫn đi qua request thay vì để backend đoán.
     branchId: values.branchId,
@@ -96,18 +103,26 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     electricRangeKm: values.electricRangeKm ?? undefined,
     batteryCapacityKwh: values.batteryCapacityKwh ?? undefined,
     electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km ?? undefined,
-    weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
-    weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
-    hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
-    monthlyPrice: values.monthlyPrice == null ? null : String(values.monthlyPrice),
+    /*
+     * Giá CHỈ đi theo dịch vụ đang BẬT (web, 18/11/2026): wizard tự điền giá tham khảo vào cả ba nhóm,
+     * và chủ xe có thể nhập rồi tắt dịch vụ - giá của dịch vụ đã tắt không được lên server.
+     */
+    weekdayPrice: selfDrive && values.weekdayPrice != null ? String(values.weekdayPrice) : undefined,
+    weekendPrice: selfDrive && values.weekendPrice != null ? String(values.weekendPrice) : undefined,
+    hourlyPrice: selfDrive && values.hourlyPrice != null ? String(values.hourlyPrice) : null,
+    monthlyPrice: longTerm && values.monthlyPrice != null ? String(values.monthlyPrice) : null,
     withDriverDailyPrice:
-      values.withDriverDailyPrice == null ? null : String(values.withDriverDailyPrice),
+      withDriver && values.withDriverDailyPrice != null ? String(values.withDriverDailyPrice) : null,
     withDriverInterCityPrice:
-      values.withDriverInterCityPrice == null ? null : String(values.withDriverInterCityPrice),
+      withDriver && values.withDriverInterCityPrice != null
+        ? String(values.withDriverInterCityPrice)
+        : null,
     withDriverOneWayPrice:
-      values.withDriverOneWayPrice == null ? null : String(values.withDriverOneWayPrice),
+      withDriver && values.withDriverOneWayPrice != null
+        ? String(values.withDriverOneWayPrice)
+        : null,
     deliveryEnabled: values.deliveryEnabled,
-    discountPercent: values.discountPercent ?? null,
+    discountPercent: selfDrive ? (values.discountPercent ?? null) : null,
     description: textOrUndefined(values.description),
     // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
@@ -123,6 +138,28 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
  * Các trường enum ở đây do backend bảo đảm hợp lệ (contract), nên ép về union là trung thực.
  */
 export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
+  const values = rawVehicleToFormValues(v);
+  /*
+   * Ô không còn nghĩa với loại xe / nguồn năng lượng bị form tự xoá lúc mở. Xe cũ lưu dư (xe máy có
+   * số chỗ…) mà baseline giữ giá trị đó thì mở màn sửa là đã "chưa lưu" - dọn ngay ở baseline,
+   * cùng luật với form (web #303).
+   */
+  const policy = vehicleFieldPolicy(values.vehicleType, values.fuelType);
+  if (policy.seatCount === 'hidden') values.seatCount = null;
+  if (policy.bodyType === 'hidden') values.bodyType = null;
+  if (policy.motorbikeCategory === 'hidden') values.motorbikeCategory = null;
+  if (values.fuelType) {
+    if (policy.fuelConsumption === 'hidden') values.fuelConsumptionCombined = null;
+    if (policy.electricRangeKm === 'hidden') values.electricRangeKm = null;
+    if (policy.batteryCapacityKwh === 'hidden') values.batteryCapacityKwh = null;
+    if (policy.electricConsumption === 'hidden') values.electricConsumptionKwhPer100Km = null;
+    if (policy.engineDisplacementCc === 'hidden') values.engineDisplacementCc = null;
+    if (policy.transmission === 'hidden') values.transmission = null;
+  }
+  return values;
+}
+
+function rawVehicleToFormValues(v: VehicleDetail): VehicleFormValues {
   return {
     code: v.code,
     name: v.name,

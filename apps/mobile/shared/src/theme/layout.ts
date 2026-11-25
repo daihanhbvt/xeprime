@@ -7,9 +7,10 @@ import { NARROW_SCREEN, space } from './tokens';
  * cấu hình Expo thay vì `@/app-profile` - file đó kéo theo routes/deep link, nạp vào đây là vòng import.
  */
 const PARTNER_APP = Constants.expoConfig?.slug === 'xeprime-partner';
-const SCREEN_X = PARTNER_APP ? (NARROW_SCREEN ? 8 : 12) : NARROW_SCREEN ? 12 : space.md;
+// Feedback thiết kế 20/11/2026 ("padding 2 bên tối thiểu 16px", ghi đè chốt 10/11): Partner lề 16 mọi khổ.
+const SCREEN_X = PARTNER_APP ? 16 : NARROW_SCREEN ? 12 : space.md;
 /** Lề ngang thay cho `space.md` / `space.lg` viết tay: app khách giữ nguyên giá trị cũ, Partner hẹp hơn. */
-const PAD_X = PARTNER_APP ? (NARROW_SCREEN ? 8 : 12) : space.md;
+const PAD_X = PARTNER_APP ? 16 : space.md;
 const PAD_X_LG = PARTNER_APP ? (NARROW_SCREEN ? 12 : 16) : space.lg;
 const CARD_PAD = PARTNER_APP ? (NARROW_SCREEN ? 10 : 12) : NARROW_SCREEN ? 12 : space.md;
 

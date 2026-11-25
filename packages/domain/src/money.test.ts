@@ -148,13 +148,21 @@ describe('formatMoneyVnd - chèn dấu, KHÔNG đổi giá trị', () => {
 
 describe('compactMoneyParts - rút gọn cho chỗ hẹp', () => {
   it('chọn đúng bậc theo ngưỡng nghìn/triệu/tỷ', () => {
-    expect(compactMoneyParts('12750000', VI)).toEqual({ value: '12,7', unit: 'million' });
+    expect(compactMoneyParts('12750000', VI)).toEqual({ value: '12,75', unit: 'million' });
     expect(compactMoneyParts('2500000000', VI)).toEqual({ value: '2,5', unit: 'billion' });
     expect(compactMoneyParts('12500', VI)).toEqual({ value: '12,5', unit: 'thousand' });
   });
 
-  it('bỏ phần thập phân khi số đã ≥ 100 (chỗ hẹp, thêm chữ số là tràn)', () => {
-    expect(compactMoneyParts('123400000', VI)).toEqual({ value: '123', unit: 'million' });
+  it('bậc triệu/tỷ luôn giữ phần lẻ kể cả ≥ 100 - không làm mất tiền', () => {
+    expect(compactMoneyParts('123400000', VI)).toEqual({ value: '123,4', unit: 'million' });
+    expect(compactMoneyParts('112205000', VI)).toEqual({ value: '112,2', unit: 'million' });
+    expect(compactMoneyParts('116444555', VI)).toEqual({ value: '116,4', unit: 'million' });
+    expect(compactMoneyParts('5004000', VI)).toEqual({ value: '5,004', unit: 'million' });
+    expect(compactMoneyParts('1234567000', VI)).toEqual({ value: '1,234', unit: 'billion' });
+  });
+
+  it('bậc nghìn ≥ 100 vẫn bỏ phần lẻ (dưới 1.000đ)', () => {
+    expect(compactMoneyParts('123456', VI)).toEqual({ value: '123', unit: 'thousand' });
   });
 
   it('phần mười bằng 0 thì không hiện dấu thập phân', () => {
@@ -162,11 +170,11 @@ describe('compactMoneyParts - rút gọn cho chỗ hẹp', () => {
   });
 
   it('dấu thập phân theo ngôn ngữ', () => {
-    expect(compactMoneyParts('12750000', EN)).toEqual({ value: '12.7', unit: 'million' });
+    expect(compactMoneyParts('12750000', EN)).toEqual({ value: '12.75', unit: 'million' });
   });
 
   it('giữ dấu âm', () => {
-    expect(compactMoneyParts('-12750000', VI)).toEqual({ value: '-12,7', unit: 'million' });
+    expect(compactMoneyParts('-12750000', VI)).toEqual({ value: '-12,75', unit: 'million' });
   });
 
   it('quá nhỏ để rút gọn ⇒ null, nơi gọi hiện dạng đầy đủ', () => {
@@ -197,8 +205,8 @@ describe('compactMoneyParts - rút gọn cho chỗ hẹp', () => {
     expect(compactMoneyParts('600000', VI, 2)).toEqual({ value: '600', unit: 'thousand' });
   });
 
-  it('mặc định vẫn là 1 chữ số lẻ - trục biểu đồ không tự nhiên dài ra', () => {
-    expect(compactMoneyParts('1350000', VI)).toEqual({ value: '1,3', unit: 'million' });
+  it('mặc định là 3 chữ số lẻ - MỘT kiểu chung cho mọi màn (25/11/2026)', () => {
+    expect(compactMoneyParts('1350000', VI)).toEqual({ value: '1,35', unit: 'million' });
   });
 });
 

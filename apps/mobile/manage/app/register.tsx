@@ -48,8 +48,8 @@ export default function PartnerRegisterRoute() {
       initialTrack={chosenTrack}
       // Tuyến chọn sẵn ở app XePrime ⇒ không mời đổi tuyến (web ẩn "Đổi cách cho thuê" khi `source=market`).
       lockTrack={chosenTrack != null}
+      // Mũi tên lui của màn chọn tuyến (Figma "Signup - Plan") và của form khi tuyến bị khoá: về Đăng nhập.
       onExit={() => goBackOr(router, ROUTES.account.login())}
-      onSwitchToLogin={() => router.replace(ROUTES.account.login())}
     />
   );
 }
