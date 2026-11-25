@@ -18,13 +18,15 @@ import type {
  * mọi bảng đọc cùng một hình — dù người lái là tài xế LIÊN KẾT hay tài xế NGOÀI HỆ THỐNG.
  */
 export const BOOKING_DRIVER_SELECT = {
-  driver: { select: { id: true, name: true, phone: true } },
+  driver: { select: { id: true, name: true, phone: true, user: { select: { avatarUrl: true } } } },
+  internalDriver: { select: { photoUrl: true } },
   driverAssignmentStatus: true,
   driverAssignedAt: true,
   driverRespondedAt: true,
   driverRespondBy: true,
   externalDriverName: true,
   externalDriverPhone: true,
+  internalDriverId: true,
 } satisfies Prisma.BookingSelect;
 
 type BookingDriverRow = Prisma.BookingGetPayload<{ select: typeof BOOKING_DRIVER_SELECT }>;
@@ -41,20 +43,25 @@ export function toBookingDriverSummary(b: BookingDriverRow): BookingDriverSummar
       assignedAt: b.driverAssignedAt.toISOString(),
       respondedAt: b.driverRespondedAt?.toISOString() ?? null,
       respondBy: b.driverRespondBy?.toISOString() ?? null,
+      avatarUrl: b.driver.user.avatarUrl,
+      licence: null,
     };
   }
-  // Ngoài hệ thống: không có lượt chờ — coi là đã nhận ngay khi lưu (ADR 0067 điều 1). CHECK
+  // Ngoài hệ thống / nội bộ: không có lượt chờ — coi là đã nhận ngay khi lưu (ADR 0067 điều 1 ·
+  // ADR 0108). Tài xế nội bộ đọc tên + SĐT từ ẢNH CHỤP trên đơn, không từ danh bạ hiện tại. CHECK
   // nhất quán bảo đảm có `driver_assigned_at` khi có tên.
   if (b.externalDriverName && b.externalDriverPhone && b.driverAssignedAt) {
     return {
-      source: DRIVER_SOURCE.EXTERNAL,
-      id: null,
+      source: b.internalDriverId ? DRIVER_SOURCE.INTERNAL : DRIVER_SOURCE.EXTERNAL,
+      id: b.internalDriverId ?? null,
       name: b.externalDriverName,
       phone: toLocalVnPhone(b.externalDriverPhone),
       assignmentStatus: DRIVER_ASSIGNMENT_STATUS.ACCEPTED,
       assignedAt: b.driverAssignedAt.toISOString(),
       respondedAt: null,
       respondBy: null,
+      avatarUrl: b.internalDriverId ? (b.internalDriver?.photoUrl ?? null) : null,
+      licence: null,
     };
   }
   return null;
@@ -68,7 +75,17 @@ export function toBookingDriverSummary(b: BookingDriverRow): BookingDriverSummar
 export function toRenterDriverSummary(b: BookingDriverRow): BookingDriverSummaryDto | null {
   const full = toBookingDriverSummary(b);
   if (!full || full.assignmentStatus !== DRIVER_ASSIGNMENT_STATUS.ACCEPTED) return null;
-  return { ...full, id: null, respondedAt: null, respondBy: null };
+  // Với khách chỉ có "người sẽ đến đón" — tài xế nội bộ đọc như ngoài hệ thống (ADR 0108 điều 4).
+  const source = full.source === DRIVER_SOURCE.INTERNAL ? DRIVER_SOURCE.EXTERNAL : full.source;
+  return {
+    ...full,
+    source,
+    id: null,
+    respondedAt: null,
+    respondBy: null,
+    avatarUrl: null,
+    licence: null,
+  };
 }
 
 /**

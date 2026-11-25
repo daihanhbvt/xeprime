@@ -122,10 +122,15 @@ export async function expirePendingDriverAssignment(
  * Hai cột tài xế NGOÀI HỆ THỐNG về NULL (ADR 0067). Đi kèm `CLEARED_DRIVER_ASSIGNMENT` khi bỏ gán
  * hẳn (CHECK `bookings_driver_assignment_consistency_check`: còn tên ngoài hệ thống thì mốc gán
  * không được NULL), hay khi thay bằng tài xế liên kết (CHECK loại trừ).
+ *
+ * Kèm `internalDriverId` (ADR 0108): tài xế nội bộ CHỤP tên + SĐT lên hai cột này, và CHECK
+ * `bookings_internal_driver_snapshot_check` cấm còn id trong danh bạ mà mất ảnh chụp — ba cột luôn
+ * về NULL cùng nhau.
  */
 export const CLEARED_EXTERNAL_DRIVER = {
   externalDriverName: null,
   externalDriverPhone: null,
+  internalDriverId: null,
 } satisfies Prisma.BookingUncheckedUpdateManyInput;
 
 /**

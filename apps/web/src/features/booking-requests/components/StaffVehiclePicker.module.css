@@ -1,40 +1,88 @@
 /*
- * Bộ chọn xe LẤP ĐẦY thân overlay: thân cỡ `xl` có chiều cao cố định (`.xlBody`), nên một khối
- * cao theo nội dung để lại đúng dải trống ở đáy. Ô tìm kiếm đứng yên, chỉ lưới thẻ cuộn.
+ * Bước "Chọn xe" — Figma Partner `24565:59738`. Hộp cao theo nội dung (trần bằng thân `xl`):
+ * hàng lọc đứng yên trên, lưới thẻ cuộn ở giữa, chân hộp (tạm tính + hai nút) đứng yên dưới.
  */
 .picker {
   display: flex;
-  height: 100%;
+  /* Cao theo nội dung, trần bằng trần thân `xl` (`.xlBody`) — lưới thẻ là vùng cuộn duy nhất. */
+  max-height: calc(100dvh - var(--xp-space-xl) * 5);
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-lg);
 }
 
-.head {
+/* Chi nhánh 315 · Loại theo nội dung · Tìm kiếm và Thời gian chia đều phần còn lại (gap 16). */
+.filters {
   display: flex;
   flex: none;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-sm);
+  align-items: flex-end;
+  gap: var(--xp-space-md);
 }
 
-.search {
-  max-width: 420px;
-  flex: 1 1 260px;
+.fieldBranch,
+.fieldType,
+.fieldSearch,
+.fieldTime {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-6);
 }
 
-/* Không co lại dưới 200px: nhãn là `Tên chi nhánh · Tỉnh`, cắt ngắn thì hai chi nhánh cùng tỉnh
-   trông giống hệt nhau. */
-.branch {
-  flex: 0 1 220px;
+/* Không co dưới 200px: nhãn là `Tên chi nhánh · Tỉnh`, cắt ngắn thì hai chi nhánh cùng tỉnh giống hệt. */
+.fieldBranch {
+  flex: 0 1 315px;
   min-width: 200px;
 }
 
-.count {
+.fieldType {
+  flex: none;
+}
+
+.fieldSearch {
+  flex: 1 1 240px;
+}
+
+.fieldTime {
+  flex: 1 1 320px;
+}
+
+.label {
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-variant-numeric: tabular-nums;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.required {
+  color: var(--xp-color-error);
+}
+
+.control {
+  width: 100%;
+}
+
+.rangeBox {
+  min-width: 0;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  transition: border-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
+}
+
+.rangeBox:hover,
+.rangeBox:focus-within {
+  border-color: var(--xp-color-primary);
+}
+
+.rangeBox > button {
+  width: 100%;
+  min-height: 38px;
+  padding: var(--xp-space-sm) 14px;
+  gap: var(--xp-space-sm);
 }
 
 /* Trạng thái rỗng/lỗi/skeleton chiếm phần cao còn lại thay vì dồn lên đỉnh. */
@@ -49,91 +97,18 @@
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: var(--xp-space-xs);
+  /* Chỗ cho bóng + viền vàng của thẻ đang chọn, không bị mép vùng cuộn cắt. */
+  padding: 2px var(--xp-space-xs) 2px 2px;
 }
 
+/* Bốn cột ở cỡ design (thẻ 315, gap 20), tự rơi về 3/2/1 cột khi hộp hẹp lại. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--xp-space-lg);
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.card {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  cursor: pointer;
-  text-align: left;
-  /* Cả thẻ là vùng chạm — thoải mái trên trần 44px của WCAG 2.5.5. */
-  min-height: var(--xp-touch-target-min);
-}
-
-.card:hover {
-  border-color: var(--xp-color-primary);
-  background: var(--xp-color-primary-light);
-}
-
-.thumb {
-  display: grid;
-  flex: none;
-  width: 56px;
-  height: 56px;
-  place-items: center;
-  overflow: hidden;
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-tertiary);
-}
-
-.thumbImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumbIcon {
-  font-size: var(--xp-font-size-h3);
-}
-
-.body {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.name {
-  font-weight: var(--xp-font-weight-semibold);
-  overflow-wrap: anywhere;
-}
-
-.meta {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  overflow-wrap: anywhere;
-}
-
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-xs);
-  min-width: 0;
-}
-
-.price {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-variant-numeric: tabular-nums;
 }
 
 /* Mốc kích hoạt tải trang kế + chỗ đứng cho trạng thái của trang đó. */
@@ -151,4 +126,69 @@
   gap: var(--xp-space-xs);
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
+}
+
+/* "_Modal actions": vạch ngăn trên, tạm tính bên trái, Quay lại · Tiếp tục bên phải. */
+.footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding-top: var(--xp-space-lg);
+  border-top: 1px solid var(--xp-color-border);
+  gap: var(--xp-space-12);
+}
+
+.estimateSlot {
+  min-width: 0;
+  flex: 1;
+}
+
+.estimate {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-h4);
+}
+
+.estimateAmount {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.estimateHint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+}
+
+.continue {
+  min-width: 120px;
+}
+
+@media (max-width: 640px) {
+  /* Điện thoại: hộp toàn màn hình — bộ chọn lấp đầy để chân hộp nằm ở đáy màn. */
+  .picker {
+    height: 100%;
+    max-height: none;
+  }
+
+  .fieldBranch,
+  .fieldSearch,
+  .fieldTime {
+    flex-basis: 100%;
+  }
+
+  .footer {
+    flex-wrap: wrap;
+  }
+
+  .estimateSlot {
+    flex-basis: 100%;
+  }
+
+  .footer > :global(.ant-btn) {
+    flex: 1;
+    min-height: var(--xp-touch-target-min);
+  }
 }

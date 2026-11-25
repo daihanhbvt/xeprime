@@ -57,7 +57,13 @@ import { queryKeys } from '@/services/query-keys';
 import { BUSY_DAYS_LOOKAHEAD } from '../api';
 import { pickupPointText } from '../pickup-point';
 import { PICKUP_METHOD } from '../schema';
-import { staffBookingSchema, type StaffBookingValues } from '../staff-booking-schema';
+import {
+  STAFF_COLLATERAL_MODE,
+  collateralModeHasAssets,
+  collateralModeHasCash,
+  staffBookingSchema,
+  type StaffBookingValues,
+} from '../staff-booking-schema';
 import { BookingJourney } from './BookingJourney';
 import { BookingResult, BookingResultTotal } from './BookingResult';
 import { StaffBookingReviewStep } from './StaffBookingReviewStep';
@@ -119,6 +125,9 @@ function rowAmount(quote: CalendarQuote, key: string): string | null {
  * BỘ `/calendar/quote` (cùng PricingService với báo giá công khai — FE không tự cộng trừ); xe chưa
  * cấu hình giá thì server 400 và màn Xem lại rơi về ô nhập tiền tay. Giao tận nơi: phí 0 lúc tạo
  * (chốt sau), địa chỉ đi vào ghi chú của đơn vì đơn trực tiếp không có cột địa chỉ giao.
+ *
+ * "Giá thoả thuận" (ADR 0109, mọi loại dịch vụ): giá hệ thống thành gợi ý — tiền thuê, giảm giá, phí
+ * giao xe, phụ phí theo dòng do gian hàng nhập. Cọc tiền / tài sản thế chấp / cả hai ghi theo đơn.
  */
 export function StaffBookingFlow({
   vehicleId,
@@ -150,7 +159,9 @@ export function StaffBookingFlow({
    */
   const [packageMonths, setPackageMonths] = useState<LongTermPackageMonths | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ id: string; code: string } | null>(null);
+  const [created, setCreated] = useState<{ id: string; code: string; totalAmount: string } | null>(
+    null,
+  );
   /** Chặn bấm đúp "Tạo đơn" trước khi `isPending` kịp bật (Enter + click cùng lúc). */
   const submitLock = useRef(false);
 
@@ -188,6 +199,12 @@ export function StaffBookingFlow({
       note: '',
       manualBaseAmount: null,
       depositAmount: null,
+      negotiated: false,
+      manualDiscount: null,
+      manualDeliveryFee: null,
+      extraCharges: [],
+      collateralMode: STAFF_COLLATERAL_MODE.CASH,
+      collaterals: [],
     },
   });
 
@@ -243,9 +260,34 @@ export function StaffBookingFlow({
    */
   useEffect(() => {
     if (!quote) return;
-    if (formState.dirtyFields.depositAmount) return;
-    setValue('depositAmount', Number(quote.depositAmount ?? 0));
-  }, [quote, formState.dirtyFields.depositAmount, setValue]);
+    if (!formState.dirtyFields.depositAmount) {
+      setValue('depositAmount', Number(quote.depositAmount ?? 0));
+    }
+    // Chế độ bảo đảm mở theo chính sách xe: có cọc tiền ⇒ "Tiền", không ⇒ "Không cọc" — trừ khi
+    // nhân viên đã tự chọn (ADR 0109: mức cọc thay đổi theo từng khách).
+    if (!formState.dirtyFields.collateralMode) {
+      setValue(
+        'collateralMode',
+        Number(quote.depositAmount ?? 0) > 0 ? STAFF_COLLATERAL_MODE.CASH : STAFF_COLLATERAL_MODE.NONE,
+      );
+    }
+  }, [quote, formState.dirtyFields.depositAmount, formState.dirtyFields.collateralMode, setValue]);
+
+  /**
+   * Bật "Giá thoả thuận" (ADR 0109): giá hệ thống thành GỢI Ý — điền sẵn các ô còn trống từ báo giá
+   * để nhân viên chỉ sửa chỗ khác. Tắt thì đơn quay về đúng báo giá, các ô đã gõ vẫn giữ để bật lại.
+   */
+  function toggleNegotiated(on: boolean) {
+    setValue('negotiated', on, { shouldDirty: true });
+    if (!on || !quote) return;
+    if (getValues('manualBaseAmount') == null) {
+      setValue('manualBaseAmount', Number(rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount));
+    }
+    if (getValues('manualDiscount') == null) {
+      const discountRow = rowAmount(quote, PRICE_ROW.DISCOUNT);
+      setValue('manualDiscount', discountRow ? Number(discountRow.replace('-', '')) : 0);
+    }
+  }
 
   /**
    * Lịch bận của xe — CÙNG phép tính với luồng của khách nhưng qua cửa NỘI BỘ của gian hàng
@@ -323,16 +365,35 @@ export function StaffBookingFlow({
     if (submitLock.current || submitting) return;
     submitLock.current = true;
     setStepError(null);
-    const fields = ['customerName', 'customerPhone', 'note', 'depositAmount'] as const;
-    if (
-      !(await trigger([...fields, ...(quoteUnavailable ? (['manualBaseAmount'] as const) : [])]))
-    ) {
+    // Xe chưa có giá ⇒ giá thoả thuận là con đường DUY NHẤT (không tạo đơn 0đ âm thầm).
+    const negotiated = quoteUnavailable || getValues('negotiated');
+    const mode = getValues('collateralMode');
+    const fields = [
+      'customerName',
+      'customerPhone',
+      'note',
+      ...(collateralModeHasCash(mode) ? (['depositAmount'] as const) : []),
+      ...(collateralModeHasAssets(mode) ? (['collaterals'] as const) : []),
+      ...(negotiated
+        ? ([
+            'manualBaseAmount',
+            'manualDiscount',
+            ...(isDelivery ? (['manualDeliveryFee'] as const) : []),
+            'extraCharges',
+          ] as const)
+        : []),
+    ] as const;
+    if (!(await trigger([...fields]))) {
       submitLock.current = false;
       return;
     }
-    // Không có báo giá server thì tiền thuê nhập tay là BẮT BUỘC — không tạo đơn 0đ âm thầm.
-    if (quoteUnavailable && getValues('manualBaseAmount') == null) {
+    if (negotiated && getValues('manualBaseAmount') == null) {
       setStepError(t('validation.baseAmountRequired'));
+      submitLock.current = false;
+      return;
+    }
+    if (negotiated && (getValues('manualDiscount') ?? 0) > (getValues('manualBaseAmount') ?? 0)) {
+      setStepError(t('validation.discountExceedsBase'));
       submitLock.current = false;
       return;
     }
@@ -365,19 +426,39 @@ export function StaffBookingFlow({
         ...(isLongTerm
           ? { longTermPackageMonths: packageMonths ?? undefined }
           : { returnAt: appWallClockToIso(v.returnAt!) }),
-        // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
-        baseAmount: quote
-          ? (rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount)
-          : String(v.manualBaseAmount ?? 0),
-        discountAmount: discountRow ? discountRow.replace('-', '') : '0',
-        // Giao tận nơi phí 0 lúc tạo — chủ xe chốt phí đã thoả thuận sau.
-        deliveryFee: '0',
-        depositAmount: String(v.depositAmount ?? 0),
+        ...(negotiated
+          ? {
+              // Giá thoả thuận (ADR 0109): mọi khoản do gian hàng nhập; server tính lại tổng.
+              baseAmount: String(v.manualBaseAmount ?? 0),
+              discountAmount: String(v.manualDiscount ?? 0),
+              deliveryFee: isDelivery ? String(v.manualDeliveryFee ?? 0) : '0',
+              extraCharges: v.extraCharges.map((c) => ({
+                label: c.label.trim(),
+                amount: String(c.amount ?? 0),
+              })),
+              negotiatedPrice: true,
+            }
+          : {
+              // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
+              baseAmount: quote ? (rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount) : '0',
+              discountAmount: discountRow ? discountRow.replace('-', '') : '0',
+              // Giao tận nơi phí 0 lúc tạo — chủ xe chốt phí đã thoả thuận sau.
+              deliveryFee: '0',
+            }),
+        depositAmount: collateralModeHasCash(mode) ? String(v.depositAmount ?? 0) : '0',
+        ...(collateralModeHasAssets(mode) && v.collaterals.length > 0
+          ? {
+              collaterals: v.collaterals.map((c) => ({
+                collateralType: c.collateralType,
+                description: c.description.trim() || null,
+              })),
+            }
+          : {}),
         ...(note ? { note } : {}),
       },
       {
         onSuccess: (booking) => {
-          setCreated({ id: booking.id, code: booking.code });
+          setCreated({ id: booking.id, code: booking.code, totalAmount: booking.totalAmount });
           setStep('done');
         },
         onError: (e) => {
@@ -456,7 +537,7 @@ export function StaffBookingFlow({
           showOwner={false}
           selfPickupFallback={t('review.selfPickupBranch')}
         >
-          {quote ? <BookingResultTotal label={t('done.total')} amount={quote.totalAmount} /> : null}
+          <BookingResultTotal label={t('done.total')} amount={created.totalAmount} />
         </BookingTripCard>
       </BookingResult>
     );
@@ -471,6 +552,8 @@ export function StaffBookingFlow({
         vehicleImageUrl={vehicleThumbUrl}
         trip={tripSummary}
         control={control}
+        setValue={setValue}
+        onToggleNegotiated={toggleNegotiated}
         quote={quote}
         quoteLoading={quoteQ.isLoading}
         quoteUnavailable={quoteUnavailable}

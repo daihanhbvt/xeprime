@@ -8,7 +8,7 @@ import {
 } from '@xeprime/types';
 import { CurrentTenant, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
-import { vehicleImageObjectPrefix } from './object-keys';
+import { internalDriverPhotoObjectPrefix, vehicleImageObjectPrefix } from './object-keys';
 import { PresignDocumentDto, PresignImageDto, UploadPresignDto } from './dto/storage.dto';
 import { R2Service } from './r2.service';
 
@@ -63,6 +63,28 @@ export class StorageController {
     this.assertConfigured();
     return this.r2.presignUpload({
       prefix: `tenants/${tenant.tenantId}/shop`,
+      fileName: dto.fileName,
+      contentType: dto.contentType,
+      contentLength: dto.fileSize,
+    });
+  }
+
+  /**
+   * Ảnh đại diện TUỲ CHỌN của tài xế NỘI BỘ (ADR 0108). Bucket công khai như ảnh xe — chỉ là ảnh
+   * chân dung để nhận ra người trong danh bạ, không phải giấy tờ. CỐ Ý không `@SupportAction`: phiên
+   * hỗ trợ chỉ XEM danh bạ tài xế, không thêm/sửa (ADR 0050, default-deny).
+   */
+  @Post('driver-photos/presign')
+  @RequirePermissions(PERMISSION.DRIVER_MANAGE)
+  @ApiOperation({ summary: 'Presign upload ảnh tài xế nội bộ lên R2' })
+  @ApiCreatedResponse({ type: UploadPresignDto })
+  presignDriverPhoto(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: PresignImageDto,
+  ): Promise<UploadPresignDto> {
+    this.assertConfigured();
+    return this.r2.presignUpload({
+      prefix: internalDriverPhotoObjectPrefix(tenant.tenantId),
       fileName: dto.fileName,
       contentType: dto.contentType,
       contentLength: dto.fileSize,

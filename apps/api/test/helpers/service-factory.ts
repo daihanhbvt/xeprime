@@ -25,6 +25,8 @@ import { BookingExtensionsService } from '../../src/modules/booking-extensions/b
 import { OccupancyService } from '../../src/modules/calendar/occupancy.service';
 import { CustomersService } from '../../src/modules/customers/customers.service';
 import { DriversService } from '../../src/modules/drivers/drivers.service';
+import { InternalDriversService } from '../../src/modules/drivers/internal-drivers.service';
+import { BookingCollateralsService } from '../../src/modules/bookings/booking-collaterals.service';
 import { FeePoliciesService } from '../../src/modules/fee-policies/fee-policies.service';
 import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.service';
 import { WalletService } from '../../src/modules/wallet/wallet.service';
@@ -97,7 +99,32 @@ export function makeDriversService(
     overrides.notifications ?? makeNotificationService(prisma),
     // Giới hạn tiền công tài xế (ADR 0075) đọc từ chính sách phí hiện hành.
     new FeePoliciesService(prisma, new AuditService(prisma)),
+    makeInternalDriversService(prisma, overrides.audit),
   );
+}
+
+/** Gốc kho ảnh công khai mà các spec dùng để dựng URL ảnh "đã tải lên". */
+export const TEST_R2_PUBLIC_BASE_URL = 'https://media.xeprime.test';
+
+/** Danh bạ tài xế nội bộ (ADR 0108). */
+export function makeInternalDriversService(
+  prisma: PrismaService,
+  audit?: AuditService,
+): InternalDriversService {
+  return new InternalDriversService(
+    prisma,
+    audit ?? new AuditService(prisma),
+    // Kho ảnh công khai giả — ảnh tài xế nội bộ chỉ hợp lệ dưới `tenants/<id>/drivers/` của kho này.
+    new ConfigService({ R2_PUBLIC_BASE_URL: TEST_R2_PUBLIC_BASE_URL }),
+  );
+}
+
+/** Sổ tài sản thế chấp theo đơn (ADR 0109). */
+export function makeBookingCollateralsService(
+  prisma: PrismaService,
+  audit?: AuditService,
+): BookingCollateralsService {
+  return new BookingCollateralsService(prisma, audit ?? new AuditService(prisma));
 }
 
 /**
@@ -405,6 +432,7 @@ export function makeBookingsService(
     new TaxService(prisma, audit),
     new CancellationsService(),
     makeBookingExtensionsService(prisma, { audit, notifications }),
+    makeBookingCollateralsService(prisma, audit),
   );
 }
 

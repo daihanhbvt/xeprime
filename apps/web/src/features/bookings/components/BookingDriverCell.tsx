@@ -13,7 +13,8 @@ import styles from './BookingDriverCell.module.css';
  * - đơn không phải `with_driver` và không có tài xế cũ ⇒ "—" (không áp dụng);
  * - đơn `with_driver` chưa có ai ⇒ "Chưa phân công" tông cảnh báo — đơn chưa chạy được;
  * - tài xế liên kết ⇒ tên + nhãn lượt gán (chờ nhận / đã nhận);
- * - tài xế ngoài hệ thống ⇒ tên + nhãn "Ngoài hệ thống" (đã phủ chuyến, không có lượt chờ).
+ * - tài xế ngoài hệ thống ⇒ tên + nhãn "Ngoài hệ thống" (đã phủ chuyến, không có lượt chờ);
+ * - tài xế nội bộ (ADR 0108) ⇒ tên + nhãn "Tài xế nội bộ" (đã phủ chuyến, không có lượt chờ).
  */
 export function BookingDriverCell({
   booking,
@@ -26,7 +27,9 @@ export function BookingDriverCell({
     return (
       <span className={styles.cell}>
         <span className={styles.name}>{driver.name}</span>
-        {driver.source === DRIVER_SOURCE.EXTERNAL ? (
+        {driver.source === DRIVER_SOURCE.INTERNAL ? (
+          <Tag>{t('internal')}</Tag>
+        ) : driver.source === DRIVER_SOURCE.EXTERNAL ? (
           <Tag>{t('external')}</Tag>
         ) : (
           <StatusTag

@@ -439,7 +439,7 @@ export class VehiclesService {
       // `branchId` đứng SAU `tenantId` và không thay thế nó: bộ chọn chi nhánh chỉ thu hẹp phạm
       // vi, không bao giờ là đường vòng ra khỏi gian hàng của mình.
       branchId: resolveBranchScope(query.branchId, allowedBranchIds),
-      ...(query.q ? { OR: searchOr(query.q) } : {}),
+      ...(query.q ? { OR: vehicleSearchOr(query.q) } : {}),
     };
 
     // Đếm và lấy trang trong một transaction: total khớp data cùng thời điểm.
@@ -1999,7 +1999,8 @@ export class VehiclesService {
   }
 }
 
-function searchOr(q: string): Prisma.VehicleWhereInput[] {
+/** Ô tìm xe dùng chung của danh sách xe và bộ chọn xe khi lập đơn. */
+export function vehicleSearchOr(q: string): Prisma.VehicleWhereInput[] {
   const contains = { contains: q, mode: 'insensitive' } as const;
   return [
     { name: contains },

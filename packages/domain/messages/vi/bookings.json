@@ -191,7 +191,8 @@
     "routeDestination": "→ {address}",
     "searchLabel": "Tìm tài xế",
     "searchPlaceholder": "Tên hoặc số điện thoại",
-    "searchEmpty": "Không có tài xế nào khớp “{query}”"
+    "searchEmpty": "Không có tài xế nào khớp “{query}”",
+    "internal": "Tài xế nội bộ"
   },
   "deliveryFee": {
     "title": "Phí giao nhận",
@@ -349,7 +350,6 @@
       "odoCurrent": "KM hệ thống đang ghi: {km}.",
       "odoOptional": "Không bắt buộc - bỏ trống thì KM của xe giữ nguyên.",
       "detailsTitle": "Tình trạng, ảnh & ghi chú",
-      "optional": "Không bắt buộc",
       "photoCount": "{done}/{total} ảnh",
       "conditionNormal": "Bình thường, không có dấu hiệu hư hại",
       "photosLabel": "Ảnh hiện trạng & Odo",
@@ -379,7 +379,12 @@
       "collectChanged": "Số tiền còn phải thu vừa đổi thành {amount}. Kiểm tra lại rồi bấm xác nhận.",
       "suspicious": "Quãng đường {delta} trong {days, plural, other {# ngày}} thấp bất thường (dưới {threshold}/ngày). Kiểm tra lại số Odo.",
       "suspiciousConfirm": "Số Odo đúng, vẫn xác nhận",
-      "confirm": "Xác nhận đã nhận xe"
+      "confirm": "Xác nhận đã nhận xe",
+      "encouraged": "Khuyến khích",
+      "photosWarningTitle": "Chưa đủ ảnh hiện trạng xe",
+      "photosWarningBody": "Còn thiếu ảnh: {slots}. Ảnh lúc nhận lại xe là bằng chứng khi cần đối chiếu hư hại với khách - nên chụp đủ trước khi hoàn tất chuyến.",
+      "photosWarningAdd": "Thêm ảnh",
+      "photosWarningContinue": "Vẫn xác nhận"
     }
   },
   "settlement": {
@@ -1115,7 +1120,29 @@
       "dueAfterPickup": "Thu trực tiếp của khách, trước khi nhận lại xe.",
       "dueSettled": "Khách đã thanh toán đủ tiền thuê.",
       "depositNote": "Chưa gồm cọc tài sản {amount} - khoản giữ rồi trả lại khách khi nhận lại xe.",
-      "returningCustomer": "Khách quen"
+      "returningCustomer": "Khách quen",
+      "collateral": {
+        "title": "Cọc & thế chấp",
+        "heldCount": "Đang giữ {held}/{total}",
+        "cash": "Tiền cọc",
+        "noCash": "Không cọc tiền",
+        "empty": "Chưa ghi tài sản thế chấp nào.",
+        "returnedTag": "Đã trả",
+        "returnedBy": "{name} trả lúc {time}",
+        "returnedAt": "Đã trả lúc {time}",
+        "markReturned": "Trả lại",
+        "returnedToast": "Đã đánh dấu trả tài sản cho khách",
+        "remove": "Gỡ",
+        "removeConfirm": "Gỡ món tài sản ghi nhầm này?",
+        "add": "Thêm tài sản thế chấp",
+        "added": "Đã ghi thêm tài sản",
+        "type": "Loại tài sản",
+        "description": "Mô tả tài sản",
+        "descriptionPlaceholder": "Số giấy tờ (không bắt buộc)",
+        "descriptionMotorbike": "Biển số, ví dụ 59A1-12345",
+        "descriptionOther": "Món gì, ví dụ laptop Dell",
+        "descriptionRequired": "Mô tả món tài sản trước khi thêm"
+      }
     },
     "stepAt": {
       "confirmed": "Đã xác nhận lúc {time}",
@@ -1230,5 +1257,67 @@
     "noResultsTitle": "Không có chuyến nào khớp bộ lọc",
     "noResultsBody": "Thử đổi từ khoá hoặc bỏ bớt bộ lọc.",
     "totalLabel": "{count, plural, other {# chuyến}}"
+  },
+  "contractDocument": {
+    "title": "Hợp đồng thuê xe",
+    "number": "Số: {value}",
+    "createdAt": "Ngày lập: {date}",
+    "shop": {
+      "taxCode": "MST: {value}",
+      "businessLicense": "GPKD: {value}"
+    },
+    "parties": {
+      "lessor": "Bên cho thuê (Bên A)",
+      "lessee": "Bên thuê (Bên B)",
+      "phone": "Điện thoại: {value}",
+      "bankAccount": "TK: {value}"
+    },
+    "vehicle": {
+      "title": "Thông tin xe",
+      "name": "Tên xe",
+      "plate": "Biển số",
+      "type": "Loại xe",
+      "service": "Hình thức",
+      "brandModel": "Hãng / dòng",
+      "year": "Đời xe",
+      "color": "Màu",
+      "seats": "Số chỗ",
+      "seatsValue": "{count, plural, other {# chỗ}}"
+    },
+    "rental": {
+      "title": "Thời gian thuê",
+      "pickup": "Nhận xe",
+      "return": "Trả xe",
+      "term": "Thời hạn thuê",
+      "days": "Số ngày",
+      "daysValue": "{count, plural, other {# ngày}}",
+      "bookingCode": "Mã đơn",
+      "route": "Lộ trình",
+      "pickupAddress": "Địa chỉ đón",
+      "destination": "Điểm đến"
+    },
+    "pricing": {
+      "title": "Chi phí thuê",
+      "base": "Tiền thuê",
+      "delivery": "Phí giao xe",
+      "discount": "Giảm giá",
+      "total": "Tổng cộng",
+      "deposit": "Tiền cọc",
+      "paid": "Đã thanh toán",
+      "remaining": "Còn phải trả"
+    },
+    "collateral": {
+      "title": "Tài sản thế chấp",
+      "note": "Bên A giữ các tài sản trên trong thời gian thuê và trả lại khi Bên B trả xe."
+    },
+    "terms": {
+      "title": "Điều khoản",
+      "handover": "Bên B nhận và trả xe đúng thời gian, địa điểm đã thỏa thuận; giữ gìn xe cẩn thận.",
+      "liability": "Bên B chịu trách nhiệm về vi phạm giao thông, hư hỏng, mất mát phát sinh trong thời gian thuê.",
+      "deposit": "Tiền cọc được hoàn lại sau khi trả xe, trừ các khoản phát sinh (nếu có).",
+      "platform": "Hai bên tự thỏa thuận và giải quyết trên tinh thần hợp tác; XePrime chỉ là nền tảng kết nối."
+    },
+    "note": "Ghi chú",
+    "signHint": "(Ký, ghi rõ họ tên)"
   }
 }

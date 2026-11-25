@@ -1,4 +1,4 @@
-# ADR 0091 — Bảo hiểm MIC theo SRS v1.3: chủ xe chọn Bắt buộc/Tuỳ chọn, phí thu hộ bảo hiểm, GCN lưu R2, tự hoàn khi không cấp được, chặn đặt trước 15 ngày và tự lái tối đa 30 ngày
+# ADR 0091 — Bảo hiểm MIC theo SRS v1.3: chủ xe chọn Bắt buộc/Tuỳ chọn, phí thu hộ bảo hiểm, GCN lưu R2, tự hoàn khi không cấp được, chặn đặt trước 30 ngày và tự lái tối đa 30 ngày
 
 Ngày: 16/11/2026 · Trạng thái: **Accepted** (16/11/2026 — người dùng chốt từng điểm lệch giữa đặc tả
 BA `SRS_INSURANCE_10 v1.3` và ADR 0088), **trừ điều 3 (phí thu hộ) là Proposed** cho tới khi luật sư
@@ -82,11 +82,19 @@ hợp đồng: giá trị xe, bậc áp dụng (số ngày và %), phí đã thu
 ### 4. Chặn thời gian đặt xe (bổ sung 0011)
 
 Hai số của nền tảng, sống ở chính sách phí (có phiên bản như mọi số khác, admin sửa):
-`fee_policies.max_advance_booking_days` (mặc định 15) và `self_drive_max_days` (mặc định 30). Áp cho
-yêu cầu đặt xe của KHÁCH trên chợ: giờ nhận không quá N ngày kể từ lúc gửi (tự lái và có tài xế,
+`fee_policies.max_advance_booking_days` (mặc định **30**) và `self_drive_max_days` (mặc định 30). Áp
+cho yêu cầu đặt xe của KHÁCH trên chợ: giờ nhận không quá N ngày kể từ lúc gửi (tự lái và có tài xế,
 `BOOKING_TOO_FAR_AHEAD`); chuyến tự lái không dài quá M ngày (`SELF_DRIVE_TOO_LONG`), dài hơn thì đặt
 thuê dài hạn. Thuê dài hạn giữ nguyên. Yêu cầu và đơn đã có không bị đụng. Hệ quả: chuyến tự lái luôn
 nằm trong bậc phí MIC tối đa 30 ngày, mỗi đơn đúng MỘT hợp đồng — bỏ phần chia hợp đồng của SRS.
+
+**Sửa 25/11/2026 — đặt trước mặc định 15 → 30 ngày** (người dùng chốt, khớp đặc tả "giờ nhận ≤ 30
+ngày kể từ lúc đặt"). Lý do: khách thuê dịp Tết/lễ giữ xe trước 3-5 tuần, trần 15 ngày cắt đúng phần
+đơn giá trị nhất; hai trần cùng 30 ngày đọc thành một câu với khách ("trong vòng 1 tháng"); bảo hiểm
+MIC không đổi vì hợp đồng cấp ở mốc giao xe. Rủi ro chấp nhận: giá chốt ở lượt duyệt (ADR 0044) nên
+xe "Đặt ngay" có thể bị đặt dịp lễ theo giá thường trước khi chủ xe đặt giá lễ (đặt giá hàng loạt theo
+ngày đã có). Migration `20261125110000_booking_advance_default_30` chỉ đổi DEFAULT của cột; bản chính
+sách đang hiệu lực KHÔNG bị viết lại — admin ra bản mới để áp số mới (có phiên bản + audit).
 
 ### 5. Ảnh gửi MIC: giữ 5 ảnh đăng xe (giữ 0088 điều 4)
 
@@ -134,7 +142,7 @@ và hiệu giữ danh mục XePrime.
 
 - Ô tô mặc định không còn bắt buộc bảo hiểm: gian hàng phải chủ động chọn Bắt buộc.
 - Gian hàng chọn Bắt buộc mà xe thiếu dữ liệu thì xe biến khỏi tìm xe tự lái cho tới khi bổ sung.
-- Khách không đặt được tự lái quá 30 ngày hay đặt trước quá 15 ngày trên chợ.
+- Khách không đặt được tự lái quá 30 ngày hay đặt trước quá 30 ngày trên chợ.
 - CLAUDE.md: dòng "gọi phí dịch vụ XePrime là bảo hiểm" được nới cho trình bày gộp có tách ở điều 3;
   dòng "lưu GCN PDF" và "bỏ chọn `IV` theo bậc" sửa theo điều 1 và 6.
 - App native (`apps/mobile`) cần ô tích bảo hiểm Tuỳ chọn và dòng gộp — việc của nhóm mobile (ADR 0031).

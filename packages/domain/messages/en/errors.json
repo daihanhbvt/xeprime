@@ -59,6 +59,7 @@
     "OTP_LOCKED": "Too many incorrect attempts, so this code has been cancelled. Please request a new code.",
     "DRIVER_LICENCE_IMAGE_INVALID": "The uploaded file is not a valid image - choose a JPG, PNG or WEBP photo.",
     "DRIVER_LICENCE_SUBMISSION_LIMIT": "You have sent many licence photos in the last 24 hours. Please try again tomorrow, or contact XePrime if you need help.",
+    "DRIVER_LICENCE_NOT_VERIFIED": "This driver has no verified, valid licence yet - wait for them to submit one before marking it checked.",
     "DRIVER_LICENCE_STATE_CONFLICT": "Your licence submission has just changed - please reload the page.",
     "DRIVER_LICENCE_CLASS_MISMATCH": "Your driving licence class does not cover this type of vehicle.",
     "DRIVER_LICENCE_EXPIRED": "Your driving licence expires before the trip ends - please update to a valid licence.",
@@ -285,7 +286,14 @@
     "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other.",
     "HANDOVER_PICKUP_NOT_OPEN": "It is not handover time yet - handover can only be confirmed from 60 minutes before pickup.",
     "INSURANCE_PREMIUM_SYNCED_LOCKED": "The premium table is synced from MIC and cannot be edited by hand. It unlocks only when a sync fails.",
-    "INSURANCE_EARLY_HANDOVER": "The car cannot be handed over yet: handing over this early makes the insurance contract longer than the tier the customer paid for. Hand over closer to the pickup time."
+    "INSURANCE_EARLY_HANDOVER": "The car cannot be handed over yet: handing over this early makes the insurance contract longer than the tier the customer paid for. Hand over closer to the pickup time.",
+    "INTERNAL_DRIVER_NOT_FOUND": "This in-house driver was not found. Reload the list and try again.",
+    "INTERNAL_DRIVER_ARCHIVED": "This driver has been archived. Restore them in the directory before using them.",
+    "INTERNAL_DRIVER_PHONE_TAKEN": "This phone number is already in your in-house driver directory.",
+    "INTERNAL_DRIVER_PHOTO_INVALID": "This driver photo is not valid. Choose the photo again and save.",
+    "BOOKING_DISCOUNT_EXCEEDS_BASE": "The discount cannot be larger than the rental amount.",
+    "BOOKING_COLLATERAL_NOT_FOUND": "This collateral item was not found on the booking.",
+    "BOOKING_COLLATERAL_LOCKED": "Collateral cannot be added or removed: the booking is closed, already has 10 items, or this item was returned."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",

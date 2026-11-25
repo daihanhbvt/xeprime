@@ -8,7 +8,9 @@ import {
   WarningFilled,
 } from '@ant-design/icons';
 import { Avatar, Button } from 'antd';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import {
   DRIVER_LICENCE_STATE,
   DRIVER_LINK_END_PARTY,
@@ -24,7 +26,7 @@ import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
-import { DRIVER_DETAIL_TAB, type Driver, type DriverDetailTab } from '../types';
+import type { Driver, InternalDriver } from '../types';
 import styles from './DriverCard.module.css';
 
 /**
@@ -42,8 +44,8 @@ export function DriverCard({
   monthLabel,
   canManage,
   menu,
-  onOpen,
-  onEdit,
+  detailHref,
+  tripsHref,
   onReinvite,
 }: {
   driver: Driver;
@@ -52,8 +54,10 @@ export function DriverCard({
   canManage: boolean;
   /** Mục của menu "…" — trang dựng vì các lượt ghi (tạm khoá, kết thúc) sống ở trang. */
   menu: RowAction[];
-  onOpen: (tab?: DriverDetailTab) => void;
-  onEdit: () => void;
+  /** Trang chi tiết (tab Tổng quan) — `null` khi trang không mở ở ngữ cảnh này. */
+  detailHref: string | null;
+  /** Trang chi tiết, tab "Chuyến & tiền công". */
+  tripsHref: string | null;
   onReinvite: () => void;
 }) {
   const t = useTranslations('Drivers');
@@ -71,12 +75,7 @@ export function DriverCard({
   return (
     <article className={styles.card} aria-label={driver.name}>
       <header className={styles.head}>
-        <button
-          type="button"
-          className={styles.identity}
-          onClick={() => onOpen()}
-          aria-label={t('card.openDetail', { name: driver.name })}
-        >
+        <IdentityLink href={detailHref} label={t('card.openDetail', { name: driver.name })}>
           <Avatar
             size={48}
             src={driver.account.avatarUrl ?? undefined}
@@ -99,7 +98,7 @@ export function DriverCard({
               ) : null}
             </span>
           </span>
-        </button>
+        </IdentityLink>
         <RowActions
           actions={menu}
           maxInline={0}
@@ -128,14 +127,12 @@ export function DriverCard({
         <div className={styles.fact}>
           <dt>{t('card.activeTrips')}</dt>
           <dd>
-            {driver.activeBookingCount > 0 ? (
-              <button
-                type="button"
-                className={styles.factLink}
-                onClick={() => onOpen(DRIVER_DETAIL_TAB.OVERVIEW)}
-              >
+            {driver.activeBookingCount > 0 && detailHref ? (
+              <Link href={detailHref} className={styles.factLink}>
                 {t('activeBookings', { count: driver.activeBookingCount })}
-              </button>
+              </Link>
+            ) : driver.activeBookingCount > 0 ? (
+              t('activeBookings', { count: driver.activeBookingCount })
             ) : (
               <span className={styles.none}>{t('card.noTrips')}</span>
             )}
@@ -145,16 +142,12 @@ export function DriverCard({
           <dt>{t('card.monthWage', { month: monthLabel })}</dt>
           <dd>
             {hasMonthWage ? (
-              <button
-                type="button"
-                className={styles.factLink}
-                onClick={() => onOpen(DRIVER_DETAIL_TAB.TRIPS)}
-              >
+              <MaybeLink href={tripsHref} className={styles.factLink}>
                 {t('card.monthWageValue', {
                   amount: fmt.money(driver.monthWageTotal),
                   count: driver.monthCompletedTrips,
                 })}
-              </button>
+              </MaybeLink>
             ) : (
               <span className={styles.none}>{t('card.noTrips')}</span>
             )}
@@ -164,13 +157,14 @@ export function DriverCard({
       <DropsNote driver={driver} />
 
       <footer className={styles.actions}>
-        {open && canManage ? <Button onClick={onEdit}>{t('card.editInfo')}</Button> : null}
+        {/* Sửa thông tin nằm ở trang chi tiết (người dùng 25/11/2026) — thẻ chỉ dẫn tới đó. */}
+        {detailHref && !canReinvite ? <Button href={detailHref}>{t('card.detail')}</Button> : null}
         {canReinvite ? (
           <Button type="primary" onClick={onReinvite}>
             {t('actions.reinvite')}
           </Button>
         ) : null}
-        <Button onClick={() => onOpen(DRIVER_DETAIL_TAB.TRIPS)}>{t('card.viewTrips')}</Button>
+        {tripsHref ? <Button href={tripsHref}>{t('card.viewTrips')}</Button> : null}
       </footer>
     </article>
   );
@@ -179,6 +173,7 @@ export function DriverCard({
 /** Khối "Bằng lái" — nền xám bo 12, ba trạng thái: đã xác thực · đang đọc ảnh · chưa có. */
 function LicenceBox({ driver }: { driver: Driver }) {
   const t = useTranslations('Drivers.card');
+  const tCheck = useTranslations('Drivers.licenceCheck');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const licence = driver.licence;
@@ -203,7 +198,9 @@ function LicenceBox({ driver }: { driver: Driver }) {
     );
   }
 
-  const mismatch = holderNameDiffers(licence.fullName, driver.name);
+  // Bên thuê đã "đối chiếu" đúng bằng này ⇒ không còn việc cần làm (server cũng bỏ khỏi bộ lọc).
+  const checked = Boolean(driver.licenceCheck);
+  const mismatch = holderNameDiffers(licence.fullName, driver.name) && !checked;
   const classes = licence.classes ?? [];
   return (
     <section className={styles.licence} aria-label={t('licence')}>
@@ -219,7 +216,7 @@ function LicenceBox({ driver }: { driver: Driver }) {
             <span className={styles.checkIcon} aria-hidden="true">
               <CheckOutlined />
             </span>
-            {t('verified')}
+            {checked ? tCheck('checked') : t('verified')}
           </span>
         )}
         {classes.length > 0 ? (
@@ -285,5 +282,117 @@ function DropsNote({ driver }: { driver: Driver }) {
       <WarningFilled aria-hidden="true" />
       <span>{parts.join(' · ')}</span>
     </p>
+  );
+}
+
+/** Ảnh + tên + SĐT là MỘT link tới trang chi tiết — vùng bấm rộng; ngoài ngữ cảnh có trang thì là khối tĩnh. */
+function IdentityLink({
+  href,
+  label,
+  children,
+}: {
+  href: string | null;
+  label: string;
+  children: ReactNode;
+}) {
+  return href ? (
+    <Link href={href} className={styles.identity} aria-label={label}>
+      {children}
+    </Link>
+  ) : (
+    <span className={cx(styles.identity, styles.identityStatic)}>{children}</span>
+  );
+}
+
+function MaybeLink({
+  href,
+  className,
+  children,
+}: {
+  href: string | null;
+  className?: string;
+  children: ReactNode;
+}) {
+  return href ? (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  ) : (
+    <>{children}</>
+  );
+}
+
+/**
+ * Thẻ MỘT tài xế NỘI BỘ (ADR 0108) ở cùng lưới — Figma `23737:41945` (thẻ "Nhân viên nội bộ"): viên
+ * hình thức, khối "Trạng thái" thay cho khối bằng lái (người nội bộ không có bằng trên hệ thống),
+ * chuyến đang gán, hai nút. Không tiền công, không lời mời.
+ */
+export function InternalDriverCard({
+  driver,
+  menu,
+  detailHref,
+}: {
+  driver: InternalDriver;
+  menu: RowAction[];
+  detailHref: string | null;
+}) {
+  const t = useTranslations('Drivers');
+  const archived = driver.archivedAt !== null;
+
+  return (
+    <article className={styles.card} aria-label={driver.name}>
+      <header className={styles.head}>
+        <IdentityLink href={detailHref} label={t('card.openDetail', { name: driver.name })}>
+          <Avatar
+            size={48}
+            src={driver.photoUrl ?? undefined}
+            icon={driver.photoUrl ? undefined : <UserOutlined />}
+            className={styles.avatar}
+          />
+          <span className={styles.who}>
+            <span className={styles.name}>{driver.name}</span>
+            <span className={styles.contact}>
+              <span>{driver.phone}</span>
+            </span>
+          </span>
+        </IdentityLink>
+        <RowActions
+          actions={menu}
+          maxInline={0}
+          overflowLabel={t('card.menu', { name: driver.name })}
+        />
+      </header>
+
+      <div className={styles.tags}>
+        <span className={styles.typeChip}>{t('roster.typeInternal')}</span>
+      </div>
+
+      <div className={styles.statusBox}>
+        <span>{t('roster.statusLabel')}</span>
+        <span className={archived ? styles.statusArchived : styles.statusActive}>
+          {archived ? t('roster.internalArchived') : t('roster.internalActive')}
+        </span>
+      </div>
+
+      <dl className={styles.facts}>
+        <div className={styles.fact}>
+          <dt>{t('card.activeTrips')}</dt>
+          <dd>
+            {driver.activeTripCount > 0 ? (
+              <MaybeLink href={detailHref} className={styles.factLink}>
+                {t('activeBookings', { count: driver.activeTripCount })}
+              </MaybeLink>
+            ) : (
+              <span className={styles.none}>{t('card.noTrips')}</span>
+            )}
+          </dd>
+        </div>
+      </dl>
+      {driver.note ? <p className={styles.note}>{driver.note}</p> : null}
+
+      <footer className={styles.actions}>
+        {detailHref ? <Button href={detailHref}>{t('card.detail')}</Button> : null}
+      </footer>
+    </article>
   );
 }

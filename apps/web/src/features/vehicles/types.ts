@@ -7,6 +7,8 @@ import type { components } from '@xeprime/types';
 type Schemas = components['schemas'];
 
 export type VehicleListItem = Schemas['VehicleListItemDto'];
+/** Một thẻ của bước chọn xe khi lập đơn — kèm cờ bận theo khung giờ (`GET /vehicles/booking-picker`). */
+export type VehicleBookingPickerItem = Schemas['VehicleBookingPickerItemDto'];
 export type VehicleDetail = Schemas['VehicleDetailDto'];
 /** Kết quả đồng bộ lại snapshot công khai — thao tác sửa chữa của phiên hỗ trợ (ADR 0050 §13). */
 export type ListingRepairResult = Schemas['ListingRepairResultDto'];

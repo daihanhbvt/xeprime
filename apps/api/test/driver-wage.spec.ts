@@ -22,12 +22,8 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { DriverSelfService } from '../src/modules/drivers/driver-self.service';
-import {
-  DriversService,
-  shiftMonthKey,
-  vnMonthRange,
-  wageDaysOf,
-} from '../src/modules/drivers/drivers.service';
+import { shiftMonthKey, vnMonthRange } from '../src/modules/drivers/driver-trip-query';
+import { DriversService, wageDaysOf } from '../src/modules/drivers/drivers.service';
 import { FeePoliciesService } from '../src/modules/fee-policies/fee-policies.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';

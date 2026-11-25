@@ -37,6 +37,7 @@ import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contrac
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { cleanupDriverAccounts, seedDriverLink } from './helpers/driver-link';
 import {
+  makeBookingCollateralsService,
   makeBookingHoldsService,
   makeBookingsService,
   makeCustomersService,
@@ -153,7 +154,7 @@ function farPickup(): Date {
 }
 
 const EXTERNAL = { name: '  Nguyễn Văn Tài  ', phone: '0912345678' };
-const controller = new BookingsController(bookings);
+const controller = new BookingsController(bookings, makeBookingCollateralsService(asService));
 
 /** Đơn CŨ mang tài xế ngoài hệ thống — ghi thẳng DB vì API đã bỏ đường ghi (ADR 0074 điều 4). */
 async function setLegacyExternal(bookingId: string, name: string, phone: string): Promise<void> {

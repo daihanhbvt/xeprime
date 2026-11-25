@@ -15,7 +15,7 @@ export function feePolicyFixture(over: Partial<FeePolicy> = {}): FeePolicy {
     holdMinAmount: '20000',
     holdPaymentWindowMinutes: 120,
     freeCancelHours: 2,
-    maxAdvanceBookingDays: 15,
+    maxAdvanceBookingDays: 30,
     selfDriveMaxDays: 30,
     taxEnabled: false,
     taxRates: null,

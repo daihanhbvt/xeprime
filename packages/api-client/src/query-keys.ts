@@ -162,6 +162,25 @@ export const queryKeys = {
       ['drivers', 'assignments', id, params] as const,
     /** Ngăn chi tiết một tài xế: tiền công tháng, việc đang treo, độ tin cậy, xu hướng (ADR 0075). */
     overview: (id: string, params: QueryParams) => ['drivers', 'overview', id, params] as const,
+    /** Danh bạ tài xế nội bộ (ADR 0108) - nằm dưới `drivers` để mutation tài xế/đơn tự làm mới. */
+    internal: (params: QueryParams) => ['drivers', 'internal', params] as const,
+    /** Bộ chọn tài xế nội bộ theo khung giờ của đơn. */
+    internalAssignable: (window: {
+      pickupAt: string;
+      returnAt: string;
+      excludeBookingId?: string;
+    }) => ['drivers', 'internal-assignable', window] as const,
+    /** Danh sách GỘP liên kết + nội bộ của màn Tài xế (25/11/2026). */
+    roster: (params: QueryParams) => ['drivers', 'roster', params] as const,
+    /** Dải số đếm của danh sách gộp. */
+    rosterSummary: (params: QueryParams) => ['drivers', 'roster-summary', params] as const,
+    /** Trang chi tiết một tài xế nội bộ: hồ sơ + đơn đang gán. */
+    internalDetail: (id: string) => ['drivers', 'internal-detail', id] as const,
+    /** Bảng chuyến của một tài xế nội bộ theo tháng. */
+    internalTrips: (id: string, params: QueryParams) =>
+      ['drivers', 'internal-trips', id, params] as const,
+    /** Tra tài khoản theo SĐT ở hộp "Mời tài xế". */
+    accountLookup: (phone: string) => ['drivers', 'account-lookup', phone] as const,
   },
   /**
    * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) - lời mời/liên kết, huy hiệu chờ trả
@@ -223,8 +242,11 @@ export const queryKeys = {
   vehicles: {
     all: ['vehicles'] as const,
     list: (params: QueryParams) => ['vehicles', 'list', params] as const,
-    /** Bộ chọn xe tải-dần theo cuộn - key KHÔNG chứa page (page là pageParam của TanStack). */
-    infinite: (params: QueryParams) => ['vehicles', 'list-infinite', params] as const,
+    /**
+     * Bước chọn xe khi lập đơn (`GET /vehicles/booking-picker`), tải-dần theo cuộn - key KHÔNG chứa
+     * page (page là pageParam của TanStack). Nằm dưới `vehicles` để mutation xe tự invalidate.
+     */
+    bookingPicker: (params: QueryParams) => ['vehicles', 'booking-picker', params] as const,
     detail: (id: string) => ['vehicles', 'detail', id] as const,
     /** Chỉ số thẻ xe theo nhóm id - nằm dưới nhánh `vehicles` để mutation xe tự invalidate luôn. */
     stats: (ids: readonly string[]) => ['vehicles', 'stats', ids] as const,
@@ -744,7 +766,8 @@ export const queryKeys = {
     /** Ô tô và phí theo từng bậc (ADR 0097). */
     vehicles: (params: QueryParams) => ['platform-insurance', 'vehicles', params] as const,
     /** Đối chiếu biểu phí với hãng cho một xe — không cache (mỗi lần mở là một lượt hỏi). */
-    premiumCheck: (vehicleId: string) => ['platform-insurance', 'premium-check', vehicleId] as const,
+    premiumCheck: (vehicleId: string) =>
+      ['platform-insurance', 'premium-check', vehicleId] as const,
   },
   /** Bảo hiểm phía khách/gian hàng - danh mục công khai + GCN của một đơn (ADR 0064). */
   insurance: {

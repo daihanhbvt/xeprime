@@ -240,6 +240,23 @@ export class OccupancyService {
   }
 
   /**
+   * Xe của gian hàng đã có lịch chồng lên `[startAt, endAt)` (gồm cả thời gian chuẩn bị nằm
+   * trong `period`) — bộ chọn xe khi lập đơn dùng để đẩy xe trống lên đầu và làm mờ xe bận.
+   *
+   * ADR 0006: chỉ là cách CHỌN ứng viên cho giao diện, không phải lớp bảo vệ. Kết quả trần theo
+   * số xe của gian hàng (DISTINCT); lọc theo `tenant_id` (có chỉ mục) rồi mới so `period &&`.
+   */
+  async listBusyVehicleIds(tenantId: string, startAt: Date, endAt: Date): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<Array<{ vehicleId: string }>>`
+      SELECT DISTINCT vehicle_id AS "vehicleId"
+      FROM vehicle_occupancies
+      WHERE tenant_id = ${tenantId}
+        AND period && tstzrange(${startAt}, ${endAt}, '[)')
+    `;
+    return rows.map((r) => r.vehicleId);
+  }
+
+  /**
    * Preview trùng lịch cho UX (`POST /calendar/check-conflict`).
    *
    * ADR 0006: đây KHÔNG phải cơ chế bảo vệ. Kết quả có thể cũ ngay khi vừa trả về —

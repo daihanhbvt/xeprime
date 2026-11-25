@@ -41,6 +41,58 @@
   color: var(--xp-color-primary-hover);
 }
 
+/* Vùng danh tính là `<a>` tới trang chi tiết — không gạch chân, không đổi màu chữ phụ. */
+a.identity,
+a.identity:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Ngữ cảnh không có trang chi tiết: khối tĩnh, không con trỏ tay. */
+.identityStatic {
+  cursor: default;
+}
+
+.identityStatic:hover .name {
+  color: var(--xp-color-text);
+}
+
+/* Thẻ tài xế nội bộ — khối "Trạng thái" nền xám thay chỗ khối bằng lái (design thẻ "Nhân viên nội bộ"). */
+.statusBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-12);
+  line-height: 20px;
+}
+
+.statusActive {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.statusArchived {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Ghi chú nội bộ trên thẻ nội bộ — hai dòng, phần còn lại ở trang chi tiết. */
+.note {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
 .identity:focus-visible {
   border-radius: var(--xp-border-radius);
   outline: 2px solid var(--xp-color-primary);

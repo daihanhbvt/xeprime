@@ -59,6 +59,7 @@
     "OTP_LOCKED": "Bạn đã nhập sai mã quá nhiều lần nên mã này đã bị huỷ. Vui lòng gửi lại mã để nhận mã mới.",
     "DRIVER_LICENCE_IMAGE_INVALID": "Tệp tải lên không phải ảnh hợp lệ - hãy chọn ảnh JPG, PNG hoặc WEBP.",
     "DRIVER_LICENCE_SUBMISSION_LIMIT": "Bạn đã gửi ảnh bằng lái nhiều lần trong 24 giờ qua. Vui lòng thử lại vào ngày mai, hoặc liên hệ XePrime nếu cần hỗ trợ.",
+    "DRIVER_LICENCE_NOT_VERIFIED": "Tài xế chưa có bằng lái đã xác thực còn hạn - chờ tài xế nộp bằng rồi mới đối chiếu được.",
     "DRIVER_LICENCE_STATE_CONFLICT": "Lượt nộp bằng lái vừa thay đổi - vui lòng tải lại trang.",
     "DRIVER_LICENCE_CLASS_MISMATCH": "Hạng bằng lái của bạn không lái được loại xe này.",
     "DRIVER_LICENCE_EXPIRED": "Bằng lái hết hạn trước khi chuyến kết thúc - vui lòng cập nhật bằng còn hạn.",
@@ -285,7 +286,14 @@
     "CHAT_BLOCKED": "Không thể nhắn tin vì một trong hai bên đã chặn.",
     "HANDOVER_PICKUP_NOT_OPEN": "Chưa tới giờ giao xe - chỉ xác nhận được từ 60 phút trước giờ nhận.",
     "INSURANCE_PREMIUM_SYNCED_LOCKED": "Biểu phí đang đồng bộ từ MIC nên không sửa tay được. Chỉ sửa được khi một lần đồng bộ hỏng.",
-    "INSURANCE_EARLY_HANDOVER": "Chưa giao xe được lúc này: giao sớm như vậy làm hợp đồng bảo hiểm dài hơn bậc phí khách đã trả. Giao gần giờ hẹn hơn."
+    "INSURANCE_EARLY_HANDOVER": "Chưa giao xe được lúc này: giao sớm như vậy làm hợp đồng bảo hiểm dài hơn bậc phí khách đã trả. Giao gần giờ hẹn hơn.",
+    "INTERNAL_DRIVER_NOT_FOUND": "Không tìm thấy tài xế nội bộ này. Tải lại danh sách rồi thử lại.",
+    "INTERNAL_DRIVER_ARCHIVED": "Tài xế này đã được lưu trữ. Khôi phục trong danh bạ trước khi dùng.",
+    "INTERNAL_DRIVER_PHONE_TAKEN": "Số điện thoại này đã có trong danh bạ tài xế nội bộ.",
+    "INTERNAL_DRIVER_PHOTO_INVALID": "Ảnh tài xế không hợp lệ. Chọn lại ảnh rồi lưu.",
+    "BOOKING_DISCOUNT_EXCEEDS_BASE": "Giảm giá không được lớn hơn tiền thuê.",
+    "BOOKING_COLLATERAL_NOT_FOUND": "Không tìm thấy tài sản thế chấp này trên đơn.",
+    "BOOKING_COLLATERAL_LOCKED": "Không thêm hoặc gỡ được tài sản: đơn đã kết thúc, đã đủ 10 món, hoặc món này đã trả cho khách."
   },
   "codeWithWait": {
     "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng thử lại sau {wait}.",

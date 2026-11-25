@@ -3,10 +3,10 @@
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import type { VehicleListItem } from '@/features/vehicles/types';
 import { bookingResultDialogClassNames } from './BookingResult';
 import { StaffBookingFlow } from './StaffBookingFlow';
-import { StaffVehiclePicker } from './StaffVehiclePicker';
+import { StaffVehiclePicker, type PickedRange } from './StaffVehiclePicker';
+import styles from './StaffBookingDialog.module.css';
 
 /** Xe của luồng — từ ô lịch được bấm, hoặc từ bước chọn xe ngay trong hộp thoại. */
 interface PickedVehicle {
@@ -67,9 +67,15 @@ export function StaffBookingDialog({
   onClose,
 }: StaffBookingDialogProps) {
   const t = useTranslations('BookingRequests.staffFlow');
+  const tPicker = useTranslations('BookingRequests.vehiclePicker');
   const [busy, setBusy] = useState(false);
   const [isResult, setIsResult] = useState(false);
   const [picked, setPicked] = useState<PickedVehicle | null>(null);
+  /**
+   * Khung giờ chọn ở bước chọn xe — thành giá trị mở đầu của bước Chuyến đi, và được giữ lại khi
+   * nhân viên quay về "Chọn xe khác" để không phải chọn giờ lần nữa.
+   */
+  const [pickedRange, setPickedRange] = useState<PickedRange | null>(null);
 
   const preset: PickedVehicle | null = vehicleId
     ? { id: vehicleId, name: vehicleName ?? '', imageUrl: vehicleImageUrl }
@@ -78,35 +84,59 @@ export function StaffBookingDialog({
 
   function handleClose() {
     setPicked(null);
+    setPickedRange(null);
     setIsResult(false);
     onClose();
   }
 
-  const title = vehicle ? t('title') : t('pickVehicleTitle');
+  const title = vehicle ? t('title') : tPicker('title');
+  // Figma `24565:59739`: bước chọn xe có phụ đề dưới tiêu đề; tên khả truy cập vẫn là tiêu đề.
+  const header = vehicle ? (
+    title
+  ) : (
+    <span className={styles.titleBlock}>
+      <span>{title}</span>
+      <span className={styles.subtitle}>{tPicker('subtitle')}</span>
+    </span>
+  );
 
   return (
     <ResponsiveDialog
       // Hộp kết quả tự có tiêu đề lớn — tên hộp vẫn còn cho trình đọc màn hình.
-      {...(isResult ? { hideHeaderTitle: true as const, ariaLabel: title } : { title })}
+      {...(isResult ? { hideHeaderTitle: true as const, ariaLabel: title } : { title: header })}
       open={open}
       onClose={handleClose}
       size={isResult ? 'fit' : 'xl'}
       // Bố cục hai cột tự cuộn từng bên (RequestBookingFlow `.left`/`.right`, StaffVehiclePicker
       // `.scroller`) — thân overlay phải khoá cuộn để không thành hai lớp lồng nhau.
-      bodyScroll="content"
+      // Bước chọn xe: thân cao THEO NỘI DUNG (Figma `24565:59738` ôm sát lưới thẻ) — bộ chọn tự
+      // giới hạn chiều cao và chỉ cho lưới cuộn, nên thân khoá cuộn (`pickerBody`).
+      bodyScroll={vehicle ? 'content' : 'body'}
       mobileMode="fullscreen"
       footer={null}
       confirmLoading={busy}
-      className={isResult ? bookingResultDialogClassNames.className : undefined}
-      bodyClassName={isResult ? bookingResultDialogClassNames.bodyClassName : undefined}
+      className={
+        isResult
+          ? bookingResultDialogClassNames.className
+          : vehicle
+            ? undefined
+            : styles.pickerDialog
+      }
+      bodyClassName={
+        isResult
+          ? bookingResultDialogClassNames.bodyClassName
+          : vehicle
+            ? undefined
+            : styles.pickerBody
+      }
     >
       {!open ? null : vehicle ? (
         <StaffBookingFlow
           vehicleId={vehicle.id}
           vehicleName={vehicle.name}
           vehicleImageUrl={vehicle.imageUrl}
-          pickupAt={pickupAt}
-          returnAt={returnAt}
+          pickupAt={preset ? pickupAt : (pickedRange?.pickupAt ?? pickupAt)}
+          returnAt={preset ? returnAt : (pickedRange?.returnAt ?? returnAt)}
           customerName={customerName}
           customerPhone={customerPhone}
           // Vào từ lịch thì xe là cố định — không cho đổi, tránh mở một nhánh không ai cần.
@@ -118,9 +148,12 @@ export function StaffBookingDialog({
       ) : (
         <StaffVehiclePicker
           defaultBranchId={defaultBranchId}
-          onPick={(item: VehicleListItem) =>
-            setPicked({ id: item.id, name: item.name, imageUrl: item.mainImageUrl })
-          }
+          initialRange={pickedRange}
+          onCancel={handleClose}
+          onContinue={(item, range) => {
+            setPickedRange(range);
+            setPicked({ id: item.id, name: item.name, imageUrl: item.mainImageUrl });
+          }}
         />
       )}
     </ResponsiveDialog>

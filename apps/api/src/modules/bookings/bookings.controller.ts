@@ -6,6 +6,7 @@ import {
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -30,6 +31,8 @@ import {
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   AssignBookingDriverDto,
+  BookingCollateralInputDto,
+  BookingCollateralListDto,
   BookingDetailDto,
   BookingHandoverPrepDto,
   BookingListQueryDto,
@@ -40,6 +43,7 @@ import {
   UpdateBookingDeliveryFeeDto,
   UpdateBookingDto,
 } from './dto/booking.dto';
+import { BookingCollateralsService } from './booking-collaterals.service';
 import { BookingsService } from './bookings.service';
 
 /**
@@ -53,7 +57,10 @@ import { BookingsService } from './bookings.service';
 @TenantScoped()
 @Realms(ACCOUNT_REALM.PARTNER)
 export class BookingsController {
-  constructor(private readonly bookings: BookingsService) {}
+  constructor(
+    private readonly bookings: BookingsService,
+    private readonly collaterals: BookingCollateralsService,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
@@ -137,6 +144,79 @@ export class BookingsController {
     return this.bookings.updateDeliveryFee(tenant.tenantId, id, user.id, dto);
   }
 
+  /** Sổ tài sản thế chấp của đơn (ADR 0109) — cũ nhất trước. */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Get(':id/collaterals')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @ApiOperation({ summary: 'Tài sản thế chấp khách để lại cho đơn' })
+  @ApiOkResponse({ type: BookingCollateralListDto })
+  listCollaterals(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.list(tenant.tenantId, id);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post(':id/collaterals')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({
+    summary:
+      'Ghi thêm một món tài sản thế chấp (đơn chưa khép, tối đa 10 món - 409 `BOOKING_COLLATERAL_LOCKED`)',
+  })
+  @ApiCreatedResponse({ type: BookingCollateralListDto })
+  addCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: BookingCollateralInputDto,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.add(tenant.tenantId, id, user.id, dto);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Delete(':id/collaterals/:collateralId')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Gỡ một món ghi nhầm (đơn chưa khép, món chưa trả)' })
+  @ApiOkResponse({ type: BookingCollateralListDto })
+  removeCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.remove(tenant.tenantId, id, collateralId, user.id);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post(':id/collaterals/:collateralId/return')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Đánh dấu đã trả tài sản cho khách (mọi trạng thái đơn, idempotent)' })
+  @ApiCreatedResponse({ type: BookingCollateralListDto })
+  returnCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.setReturned(tenant.tenantId, id, collateralId, user.id, true);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post(':id/collaterals/:collateralId/unreturn')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Hoàn tác "đã trả" của một món tài sản (bấm nhầm)' })
+  @ApiCreatedResponse({ type: BookingCollateralListDto })
+  unreturnCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.setReturned(tenant.tenantId, id, collateralId, user.id, false);
+  }
+
   /**
    * Đánh dấu / bỏ đánh dấu TAY một việc "Chuẩn bị bàn giao" (03/11/2026) — khi việc diễn ra ngoài
    * hệ thống. Việc tiền không đánh dấu tay được (phải là phiếu thu thật). Cùng quyền với soạn biên
@@ -161,9 +241,10 @@ export class BookingsController {
   @Patch(':id/driver')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({
-    summary: 'Gán/bỏ gán tài xế liên kết cho đơn (có audit)',
+    summary: 'Gán/bỏ gán tài xế (liên kết hoặc nội bộ) cho đơn (có audit)',
     description:
       '`driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống còn trên đơn cũ). ' +
+      '`internalDriverId`: gán tài xế NỘI BỘ từ danh bạ (ADR 0108) - đã nhận ngay, chống trùng lịch 409 `DRIVER_BUSY`. ' +
       '`externalDriver` đã bỏ (ADR 0074 điều 4) ⇒ 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. ' +
       'Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.',
   })
@@ -180,6 +261,9 @@ export class BookingsController {
         code: API_ERROR_CODE.EXTERNAL_DRIVER_NOT_SUPPORTED,
         message: 'XePrime không còn nhận tài xế ngoài hệ thống - gán tài xế liên kết',
       });
+    }
+    if (dto.internalDriverId !== undefined) {
+      return this.bookings.assignInternalDriver(tenant.tenantId, id, user.id, dto.internalDriverId);
     }
     return this.bookings.assignDriver(
       tenant.tenantId,

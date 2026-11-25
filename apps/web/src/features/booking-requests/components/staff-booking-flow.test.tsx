@@ -91,7 +91,9 @@ beforeEach(() => {
   api.quote.mockReset().mockResolvedValue(QUOTE);
   api.busyDays.mockReset().mockResolvedValue({ days: [], from: '2026-10-25', to: '2027-10-26' });
   api.conflict.mockReset().mockResolvedValue({ hasConflict: false });
-  api.create.mockReset().mockResolvedValue({ id: 'bk-1', code: 'BK-000123' });
+  api.create
+    .mockReset()
+    .mockResolvedValue({ id: 'bk-1', code: 'BK-000123', totalAmount: '1350000' });
 });
 afterEach(cleanup);
 
@@ -219,5 +221,83 @@ describe('StaffBookingFlow - xe chưa cấu hình giá', () => {
       await screen.findByText('Xe chưa cấu hình giá - nhập tiền thuê trước khi tạo đơn.'),
     ).toBeTruthy();
     expect(api.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('StaffBookingFlow - giá thoả thuận + cọc & thế chấp (ADR 0109)', () => {
+  async function fillCustomer() {
+    fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'Khách C' } });
+    fireEvent.change(screen.getByPlaceholderText('0901234567'), {
+      target: { value: '0912345678' },
+    });
+  }
+
+  it('bật giá thoả thuận: điền sẵn từ báo giá, sửa tiền thuê + phụ phí theo dòng, tổng tính lại', async () => {
+    await goToReview();
+    fireEvent.click(screen.getByRole('switch', { name: 'Giá thoả thuận' }));
+    const base = (await screen.findByLabelText(/Tiền thuê \(cả kỳ\)/)) as HTMLInputElement;
+    expect(base.value).toBe('1.500.000');
+    expect((screen.getByLabelText('Giảm giá') as HTMLInputElement).value).toBe('150.000');
+
+    fireEvent.change(base, { target: { value: '1800000' } });
+    fireEvent.click(screen.getByRole('button', { name: /Thêm phụ phí/ }));
+    fireEvent.change(screen.getByPlaceholderText('Ghế trẻ em'), {
+      target: { value: 'Ghế trẻ em' },
+    });
+    fireEvent.change(screen.getByLabelText('Số tiền'), { target: { value: '100000' } });
+    // 1.800.000 − 150.000 + 100.000
+    expect(await screen.findByText('1.750.000 ₫')).toBeTruthy();
+
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    expect(api.create.mock.calls[0]![0]).toMatchObject({
+      baseAmount: '1800000',
+      discountAmount: '150000',
+      deliveryFee: '0',
+      negotiatedPrice: true,
+      extraCharges: [{ label: 'Ghế trẻ em', amount: '100000' }],
+    });
+  });
+
+  it('giảm giá lớn hơn tiền thuê: báo lỗi, không tạo đơn', async () => {
+    await goToReview();
+    fireEvent.click(screen.getByRole('switch', { name: 'Giá thoả thuận' }));
+    fireEvent.change(await screen.findByLabelText('Giảm giá'), { target: { value: '2000000' } });
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    expect(await screen.findByText('Giảm giá không được lớn hơn tiền thuê.')).toBeTruthy();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('cọc cả tiền lẫn tài sản: gửi cọc tiền + danh sách tài sản kèm mô tả', async () => {
+    await goToReview();
+    fireEvent.click(screen.getByText('Cả hai'));
+    // Chọn có tài sản ⇒ mở sẵn một dòng CCCD; thêm một dòng xe máy.
+    fireEvent.click(screen.getByRole('button', { name: /Thêm tài sản/ }));
+    const descriptions = screen.getAllByLabelText('Mô tả');
+    fireEvent.change(descriptions[1]!, { target: { value: '59A1-12345' } });
+
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    const body = api.create.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.depositAmount).toBe('5000000');
+    expect(body.collaterals).toEqual([
+      { collateralType: 'citizen_id', description: null },
+      { collateralType: 'citizen_id', description: '59A1-12345' },
+    ]);
+    expect(body).not.toHaveProperty('negotiatedPrice');
+  });
+
+  it('không cọc: không gửi tiền cọc lẫn tài sản', async () => {
+    await goToReview();
+    fireEvent.click(screen.getByText('Không cọc'));
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    const body = api.create.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.depositAmount).toBe('0');
+    expect(body).not.toHaveProperty('collaterals');
   });
 });

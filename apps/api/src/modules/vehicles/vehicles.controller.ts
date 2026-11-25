@@ -13,12 +13,17 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  ACCOUNT_REALM,
-  PERMISSION,
-  SUPPORT_CAPABILITY,
-} from '@xeprime/types';
-import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  RequirePermissions,
+  SupportAction,
+  TenantScoped,
+} from '../../common/decorators';
 import { IdResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
@@ -53,6 +58,11 @@ import {
   supportVehicleUpdateCapabilities,
 } from './vehicle-support-policy';
 import { VehiclesService } from './vehicles.service';
+import {
+  VehicleBookingPickerPageDto,
+  VehicleBookingPickerQueryDto,
+} from './dto/vehicle-booking-picker.dto';
+import { VehicleBookingPickerService } from './vehicle-booking-picker.service';
 
 /**
  * Quản lý xe của gian hàng — tất cả tenant-scoped.
@@ -71,6 +81,7 @@ export class VehiclesController {
     private readonly source: VehicleSourceService,
     private readonly contracts: VehicleContractsService,
     private readonly alertsService: VehicleAlertsService,
+    private readonly picker: VehicleBookingPickerService,
   ) {}
 
   @Get()
@@ -82,7 +93,11 @@ export class VehiclesController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: VehicleListQueryDto,
   ): Promise<VehiclePageDto> {
-    return this.vehicles.list(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<VehiclePageDto>;
+    return this.vehicles.list(
+      tenant.tenantId,
+      query,
+      tenant.allowedBranchIds,
+    ) as Promise<VehiclePageDto>;
   }
 
   /**
@@ -167,6 +182,23 @@ export class VehiclesController {
     @Query() query: FleetSummaryQueryDto,
   ): Promise<FleetSummaryDto> {
     return this.vehicles.fleetSummary(tenant.tenantId, query.branchId, tenant.allowedBranchIds);
+  }
+
+  /**
+   * Bước "Chọn xe" của hộp Tạo đơn thuê: xe trống trong khung giờ lên trước, xe bận đánh dấu
+   * `busy`. Route tĩnh — phải đứng trước `:id`. Cùng quyền với danh sách xe mà bộ chọn dùng trước
+   * đây; quyền TẠO đơn vẫn do `POST /bookings` gác.
+   */
+  @Get('booking-picker')
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
+  @ApiOperation({ summary: 'Xe cho bước chọn xe khi lập đơn, kèm cờ bận theo khung giờ' })
+  @ApiOkResponse({ type: VehicleBookingPickerPageDto })
+  bookingPicker(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: VehicleBookingPickerQueryDto,
+  ): Promise<VehicleBookingPickerPageDto> {
+    return this.picker.list(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)

@@ -8,6 +8,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { DATE_TIME_SEPARATOR, licenceTripLastDayKey, toAppTz } from '@xeprime/domain';
 import { newId, Prisma } from '@xeprime/prisma';
@@ -27,6 +28,7 @@ import {
   CUSTOMER_DOCUMENT_TYPE,
   DRIVER_ASSIGNMENT_STATUS,
   DRIVER_LICENCE_STATUS,
+  DRIVER_SOURCE,
   FEE_LINE,
   HANDOVER_ELIGIBLE_BOOKING_STATUS,
   handoverPhotoSlotsFor,
@@ -89,6 +91,12 @@ import { CancellationsService } from '../cancellations/cancellations.service';
 import { BookingExtensionsService } from '../booking-extensions/booking-extensions.service';
 import { AddressService } from '../locations/address.service';
 import { DriversService, driverBusy, isDriverScheduleConflict } from '../drivers/drivers.service';
+import {
+  BOOKING_COLLATERAL_ORDER,
+  BOOKING_COLLATERAL_SELECT,
+  BookingCollateralsService,
+  toBookingCollateralDto,
+} from './booking-collaterals.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
 import {
@@ -209,7 +217,10 @@ const DETAIL_SELECT = {
   baseAmount: true,
   deliveryFee: true,
   discountAmount: true,
+  extraChargesAmount: true,
   priceSnapshot: true,
+  // Sổ tài sản thế chấp (ADR 0109) — một đơn tối đa BOOKING_COLLATERAL_MAX_ITEMS món.
+  collaterals: { orderBy: BOOKING_COLLATERAL_ORDER, select: BOOKING_COLLATERAL_SELECT },
   // Một đơn chỉ có tối đa một khoản giữ chỗ. Đọc số THỰC THU để màn chi tiết không diễn giải
   // `fees.holdAmount` (số phải thu trong snapshot) thành số khách đã chuyển.
   hold: { select: { paidAmount: true, paidAt: true } },
@@ -290,6 +301,8 @@ export class BookingsService {
     private readonly cancellations: CancellationsService,
     /** Phụ lục gia hạn (ADR 0077): đóng phụ lục còn chờ + quyết toán phụ lục khi đơn kết thúc. */
     private readonly extensions: BookingExtensionsService,
+    /** Writer DUY NHẤT của sổ tài sản thế chấp theo đơn (ADR 0109). */
+    private readonly collaterals: BookingCollateralsService,
   ) {}
 
   async list(
@@ -402,6 +415,12 @@ export class BookingsService {
 
   private async withMoneyOne<T extends BookingListItemDto>(item: T): Promise<T> {
     const [patched] = await this.withMoney([item]);
+    // Chi tiết đơn (mọi đường trả `BookingDetailDto` đi qua đây): thẻ "Tài xế" hiện hạng bằng lái
+    // của tài xế liên kết. Danh sách không cần — không thêm một phép đọc cho mỗi trang đơn.
+    const driver = patched!.driver;
+    if (driver?.source === DRIVER_SOURCE.LINKED && driver.id) {
+      driver.licence = await this.drivers.licenceOfLink(driver.id);
+    }
     return patched!;
   }
 
@@ -719,7 +738,19 @@ export class BookingsService {
     const delivery = money(dto.deliveryFee);
     const discount = money(dto.discountAmount);
     const deposit = money(dto.depositAmount);
-    const total = base.plus(delivery).minus(discount);
+    /*
+     * Giá thoả thuận của đơn TỰ LẬP (ADR 0109): phụ phí theo dòng + nhãn. Luồng duyệt yêu cầu dựng
+     * dto ở server và không bao giờ mang hai trường này — tiền của nó do PricingService chốt.
+     */
+    const extraCharges = source === 'direct' ? normalizeExtraCharges(dto.extraCharges) : [];
+    const extra = extraCharges.reduce((sum, c) => sum.plus(c.amount), new Prisma.Decimal(0));
+    if (source === 'direct' && discount.gt(base)) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODE.BOOKING_DISCOUNT_EXCEEDS_BASE,
+        message: 'Giảm giá không được lớn hơn tiền thuê',
+      });
+    }
+    const total = bookingTotal({ base, delivery, discount, extra });
 
     /*
      * Sổ khách của gian hàng (S-01): mỗi đơn có SĐT đều gắn về một hồ sơ khách, TRONG CÙNG
@@ -754,7 +785,17 @@ export class BookingsService {
     // MỌI đơn đều mang snapshot giá (Wave 2): luồng duyệt yêu cầu truyền snapshot từ
     // PricingService; đơn shop tự lập chốt lại đúng các số shop đã nhập ('manual').
     // Snapshot BẤT BIẾN — không code path nào UPDATE lại cột này.
-    const priceSnapshot = snapshot ?? manualSnapshot({ base, delivery, discount, deposit, total });
+    const priceSnapshot =
+      snapshot ??
+      manualSnapshot({
+        base,
+        delivery,
+        discount,
+        deposit,
+        total,
+        extraCharges,
+        negotiated: source === 'direct' && dto.negotiatedPrice === true,
+      });
 
     const created = await tx.booking.create({
       data: {
@@ -789,6 +830,7 @@ export class BookingsService {
         deliveryFee: delivery,
         discountAmount: discount,
         depositAmount: deposit,
+        extraChargesAmount: extra,
         totalAmount: total,
         priceSnapshot: priceSnapshot as unknown as Prisma.InputJsonValue,
         /*
@@ -819,6 +861,15 @@ export class BookingsService {
       snapshot: priceSnapshot,
       consent: extras.insuranceConsent ?? null,
     });
+
+    if (source === 'direct' && dto.collaterals?.length) {
+      await this.collaterals.addManyWithinTx(tx, {
+        tenantId,
+        bookingId: id,
+        actorUserId: userId,
+        items: dto.collaterals,
+      });
+    }
 
     if (extras.autoAssignDriverId) {
       await this.drivers.assignWithinTx(tx, {
@@ -876,7 +927,16 @@ export class BookingsService {
       );
     }
 
-    return this.withMoneyOne(toDetail(created));
+    // `created` được đọc TRƯỚC khi ghi sổ tài sản — đọc lại sổ để chi tiết trả về đủ.
+    const collaterals =
+      source === 'direct' && dto.collaterals?.length
+        ? await tx.bookingCollateral.findMany({
+            where: { bookingId: id },
+            orderBy: BOOKING_COLLATERAL_ORDER,
+            select: BOOKING_COLLATERAL_SELECT,
+          })
+        : created.collaterals;
+    return this.withMoneyOne(toDetail({ ...created, collaterals }));
   }
 
   /**
@@ -935,6 +995,7 @@ export class BookingsService {
         baseAmount: true,
         deliveryFee: true,
         discountAmount: true,
+        extraChargesAmount: true,
       },
     });
     if (!current) throw notFound();
@@ -946,9 +1007,13 @@ export class BookingsService {
     assertMutable(current.status as BookingStatus);
 
     const nextFee = money(dto.deliveryFee);
-    const total = new Prisma.Decimal(current.baseAmount)
-      .plus(nextFee)
-      .minus(current.discountAmount);
+    // CÙNG công thức với lúc tạo — phụ phí theo dòng (ADR 0109) không được rơi mất khi đổi phí giao.
+    const total = bookingTotal({
+      base: current.baseAmount,
+      delivery: nextFee,
+      discount: current.discountAmount,
+      extra: current.extraChargesAmount,
+    });
     const previousFee = current.deliveryFee.toFixed(2);
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -968,10 +1033,12 @@ export class BookingsService {
           targetId: id,
           before: {
             deliveryFee: previousFee,
-            totalAmount: current.baseAmount
-              .plus(current.deliveryFee)
-              .minus(current.discountAmount)
-              .toFixed(2),
+            totalAmount: bookingTotal({
+              base: current.baseAmount,
+              delivery: current.deliveryFee,
+              discount: current.discountAmount,
+              extra: current.extraChargesAmount,
+            }).toFixed(2),
           },
           after: {
             deliveryFee: nextFee.toFixed(2),
@@ -1055,6 +1122,23 @@ export class BookingsService {
         wageAmount,
       });
     });
+  }
+
+  /** Gán tài xế NỘI BỘ từ danh bạ (ADR 0108) — luật ở `DriversService.assignInternalWithinTx`. */
+  assignInternalDriver(
+    tenantId: string,
+    id: string,
+    userId: string,
+    internalDriverId: string,
+  ): Promise<BookingDetailDto> {
+    return this.changeDriver(tenantId, id, (tx) =>
+      this.drivers.assignInternalWithinTx(tx, {
+        tenantId,
+        bookingId: id,
+        internalDriverId,
+        actorUserId: userId,
+      }),
+    );
   }
 
   /** Khung chung của mọi lần đổi tài xế: đơn còn sửa được → transaction → đọc lại chi tiết. */
@@ -1592,6 +1676,9 @@ function manualSnapshot(amounts: {
   discount: Prisma.Decimal;
   deposit: Prisma.Decimal;
   total: Prisma.Decimal;
+  /** Phụ phí theo dòng của đơn tự lập (ADR 0109) — mỗi dòng một hàng `PRICE_ROW.EXTRAS`. */
+  extraCharges?: { label: string; amount: Prisma.Decimal }[];
+  negotiated?: boolean;
 }): BookingPriceSnapshot {
   const rows: BookingPriceSnapshot['rows'] = [
     { key: PRICE_ROW.BASE, label: 'Tiền thuê gốc', amount: amounts.base.toFixed(0) },
@@ -1610,15 +1697,48 @@ function manualSnapshot(amounts: {
       amount: amounts.delivery.toFixed(0),
     });
   }
+  for (const charge of amounts.extraCharges ?? []) {
+    rows.push({ key: PRICE_ROW.EXTRAS, label: charge.label, amount: charge.amount.toFixed(0) });
+  }
   return {
     calculatedAt: new Date().toISOString(),
     source: 'manual',
+    ...(amounts.negotiated ? { negotiated: true } : {}),
     currency: 'VND',
     rows,
     totalAmount: amounts.total.toFixed(0),
     depositAmount: amounts.deposit.toFixed(0),
     policy: null,
   };
+}
+
+/**
+ * Tổng tiền của đơn = tiền thuê − giảm giá + phí giao xe + Σ phụ phí theo dòng (ADR 0109). MỘT công
+ * thức cho lúc tạo và lúc sửa phí giao xe.
+ */
+function bookingTotal(a: {
+  base: Prisma.Decimal;
+  delivery: Prisma.Decimal;
+  discount: Prisma.Decimal;
+  extra: Prisma.Decimal;
+}): Prisma.Decimal {
+  return new Prisma.Decimal(a.base).plus(a.delivery).minus(a.discount).plus(a.extra);
+}
+
+/** Dòng phụ phí hợp lệ: số > 0 (DTO đã kiểm dạng + trần số dòng). */
+function normalizeExtraCharges(
+  input: { label: string; amount: string }[] | undefined,
+): { label: string; amount: Prisma.Decimal }[] {
+  return (input ?? []).map((c) => {
+    const amount = new Prisma.Decimal(c.amount);
+    if (amount.lte(0)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: `Phụ phí "${c.label}" phải lớn hơn 0`,
+      });
+    }
+    return { label: c.label, amount };
+  });
 }
 
 function assertRange(pickupAt: Date, returnAt: Date): void {
@@ -1890,6 +2010,8 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     baseAmount: b.baseAmount as unknown as string,
     deliveryFee: b.deliveryFee as unknown as string,
     discountAmount: b.discountAmount as unknown as string,
+    extraChargesAmount: b.extraChargesAmount as unknown as string,
+    collaterals: b.collaterals.map(toBookingCollateralDto),
     priceSnapshot,
     holdPaidAt: b.hold?.paidAt?.toISOString() ?? null,
     cancellationReasonCategory: b.cancellation?.reasonCategory ?? null,

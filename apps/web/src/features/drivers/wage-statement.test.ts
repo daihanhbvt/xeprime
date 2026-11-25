@@ -32,6 +32,9 @@ function row(over: Partial<DriverAssignmentRow>): DriverAssignmentRow {
     wageDays: 2,
     vehiclePlate: '51K-123.45',
     vehicleName: 'Innova',
+    vehicleImageUrl: null,
+    customerName: 'Khách',
+    customerPhone: '0901234567',
     ...over,
   };
 }
