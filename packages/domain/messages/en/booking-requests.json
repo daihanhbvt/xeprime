@@ -40,10 +40,28 @@
     "emptySearch": "No vehicle matches that search",
     "emptyBranch": "This branch has no vehicles yet",
     "empty": "This shop has no vehicles yet",
-    "perDay": "{amount}/day",
     "loadingMore": "Loading more vehicles…",
     "appendFailed": "Could not load more vehicles.",
-    "allShown": "All {count, plural, one {# vehicle} other {# vehicles}} shown"
+    "allShown": "All {count, plural, one {# vehicle} other {# vehicles}} shown",
+    "title": "Create a rental for a customer",
+    "subtitle": "Pick a vehicle that is free to continue creating the rental",
+    "branchLabel": "Branch",
+    "typeLabel": "Type",
+    "searchLabel": "Search",
+    "timeLabel": "Pick-up/return time",
+    "timePlaceholder": "Choose pick-up and return time",
+    "timeRequired": "Choose a pick-up/return time to see which vehicles are free",
+    "gridLabel": "Vehicles",
+    "busy": "Booked",
+    "busyHint": "{name} is already booked in this time window",
+    "emptyType": "{type, select, car {This shop has no cars yet} motorbike {This shop has no motorbikes yet} other {This shop has no vehicles yet}}",
+    "estimateDays": "Estimate for {days, plural, one {# day} other {# days}} · <amount>{value}</amount>",
+    "estimate": "Estimate · <amount>{value}</amount>",
+    "estimateLoading": "Calculating price…",
+    "estimateUnavailable": "This vehicle has no price set, enter the amount in the next step",
+    "pickHint": "Pick a vehicle to see the estimate",
+    "plateLabel": "Plate number",
+    "codeLabel": "Vehicle code"
   },
   "customer": {
     "heading": "Customer",
@@ -722,6 +740,43 @@
       "next": {
         "title": "After the booking is created",
         "body": "The vehicle is blocked on the calendar for this customer right away. You collect the rental and the deposit directly from the customer at pick-up."
+      },
+      "negotiated": {
+        "toggle": "Negotiated price",
+        "lead": "The system price is only a suggestion. Edit it to the amounts agreed with the customer; the total updates instantly.",
+        "discount": "Discount",
+        "deliveryFee": "Delivery fee",
+        "deliveryFeeHint": "Paid directly by the customer at pickup.",
+        "extrasTitle": "Extra charges",
+        "extrasHint": "For example a child seat or charger. Each line is printed on the booking and contract.",
+        "extraLabel": "Item",
+        "extraLabelPlaceholder": "Child seat",
+        "extraAmount": "Amount",
+        "addExtra": "Add charge",
+        "removeExtra": "Remove charge"
+      },
+      "collateral": {
+        "title": "Deposit & collateral",
+        "lead": "Record exactly what the customer leaves for this booking so you can check it at return.",
+        "modeLabel": "Security type",
+        "mode": {
+          "cash": "Cash",
+          "asset": "Items",
+          "both": "Both",
+          "none": "No deposit"
+        },
+        "cash": "Cash deposit collected directly",
+        "cashHint": "Paid to your shop at pickup and returned at drop-off.",
+        "assetsTitle": "Items held",
+        "assetsHint": "ID card, driving licence, motorbike with plate… Mark them returned on the booking.",
+        "type": "Type",
+        "description": "Description",
+        "descriptionPlaceholder": "Document number (optional)",
+        "descriptionMotorbike": "Plate, e.g. 59A1-12345",
+        "descriptionOther": "What it is, e.g. Dell laptop",
+        "add": "Add item",
+        "remove": "Remove item",
+        "noneHint": "The customer leaves no deposit for this booking."
       }
     },
     "validation": {
@@ -738,7 +793,13 @@
       "addressMax": "Address can be at most {max} characters",
       "noteMax": "Note can be at most {max} characters",
       "amountMin": "Amount cannot be negative",
-      "baseAmountRequired": "This vehicle has no price - enter the rental amount before creating the booking."
+      "baseAmountRequired": "This vehicle has no price - enter the rental amount before creating the booking.",
+      "extraLabelRequired": "Enter the charge name",
+      "extraLabelMax": "The charge name can be at most {max} characters",
+      "extraAmountPositive": "The amount must be greater than 0",
+      "collateralDescriptionRequired": "Describe the item",
+      "collateralDescriptionMax": "The description can be at most {max} characters",
+      "discountExceedsBase": "The discount cannot be larger than the rental amount."
     },
     "scheduleConflict": "The vehicle was just booked for this time. Click “Edit” to choose another period.",
     "deliveryNoteLine": "Delivery to: {address}",

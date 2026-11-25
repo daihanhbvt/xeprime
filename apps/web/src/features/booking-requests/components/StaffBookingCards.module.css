@@ -1,0 +1,75 @@
+/* Thẻ "Tiền thuê" (giá thoả thuận) + "Cọc & thế chấp" của luồng đặt hộ (ADR 0109). */
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 500;
+}
+
+.listHead {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-xs);
+  gap: 2px;
+}
+
+.listTitle {
+  font-weight: 600;
+}
+
+.listHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+/* Một dòng phụ phí / tài sản: hai ô + nút gỡ, xuống dòng trên màn hẹp. */
+.lineRow {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-sm);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+}
+
+.removeBtn {
+  margin-top: 30px;
+}
+
+@media (width <= 575px) {
+  .lineRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .lineRow > :nth-child(2) {
+    grid-column: 1;
+  }
+
+  .removeBtn {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border);
+  margin-top: var(--xp-space-sm);
+  gap: var(--xp-space-sm);
+}
+
+.totalRow b {
+  font-size: var(--xp-font-size-h4);
+}

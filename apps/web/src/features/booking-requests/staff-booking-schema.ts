@@ -1,4 +1,17 @@
-import { ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE, compactPhoneInput } from '@xeprime/types';
+import {
+  BOOKING_COLLATERAL_DESCRIPTION_MAX,
+  BOOKING_COLLATERAL_MAX_ITEMS,
+  BOOKING_COLLATERAL_TYPE,
+  BOOKING_COLLATERAL_TYPE_VALUES,
+  BOOKING_EXTRA_CHARGE_LABEL_MAX,
+  BOOKING_EXTRA_CHARGE_MAX_LINES,
+  ROUTE_TYPE,
+  ROUTE_TYPE_VALUES,
+  SERVICE_TYPE,
+  bookingCollateralNeedsDescription,
+  compactPhoneInput,
+  type BookingCollateralType,
+} from '@xeprime/types';
 import { buildRequiredPhoneSchema } from '@xeprime/validators';
 import type { Dayjs } from 'dayjs';
 import type { useTranslations } from 'next-intl';
@@ -12,6 +25,25 @@ type StaffTranslate = ReturnType<typeof useTranslations<'BookingRequests.staffFl
 const CUSTOMER_NAME_MAX = 255;
 const ADDRESS_MAX = 500;
 const NOTE_MAX = 2000;
+
+/**
+ * Cách gian hàng giữ bảo đảm của ĐƠN (ADR 0109) - chỉ là trạng thái của form: server suy chế độ từ dữ
+ * liệu (cọc tiền > 0, có dòng tài sản), không có cột chế độ nào.
+ */
+export const STAFF_COLLATERAL_MODE = {
+  CASH: 'cash',
+  ASSET: 'asset',
+  BOTH: 'both',
+  NONE: 'none',
+} as const;
+export type StaffCollateralMode =
+  (typeof STAFF_COLLATERAL_MODE)[keyof typeof STAFF_COLLATERAL_MODE];
+export const STAFF_COLLATERAL_MODE_VALUES = Object.values(STAFF_COLLATERAL_MODE);
+
+export const collateralModeHasCash = (mode: string): boolean =>
+  mode === STAFF_COLLATERAL_MODE.CASH || mode === STAFF_COLLATERAL_MODE.BOTH;
+export const collateralModeHasAssets = (mode: string): boolean =>
+  mode === STAFF_COLLATERAL_MODE.ASSET || mode === STAFF_COLLATERAL_MODE.BOTH;
 
 /**
  * Form của luồng ĐẶT HỘ (gian hàng lập đơn tay — `StaffBookingFlow`).
@@ -113,6 +145,61 @@ export function staffBookingSchema(t: StaffTranslate) {
      * viên sửa theo thoả thuận thực tế. Không đi qua XePrime (đơn ngoài chợ không có tiền giữ chỗ).
      */
     depositAmount: yup.number().min(0, t('validation.amountMin')).nullable().default(null),
+    /**
+     * "Giá thoả thuận" (ADR 0109): bật thì giá hệ thống chỉ là gợi ý - tiền thuê, giảm giá, phí giao
+     * xe và phụ phí theo dòng do gian hàng nhập. Kiểm "giảm giá ≤ tiền thuê" ở component lúc tạo.
+     */
+    negotiated: yup.boolean().default(false),
+    manualDiscount: yup.number().min(0, t('validation.amountMin')).nullable().default(null),
+    manualDeliveryFee: yup.number().min(0, t('validation.amountMin')).nullable().default(null),
+    extraCharges: yup
+      .array(
+        yup.object({
+          label: yup
+            .string()
+            .trim()
+            .required(t('validation.extraLabelRequired'))
+            .max(
+              BOOKING_EXTRA_CHARGE_LABEL_MAX,
+              t('validation.extraLabelMax', { max: BOOKING_EXTRA_CHARGE_LABEL_MAX }),
+            )
+            .default(''),
+          amount: yup
+            .number()
+            .nullable()
+            .defined()
+            .test('positive', t('validation.extraAmountPositive'), (v) => v != null && v > 0),
+        }),
+      )
+      .max(BOOKING_EXTRA_CHARGE_MAX_LINES)
+      .default([]),
+    collateralMode: yup
+      .string()
+      .oneOf(STAFF_COLLATERAL_MODE_VALUES)
+      .default(STAFF_COLLATERAL_MODE.CASH),
+    collaterals: yup
+      .array(
+        yup.object({
+          collateralType: yup
+            .mixed<BookingCollateralType>()
+            .oneOf(BOOKING_COLLATERAL_TYPE_VALUES)
+            .default(BOOKING_COLLATERAL_TYPE.CITIZEN_ID),
+          description: yup
+            .string()
+            .trim()
+            .max(
+              BOOKING_COLLATERAL_DESCRIPTION_MAX,
+              t('validation.collateralDescriptionMax', { max: BOOKING_COLLATERAL_DESCRIPTION_MAX }),
+            )
+            .default('')
+            .when('collateralType', {
+              is: (type: string) => bookingCollateralNeedsDescription(type),
+              then: (s) => s.required(t('validation.collateralDescriptionRequired')),
+            }),
+        }),
+      )
+      .max(BOOKING_COLLATERAL_MAX_ITEMS)
+      .default([]),
   });
 }
 

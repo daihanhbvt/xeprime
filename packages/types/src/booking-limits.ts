@@ -24,7 +24,7 @@ export interface BookingLimits {
 
 /** Giá trị của chính sách chưa khai — khớp DEFAULT của cột ở migration. */
 export const BOOKING_LIMITS_DEFAULTS: Readonly<BookingLimits> = {
-  maxAdvanceBookingDays: 15,
+  maxAdvanceBookingDays: 30,
   selfDriveMaxDays: 30,
 };
 

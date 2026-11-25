@@ -82,6 +82,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { NotificationService } from '../notification/notification.service';
+import { InternalDriversService } from './internal-drivers.service';
 import {
   AssignableDriverDto,
   DRIVER_DEFAULT_LIMIT,
@@ -168,6 +169,7 @@ export class DriversService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
     private readonly feePolicies: FeePoliciesService,
+    private readonly internalDrivers: InternalDriversService,
   ) {}
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -1019,6 +1021,92 @@ export class DriversService {
   }
 
   /**
+   * Gán / đổi tài xế NỘI BỘ từ danh bạ (ADR 0108) — chạy TRONG transaction của bên gọi.
+   *
+   * Coi là ĐÃ NHẬN ngay (như tài xế ngoài hệ thống của ADR 0067): không lượt chờ, không hạn trả lời,
+   * không dòng sổ lượt gán, không tiền công. Tên + SĐT CHỤP lên hai cột `external_driver_*` — đổi danh
+   * bạ về sau không viết lại đơn. Lượt liên kết đang mở bị khép `unassigned` và người đó được báo.
+   *
+   * Kiểm bận trước để báo đúng tên; hai request đua thì EXCLUDE `bookings_internal_driver_schedule_excl`
+   * ném 23P01 nguyên trạng — bên gọi đổi thành `DRIVER_BUSY` (`isDriverScheduleConflict`).
+   */
+  async assignInternalWithinTx(
+    tx: Prisma.TransactionClient,
+    input: { tenantId: string; bookingId: string; internalDriverId: string; actorUserId: string },
+  ): Promise<void> {
+    const booking = await this.lockBookingForDriverChange(tx, input.tenantId, input.bookingId);
+    if (booking.internalDriverId === input.internalDriverId) return;
+    if (!REASSIGNABLE.includes(booking.status)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.DRIVER_ASSIGNMENT_LOCKED,
+        message: 'Đơn đã giao xe hoặc đã kết thúc - không đổi tài xế được nữa',
+      });
+    }
+    if (booking.serviceType !== SERVICE_TYPE.WITH_DRIVER) {
+      throw new UnprocessableEntityException({
+        code: API_ERROR_CODE.DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED,
+        message: 'Chỉ đơn thuê có tài xế mới gán tài xế được',
+      });
+    }
+    const person = await this.internalDrivers.lockAssignable(
+      tx,
+      input.tenantId,
+      input.internalDriverId,
+    );
+    const busy = await this.internalDrivers.busyIds(tx, input.tenantId, [person.id], {
+      pickupAt: booking.pickupAt,
+      returnAt: booking.returnAt,
+      excludeBookingId: booking.id,
+    });
+    if (busy.size > 0) throw driverBusy(person.name);
+
+    const now = new Date();
+    await tx.booking.update({
+      where: { id: booking.id },
+      data: {
+        ...CLEARED_ASSIGNMENT,
+        internalDriverId: person.id,
+        externalDriverName: person.name,
+        externalDriverPhone: person.phone,
+        // CHECK nhất quán: có tên ngoài hệ thống ⇔ có mốc gán.
+        driverAssignedAt: now,
+      },
+    });
+
+    if (booking.driverId) {
+      await closeOpenAssignment(
+        tx,
+        booking.id,
+        DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
+        input.actorUserId,
+      );
+    }
+    await this.audit.record(
+      {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+        action: DRIVER_ASSIGNMENT_AUDIT_ACTION.INTERNAL_SET,
+        targetType: AUDIT_TARGET_TYPE.BOOKING,
+        targetId: booking.id,
+        before: {
+          driverId: booking.driverId,
+          internalDriverId: booking.internalDriverId,
+          externalDriver: maskedExternalDriver(booking),
+        },
+        after: {
+          internalDriverId: person.id,
+          externalDriver: { name: maskName(person.name), phone: maskPhone(person.phone) },
+        },
+      },
+      tx,
+    );
+    if (booking.driverUserId) {
+      await this.notifyUnassigned(tx, booking, 'Chuyến đã được giao cho tài xế khác.');
+    }
+  }
+
+  /**
    * Tiền công của một lượt gán MỚI (ADR 0075): số bên thuê nhập, hoặc mức mặc định × số ngày.
    * Luôn trong giới hạn chuyến chạy `[min × N; max × N]` của chính sách hiện hành.
    *
@@ -1105,6 +1193,7 @@ export class DriversService {
         driverUserId: true,
         externalDriverName: true,
         externalDriverPhone: true,
+        internalDriverId: true,
         bookingRequest: { select: { customerUserId: true } },
       },
     });
@@ -2250,7 +2339,11 @@ async function openAssignment(
  */
 export function isDriverScheduleConflict(err: unknown): boolean {
   const text = err instanceof Error ? err.message : String(err);
-  return text.includes('bookings_driver_user_schedule_excl');
+  return (
+    text.includes('bookings_driver_user_schedule_excl') ||
+    // Tài xế nội bộ (ADR 0108) — cùng nghĩa với người dùng: "người này đã có chuyến giờ đó".
+    text.includes('bookings_internal_driver_schedule_excl')
+  );
 }
 
 export function driverBusy(name?: string): ConflictException {

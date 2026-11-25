@@ -127,7 +127,13 @@
       "overdue": "The rearranging deadline has passed ({time}). The customer can now cancel with a 100% refund, counted against you.",
       "urgent": "Pickup is less than 2 hours away - the customer can cancel with a 100% refund at any time.",
       "cancelForDriver": "Cancel trip: no driver available"
-    }
+    },
+    "internalTag": "In-house driver",
+    "internalAssigned": "In-house driver assigned to the trip",
+    "pickerGroupLinked": "Linked drivers",
+    "pickerGroupInternal": "In-house drivers",
+    "pickerEmptyAll": "No linked or in-house drivers yet",
+    "addInternal": "Add in-house driver"
   },
   "endedBy": {
     "driver": "Driver left",
@@ -405,5 +411,57 @@
     "edit": "Edit",
     "editInfo": "Edit details",
     "viewTrips": "View trips"
+  },
+  "internal": {
+    "viewLabel": "Driver list",
+    "views": {
+      "linked": "Linked drivers",
+      "internal": "In-house drivers"
+    },
+    "subtitle": "Regular drivers of your vehicles who don't need a XePrime account. Assign them straight to chauffeured trips; the system doesn't message them, so you tell them the schedule.",
+    "searchPlaceholder": "Search by name or phone number",
+    "state": {
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "total": "{total, plural, one {# driver} other {# drivers}}",
+    "columns": {
+      "name": "Driver",
+      "phone": "Phone number",
+      "activeTrips": "Open trips",
+      "actions": "Actions"
+    },
+    "actions": {
+      "add": "Add in-house driver",
+      "archive": "Archive",
+      "restore": "Restore",
+      "archiveConfirm": "Archive driver {name}?",
+      "archiveHasTrips": "This driver is assigned to {count, plural, one {# open trip} other {# open trips}}. Those trips keep the driver; they just cannot be assigned again."
+    },
+    "empty": {
+      "title": "No in-house drivers yet",
+      "description": "Add the regular drivers of your vehicles to assign them to trips without an account.",
+      "noResults": "No drivers match your search",
+      "noArchived": "No archived drivers"
+    },
+    "form": {
+      "titleCreate": "Add in-house driver",
+      "titleEdit": "Edit in-house driver",
+      "hint": "In-house drivers don't need a XePrime account and receive no notifications. Customers will see this name and phone number on their trip page.",
+      "phone": "Phone number",
+      "phonePlaceholder": "Mobile number customers call to reach the driver",
+      "notePlaceholder": "Internal note, e.g. the vehicle they usually drive",
+      "snapshotNote": "Changing the name or phone does not update {count, plural, one {# assigned trip} other {# assigned trips}}: trips keep the details from when they were assigned.",
+      "errors": {
+        "nameRequired": "Enter the driver name",
+        "nameShort": "The driver name needs at least 2 characters"
+      }
+    },
+    "toast": {
+      "created": "In-house driver added",
+      "updated": "Driver details saved",
+      "archived": "Driver archived",
+      "restored": "Driver restored"
+    }
   }
 }

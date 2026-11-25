@@ -10,7 +10,14 @@ import { SERVICE_TYPE } from './status/vehicle';
 
 /** 16/11/2026 22:00 giờ VN = 15:00 UTC. */
 const NOW = new Date('2026-11-16T15:00:00.000Z');
-const limits = BOOKING_LIMITS_DEFAULTS;
+/** Ghim số tường minh — test kiểm LUẬT đếm ngày, không phụ thuộc mặc định nền tảng. */
+const limits = { maxAdvanceBookingDays: 15, selfDriveMaxDays: 30 };
+
+describe('BOOKING_LIMITS_DEFAULTS', () => {
+  it('đặt trước tối đa 30 ngày, tự lái tối đa 30 ngày (ADR 0091 điều 4)', () => {
+    expect(BOOKING_LIMITS_DEFAULTS).toEqual({ maxAdvanceBookingDays: 30, selfDriveMaxDays: 30 });
+  });
+});
 const hours = (h: number) => h * 3_600_000;
 
 describe('lastBookablePickupDateKey', () => {

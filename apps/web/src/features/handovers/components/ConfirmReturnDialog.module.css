@@ -234,6 +234,7 @@
   background: var(--xp-color-bg-container);
 }
 
+/* Đầu khối — không còn là nút thu gọn (25/11/2026): khối luôn mở. */
 .detailsHeader {
   display: flex;
   align-items: center;
@@ -241,17 +242,7 @@
   gap: var(--xp-space-sm);
   width: 100%;
   padding: var(--xp-space-md);
-  border: none;
   background: var(--xp-color-bg);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.detailsHeader:focus-visible {
-  outline: 2px solid var(--xp-color-primary);
-  outline-offset: -2px;
 }
 
 .detailsHeading {
@@ -262,17 +253,6 @@
   min-width: 0;
 }
 
-.chevron {
-  flex: none;
-  color: var(--xp-color-text);
-  font-size: 24px;
-  transition: transform 0.2s ease;
-}
-
-.chevronCollapsed {
-  transform: rotate(-90deg);
-}
-
 .detailsTitle {
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-h4);
@@ -280,11 +260,12 @@
   line-height: var(--xp-line-height-h4);
 }
 
-.optional {
+/* "Khuyến khích" — tông vàng thương hiệu thay cho viên xám "Không bắt buộc": mời làm, không ép. */
+.encouraged {
   padding: var(--xp-space-2) var(--xp-space-sm);
   border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-secondary);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-body-sm);
@@ -306,8 +287,12 @@
   padding: var(--xp-space-md);
 }
 
-.detailsBody[hidden] {
-  display: none;
+/* Thân popup cảnh báo thiếu ảnh. */
+.warningBody {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
 }
 
 .group {

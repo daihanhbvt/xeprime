@@ -13,8 +13,9 @@ import {
   UserOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
-import { App, Button, Pagination, Select, Skeleton } from 'antd';
-import { Suspense, useState } from 'react';
+import { App, Button, Pagination, Segmented, Select, Skeleton } from 'antd';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   DRIVER_LICENCE_CHECK_FILTER,
@@ -55,6 +56,8 @@ import {
 } from '../hooks/use-drivers';
 import {
   DRIVER_DETAIL_TABS,
+  DRIVERS_VIEW,
+  type DriversView,
   type Driver,
   type DriverDetailTab,
   type DriverFilters,
@@ -65,6 +68,7 @@ import { DriverDetailDrawer } from './DriverDetailDrawer';
 import { DRIVER_MONTH_FORMAT, DRIVER_MONTH_PATTERN, DriverMonthPicker } from './DriverMonthPicker';
 import { DriverWageSettingsButton } from './DriverWageSettingsButton';
 import { EditDriverModal } from './EditDriverModal';
+import { InternalDriversView } from './InternalDriversView';
 import { InviteDriverModal } from './InviteDriverModal';
 import styles from './DriversPage.module.css';
 
@@ -170,12 +174,58 @@ export function DriversPage() {
   // `useUrlFilters` đọc `useSearchParams` — Next bắt buộc một ranh giới Suspense.
   return (
     <Suspense fallback={<Skeleton active aria-label={t('loading')} />}>
-      <DriversPageInner />
+      <DriversViews />
     </Suspense>
   );
 }
 
-function DriversPageInner() {
+/**
+ * Hai danh sách của màn Tài xế: tài xế LIÊN KẾT (tài khoản khách, ADR 0063) và danh bạ tài xế NỘI BỘ
+ * (không tài khoản, ADR 0108). Danh sách đang xem sống trên URL (`view`); đổi danh sách bỏ tìm kiếm
+ * và trang của danh sách kia — hai bộ lọc không cùng nghĩa.
+ */
+function DriversViews() {
+  const t = useTranslations('Drivers.internal');
+  const searchParams = useSearchParams();
+  const { setFilters } = useUrlFilters((params) => ({ view: params.get('view') ?? undefined }));
+  const view: DriversView =
+    searchParams.get('view') === DRIVERS_VIEW.INTERNAL ? DRIVERS_VIEW.INTERNAL : DRIVERS_VIEW.LINKED;
+
+  const viewSwitch = (
+    <Segmented<DriversView>
+      size="large"
+      value={view}
+      aria-label={t('viewLabel')}
+      options={[
+        { value: DRIVERS_VIEW.LINKED, label: t('views.linked') },
+        { value: DRIVERS_VIEW.INTERNAL, label: t('views.internal') },
+      ]}
+      onChange={(next) =>
+        setFilters({
+          view: next === DRIVERS_VIEW.INTERNAL ? next : undefined,
+          q: undefined,
+          page: undefined,
+          limit: undefined,
+          archived: undefined,
+          linkStatus: undefined,
+          licenceCheck: undefined,
+          driverType: undefined,
+          operation: undefined,
+          open: undefined,
+          tab: undefined,
+        } as Record<string, undefined | string>)
+      }
+    />
+  );
+
+  return view === DRIVERS_VIEW.INTERNAL ? (
+    <InternalDriversView viewSwitch={viewSwitch} />
+  ) : (
+    <DriversPageInner viewSwitch={viewSwitch} />
+  );
+}
+
+function DriversPageInner({ viewSwitch }: { viewSwitch: ReactNode }) {
   const t = useTranslations('Drivers');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
@@ -473,6 +523,7 @@ function DriversPageInner() {
           </div>
         }
       />
+      {viewSwitch}
 
       <FilterBar
         fields={filterFields}

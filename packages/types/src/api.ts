@@ -827,6 +827,18 @@ export const API_ERROR_CODE = {
    * chuyến có tài xế phải do tài xế liên kết chạy.
    */
   EXTERNAL_DRIVER_NOT_SUPPORTED: 'EXTERNAL_DRIVER_NOT_SUPPORTED',
+  /** Danh bạ tài xế nội bộ (ADR 0108): id không thuộc bên thuê / không tồn tại. */
+  INTERNAL_DRIVER_NOT_FOUND: 'INTERNAL_DRIVER_NOT_FOUND',
+  /** Tài xế nội bộ đã lưu trữ — không gán mới, không sửa (khôi phục trước). */
+  INTERNAL_DRIVER_ARCHIVED: 'INTERNAL_DRIVER_ARCHIVED',
+  /** SĐT đã có trong danh bạ tài xế nội bộ đang dùng của bên thuê. */
+  INTERNAL_DRIVER_PHONE_TAKEN: 'INTERNAL_DRIVER_PHONE_TAKEN',
+  /** Đơn tự lập (ADR 0109): giảm giá lớn hơn tiền thuê. */
+  BOOKING_DISCOUNT_EXCEEDS_BASE: 'BOOKING_DISCOUNT_EXCEEDS_BASE',
+  /** Tài sản thế chấp không thuộc đơn này. */
+  BOOKING_COLLATERAL_NOT_FOUND: 'BOOKING_COLLATERAL_NOT_FOUND',
+  /** Không thêm/gỡ tài sản được: đơn đã khép, đã đủ số món, hoặc món đã trả. */
+  BOOKING_COLLATERAL_LOCKED: 'BOOKING_COLLATERAL_LOCKED',
   /** Nhóm `other` khi rút chuyến mà thiếu ghi chú đủ dài (ADR 0074). */
   DRIVER_DROP_NOTE_REQUIRED: 'DRIVER_DROP_NOTE_REQUIRED',
 

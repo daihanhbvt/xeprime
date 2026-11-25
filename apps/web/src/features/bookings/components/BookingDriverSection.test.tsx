@@ -40,6 +40,7 @@ const wageData = vi.hoisted(() => ({
   history: [] as unknown[],
   quote: null as unknown,
   assignable: [] as unknown[],
+  internal: [] as unknown[],
 }));
 vi.mock('../hooks/use-booking-mutations', () => ({
   useAssignBookingDriver: () => ({
@@ -67,6 +68,13 @@ vi.mock('@/hooks/use-permissions', () => ({
 vi.mock('@/features/drivers/hooks/use-drivers', () => ({
   useAssignableDrivers: () => ({ data: wageData.assignable, isLoading: false, isError: false }),
   useUpdateDriverWageSettings: () => ({ mutateAsync: wageCalls.saveDefault, isPending: false }),
+}));
+vi.mock('@/features/drivers/hooks/use-internal-drivers', () => ({
+  useAssignableInternalDrivers: () => ({ data: wageData.internal, isLoading: false, isError: false }),
+}));
+vi.mock('@/features/drivers/components/InternalDriverModal', () => ({
+  InternalDriverModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="internal-driver-modal" /> : null,
 }));
 vi.mock('./BookingDriverHistory', () => ({ BookingDriverHistory: () => null }));
 vi.mock('./BookingStatusTransitionDialog', () => ({
@@ -114,6 +122,7 @@ beforeEach(() => {
   wageData.history = [];
   wageData.quote = null;
   wageData.assignable = [];
+  wageData.internal = [];
 });
 afterEach(cleanup);
 
@@ -439,5 +448,67 @@ describe('BookingDriverSection - tiền công tài xế (ADR 0075)', () => {
     await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutation.mutateAsync.mock.calls[0]![0]).toEqual({ driverId: 'drv-2', wageAmount: '1800000' });
     expect(wageCalls.saveDefault).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookingDriverSection - tài xế nội bộ (ADR 0108)', () => {
+  it('bộ chọn có nhóm tài xế nội bộ; chọn người rảnh gán thẳng { internalDriverId }, người bận bị khoá', async () => {
+    wageData.assignable = [
+      { id: 'drv-2', name: 'Trần Bình', phone: '0912000333', busy: false, licenceState: 'none' },
+    ];
+    wageData.internal = [
+      { id: 'int-1', name: 'Lê Nội Bộ', phone: '0912000444', busy: false },
+      { id: 'int-2', name: 'Phạm Bận', phone: '0912000555', busy: true },
+    ];
+    render(
+      <Harness>
+        <BookingDriverSection booking={booking()} canUpdate />
+      </Harness>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Gán tài xế' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Chọn tài xế cho đơn' }));
+    expect(await screen.findByText('Tài xế liên kết')).toBeTruthy();
+    expect(screen.getAllByText('Tài xế nội bộ').length).toBeGreaterThan(0);
+    const busy = (await screen.findByText(/Phạm Bận · 0912000555/)).closest('.ant-select-item');
+    expect(busy?.className).toContain('ant-select-item-option-disabled');
+
+    fireEvent.click(screen.getByText(/Lê Nội Bộ · 0912000444/));
+    await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
+    expect(mutation.mutate.mock.calls[0]![0]).toEqual({ internalDriverId: 'int-1' });
+    // Không qua hộp tiền công.
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('nút "Thêm tài xế nội bộ" ở đáy bộ chọn mở hộp thêm nhanh', async () => {
+    render(
+      <Harness>
+        <BookingDriverSection booking={booking()} canUpdate />
+      </Harness>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Gán tài xế' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Chọn tài xế cho đơn' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Thêm tài xế nội bộ/ }));
+    expect(screen.getByTestId('internal-driver-modal')).toBeTruthy();
+  });
+
+  it('đơn đang có tài xế nội bộ: hiện tên + nhãn, không có ghi chú "đơn cũ" của tài xế ngoài', () => {
+    render(
+      <Harness>
+        <BookingDriverSection
+          booking={booking({
+            driver: {
+              ...EXTERNAL_DRIVER,
+              source: DRIVER_SOURCE.INTERNAL,
+              id: 'int-1',
+              name: 'Lê Nội Bộ',
+            },
+          })}
+          canUpdate
+        />
+      </Harness>,
+    );
+    expect(screen.getByText('Lê Nội Bộ')).toBeTruthy();
+    expect(screen.getByText('Tài xế nội bộ')).toBeTruthy();
+    expect(screen.queryByText(/XePrime không còn nhận cách này/)).toBeNull();
   });
 });

@@ -1778,5 +1778,13 @@
     "photos_missing": "Required vehicle photos missing",
     "registration_missing": "No registration certificate (chassis number + owner name)",
     "vehicle_info_missing": "Brand, model, year or seat count missing"
+  },
+  "bookingCollateralType": {
+    "citizen_id": "Citizen ID card",
+    "driver_licence": "Driving licence",
+    "passport": "Passport",
+    "motorbike": "Motorbike",
+    "vehicle_registration": "Motorbike registration",
+    "other": "Other"
   }
 }

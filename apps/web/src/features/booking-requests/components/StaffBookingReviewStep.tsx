@@ -1,21 +1,20 @@
 'use client';
 
 import { InfoCircleOutlined } from '@ant-design/icons';
-import { Alert, Form, Skeleton } from 'antd';
+import { Alert, Form } from 'antd';
 import { useTranslations } from 'next-intl';
-import type { Control } from 'react-hook-form';
-import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
-import { NumberField } from '@/components/form/NumberField';
+import type { Control, UseFormSetValue } from 'react-hook-form';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import type { CalendarQuote } from '@/features/calendar/types/calendar.types';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import type { PublicListingDetail } from '@/features/marketplace/types';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import { STAFF_BOOKING_NOTE_MAX, type StaffBookingValues } from '../staff-booking-schema';
 import { BookingJourney } from './BookingJourney';
 import { BookingTripCard, type BookingTrip } from './BookingTripCard';
+import { StaffBookingCollateralCard } from './StaffBookingCollateralCard';
+import { StaffBookingPriceCard } from './StaffBookingPriceCard';
 import styles from './BookingReviewStep.module.css';
 
 interface StaffBookingReviewStepProps {
@@ -24,6 +23,9 @@ interface StaffBookingReviewStepProps {
   vehicleImageUrl: string | null;
   trip: BookingTrip;
   control: Control<StaffBookingValues>;
+  setValue: UseFormSetValue<StaffBookingValues>;
+  /** Bật/tắt "Giá thoả thuận" (ADR 0109) — luồng cha điền sẵn số từ báo giá khi bật. */
+  onToggleNegotiated: (on: boolean) => void;
   /** Báo giá NỘI BỘ (`/calendar/quote`); `null` + `quoteUnavailable` = xe chưa cấu hình giá. */
   quote: CalendarQuote | null;
   quoteLoading: boolean;
@@ -48,7 +50,8 @@ interface StaffBookingReviewStepProps {
  *  - Không có giấy tờ/điều khoản/ô đồng ý: đó là cam kết của khách với nền tảng; ở đây người bấm là
  *    gian hàng, và gian hàng đối chiếu giấy tờ lúc giao xe.
  *  - Tiền là báo giá nội bộ: không phí sàn, không tiền giữ chỗ, không mã khuyến mãi — đơn lập tay
- *    nằm ngoài chợ. Cọc là khoản gian hàng THU TRỰC TIẾP, sửa được theo thoả thuận.
+ *    nằm ngoài chợ. Bật "Giá thoả thuận" thì gian hàng sửa được mọi khoản + phụ phí theo dòng; cọc
+ *    tiền, tài sản thế chấp, hoặc cả hai ghi theo từng đơn (ADR 0109).
  */
 export function StaffBookingReviewStep({
   listing,
@@ -56,6 +59,8 @@ export function StaffBookingReviewStep({
   vehicleImageUrl,
   trip,
   control,
+  setValue,
+  onToggleNegotiated,
   quote,
   quoteLoading,
   quoteUnavailable,
@@ -66,7 +71,6 @@ export function StaffBookingReviewStep({
 }: StaffBookingReviewStepProps) {
   const t = useTranslations('BookingRequests.staffFlow');
   const tFlow = useTranslations('BookingRequests.flow');
-  const fmt = useAppFormat();
 
   return (
     <div className={styles.review}>
@@ -139,65 +143,15 @@ export function StaffBookingReviewStep({
         </div>
 
         <div className={styles.aside}>
-          {/* Bảng tiền là MỘT thẻ tự có tiêu đề (`PriceBreakdown`) — không bọc thêm thẻ thứ hai. */}
-          {quoteLoading ? (
-            <section className={styles.card} aria-busy="true">
-              <Skeleton active paragraph={{ rows: 3 }} />
-            </section>
-          ) : quote ? (
-            <PriceBreakdown
-              rows={quote.rows}
-              totalAmount={quote.totalAmount}
-              totalLabel={quote.estimateNote ? t('trip.barEstimate') : t('trip.barTotal')}
-              title={t('review.costs.title')}
-              footer={
-                <>
-                  {quote.longTerm?.durationDiscountPercent ? (
-                    <strong>
-                      {tFlow('price.savings', {
-                        amount: fmt.money(quote.longTerm.durationDiscountAmount),
-                        months: quote.longTerm.packageMonths,
-                      })}
-                    </strong>
-                  ) : null}{' '}
-                  {quote.estimateNote ? `${quote.estimateNote}. ` : ''}
-                  {t('review.costs.systemNote')}
-                </>
-              }
-            />
-          ) : quoteUnavailable ? (
-            <section className={styles.card} aria-label={t('review.costs.title')}>
-              <h3 className={styles.cardTitle}>{t('review.costs.title')}</h3>
-              <Alert type="warning" showIcon title={t('review.costs.noPrice')} />
-              <Form component={false} layout="vertical" colon={false}>
-                <NumberField
-                  control={control}
-                  name="manualBaseAmount"
-                  label={t('review.costs.baseAmount')}
-                  money
-                  min={0}
-                  required
-                />
-              </Form>
-            </section>
-          ) : null}
-
-          {/*
-            Cọc gian hàng thu trực tiếp — điền sẵn từ chính sách thuê của xe, sửa theo thoả thuận.
-            Thẻ riêng, không nằm trong bảng tiền thuê: nó không thuộc tổng, khách nhận lại lúc trả xe.
-          */}
-          <section className={styles.card} aria-label={t('review.costs.deposit')}>
-            <Form component={false} layout="vertical" colon={false}>
-              <NumberField
-                control={control}
-                name="depositAmount"
-                label={t('review.costs.deposit')}
-                help={t('review.costs.depositHint')}
-                money
-                min={0}
-              />
-            </Form>
-          </section>
+          <StaffBookingPriceCard
+            control={control}
+            quote={quote}
+            quoteLoading={quoteLoading}
+            quoteUnavailable={quoteUnavailable}
+            isDelivery={trip.isDelivery}
+            onToggleNegotiated={onToggleNegotiated}
+          />
+          <StaffBookingCollateralCard control={control} setValue={setValue} />
 
           <section className={cx(styles.card, styles.submitCard)}>
             {stepError ? <Alert type="error" showIcon title={stepError} role="alert" /> : null}

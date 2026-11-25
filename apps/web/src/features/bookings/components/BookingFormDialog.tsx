@@ -35,8 +35,8 @@ const NOTE_MAX = 2000;
 /** Giá trị Select cho "không gán" — `null` không phải một value hợp lệ của AntD Select. */
 const NO_DRIVER = '';
 /**
- * Giá trị Select đại diện tài xế NGOÀI HỆ THỐNG đang ghi trên đơn (ADR 0067) — không có id liên
- * kết. Chọn lại nó là "giữ nguyên"; sửa tên/SĐT làm ở khối Tài xế của chi tiết đơn.
+ * Giá trị Select đại diện tài xế NGOÀI HỆ THỐNG (ADR 0067) hoặc NỘI BỘ (ADR 0108) đang ghi trên
+ * đơn — không có id liên kết. Chọn lại nó là "giữ nguyên"; sửa tên/SĐT làm ở khối Tài xế của chi tiết đơn.
  */
 const EXTERNAL_DRIVER = '__external__';
 
@@ -102,7 +102,8 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
   const driverEditable =
     withDriver && isDriverReassignable(booking.status) && has(PERMISSION.DRIVER_VIEW);
   const currentDriverId = booking.driver
-    ? booking.driver.source === DRIVER_SOURCE.EXTERNAL
+    ? booking.driver.source === DRIVER_SOURCE.EXTERNAL ||
+      booking.driver.source === DRIVER_SOURCE.INTERNAL
       ? EXTERNAL_DRIVER
       : (booking.driver.id ?? NO_DRIVER)
     : NO_DRIVER;
@@ -246,12 +247,15 @@ function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: 
                    * Người đang gán có thể không còn trong danh sách khả dụng (liên kết đã tạm
                    * ngưng) — vẫn giữ một option để ô hiện đúng tên, không hiện mã thô.
                    */
-                  ...(driver?.source === DRIVER_SOURCE.EXTERNAL
+                  ...(driver?.source === DRIVER_SOURCE.EXTERNAL ||
+                  driver?.source === DRIVER_SOURCE.INTERNAL
                     ? [
                         {
                           value: EXTERNAL_DRIVER,
                           title: driver.name,
-                          label: `${driver.name} · ${tDriver('externalTag')}`,
+                          label: `${driver.name} · ${tDriver(
+                            driver.source === DRIVER_SOURCE.INTERNAL ? 'internalTag' : 'externalTag',
+                          )}`,
                         },
                       ]
                     : driver?.id && !(driversQ.data ?? []).some((d) => d.id === driver.id)

@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, App, Button, Popconfirm, Select, Tag } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Divider, Popconfirm, Select, Tag } from 'antd';
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -20,7 +21,9 @@ import {
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DriverLicenceStateTag } from '@/features/drivers/components/DriverLicenceStateTag';
+import { InternalDriverModal } from '@/features/drivers/components/InternalDriverModal';
 import { useAssignableDrivers } from '@/features/drivers/hooks/use-drivers';
+import { useAssignableInternalDrivers } from '@/features/drivers/hooks/use-internal-drivers';
 import { useNow } from '@/hooks/use-now';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -37,14 +40,18 @@ import { DriverWageInfo } from './DriverWageInfo';
 import { BookingStatusTransitionDialog } from './BookingStatusTransitionDialog';
 import styles from './BookingDriverSection.module.css';
 
+/** Giá trị trong bộ chọn mang tiền tố nguồn - hai danh sách là hai bảng id riêng. */
+const PICK_PREFIX = { LINKED: 'linked:', INTERNAL: 'internal:' } as const;
+
 /**
- * Khối "Tài xế" trên chi tiết đơn (ADR 0063 · ADR 0074).
+ * Khối "Tài xế" trên chi tiết đơn (ADR 0063 · ADR 0074 · ADR 0108).
  *
  * CHỈ đơn `with_driver` mới có tài xế: đơn khác ẩn hẳn khối, trừ khi còn một tài xế gán từ trước
  * (dữ liệu cũ) — khi đó hiện chỉ-đọc để không ai mất dấu người đang cầm xe. Chỉ còn tài xế LIÊN
  * KẾT: chọn ở bộ chọn, `pending` cho tới khi tài xế nhận ở site khách; bộ chọn hiện cả người BẬN
  * (disable, nhãn "Bận" — không bao giờ nói bận ở đâu). Đơn cũ còn mang tài xế ngoài hệ thống vẫn
- * hiện, gỡ / thay bằng tài xế liên kết được (ADR 0074 điều 4).
+ * hiện, gỡ / thay bằng tài xế liên kết được (ADR 0074 điều 4). Tài xế NỘI BỘ (ADR 0108) chọn ở nhóm thứ
+ * hai của cùng bộ chọn - gán thẳng, không tiền công; thêm nhanh người mới ngay trong bộ chọn.
  *
  * Tài xế ĐÃ NHẬN rồi rút ⇒ thẻ SỰ CỐ: ai rút, vì sao, hạn điều phối lại; quá hạn hoặc sát giờ thì
  * nói rõ khách đang được huỷ hoàn 100% tính cho bên thuê, kèm lối "Huỷ chuyến do thiếu tài xế".
@@ -73,18 +80,26 @@ export function BookingDriverSection({
   // Tài xế vừa chọn ở bộ chọn — chờ nhập tiền công trong hộp gán.
   const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
   const [editingWage, setEditingWage] = useState<BookingDriverHistoryItem | null>(null);
+  // Thêm nhanh một tài xế nội bộ ngay từ bộ chọn - lưu xong gán luôn vào đơn (ADR 0108).
+  const [creatingInternal, setCreatingInternal] = useState(false);
   const assign = useAssignBookingDriver(booking.id);
 
   const isWithDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const driver = booking.driver ?? null;
   const isExternal = driver?.source === DRIVER_SOURCE.EXTERNAL;
+  // Tài xế nội bộ (ADR 0108): đã nhận ngay như tài xế ngoài hệ thống, nhưng chọn từ danh bạ.
+  const isInternal = driver?.source === DRIVER_SOURCE.INTERNAL;
+  const isAcceptedOnSave = isExternal || isInternal;
   const incident = booking.driverIncident ?? null;
 
   // Chỉ tải danh sách khi thật sự mở bộ chọn — theo KHUNG GIỜ của đơn.
-  const driversQ = useAssignableDrivers(
-    { pickupAt: booking.pickupAt, returnAt: booking.returnAt, excludeBookingId: booking.id },
-    selecting && isWithDriver,
-  );
+  const pickWindow = {
+    pickupAt: booking.pickupAt,
+    returnAt: booking.returnAt,
+    excludeBookingId: booking.id,
+  };
+  const driversQ = useAssignableDrivers(pickWindow, selecting && isWithDriver);
+  const internalQ = useAssignableInternalDrivers(pickWindow, selecting && isWithDriver);
 
   // Lịch sử lượt gán mang tiền công của lượt ĐANG MỞ — tải luôn cho đơn có tài xế (nhỏ, một đơn).
   const historyQ = useBookingDriverHistory(booking.id, isWithDriver);
@@ -103,6 +118,7 @@ export function BookingDriverSection({
   const canWrite = canUpdate && isWithDriver && reassignable;
   // Bộ chọn đọc `/drivers/assignable` (DRIVER_VIEW) — thiếu quyền thì không bày nút, như app native.
   const canPick = canWrite && has(PERMISSION.DRIVER_VIEW);
+  const canAddInternal = canPick && has(PERMISSION.DRIVER_MANAGE);
   const canCancel =
     canUpdate && canTransitionBooking(booking.status as BookingStatus, BOOKING_STATUS.CANCELLED);
   // Thẻ sự cố đã nói việc cần làm — không chồng thêm cảnh báo "sắp tới giờ chưa có tài xế".
@@ -115,7 +131,22 @@ export function BookingDriverSection({
       new Date(now),
     );
 
-  /** Chỉ còn đường BỎ GÁN đi thẳng — gán ai cũng qua hộp gán kèm tiền công. */
+  /** Tài xế nội bộ: không tiền công, không lượt chờ - gán thẳng (ADR 0108). */
+  function assignInternal(internalDriverId: string) {
+    if (assign.isPending) return;
+    assign.mutate(
+      { internalDriverId },
+      {
+        onSuccess: () => {
+          message.success(t('internalAssigned'));
+          setSelecting(false);
+        },
+        onError: (err) => message.error(errorMessage(err)),
+      },
+    );
+  }
+
+  /** Chỉ còn đường BỎ GÁN đi thẳng - gán tài xế liên kết luôn qua hộp gán kèm tiền công. */
   function submit(driverId: string | null) {
     if (assign.isPending) return;
     assign.mutate(
@@ -174,34 +205,85 @@ export function BookingDriverSection({
           <Select
             className={styles.select}
             placeholder={t('pickerPlaceholder')}
-            loading={driversQ.isLoading}
+            loading={driversQ.isLoading || internalQ.isLoading}
             showSearch
             optionFilterProp="title"
-            options={(driversQ.data ?? []).map((d) => ({
-              value: d.id,
-              title: `${d.name} ${d.phone}`,
-              disabled: d.busy,
-              label: (
-                <span className={styles.option}>
-                  <span>
-                    {d.name} · {d.phone}
-                  </span>
-                  <span className={styles.optionTags}>
-                    <DriverLicenceStateTag licence={{ state: d.licenceState }} compact />
-                    {d.busy ? <Tag>{t('busy')}</Tag> : null}
-                  </span>
-                </span>
-              ),
-            }))}
+            options={[
+              {
+                key: 'linked',
+                label: t('pickerGroupLinked'),
+                options: (driversQ.data ?? []).map((d) => ({
+                  value: `${PICK_PREFIX.LINKED}${d.id}`,
+                  title: `${d.name} ${d.phone}`,
+                  disabled: d.busy,
+                  label: (
+                    <span className={styles.option}>
+                      <span>
+                        {d.name} · {d.phone}
+                      </span>
+                      <span className={styles.optionTags}>
+                        <DriverLicenceStateTag licence={{ state: d.licenceState }} compact />
+                        {d.busy ? <Tag>{t('busy')}</Tag> : null}
+                      </span>
+                    </span>
+                  ),
+                })),
+              },
+              {
+                key: 'internal',
+                label: t('pickerGroupInternal'),
+                options: (internalQ.data ?? []).map((d) => ({
+                  value: `${PICK_PREFIX.INTERNAL}${d.id}`,
+                  title: `${d.name} ${d.phone}`,
+                  disabled: d.busy || (isInternal && d.id === driver?.id),
+                  label: (
+                    <span className={styles.option}>
+                      <span>
+                        {d.name} · {d.phone}
+                      </span>
+                      <span className={styles.optionTags}>
+                        <Tag>{t('internalTag')}</Tag>
+                        {d.busy ? <Tag>{t('busy')}</Tag> : null}
+                      </span>
+                    </span>
+                  ),
+                })),
+              },
+            ].filter((group) => group.options.length > 0)}
+            popupRender={(menu) =>
+              canAddInternal ? (
+                <>
+                  {menu}
+                  <Divider className={styles.pickerDivider} />
+                  <Button
+                    type="text"
+                    block
+                    icon={<PlusOutlined />}
+                    onClick={() => setCreatingInternal(true)}
+                  >
+                    {t('addInternal')}
+                  </Button>
+                </>
+              ) : (
+                menu
+              )
+            }
             notFoundContent={
-              driversQ.isLoading
+              driversQ.isLoading || internalQ.isLoading
                 ? null
                 : driversQ.isError
                   ? errorMessage(driversQ.error)
-                  : t('pickerEmpty')
+                  : internalQ.isError
+                    ? errorMessage(internalQ.error)
+                    : t('pickerEmptyAll')
             }
             onChange={(value: string) => {
-              const chosen = driversQ.data?.find((d) => d.id === value);
+              if (value.startsWith(PICK_PREFIX.INTERNAL)) {
+                assignInternal(value.slice(PICK_PREFIX.INTERNAL.length));
+                return;
+              }
+              const id = value.slice(PICK_PREFIX.LINKED.length);
+              const chosen = driversQ.data?.find((d) => d.id === id);
               if (chosen) setPicked({ id: chosen.id, name: chosen.name });
             }}
             value={null}
@@ -219,7 +301,9 @@ export function BookingDriverSection({
           <div className={styles.stack}>
             <span className={styles.strong}>
               {driver.name}{' '}
-              {isExternal ? (
+              {isInternal ? (
+                <Tag>{t('internalTag')}</Tag>
+              ) : isExternal ? (
                 <Tag>{t('externalTag')}</Tag>
               ) : (
                 <StatusTag
@@ -237,7 +321,7 @@ export function BookingDriverSection({
               <span>{driver.phone}</span>
             )}
             <span className={styles.meta}>
-              {isExternal
+              {isAcceptedOnSave
                 ? t('externalSetAt', { time: fmt.dateTime(driver.assignedAt) })
                 : driver.respondedAt
                   ? t('respondedAt', { time: fmt.dateTime(driver.respondedAt) })
@@ -310,6 +394,12 @@ export function BookingDriverSection({
           }}
         />
       ) : null}
+      <InternalDriverModal
+        open={creatingInternal}
+        driver={null}
+        onClose={() => setCreatingInternal(false)}
+        onSaved={(created) => assignInternal(created.id)}
+      />
       {editingWage ? (
         <DriverWageEditDialog
           bookingId={booking.id}

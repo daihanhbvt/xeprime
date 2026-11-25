@@ -1,4 +1,12 @@
-import { DRIVER_TYPE, DRIVER_TYPE_VALUES, type DriverType } from '@xeprime/types';
+import {
+  DRIVER_TYPE,
+  DRIVER_TYPE_VALUES,
+  EXTERNAL_DRIVER_NAME_LENGTH,
+  INTERNAL_DRIVER_NOTE_MAX,
+  normalizeVnPhoneInput,
+  VN_MOBILE_PHONE_PATTERN,
+  type DriverType,
+} from '@xeprime/types';
 import * as yup from 'yup';
 
 /**
@@ -33,3 +41,28 @@ export function makeEditDriverSchema(t: (key: string) => string) {
 }
 
 export type EditDriverFormValues = yup.InferType<ReturnType<typeof makeEditDriverSchema>>;
+
+/**
+ * Form thêm / sửa tài xế NỘI BỘ (ADR 0108) — người không có tài khoản. SĐT di động (khách gọi số
+ * này để gặp tài xế); server quy về `0…` và chặn trùng trong danh bạ (`INTERNAL_DRIVER_PHONE_TAKEN`).
+ */
+export function makeInternalDriverSchema(t: (key: string) => string) {
+  return yup.object({
+    name: yup
+      .string()
+      .trim()
+      .required(t('internal.form.errors.nameRequired'))
+      .min(EXTERNAL_DRIVER_NAME_LENGTH.MIN, t('internal.form.errors.nameShort'))
+      .max(EXTERNAL_DRIVER_NAME_LENGTH.MAX),
+    phone: yup
+      .string()
+      .trim()
+      .required(t('form.errors.phoneRequired'))
+      .test('vn-mobile', t('form.errors.phoneInvalid'), (v) =>
+        VN_MOBILE_PHONE_PATTERN.test(normalizeVnPhoneInput(v ?? '')),
+      ),
+    note: yup.string().trim().max(INTERNAL_DRIVER_NOTE_MAX).default(''),
+  });
+}
+
+export type InternalDriverFormValues = yup.InferType<ReturnType<typeof makeInternalDriverSchema>>;

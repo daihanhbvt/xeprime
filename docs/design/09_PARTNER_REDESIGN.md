@@ -215,7 +215,7 @@ Code: `features/bookings/components/BookingsListView` (+ `BookingTable` → th�
 | 11 | Tổng tiền + đã thu/còn nợ · tài xế đã gán · nơi giao + tiến độ chuẩn bị bàn giao | 🟡 | **Chỉ trong trang chi tiết** — chốt 02/11. Khi ráp trang chi tiết phải kiểm đủ ba thứ này ở đó |
 | 12 | "Gia hạn" trên thẻ dài hạn đang thuê + hộp "Gia hạn thuê xe" + "Thanh toán" (`23807:68543`, `23807:70054`) | ✅ | **Đã dựng 02/11 theo ADR 0077 (Accepted)**: `ExtendBookingDialog` mở từ thẻ (cần `bookings.update`, ẩn trong phiên hỗ trợ) và từ khối "Phụ lục gia hạn" ở trang chi tiết. Lệch design có chủ đích: chỉ +1/2/3/6/9/12 tháng (không +7/+15 ngày); hộp phí tách "chuyển qua XePrime" / "trả thẳng chủ xe" / thuế / phần về Ví điểm + "Miễn phí nền tảng"; màn Thanh toán chỉ có VietQR (không "Ví điện tử" — ADR 0058 chưa mở), nút trái "Huỷ gia hạn", nút phải "Xong" — **không** có "Xác nhận/khách đã chuyển": phụ lục tự lật khi SePay đối soát đủ. Thẻ giữ CẢ "Gia hạn" lẫn "Nhận xe" (design đổi chỗ — nhận xe về vẫn là việc thường ngày). Khách thấy QR ở trang chuyến đang thuê (`TripExtensionPanel`). Chỉ đơn đặt qua chợ (có tài khoản khách) — đơn tự lập ngoài chợ sửa lịch như cũ |
 | 13 | Chip "Thuê xe dài hạn" màu hồng | ✅ | Token `--xp-color-pink*` (02/11) |
-| 14 | Popup "Tạo đơn thuê → Chọn xe" (`23754:22405`) | 🆕 | Chờ đủ các bước của luồng tạo đơn rồi ráp một lượt (chốt 02/11) |
+| 14 | Popup "Tạo đơn thuê → Chọn xe" (`23754:22405` → bản mới `24565:59734`) | 🆕→✅ | **Đã dựng 25/11/2026** (xem §3.2e). Bước Chuyến đi, Xem lại, Kết quả giữ nguyên luồng `StaffBookingFlow` tới khi có design |
 
 Tự dựng thêm (design không vẽ): ngăn rỗng / lỗi tải từng nhóm / lỗi cả màn; đơn quá giờ trả (thanh đỏ,
 "Quá giờ trả xe …"); trả trễ ("Trả xe trễ hạn"); chờ giao chưa tới ngày ("Giao xe dd/mm · hh:mm");
@@ -224,6 +224,30 @@ Tự dựng thêm (design không vẽ): ngăn rỗng / lỗi tải từng nhóm 
 `?handover=` mở sẵn hộp; tham số đó trên link cũ giờ bị bỏ qua). "Nhận xe" mở thẳng hộp "Xác nhận đã
 nhận lại xe" ngay trên thẻ (06/11, §3.2d). Link cũ
 `/bookings?status=…` được quy về ngăn tương ứng. `BookingTable` (bảng cũ) đã gỡ.
+
+### 3.2e Tạo đơn thuê — bước Chọn xe (25/11/2026)
+
+Design: `24565:59734` (hộp `24565:59738`, thẻ `24599:135819` - thay `24565:59749` từ bản cập nhật 25/11 -,
+hàng biển số + giá `24599:135925`, chân hộp `24565:59754`). Code: `StaffBookingDialog` (vỏ) · `StaffVehiclePicker` · `StaffVehicleCard` · API
+`GET /vehicles/booking-picker` (`VehicleBookingPickerService`, cờ bận đọc qua
+`OccupancyService.listBusyVehicleIds`). Lối vào: nút "Tạo đơn thuê" của `/bookings` và `?create=1` từ
+hồ sơ khách; lối từ lịch đã biết xe nên vẫn vào thẳng bước Chuyến đi.
+
+| # | Hạng mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Tiêu đề "Tạo đơn thuê xe cho khách" + phụ đề | ✅ | Theo design |
+| 2 | Hàng lọc Chi nhánh · Loại (Ô tô/Xe máy) · Tìm kiếm · Thời gian nhận/trả * | 🆕→✅ | Chi nhánh vẫn là GỢI Ý đổi được (ADR 0052). Loại mặc định Ô tô. Khung giờ mặc định `defaultRentalRange` và thành giá trị mở đầu của bước Chuyến đi; quay lại "Chọn xe khác" giữ nguyên khung giờ |
+| 3 | Xe bận trong khung giờ | 🆕→✅ | **Chốt 25/11: hiện hết, xe bận làm mờ, nhãn "Đã có lịch", không chọn được.** Server xếp xe trống lên trước (hai truy vấn nối trang, phân trang vẫn ở DB). Bận = `vehicle_occupancies.period` chồng khung giờ (gồm thời gian chuẩn bị); chỉ là gợi ý, lượt tạo đơn vẫn qua constraint (ADR 0006) |
+| 4 | Thẻ xe kiểu chợ: ảnh, Giảm %, nhãn trên ảnh, tên + Xe mới/sao, phường, thông số | 🆕→✅ | Dùng lại `DiscountTag`, `PhotoAmenityPills`, khoá `Listings.card`. Đánh giá từ snapshot chợ (xe chưa lên chợ ⇒ "Xe mới"); phường/tỉnh của chi nhánh |
+| 5 | Nút tim | ⚠️ | **Bỏ** (chốt 25/11): yêu thích là của tài khoản khách |
+| 6 | Nhãn "Tự động duyệt" | ✅ | Giữ (chốt 25/11) — mô tả xe; nguồn `vehicle_service_settings.auto_accept_enabled` như snapshot chợ |
+| 7 | Biển số | ✅ | Design cập nhật 25/11 đã vẽ: nhãn "Biển số xe" 12/18 trên biển số 14/22 Medium, bên trái hàng cuối. Bỏ mã xe khỏi thẻ (vẫn tìm được bằng mã); xe chưa có biển thì hiện "Mã xe" + mã |
+| 8 | Giá/ngày trên thẻ | ✅ | Design cập nhật 25/11 đã vẽ, cùng khuôn thẻ chợ: giá gốc gạch ngang 12/18 (chỉ khi có Giảm %) trên giá SAU khuyến mãi 18/28 vàng + "/ngày" xám; hai cột canh đáy |
+| 9 | Nhãn trạng thái vận hành | 🟡 | Chỉ hiện khi Bảo dưỡng/Ngưng hoạt động (Sẵn sàng/Đang thuê đã do cờ bận nói); xe vẫn chọn được như trước |
+| 10 | Chọn thẻ rồi "Tiếp tục"; chân hộp "Tạm tính N ngày · số tiền"; "Quay lại" | 🆕→✅ | Tạm tính = `/calendar/quote` của xe đang chọn (tự lái, không có thì có tài xế nội thành; xe chỉ dài hạn không tạm tính). Xe chưa có giá ⇒ câu "nhập tiền ở bước sau". "Quay lại" ở bước đầu là đóng hộp |
+
+Tự dựng thêm: chưa chọn khung giờ ⇒ trạng thái rỗng nhắc chọn giờ; rỗng theo loại xe ("Gian hàng chưa có
+xe máy nào"); lỗi trang đầu / trang kế; điện thoại: các ô lọc xuống từng hàng, nút chân hộp chia đôi.
 
 ### 3.2b "Đơn thuê xe" gộp + "Đơn đã kết thúc" — dạng LIST (05/11/2026)
 
@@ -354,15 +378,16 @@ xác nhận; hộp mở thẳng từ thẻ.
 | 1 | Tiêu đề "Xác nhận đã nhận lại xe #mã" + phụ đề · thẻ xe (ảnh, tên, biển số, "Hẹn trả …", viên "Đúng giờ") | ✅ | Viên đổi "Trễ {thời lượng}" (đỏ) khi giờ nhận thực tế sau giờ hẹn |
 | 2 | "Thời gian nhận thực tế" + câu "Đúng giờ" | ✅ | **Chốt lại 06/11 (người dùng):** mặc định = lúc khách báo "Đã trả xe" (ADR 0081) nếu có, không thì **giờ hẹn trả trên đơn** (như chiều giao); giờ hẹn còn ở tương lai ⇒ bây giờ. Nút chữ cạnh nhãn **bật qua lại**: đang ở giờ hẹn ⇒ **"Hiện tại"** (về bây giờ); đã lệch giờ hẹn ⇒ **"Đúng giờ"** (về lại giờ hẹn — chỉ khi giờ hẹn đã qua) — thay bản đầu (mặc định bây giờ). Hệ quả đã biết: xe về trễ mà người nhận không bấm "Hiện tại" / không sửa giờ thì hộp báo "Đúng giờ" và không gợi ý phí quá giờ. Không chọn được ngày tương lai; trễ ⇒ viên + câu đỏ "Trễ … so với giờ hẹn" |
 | 3 | "Chỉ số Odo (km)" + "Lúc giao: … Đã chạy …" | ✅ | Tuỳ chọn; nhỏ hơn số lúc giao ⇒ câu đỏ ngay dưới ô (server vẫn chặn `HANDOVER_ODOMETER_BELOW_PICKUP`); không có số lúc giao ⇒ KM hệ thống / "không bắt buộc". **Thêm** (design không vẽ): KM thấp bất thường ⇒ cảnh báo + "Số Odo đúng, vẫn xác nhận" (`acknowledgeSuspicious`) — hộp cũ không có lối này |
-| 4 | Vùng "Tình trạng, ảnh & ghi chú" · "Không bắt buộc" · "x/N ảnh" — thu gọn sẵn | ✅ | Tự mở khi server có gợi ý quá giờ / vượt km hoặc đã có dòng phụ phí; người dùng bấm thì lựa chọn của họ thắng. N = bộ góc của loại xe (ô tô 5, xe máy 3). **06/11:** người dùng tự đổi giờ nhận (ô giờ, nút Hiện tại / Đúng giờ) thì vùng GIỮ trạng thái đang thấy — không tự bung vì gợi ý quá giờ vừa hiện |
+| 4 | Vùng "Tình trạng, ảnh & ghi chú" · "Không bắt buộc" · "x/N ảnh" — thu gọn sẵn | ✅ (đổi 25/11) | ~~Tự mở khi server có gợi ý quá giờ / vượt km hoặc đã có dòng phụ phí; người dùng bấm thì lựa chọn của họ thắng. N = bộ góc của loại xe (ô tô 5, xe máy 3). **06/11:** người dùng tự đổi giờ nhận (ô giờ, nút Hiện tại / Đúng giờ) thì vùng GIỮ trạng thái đang thấy — không tự bung vì gợi ý quá giờ vừa hiện~~ **25/11/2026 (người dùng): LUÔN mở, không còn thu gọn** — mục này để khuyến khích chủ xe đánh giá xe + chụp ảnh lúc nhận lại; viên "Không bắt buộc" đổi thành "Khuyến khích" (tông vàng). Áp cho cả lối từ thẻ list lẫn trang chi tiết (cùng `ConfirmReturnDialog`) |
 | 5 | "Tình trạng xe": hai ô chọn | ✅ | Bấm lại ô đang chọn là bỏ chọn (tuỳ chọn) |
 | 6 | "Ảnh hiện trạng & Odo" — lưới 3 cột | ✅ | Hộp rộng 720 ⇒ mọi góc trên MỘT hàng (`HandoverPhotoGrid variant="row"`, như trang chi tiết) thay cho 3 cột hai hàng — tải ngay vào biên bản trả (presign → R2), cùng luật ảnh với trang; cần `handovers.manage`, thiếu thì chỉ xem |
-| 7 | Ghi chú | 🟡→✅ | Design không vẽ ô (tiêu đề có "ghi chú") — ô ghi chú ở cuối vùng, như hộp cũ |
+| 7 | Ghi chú | 🟡→✅ | Design không vẽ ô (tiêu đề có "ghi chú") — ô ghi chú ở cuối vùng, như hộp cũ. **25/11: chỉ hiện khi chọn "Có điểm cần lưu ý"**; xe bình thường ẩn ô, và chữ đã gõ không gửi đi nếu đổi về "Bình thường" |
 | 8 | "Phụ phí phát sinh": dòng Loại + Số tiền + ✕, "Thêm phụ phí" | ✅ | Ghi CÙNG transaction với biên bản (`SettlementService.addSurchargesWithinTx`); lý do = tên loại (hoặc câu công thức khi lấy từ gợi ý) — sửa câu chi tiết ở thẻ "Phát sinh". Danh mục theo luật cũ (ADR 0075: đơn có tài không có quá giờ / vượt km; một-khoản không trùng). Khoản đã ghi trước đó hiện chỉ-đọc. Tối đa `RETURN_SURCHARGE_DRAFT_MAX` = 10 dòng. Dòng thiếu số tiền chặn gửi. Cần `payments.record` — thiếu thì cả khối ẩn |
 | 9 | Gợi ý quá giờ / vượt km | 🆕→✅ | Design không vẽ — server tính theo giờ và Odo ĐANG nhập (`return-preview`), một dòng gợi ý + "Thêm" |
 | 10 | Khối tiền: cọc đã nhận · phụ phí phát sinh · đề xuất hoàn cọc | ✅ | Số của SERVER (`return-preview`, ADR 0007) — các khoản nháp cộng vào như đã ghi. Câu "chủ xe hoàn cọc ngoài hệ thống, đánh dấu ở thẻ Phát sinh" (hộp cũ là Alert) chuyển vào ⓘ cạnh "Đề xuất hoàn cọc". Đánh dấu ĐÃ hoàn cọc vẫn ở thẻ Phát sinh |
 | 11 | Ô "Đã thu {số} của khách" + hình thức thu | 🆕→✅ | Số = `collectableAmount` = công nợ (gồm phụ phí vượt cọc) trừ `D` đã ở XePrime (`counterDueAmount`, cùng phép với dòng "Thu tiền thuê" của Chuẩn bị bàn giao). Bật sẵn; nộp đúng số đang hiện, server tính lại trong transaction (khoá dòng đơn) — lệch ⇒ 409 `HANDOVER_COLLECT_AMOUNT_CHANGED` kèm số mới, không ghi gì. Ghi qua `BookingPaymentWriter` (lõi chung với hộp Thu tiền), `paidAt` = giờ nhận thực tế, audit `via: return_confirm`. Ẩn khi không còn gì phải thu, thiếu `payments.record`, hoặc gói không có Thu chi (tuyến hoa hồng). Bỏ tick ⇒ câu "đơn hoàn thành với khoản còn nợ …, thu sau bằng nút Thu tiền" |
 | 12 | Chân hộp "Hủy" · "Xác nhận đã nhận xe" | ✅ | Nút xác nhận chờ khi số tiền đang được tính lại (ô thu tiền không nộp số cũ) |
+| 13 | Bấm xác nhận khi thiếu ảnh ngoại thất | 🆕→✅ | **25/11 (người dùng):** popup CẢNH BÁO "Chưa đủ ảnh hiện trạng xe" liệt kê góc thiếu (ô tô: trước · sau · trái · phải; xe máy: trước · sau — Odo không tính), hai nút "Thêm ảnh" (đóng popup, tô đỏ ô thiếu, cuộn tới lưới ảnh) · "Vẫn xác nhận" (gửi như thường). Chỉ cảnh báo — ảnh vẫn tuỳ chọn ở server |
 
 Tự dựng thêm: đang tải (khung xương) · lỗi tải ngữ cảnh (thử lại) · lỗi tính quyết toán (cảnh báo + thử lại,
 nút chờ nếu có ô thu tiền) · ảnh xe trống · điện thoại (một cột, dòng phụ phí xuống hàng, nút chia đều).
@@ -996,6 +1021,7 @@ Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 | `23797:49689` | Màn Đơn thuê xe, một ngăn (Hoàn thành) có phân trang `23797:50995` |
 | `23746:51015` | Tab List/Kanban của màn Yêu cầu (frame chốt 02/11 không còn dùng) |
 | `23874:79920` | Section "Đơn thuê xe" gộp: List `23973:51952` (nhóm `23973:82735`, thẻ `23978:92713`) · Kanban `23895:15181` (nội dung `23898:24586`; thẻ "_Kanban Item" chờ duyệt `23895:15196`, đang thuê `23895:15208`) · Kanban + Tạo đơn `23948:84908` · Đơn đã kết thúc `23948:87473` · các bước `23898:28955` (Phê duyệt `23898:25444`, Từ chối `23919:39682`, Huỷ khi chờ trả `23930:44688`, toast duyệt `23930:42529`, Gia hạn `23941:62236`, Nhận xe `23941:64008` / modal `23941:65305`) |
+| `24565:59734` | Tạo đơn thuê — bước Chọn xe (Kanban + hộp): hộp `24565:59738` · hàng lọc `24565:59741` · lưới thẻ `24565:59748` (thẻ `24599:135819`, hàng biển số + giá `24599:135925`; bản cập nhật 25/11 thay `24565:59749`/`59753`) · chân hộp `24565:59754` |
 | `24117:65745` | Đơn thuê xe — điện thoại "Rental Request - MB" (10/11): dải tab `24117:67234` · thẻ mở `24117:72641` · thẻ thu gọn `24117:72841` · thẻ siêu gọn nháp `24117:69914` (không dựng). Chấm tab: đỏ #D92D20 · cam #F79009 · xanh #1570EF · lá #039855 |
 | `23948:99504` | Chi tiết đơn — đơn đã huỷ (Failed) · `23930:45292` đang thuê + toast |
 | `23777:53056` | Section Chi tiết đơn: chờ giao `23845:49956` (03/11, thay `23768:29928`) · cảnh báo thiếu `23845:51599` · popup sẵn sàng giao `23845:53852` (modal `23845:54382`) · chờ giao có tài xế `23807:73143` · hộp Thông tin khách `23777:49485` · hộp Thu tiền đơn `23777:52010` · đang thuê `23777:48710` · hoàn thành `23777:52626` |

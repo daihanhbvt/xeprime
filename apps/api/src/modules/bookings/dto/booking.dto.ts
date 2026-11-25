@@ -22,9 +22,17 @@ import {
   type BookingListPreset,
   HANDOVER_PREP_ITEM_VALUES,
   type HandoverPrepItem,
+  BOOKING_COLLATERAL_DESCRIPTION_MAX,
+  BOOKING_COLLATERAL_MAX_ITEMS,
+  BOOKING_COLLATERAL_TYPE_VALUES,
+  BOOKING_EXTRA_CHARGE_LABEL_MAX,
+  BOOKING_EXTRA_CHARGE_MAX_LINES,
+  bookingCollateralNeedsDescription,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsIn,
@@ -381,6 +389,66 @@ export class BookingHandoverPrepDto {
   manualChecks!: BookingHandoverManualCheckDto[];
 }
 
+const trimText = ({ value }: { value: unknown }): unknown =>
+  typeof value === 'string' ? value.trim() : value;
+
+/** Một dòng phụ phí của đơn gian hàng tự lập (ADR 0109) - vd "Ghế trẻ em". */
+export class BookingExtraChargeInputDto {
+  @ApiProperty({ example: 'Ghế trẻ em', maxLength: BOOKING_EXTRA_CHARGE_LABEL_MAX })
+  @Transform(trimText)
+  @IsString()
+  @Length(1, BOOKING_EXTRA_CHARGE_LABEL_MAX)
+  label!: string;
+
+  @ApiProperty({ example: '100000', description: 'VND, chuỗi - phải lớn hơn 0' })
+  @Matches(MONEY_PATTERN, { message: 'amount phải là số tiền hợp lệ' })
+  amount!: string;
+}
+
+/** Một món tài sản thế chấp khách để lại (ADR 0109). */
+export class BookingCollateralInputDto {
+  @ApiProperty({ enum: BOOKING_COLLATERAL_TYPE_VALUES })
+  @IsIn(BOOKING_COLLATERAL_TYPE_VALUES)
+  collateralType!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: BOOKING_COLLATERAL_DESCRIPTION_MAX,
+    nullable: true,
+    description: 'Biển số xe máy, số giấy tờ… - bắt buộc với loại `other`',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() || null : value,
+  )
+  @ValidateIf(
+    (o: BookingCollateralInputDto) =>
+      o.description != null || bookingCollateralNeedsDescription(o.collateralType),
+  )
+  @IsString({ message: 'Loại "khác" cần mô tả món tài sản' })
+  @IsNotEmpty({ message: 'Loại "khác" cần mô tả món tài sản' })
+  @MaxLength(BOOKING_COLLATERAL_DESCRIPTION_MAX)
+  description?: string | null;
+}
+
+export class BookingCollateralDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ enum: BOOKING_COLLATERAL_TYPE_VALUES }) collateralType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC - null = gian hàng đang giữ',
+  })
+  returnedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Người đánh dấu đã trả' })
+  returnedByName!: string | null;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+}
+
+export class BookingCollateralListDto {
+  @ApiProperty({ type: [BookingCollateralDto] }) data!: BookingCollateralDto[];
+}
+
 /** Chi tiết một đơn - dùng cho trang chi tiết đơn. */
 export class BookingDetailDto extends BookingListItemDto {
   /** Sự cố tài xế đang mở (ADR 0074) - null khi không có. */
@@ -410,6 +478,13 @@ export class BookingDetailDto extends BookingListItemDto {
   @ApiProperty() baseAmount!: string;
   @ApiProperty() deliveryFee!: string;
   @ApiProperty() discountAmount!: string;
+  @ApiProperty({ description: 'Σ phụ phí theo dòng lúc tạo (ADR 0109) - đã nằm trong tổng' })
+  extraChargesAmount!: string;
+  @ApiProperty({
+    type: [BookingCollateralDto],
+    description: 'Tài sản thế chấp khách để lại (ADR 0109), cũ nhất trước',
+  })
+  collaterals!: BookingCollateralDto[];
   /** Snapshot giá bất biến chốt lúc tạo đơn (Wave 2) - null với đơn tạo trước khi có tính năng. */
   @ApiPropertyOptional({ type: BookingPriceSnapshotDto, nullable: true })
   priceSnapshot!: BookingPriceSnapshotDto | null;
@@ -662,6 +737,38 @@ export class CreateBookingDto {
   @Matches(MONEY_PATTERN, { message: 'depositAmount phải là số tiền hợp lệ' })
   depositAmount?: string;
 
+  @ApiPropertyOptional({
+    type: [BookingExtraChargeInputDto],
+    maxItems: BOOKING_EXTRA_CHARGE_MAX_LINES,
+    description:
+      'Phụ phí theo dòng của đơn tự lập (ADR 0109) - cộng vào tổng, đóng băng như tiền thuê',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(BOOKING_EXTRA_CHARGE_MAX_LINES)
+  @ValidateNested({ each: true })
+  @Type(() => BookingExtraChargeInputDto)
+  extraCharges?: BookingExtraChargeInputDto[];
+
+  @ApiPropertyOptional({
+    description: 'Đơn tự lập bật "Giá thoả thuận" (ADR 0109) - chỉ ghi nhãn lên snapshot giá',
+  })
+  @IsOptional()
+  @IsBoolean()
+  negotiatedPrice?: boolean;
+
+  @ApiPropertyOptional({
+    type: [BookingCollateralInputDto],
+    maxItems: BOOKING_COLLATERAL_MAX_ITEMS,
+    description: 'Tài sản thế chấp khách để lại (ADR 0109)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(BOOKING_COLLATERAL_MAX_ITEMS)
+  @ValidateNested({ each: true })
+  @Type(() => BookingCollateralInputDto)
+  collaterals?: BookingCollateralInputDto[];
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -760,10 +867,11 @@ export class ExternalDriverInputDto {
 }
 
 /**
- * Gán/bỏ gán tài xế cho đơn - gửi ĐÚNG MỘT trong hai khoá:
+ * Gán/bỏ gán tài xế cho đơn - gửi ĐÚNG MỘT trong ba khoá:
  *
  *  - `driverId` (ADR 0063): id LIÊN KẾT tài xế (`drivers.id`); `null` là BỎ GÁN tường minh (gỡ cả
  *    tài xế liên kết lẫn tài xế ngoài hệ thống) - để không lẫn "không gửi gì" với "gỡ tài xế".
+ *  - `internalDriverId` (ADR 0108): id trong DANH BẠ tài xế nội bộ của bên thuê — coi là đã nhận ngay.
  *  - `externalDriver` (ADR 0067): ĐÃ BỎ ở ADR 0074 điều 4 - controller trả 422
  *    `EXTERNAL_DRIVER_NOT_SUPPORTED`. Khoá còn trong DTO để app cũ nhận đúng mã lỗi thay vì 400.
  *
@@ -773,13 +881,16 @@ export class AssignBookingDriverDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'ID liên kết tài xế (ULID) - null để bỏ gán. Không gửi cùng `externalDriver`.',
+    description:
+      'ID liên kết tài xế (ULID) - null để bỏ gán (gỡ mọi loại tài xế). Không gửi cùng `internalDriverId` / `externalDriver`.',
   })
-  // Kiểm cả khi VẮNG nếu `externalDriver` cũng vắng - để body rỗng bị `ExactlyOneOf` từ chối.
+  // Kiểm cả khi VẮNG nếu hai khoá kia cũng vắng - để body rỗng bị `ExactlyOneOf` từ chối.
   @ValidateIf(
-    (o: AssignBookingDriverDto) => o.driverId !== undefined || o.externalDriver === undefined,
+    (o: AssignBookingDriverDto) =>
+      o.driverId !== undefined ||
+      (o.externalDriver === undefined && o.internalDriverId === undefined),
   )
-  @ExactlyOneOf(['driverId', 'externalDriver'])
+  @ExactlyOneOf(['driverId', 'internalDriverId', 'externalDriver'])
   @ValidateBy({
     name: 'isDriverIdOrNull',
     validator: {
@@ -789,6 +900,16 @@ export class AssignBookingDriverDto {
     },
   })
   driverId?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'ID tài xế NỘI BỘ trong danh bạ của bên thuê (ADR 0108) - coi là đã nhận ngay, không tiền công. 404 `INTERNAL_DRIVER_NOT_FOUND`, 409 `INTERNAL_DRIVER_ARCHIVED` / `DRIVER_BUSY`.',
+  })
+  @ValidateIf((o: AssignBookingDriverDto) => o.internalDriverId !== undefined)
+  @IsString()
+  @Length(26, 26)
+  internalDriverId?: string;
 
   @ApiPropertyOptional({
     type: ExternalDriverInputDto,

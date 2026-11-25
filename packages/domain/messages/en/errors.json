@@ -285,7 +285,13 @@
     "CHAT_BLOCKED": "Messaging is unavailable because one of you has blocked the other.",
     "HANDOVER_PICKUP_NOT_OPEN": "It is not handover time yet - handover can only be confirmed from 60 minutes before pickup.",
     "INSURANCE_PREMIUM_SYNCED_LOCKED": "The premium table is synced from MIC and cannot be edited by hand. It unlocks only when a sync fails.",
-    "INSURANCE_EARLY_HANDOVER": "The car cannot be handed over yet: handing over this early makes the insurance contract longer than the tier the customer paid for. Hand over closer to the pickup time."
+    "INSURANCE_EARLY_HANDOVER": "The car cannot be handed over yet: handing over this early makes the insurance contract longer than the tier the customer paid for. Hand over closer to the pickup time.",
+    "INTERNAL_DRIVER_NOT_FOUND": "This in-house driver was not found. Reload the list and try again.",
+    "INTERNAL_DRIVER_ARCHIVED": "This driver has been archived. Restore them in the directory before using them.",
+    "INTERNAL_DRIVER_PHONE_TAKEN": "This phone number is already in your in-house driver directory.",
+    "BOOKING_DISCOUNT_EXCEEDS_BASE": "The discount cannot be larger than the rental amount.",
+    "BOOKING_COLLATERAL_NOT_FOUND": "This collateral item was not found on the booking.",
+    "BOOKING_COLLATERAL_LOCKED": "Collateral cannot be added or removed: the booking is closed, already has 10 items, or this item was returned."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",

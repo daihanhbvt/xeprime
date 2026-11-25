@@ -191,7 +191,8 @@
     "routeDestination": "→ {address}",
     "searchLabel": "Search drivers",
     "searchPlaceholder": "Name or phone number",
-    "searchEmpty": "No driver matches “{query}”"
+    "searchEmpty": "No driver matches “{query}”",
+    "internal": "In-house driver"
   },
   "deliveryFee": {
     "title": "Delivery fee",
@@ -348,7 +349,6 @@
       "odoCurrent": "Mileage on record: {km}.",
       "odoOptional": "Optional - leave it blank and the vehicle's mileage stays as is.",
       "detailsTitle": "Condition, photos & notes",
-      "optional": "Optional",
       "photoCount": "{done}/{total} photos",
       "conditionNormal": "Normal, no signs of damage",
       "photosLabel": "Condition & odometer photos",
@@ -378,7 +378,12 @@
       "collectChanged": "The amount still to collect has changed to {amount}. Check it, then confirm again.",
       "suspicious": "{delta} over {days, plural, one {# day} other {# days}} is unusually low (under {threshold}/day). Please double-check the odometer.",
       "suspiciousConfirm": "The reading is right, confirm anyway",
-      "confirm": "Confirm vehicle returned"
+      "confirm": "Confirm vehicle returned",
+      "encouraged": "Recommended",
+      "photosWarningTitle": "Vehicle condition photos are missing",
+      "photosWarningBody": "Missing photos: {slots}. Photos taken at return are your evidence if damage needs to be checked with the customer - take them all before completing the trip.",
+      "photosWarningAdd": "Add photos",
+      "photosWarningContinue": "Confirm anyway"
     }
   },
   "settlement": {
@@ -1091,7 +1096,29 @@
       "dueAfterPickup": "Collect in person before you take the vehicle back.",
       "dueSettled": "The customer has paid the rental in full.",
       "depositNote": "Excludes the {amount} security deposit - held and returned to the customer when you take the vehicle back.",
-      "returningCustomer": "Returning customer"
+      "returningCustomer": "Returning customer",
+      "collateral": {
+        "title": "Deposit & collateral",
+        "heldCount": "Holding {held}/{total}",
+        "cash": "Cash deposit",
+        "noCash": "No cash deposit",
+        "empty": "No collateral recorded yet.",
+        "returnedTag": "Returned",
+        "returnedBy": "Returned by {name} at {time}",
+        "returnedAt": "Returned at {time}",
+        "markReturned": "Mark returned",
+        "returnedToast": "Item marked as returned to the customer",
+        "remove": "Remove",
+        "removeConfirm": "Remove this item recorded by mistake?",
+        "add": "Add collateral",
+        "added": "Collateral recorded",
+        "type": "Item type",
+        "description": "Item description",
+        "descriptionPlaceholder": "Document number (optional)",
+        "descriptionMotorbike": "Plate, e.g. 59A1-12345",
+        "descriptionOther": "What it is, e.g. Dell laptop",
+        "descriptionRequired": "Describe the item before adding it"
+      }
     },
     "stepAt": {
       "confirmed": "Confirmed at {time}",
@@ -1188,5 +1215,67 @@
     "noResultsTitle": "No trips match these filters",
     "noResultsBody": "Try another keyword or clear some filters.",
     "totalLabel": "{count, plural, one {# trip} other {# trips}}"
+  },
+  "contractDocument": {
+    "title": "Vehicle rental contract",
+    "number": "No.: {value}",
+    "createdAt": "Date: {date}",
+    "shop": {
+      "taxCode": "Tax ID: {value}",
+      "businessLicense": "Business licence: {value}"
+    },
+    "parties": {
+      "lessor": "Lessor (Party A)",
+      "lessee": "Lessee (Party B)",
+      "phone": "Phone: {value}",
+      "bankAccount": "Account: {value}"
+    },
+    "vehicle": {
+      "title": "Vehicle",
+      "name": "Vehicle",
+      "plate": "Plate",
+      "type": "Vehicle type",
+      "service": "Service",
+      "brandModel": "Make / model",
+      "year": "Year",
+      "color": "Colour",
+      "seats": "Seats",
+      "seatsValue": "{count, plural, one {# seat} other {# seats}}"
+    },
+    "rental": {
+      "title": "Rental period",
+      "pickup": "Pickup",
+      "return": "Return",
+      "term": "Rental term",
+      "days": "Days",
+      "daysValue": "{count, plural, one {# day} other {# days}}",
+      "bookingCode": "Booking code",
+      "route": "Route",
+      "pickupAddress": "Pickup address",
+      "destination": "Destination"
+    },
+    "pricing": {
+      "title": "Rental charges",
+      "base": "Rental",
+      "delivery": "Delivery fee",
+      "discount": "Discount",
+      "total": "Total",
+      "deposit": "Deposit",
+      "paid": "Paid",
+      "remaining": "Remaining"
+    },
+    "collateral": {
+      "title": "Collateral",
+      "note": "Party A holds the items above during the rental and returns them when Party B returns the vehicle."
+    },
+    "terms": {
+      "title": "Terms",
+      "handover": "Party B collects and returns the vehicle at the agreed time and place and takes good care of it.",
+      "liability": "Party B is responsible for traffic violations, damage and loss arising during the rental.",
+      "deposit": "The deposit is refunded after the vehicle is returned, minus any extra charges.",
+      "platform": "Both parties settle matters by mutual agreement; XePrime is only the connecting platform."
+    },
+    "note": "Notes",
+    "signHint": "(Sign and print full name)"
   }
 }

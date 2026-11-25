@@ -21,6 +21,27 @@ export type DriverAssignmentRow = Schemas['DriverAssignmentRowDto'];
 export type DriverOverview = Schemas['DriverOverviewDto'];
 /** Dải số đếm đầu màn Tài xế — đã áp bộ lọc chung. */
 export type DriverSummary = Schemas['DriverSummaryDto'];
+/** Một người trong DANH BẠ tài xế nội bộ (ADR 0108) — không tài khoản XePrime. */
+export type InternalDriver = Schemas['InternalDriverDto'];
+export type CreateInternalDriverInput = Schemas['CreateInternalDriverDto'];
+export type UpdateInternalDriverInput = Schemas['UpdateInternalDriverDto'];
+/** Tài xế nội bộ trong bộ chọn gán đơn — `busy` = đã gán một đơn khác giao khung giờ. */
+export type AssignableInternalDriver = Schemas['AssignableInternalDriverDto'];
+
+/** Hai danh sách của màn Tài xế — sống trên URL (`view`). */
+export const DRIVERS_VIEW = {
+  LINKED: 'linked',
+  INTERNAL: 'internal',
+} as const;
+export type DriversView = (typeof DRIVERS_VIEW)[keyof typeof DRIVERS_VIEW];
+
+export interface InternalDriverFilters {
+  q?: string;
+  /** true = danh sách đã lưu trữ. */
+  archived?: boolean;
+  page?: number;
+  limit?: number;
+}
 
 /** Tab của ngăn chi tiết tài xế — sống trên URL cùng `open`. */
 export const DRIVER_DETAIL_TAB = {

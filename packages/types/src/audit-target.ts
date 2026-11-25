@@ -21,6 +21,8 @@ export const AUDIT_TARGET_TYPE = {
   /** Lượt nộp bằng lái của tài khoản khách (ADR 0057). */
   CUSTOMER_DRIVER_LICENCE: 'customer_driver_licence',
   DRIVER: 'driver',
+  /** Một dòng danh bạ tài xế nội bộ (ADR 0108). */
+  INTERNAL_DRIVER: 'internal_driver',
   FEE_POLICY: 'fee_policy',
   HOLD_REFUND: 'hold_refund',
   HOLIDAY_SYNC_RUN: 'holiday_sync_run',

@@ -368,6 +368,11 @@ export interface BookingPriceSnapshot {
   calculatedAt: string;
   /** 'quote' = tính từ PricingService khi duyệt yêu cầu; 'manual' = shop nhập tay khi tạo đơn. */
   source: 'quote' | 'manual';
+  /**
+   * Đơn gian hàng tự lập bật "Giá thoả thuận" (ADR 0109) — chỉ là nhãn: số tiền của đơn tự lập luôn
+   * do gian hàng gửi lên. Vắng = không bật / đơn trước 25/11/2026.
+   */
+  negotiated?: boolean;
   currency: 'VND';
   /** Số ngày tính tiền — chỉ có ở đơn tính theo NGÀY (tự lái / có tài xế). */
   days?: number;
