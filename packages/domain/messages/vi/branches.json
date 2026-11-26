@@ -8,7 +8,7 @@
     "fixNow": "Bổ sung ngay"
   },
   "toolbar": {
-    "searchPlaceholder": "Tìm theo tên, mã hoặc địa chỉ",
+    "searchPlaceholder": "Tìm kiếm,...",
     "searchLabel": "Tìm chi nhánh",
     "summary": "{total, plural, other {# chi nhánh}} · {active} đang hoạt động",
     "activeOnly": "Chỉ đang hoạt động",
@@ -35,7 +35,8 @@
   "actions": {
     "setDefault": "Đặt làm mặc định",
     "deactivate": "Ngừng hoạt động",
-    "activate": "Bật lại"
+    "activate": "Bật lại",
+    "menu": "Thao tác chi nhánh {name}"
   },
   "blocked": {
     "edit": "Bạn không có quyền sửa chi nhánh",

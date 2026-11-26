@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useTranslations } from 'use-intl';
@@ -18,17 +19,42 @@ const VIEWS: readonly TransactionHistoryView[] = [
 ];
 
 /**
+ * Bộ chuyển tab của vỏ `TransactionHistoryScreen` — có thì đổi tab là đổi STATE (hai màn đã dựng
+ * vẫn nằm trong cây, chỉ ẩn/hiện), không có thì lùi về thay route như cũ.
+ */
+export const TransactionHistoryViewContext = createContext<
+  ((view: TransactionHistoryView) => void) | null
+>(null);
+
+/** Đổi sang tab kia — dùng chung cho dải tab và lối tắt (thẻ "Công nợ khách hàng" của sổ Thu-Chi). */
+export function useSwitchTransactionHistoryView(): (view: TransactionHistoryView) => void {
+  const switchView = useContext(TransactionHistoryViewContext);
+  return (
+    switchView ??
+    ((view) =>
+      router.replace(
+        view === TRANSACTION_HISTORY_VIEW.DEBTS ? ROUTES.manage.debts() : ROUTES.manage.receipts(),
+      ))
+  );
+}
+
+/**
  * Hai tab của "Lịch sử giao dịch" — bản native của nút chuyển `Segmented` có khung viền ở
- * `/manage/receipts` (web, ledger 09 §3.11): "Giao dịch thu chi" và "Công nợ". Web gộp hai màn vào
- * MỘT route; app giữ hai màn (mỗi màn một bộ lọc riêng — đúng như web đi tới URL sạch của tab kia),
- * dải tab này nối chúng.
+ * `/manage/receipts` (web, ledger 09 §3.11): "Giao dịch thu chi" và "Công nợ".
  *
  * Tab Công nợ mang cờ gói RIÊNG (`PLAN_FEATURE.DEBTS`): gói không có thì dải tab vắng hẳn, như web.
- * Đổi tab là THAY màn (`replace`), không chồng thêm một tầng để nút lui quay vòng giữa hai tab.
  */
-export function TransactionHistoryTabs({ value }: { value: TransactionHistoryView }) {
+export function TransactionHistoryTabs({
+  value,
+  debtCount,
+}: {
+  value: TransactionHistoryView;
+  /** Số đơn còn nợ — viên đếm cạnh tab "Công nợ" (Figma `24512:125314`). Chưa tải ⇒ không có viên. */
+  debtCount?: number | undefined;
+}) {
   const t = useTranslations('Finance.history.views');
   const debts = useFeature(PLAN_FEATURE.DEBTS);
+  const switchView = useSwitchTransactionHistoryView();
 
   if (!debts.isVisible) return null;
 
@@ -37,15 +63,16 @@ export function TransactionHistoryTabs({ value }: { value: TransactionHistoryVie
       <SegmentedTabs
         fit
         variant="neutral"
-        items={VIEWS.map((view) => ({ key: view, label: t(view) }))}
+        items={VIEWS.map((view) => ({
+          key: view,
+          label: t(view),
+          ...(view === TRANSACTION_HISTORY_VIEW.DEBTS && debtCount !== undefined
+            ? { count: debtCount }
+            : {}),
+        }))}
         value={value}
         onChange={(view) => {
-          if (view === value) return;
-          router.replace(
-            view === TRANSACTION_HISTORY_VIEW.DEBTS
-              ? ROUTES.manage.debts()
-              : ROUTES.manage.receipts(),
-          );
+          if (view !== value) switchView(view);
         }}
       />
     </View>

@@ -58,6 +58,7 @@
     "cancel": "Cancel request",
     "cancelConfirm": "Cancel this withdrawal request?",
     "cancelHint": "The money returns to your available balance.",
+    "cancelAsk": "Are you sure you want to cancel this withdrawal request?",
     "reversed": "Transfer failed: {reason}. The money is back in your balance - check the payout account and create a new request."
   },
   "admin": {
@@ -145,7 +146,7 @@
     "loadError": "Could not load the summary.",
     "totalLabel": "{count, plural, one {# trip} other {# trips}}",
     "stats": {
-      "rating": "{count, plural, =0 {No reviews yet} one {Rating (# review)} other {Rating (# reviews)}}",
+      "rating": "{count, plural, one {Rating (# review)} other {Rating (# reviews)}}",
       "trips": "Completed trips",
       "tripsValue": "{count, plural, one {# trip} other {# trips}}",
       "response": "Response rate",

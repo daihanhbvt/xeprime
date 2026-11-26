@@ -5,7 +5,7 @@ import { Alert, App, Button, Segmented, Spin } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { FEATURE_STATE, PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import { FeatureExpiredNotice } from '@/components/feedback/FeatureExpiredNotice';
 import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
@@ -27,6 +27,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { buildPeriodRange } from '@/lib/datetime';
 import {
   RECEIPTS_DEFAULT_LIMIT,
+  RECEIPT_DEFAULT_PERIOD,
   RECEIPT_PERIOD_VALUES,
   type ReceiptPeriod,
 } from '@/features/finance/constants';
@@ -165,6 +166,20 @@ function ReceiptsLedger({ debtsVisible }: { debtsVisible: boolean }) {
   const { has } = usePermissions();
   const errorMessage = useErrorMessage();
   const { filters, setFilters } = useReceiptFilters();
+
+  /**
+   * Mặc định "Tháng này" (chốt 26/11/2026): mở sổ mà URL KHÔNG mang bộ lọc nào thì ghi kỳ tháng
+   * này vào URL. Chỉ chạy MỘT lần lúc mở trang — gỡ bộ lọc sau đó là người dùng muốn xem toàn bộ
+   * sổ, không được tự gắn lại. Lối vào có tham số (hồ sơ xe/khách, thẻ Tổng quan) giữ nguyên ý
+   * của nó, không bị kẹp thêm kỳ.
+   */
+  const defaultPeriodApplied = useRef(false);
+  useEffect(() => {
+    if (defaultPeriodApplied.current) return;
+    defaultPeriodApplied.current = true;
+    if (hasReceiptFilters(filters) || filters.create) return;
+    setFilters(buildPeriodRange(RECEIPT_DEFAULT_PERIOD) as Partial<ReceiptFilters>);
+  }, [filters, setFilters]);
   const branch = useBranchFilter({
     value: filters.branchId,
     onChange: (branchId) => setFilters({ branchId }),

@@ -46,6 +46,10 @@ interface AvatarProps {
    * Thông tin cửa hàng (`Avatar shape="square"` của `ShopWorkspace` web). Không đi cùng `ring`.
    */
   square?: boolean;
+  /** Bo góc riêng của khung VUÔNG (mặc định 12) - logo đầu trang Quản lý gian hàng bo 8 (`24231:113121`). */
+  squareRadius?: number;
+  /** Viền 1 `stroke/gray-low200` quanh khung (logo đầu trang Quản lý gian hàng). */
+  bordered?: boolean;
 }
 
 /**
@@ -107,6 +111,8 @@ export function Avatar({
   verifiedLabel,
   gradient = false,
   square = false,
+  squareRadius = radius.control,
+  bordered = false,
 }: AvatarProps) {
   const colors = useColors();
   const initial = name.trim().charAt(0).toLocaleUpperCase();
@@ -118,7 +124,7 @@ export function Avatar({
     <YStack
       w={inner}
       h={inner}
-      br={square ? radius.control : radius.pill}
+      br={square ? squareRadius : radius.pill}
       bg={soft ? colors.primaryLight : colors.primary}
       {...(soft ? { bw: 1, bc: colors.border } : {})}
       ai="center"
@@ -150,6 +156,20 @@ export function Avatar({
           {initial || '?'}
         </Text>
       )}
+      {/* Viền vẽ ĐÈ lên ảnh - viền của chính khung bị ảnh phủ kín (`ov="hidden"` + ảnh tràn khung). */}
+      {bordered ? (
+        <YStack
+          pos="absolute"
+          t={0}
+          l={0}
+          r={0}
+          b={0}
+          br={square ? squareRadius : radius.pill}
+          bw={1}
+          bc={colors.border}
+          pointerEvents="none"
+        />
+      ) : null}
     </YStack>
   );
 

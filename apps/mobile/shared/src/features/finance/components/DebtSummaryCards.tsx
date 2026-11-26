@@ -1,12 +1,14 @@
 import { useTranslations } from 'use-intl';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { YStack } from 'tamagui';
+import { XStack } from 'tamagui';
+import { SummaryTile } from './SummaryTile';
 import type { DebtSummary } from '../api';
+
+/** Figma "Summary Metrics": hai ô một hàng, cách 12. */
+const GRID_GAP = 12;
 
 /**
  * Dải thẻ của màn Công nợ — bản native của `DebtSummaryCards` (web, PR #276).
@@ -26,6 +28,8 @@ export function DebtSummaryCards({
 }) {
   const colors = useColors();
   const t = useTranslations('Finance.debts.tiles');
+  // Nhãn "Trong hạn" / "Chưa thu" của app theo Figma `24512:126967`; web giữ chữ của nó.
+  const tApp = useTranslations('Finance.debts.partnerApp.tiles');
   const tSummary = useTranslations('Finance.receipts.summary');
   const fmt = useAppFormat();
 
@@ -33,48 +37,34 @@ export function DebtSummaryCards({
   if (!data) return <SkeletonText lines={4} />;
 
   const overdue = data.overdueCount > 0;
-  const cells: StatCell[] = [
-    {
-      key: 'total',
-      icon: 'wallet-outline',
-      label: t('total'),
-      value: fmt.money(data.totalAmount),
-      tone: colors.primaryActive,
-      hint: t('totalHint', { orders: data.totalCount, customers: data.customerCount }),
-    },
-    {
-      key: 'overdue',
-      icon: 'alert-circle-outline',
-      label: t('overdue'),
-      value: fmt.money(data.overdueAmount),
-      tone: overdue ? colors.danger : colors.textMuted,
-      ...(overdue ? { surface: colors.dangerSurface, valueTone: colors.danger } : {}),
-      hint: t('overdueHint', { count: data.overdueCount }),
-    },
-    {
-      key: 'within',
-      icon: 'time-outline',
-      label: t('within'),
-      value: fmt.money(data.withinTermAmount),
-      tone: colors.info,
-      hint: t('withinHint', { count: data.withinTermCount }),
-    },
-    {
-      key: 'unpaid',
-      icon: 'hourglass-outline',
-      label: t('unpaid'),
-      value: t('unpaidValue', { count: data.unpaidCount }),
-      tone: colors.warning,
-      hint: t('unpaidHint', { count: data.unpaidCount }),
-    },
-  ];
 
-  /* Đổi bộ lọc: GIỮ số cũ và mờ đi, không nháy về skeleton. */
+  /* Lưới 2×2 cùng ô với sổ Thu-Chi (Figma "Summary Metrics" của tab Công nợ). Đổi bộ lọc: giữ số cũ, mờ đi. */
   return (
-    <Card padded={false} accessibilityLabel={t('label')}>
-      <YStack opacity={loading ? 0.6 : 1}>
-        <StatGrid variant="list" cells={cells} />
-      </YStack>
-    </Card>
+    <XStack flexWrap="wrap" gap={GRID_GAP} opacity={loading ? 0.6 : 1} accessibilityLabel={t('label')}>
+      <SummaryTile
+        label={t('total')}
+        value={fmt.money(data.totalAmount)}
+        valueColor={colors.text}
+        hint={t('totalHint', { orders: data.totalCount, customers: data.customerCount })}
+      />
+      <SummaryTile
+        label={t('overdue')}
+        value={fmt.money(data.overdueAmount)}
+        valueColor={overdue ? colors.danger : colors.text}
+        hint={t('overdueHint', { count: data.overdueCount })}
+      />
+      <SummaryTile
+        label={tApp('within')}
+        value={fmt.money(data.withinTermAmount)}
+        valueColor={colors.text}
+        hint={tApp('withinHint', { count: data.withinTermCount })}
+      />
+      <SummaryTile
+        label={tApp('unpaid')}
+        value={t('unpaidValue', { count: data.unpaidCount })}
+        valueColor={colors.text}
+        hint={tApp('unpaidHint', { count: data.unpaidCount })}
+      />
+    </XStack>
   );
 }

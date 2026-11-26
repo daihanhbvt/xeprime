@@ -31,7 +31,7 @@ const DAYS = 8;
 export function CalendarGridSkeleton() {
   const CAL_SURFACE = useCalSurface();
   const colors = useColors();
-  const { headerHeight, rowHeight, summaryHeight, resourceWidth, minDayWidth } = GRID_METRICS;
+  const { headerHeight, rowHeight, resourceWidth, minDayWidth } = GRID_METRICS;
 
   return (
     <XStack f={1} bg={colors.surface} ov="hidden">
@@ -121,19 +121,6 @@ export function CalendarGridSkeleton() {
         ))}
       </YStack>
 
-      {/* Hàng "Xe còn trống" ghim đáy — có mặt để lúc dữ liệu về nó không mọc thêm ra. */}
-      <YStack position="absolute" bottom={0} left={0} right={0}>
-        <XStack
-          h={summaryHeight}
-          ai="center"
-          px={space.xs}
-          bg={colors.surfaceElevated}
-          borderTopWidth={1}
-          borderColor={CAL_SURFACE.line}
-        >
-          <Skeleton width={resourceWidth - space.sm} height={10} />
-        </XStack>
-      </YStack>
     </XStack>
   );
 }

@@ -5,6 +5,8 @@ import { uploadsApi, type UploadMeta, type UploadPresign } from '../uploads/api'
 type Schemas = components['schemas'];
 
 export type VehicleListItem = Schemas['VehicleListItemDto'];
+/** Một xe ở bước "Chọn xe" khi lập đơn — kèm cờ `busy` theo khung giờ đã chọn. */
+export type VehicleBookingPickerItem = Schemas['VehicleBookingPickerItemDto'];
 /**
  * Khoảng giá tham khảo cho ô "Giá thuê mỗi ngày" — kèm phần nói lên ĐỘ TIN CẬY (`basis`,
  * `sampleSize`), không chỉ một con số.
@@ -113,6 +115,19 @@ export const vehiclesApi = {
   /** Huy hiệu menu "Danh sách xe" — phạm vi chi nhánh theo membership (ADR 0052). */
   needsActionCount(): Promise<VehicleNeedsActionCount> {
     return getApiClient().get<VehicleNeedsActionCount>('/vehicles/needs-action-count');
+  },
+
+  /**
+   * Bước "Chọn xe" của luồng lập đơn (`GET /vehicles/booking-picker`) — native port of web
+   * `use-booking-picker-vehicles.ts`. Server xếp xe TRỐNG trong khung giờ lên trước, xe đã có lịch
+   * xuống sau kèm `busy`. `pickupAt`/`returnAt` (ISO UTC) là bắt buộc.
+   */
+  bookingPicker(params: QueryParams, limit: number): Promise<Paged<VehicleBookingPickerItem>> {
+    return getApiClient().fetchPage<VehicleBookingPickerItem>(
+      '/vehicles/booking-picker',
+      params,
+      limit,
+    );
   },
 
   list(filters: VehicleFilters): Promise<Paged<VehicleListItem>> {

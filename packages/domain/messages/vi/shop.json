@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Thông tin cửa hàng",
-    "subtitle": "Thông tin và thiết lập của gian hàng.",
+    "subtitle": "Thông tin & thiết lập gian hàng",
     "viewPublicPage": "Xem gian hàng",
     "loadError": "Không tải được hồ sơ gian hàng",
     "forbidden": {
@@ -368,7 +368,7 @@
   },
   "owner": {
     "title": "Chủ gian hàng",
-    "hint": "Thông tin lấy từ tài khoản chủ sở hữu.",
+    "hint": "Lấy từ thông tin tài khoản chủ sở hữu",
     "email": "Email",
     "phone": "Số điện thoại",
     "noEmail": "Chưa có email",

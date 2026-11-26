@@ -1,16 +1,15 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LIST_SEPARATOR, vehicleLabel } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Callout } from '@/components/ui/Callout';
+import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { fontSize } from '@/theme/tokens';
 import { useReceiptBookingOptions, useReceiptVehicleOptions } from '../hooks/use-finance';
 import type { ReceiptBookingOption, ReceiptVehicleOption } from '../api';
 
@@ -35,9 +34,7 @@ export function BookingPickerSheet({
   selectedId: string | null;
   onSelect: (booking: ReceiptBookingOption) => void;
 }) {
-  const colors = useColors();
   const t = useTranslations('Finance.receipts.form');
-  const fmt = useAppFormat();
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const query = useReceiptBookingOptions(debounced, open);
@@ -55,22 +52,19 @@ export function BookingPickerSheet({
       error={query.isError ? t('bookingError') : null}
       empty={(query.data?.length ?? 0) === 0 ? t('bookingEmpty') : null}
     >
-      {(query.data ?? []).map((booking) => (
-        <Row
-          key={booking.id}
-          selected={booking.id === selectedId}
-          title={booking.code}
-          subtitle={[booking.customerName, booking.plateNumber]
-            .filter(Boolean)
-            .join(LIST_SEPARATOR)}
-          trailing={
-            <Text col={colors.price} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {fmt.money(booking.debtAmount)}
-            </Text>
-          }
-          onPress={() => onSelect(booking)}
-        />
-      ))}
+      {/* Danh sách như ô chọn thường của web (chốt 26/11/2026): "mã · khách · biển số". */}
+      <MenuOptionList>
+        {(query.data ?? []).map((booking) => (
+          <MenuOption
+            key={booking.id}
+            label={[booking.code, booking.customerName, booking.plateNumber]
+              .filter(Boolean)
+              .join(LIST_SEPARATOR)}
+            selected={booking.id === selectedId}
+            onPress={() => onSelect(booking)}
+          />
+        ))}
+      </MenuOptionList>
     </PickerShell>
   );
 }
@@ -110,15 +104,19 @@ export function VehiclePickerSheet({
       error={query.isError ? t('vehicleError') : null}
       empty={(query.data?.length ?? 0) === 0 ? t('vehicleEmpty') : null}
     >
-      {(query.data ?? []).map((vehicle) => (
-        <Row
-          key={vehicle.id}
-          selected={vehicle.id === selectedId}
-          title={vehicleLabel(vehicle.name, vehicle.plateNumber)}
-          subtitle={[vehicle.code, vehicle.branchName].filter(Boolean).join(LIST_SEPARATOR)}
-          onPress={() => onSelect(vehicle)}
-        />
-      ))}
+      {/* Như web: "mã · tên xe (biển số)". */}
+      <MenuOptionList>
+        {(query.data ?? []).map((vehicle) => (
+          <MenuOption
+            key={vehicle.id}
+            label={[vehicle.code, vehicleLabel(vehicle.name, vehicle.plateNumber)]
+              .filter(Boolean)
+              .join(LIST_SEPARATOR)}
+            selected={vehicle.id === selectedId}
+            onPress={() => onSelect(vehicle)}
+          />
+        ))}
+      </MenuOptionList>
     </PickerShell>
   );
 }
@@ -172,53 +170,5 @@ function PickerShell({
         children
       )}
     </BottomSheet>
-  );
-}
-
-function Row({
-  selected,
-  title,
-  subtitle,
-  trailing,
-  onPress,
-}: {
-  selected: boolean;
-  title: string;
-  subtitle: string;
-  trailing?: ReactNode;
-  onPress: () => void;
-}) {
-  const colors = useColors();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityLabel={title}
-      style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}
-    >
-      <XStack
-        ai="center"
-        gap={space.sm}
-        p={space.md}
-        br={radius.lg}
-        bw={1}
-        bg={selected ? colors.surfaceSelected : colors.surface}
-        bc={selected ? colors.primary : colors.border}
-        minHeight={sizing.touchTarget}
-      >
-        <YStack f={1} minWidth={0} gap={2}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
-            {title}
-          </Text>
-          {subtitle ? (
-            <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
-        </YStack>
-        {trailing}
-      </XStack>
-    </Pressable>
   );
 }

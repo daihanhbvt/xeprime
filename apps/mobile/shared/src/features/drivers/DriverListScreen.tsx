@@ -14,6 +14,8 @@ import {
   DRIVER_LIST_SORT,
   DRIVER_OPERATION_FILTER,
   DRIVER_OPERATION_FILTER_VALUES,
+  DRIVER_ROSTER_KIND,
+  DRIVER_TYPE_FILTER_INTERNAL,
   DRIVER_TYPE_VALUES,
   PERMISSION,
 } from '@xeprime/types';
@@ -46,18 +48,25 @@ import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { useColors } from '@/theme/ThemeProvider';
 import { iconSize } from '@/theme/tokens';
-import type { Driver } from './api';
-import { DriverCard, type DriverCardIntent } from './components/DriverCard';
-import { EditDriverSheet, InviteDriverSheet } from './components/DriverFormSheet';
+import type { Driver, DriverRosterItem, InternalDriver } from './api';
+import {
+  DriverCard,
+  InternalDriverCard,
+  type DriverCardIntent,
+  type InternalDriverCardIntent,
+} from './components/DriverCard';
+import { AddDriverSheet } from './components/DriverFormSheet';
 import { DriverWageSettingsButton } from './components/DriverWageSettingsButton';
 import { DRIVER_DETAIL_TAB } from './DriverDetailScreen';
 import {
-  useDriverSummary,
-  useDriversPage,
+  useDriverRoster,
+  useDriverRosterSummary,
   useEndDriver,
   useResumeDriver,
+  useSetDriverLicenceChecked,
   useSuspendDriver,
 } from './hooks/use-drivers';
+import { useArchiveInternalDriver, useRestoreInternalDriver } from './hooks/use-internal-drivers';
 
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -106,10 +115,18 @@ const SUMMARY_CHIPS = [
   },
 ] as const;
 
-type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
+type ToastKey =
+  | 'toast.suspended'
+  | 'toast.resumed'
+  | 'toast.ended'
+  | 'toast.revoked'
+  | 'toast.licenceChecked'
+  | 'internal.toast.archived'
+  | 'internal.toast.restored';
 
-// Ở module scope, không inline: FlatList coi `keyExtractor` mới là prop đổi và dựng lại cây con.
-const keyOf = (driver: Driver) => driver.id;
+/** Hai loại dòng chung một danh sách — khoá có tiền tố loại để id không đụng nhau. */
+const keyOf = (row: DriverRosterItem) =>
+  row.kind === DRIVER_ROSTER_KIND.INTERNAL ? `internal-${row.internal?.id}` : `linked-${row.linked?.id}`;
 
 /**
  * Tài xế của bên thuê (ADR 0063) — bản native của `/manage/drivers` (`DriversPage` của web).
@@ -146,7 +163,7 @@ export function DriverListScreen() {
   const navigateOnce = useNavigateOnce();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [reinviteFrom, setReinviteFrom] = useState<InviteDriverValues | null>(null);
-  const [editing, setEditing] = useState<Driver | null>(null);
+  const [archiving, setArchiving] = useState<InternalDriver | null>(null);
   const [suspending, setSuspending] = useState<Driver | null>(null);
   const [ending, setEnding] = useState<Driver | null>(null);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
@@ -157,8 +174,9 @@ export function DriverListScreen() {
     ...(driverType === FILTER_ALL ? {} : { driverType }),
     ...(operation === FILTER_ALL ? {} : { operation }),
   };
-  const summary = useDriverSummary(sharedFilters, canView);
-  const query = useDriversPage(
+  /* Danh sách GỘP liên kết + nội bộ (web `useDriverRoster`, 25/11/2026). */
+  const summary = useDriverRosterSummary(sharedFilters, canView);
+  const query = useDriverRoster(
     {
       ...sharedFilters,
       ...(linkStatus === FILTER_ALL ? {} : { linkStatus }),
@@ -195,6 +213,9 @@ export function DriverListScreen() {
   const suspend = useSuspendDriver();
   const resume = useResumeDriver();
   const end = useEndDriver();
+  const licenceCheckMutation = useSetDriverLicenceChecked();
+  const archive = useArchiveInternalDriver();
+  const restore = useRestoreInternalDriver();
 
   // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
   const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page);
@@ -272,6 +293,8 @@ export function DriverListScreen() {
             value,
             label: domainLabel('driverType', value),
           })),
+          // "Hình thức" thêm "Nhân viên nội bộ" = chỉ tài xế nội bộ (web `roster.typeInternal`).
+          { value: DRIVER_TYPE_FILTER_INTERNAL, label: t('roster.typeInternal') },
         ],
       },
     ],
@@ -307,8 +330,11 @@ export function DriverListScreen() {
           });
           setInviteOpen(true);
           return;
-        case 'edit':
-          setEditing(driver);
+        case 'licenceCheck':
+          licenceCheckMutation.mutate(
+            { id: driver.id, checked: true },
+            feedback('toast.licenceChecked'),
+          );
           return;
         case 'suspend':
           setSuspending(driver);
@@ -321,7 +347,25 @@ export function DriverListScreen() {
           return;
       }
     },
-    [feedback, resume, navigateOnce, month],
+    [feedback, resume, licenceCheckMutation, navigateOnce, month],
+  );
+
+  /* Lưu trữ HỎI LẠI (web `internalMenu.archive.confirm`); khôi phục thì không. */
+  const onInternalIntent = useCallback(
+    (driver: InternalDriver, intent: InternalDriverCardIntent) => {
+      switch (intent) {
+        case 'view':
+          navigateOnce(ROUTES.manage.internalDriverDetail(driver.id, { month }));
+          return;
+        case 'archive':
+          setArchiving(driver);
+          return;
+        case 'restore':
+          restore.mutate(driver.id, feedback('internal.toast.restored'));
+          return;
+      }
+    },
+    [feedback, restore, navigateOnce, month],
   );
 
   const pendingId = suspend.isPending
@@ -330,18 +374,33 @@ export function DriverListScreen() {
       ? resume.variables
       : end.isPending
         ? end.variables
-        : null;
+        : licenceCheckMutation.isPending
+          ? licenceCheckMutation.variables?.id
+          : null;
+  const internalPendingId = archive.isPending
+    ? archive.variables
+    : restore.isPending
+      ? restore.variables
+      : null;
 
-  const renderItem = useCallback<ListRenderItem<Driver>>(
-    ({ item }) => (
-      <DriverCard
-        driver={item}
-        canManage={canManage}
-        pending={pendingId === item.id}
-        onIntent={onIntent}
-      />
-    ),
-    [canManage, onIntent, pendingId],
+  const renderItem = useCallback<ListRenderItem<DriverRosterItem>>(
+    ({ item }) =>
+      item.kind === DRIVER_ROSTER_KIND.INTERNAL && item.internal ? (
+        <InternalDriverCard
+          driver={item.internal}
+          canManage={canManage}
+          pending={internalPendingId === item.internal.id}
+          onIntent={onInternalIntent}
+        />
+      ) : item.linked ? (
+        <DriverCard
+          driver={item.linked}
+          canManage={canManage}
+          pending={pendingId === item.linked.id}
+          onIntent={onIntent}
+        />
+      ) : null,
+    [canManage, onIntent, onInternalIntent, pendingId, internalPendingId],
   );
   // iPad: thẻ xếp lưới 2 cột trong cột nội dung; điện thoại giữ 1 cột.
   const grid = useCardGrid(renderItem, { listKey: 'drivers' });
@@ -371,7 +430,7 @@ export function DriverListScreen() {
 
   const inviteButton = canManage ? (
     <IconSquareButton
-      label={t('actions.invite')}
+      label={t('roster.addDriver')}
       tone="brand"
       onPress={() => {
         setReinviteFrom(null);
@@ -490,7 +549,7 @@ export function DriverListScreen() {
         </ManageListShell>
       </Screen>
 
-      <InviteDriverSheet
+      <AddDriverSheet
         open={inviteOpen}
         prefill={reinviteFrom}
         onClose={() => {
@@ -498,7 +557,26 @@ export function DriverListScreen() {
           setReinviteFrom(null);
         }}
       />
-      <EditDriverSheet driver={editing} onClose={() => setEditing(null)} />
+
+      <AlertDialog
+        open={archiving !== null}
+        title={archiving ? t('internal.actions.archiveConfirm', { name: archiving.name }) : ''}
+        {...(archiving && archiving.activeTripCount > 0
+          ? {
+              message: t('internal.actions.archiveHasTrips', { count: archiving.activeTripCount }),
+            }
+          : {})}
+        confirmLabel={t('actions.end')}
+        cancelLabel={tActions('close')}
+        destructive
+        loading={archive.isPending}
+        onConfirm={() => {
+          const driver = archiving;
+          setArchiving(null);
+          if (driver) archive.mutate(driver.id, feedback('internal.toast.archived'));
+        }}
+        onCancel={() => setArchiving(null)}
+      />
 
       <AlertDialog
         open={suspending !== null}

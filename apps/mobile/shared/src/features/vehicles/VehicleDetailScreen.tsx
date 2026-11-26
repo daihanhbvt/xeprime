@@ -14,6 +14,7 @@ import {
   VEHICLE_ALERT_KIND,
   VEHICLE_ALERT_SEVERITY,
   topVehicleAlertSeverity,
+  TRANSMISSION_TYPE,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
@@ -374,7 +375,6 @@ function VehicleDetailBody({
             <FinanceEntityPanel
               scope={{ vehicleId: vehicle.id }}
               kind="vehicle"
-              canCreateReceipt={can.createReceipt}
             />
           ) : null}
 
@@ -1033,6 +1033,7 @@ function PerformanceBlock({
       <StatTile
         label={t('performance.rentals')}
         value={t('performance.tripCount', { count: stats.completedBookings })}
+        align="start"
       />
       <StatTile
         label={t('performance.active')}
@@ -1047,6 +1048,7 @@ function PerformanceBlock({
         }
         value={rated ? t('performance.ratingScore', { rating: fmt.rating(Number(stats.ratingAvg)) }) : '-'}
         star
+        align="end"
       />
     </XStack>
   );
@@ -1057,14 +1059,18 @@ function StatTile({
   label,
   value,
   star = false,
+  align = 'center',
 }: {
   label: string;
   value: string;
   star?: boolean;
+  /** Ô đầu sát trái, ô cuối sát phải (người dùng chốt 26/11/2026). */
+  align?: 'start' | 'center' | 'end';
 }) {
   const colors = useColors();
+  const ai = align === 'start' ? 'flex-start' : align === 'end' ? 'flex-end' : 'center';
   return (
-    <YStack f={1} flexBasis={0} gap={4} ai="center" minWidth={0}>
+    <YStack f={1} flexBasis={0} gap={4} ai={ai} minWidth={0}>
       <XStack ai="center" gap={4}>
         {star ? <LineIcon name="star" size={iconSize.lg} color={market.star} /> : null}
         <Text
@@ -1082,7 +1088,7 @@ function StatTile({
         fos={typeScale.label.fontSize}
         lh={typeScale.label.lineHeight}
         numberOfLines={1}
-        ta="center"
+        ta={align === 'start' ? 'left' : align === 'end' ? 'right' : 'center'}
       >
         {label}
       </Text>
@@ -1342,8 +1348,15 @@ function PricingCard({
       title={t('pricing.title')}
       {...(canEdit
         ? {
-            onEdit: () => navigateOnce(vehiclePricingHref(vehicle.id, customerScope)),
-            editLabel: t('pricing.editLink'),
+            action: (
+              <CardLink
+                label={t('editMobile')}
+                accessibilityLabel={t('pricing.editLink')}
+                icon="edit"
+                iconFirst
+                onPress={() => navigateOnce(vehiclePricingHref(vehicle.id, customerScope))}
+              />
+            ),
           }
         : {})}
     >
@@ -1430,7 +1443,16 @@ function CardLink({
 }
 
 /** Một dòng nhãn ↔ giá trị của "Nhóm thông tin" (Figma "Thông tin"): nhãn 14/20 `text/gray/low`, giá trị 14/20 `text/gray/high`. */
-function InfoLine({ label, children }: { label: string; children: ReactNode }) {
+function InfoLine({
+  label,
+  strong = false,
+  children,
+}: {
+  label: string;
+  /** Giá trị in đậm (Nguồn xe & Tài chính: ngày mua, giá trị xe - người dùng chốt 26/11/2026). */
+  strong?: boolean;
+  children: ReactNode;
+}) {
   const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
@@ -1444,6 +1466,7 @@ function InfoLine({ label, children }: { label: string; children: ReactNode }) {
           col={colors.text}
           fos={typeScale.body.fontSize}
           lh={typeScale.body.lineHeight}
+          fow={strong ? fontWeight.semibold : fontWeight.regular}
           numberOfLines={1}
         >
           {children}
@@ -1493,7 +1516,13 @@ function KeySpecsCard({
     { key: 'brand-model', label: t('keySpecs.brandModel'), value: brandModel || empty },
     ...KEY_SPECS.flatMap((key) => {
       const item = byKey.get(key);
-      return item ? [{ key, label: item.label, value: item.value ?? empty }] : [];
+      if (!item) return [];
+      // Ô hẹp 1/3: "Số tự động (AT)" ghi gọn "Tự động" (người dùng chốt 26/11/2026).
+      const value =
+        key === 'transmission' && vehicle.transmission === TRANSMISSION_TYPE.AUTOMATIC
+          ? t('keySpecs.transmissionAutoApp')
+          : item.value;
+      return [{ key, label: item.label, value: value ?? empty }];
     }),
   ];
   const tile = Math.floor((gridWidth - SPEC_TILE_GAP * 2) / 3);
@@ -1523,8 +1552,8 @@ function KeySpecsCard({
                 br={SPEC_TILE_RADIUS}
                 bg={colors.background}
               >
-                {/* Figma một dòng: chữ dài co nhẹ (≥ 80%) thay vì cắt "…". */}
-                <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                {/* Figma một dòng: chữ dài cắt "…", giữ nguyên cỡ chữ. */}
+                <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
                   {item.label}
                 </Text>
                 <Text
@@ -1533,8 +1562,6 @@ function KeySpecsCard({
                   lh={typeScale.body.lineHeight}
                   fow={fontWeight.semibold}
                   numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.8}
                 >
                   {item.value}
                 </Text>
@@ -1701,7 +1728,7 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
         <SkeletonText lines={2} />
       ) : (
         rows.map((row) => (
-          <InfoLine key={row.key} label={row.label}>
+          <InfoLine key={row.key} label={row.label} strong>
             {row.value}
           </InfoLine>
         ))
@@ -1831,7 +1858,12 @@ function ActivityCard({
       ) : (
         <YStack gap={20}>
           {bookings.map((booking) => {
-            const tone = pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, booking.status));
+            /*
+              Figma `24612:142773`: trạng thái chờ (vd "Chờ giao xe") tô CAM `status/orange-*` - tông
+              `brand` của Pill ra vàng đậm nhìn như nâu (người dùng báo 26/11/2026).
+            */
+            const statusTone = pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, booking.status));
+            const tone = statusTone === 'brand' || statusTone === 'warning' ? 'orange' : statusTone;
             return (
               <YStack key={booking.id} gap={6}>
                 <XStack ai="center" gap={space.sm}>

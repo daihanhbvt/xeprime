@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
+import { useColors } from '@/theme/ThemeProvider';
 import { useTranslations } from 'use-intl';
 import { buildPeriodRange, dayjs, type PeriodKey } from '@xeprime/domain';
+import { ChipTabs } from '@/components/ui/ChipTabs';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
@@ -10,7 +12,7 @@ import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { SelectTrigger } from '@/components/ui/SelectTrigger';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { space } from '@/theme/tokens';
+import { space, typeScale } from '@/theme/tokens';
 
 /**
  * Sàn của lịch chọn kỳ — thứ người ta lọc thường đã xảy ra rồi, nên KHÔNG dùng sàn "ngày mai"
@@ -39,6 +41,7 @@ export function FinancePeriodBar({
   onChange,
   customRange = true,
   compact = false,
+  look = 'underline',
 }: {
   readonly periods: readonly PeriodKey[];
   from: string | undefined;
@@ -55,10 +58,16 @@ export function FinancePeriodBar({
    * hai ô ngày. Bấm mở tấm chọn chứa CÙNG các kỳ dựng sẵn và hai ô Từ/Đến - không mất lựa chọn nào.
    */
   compact?: boolean;
+  /**
+   * `chip` = dải viên lọc nhanh của sổ Thu-Chi (Figma "Filter Tabs" `24512:125314`, chuẩn `_Tab MB`):
+   * các kỳ là phím tắt thu hẹp CÙNG một danh sách. `underline` giữ cho Tổng quan doanh thu.
+   */
+  look?: 'underline' | 'chip';
 }) {
   const t = useTranslations('Finance.entity.periods');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
+  const colors = useColors();
   const tSheet = useTranslations('Finance.overview.periodSheet');
   const [picking, setPicking] = useState<'from' | 'to' | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -121,25 +130,25 @@ export function FinancePeriodBar({
             {customRange ? (
               <YStack gap={space.sm}>
                 <BlockTitle>{tSheet('custom')}</BlockTitle>
+                {/* Cùng ô "Input - Select" + icon "Calender 2" của Figma như ô kỳ ngoài màn - không mũi tên Ionicons. */}
                 <XStack gap={space.sm}>
-                  <YStack f={1}>
-                    <FieldBox
-                      label={tLabels('from')}
-                      value={from ? fmt.dateKey(from) : ''}
-                      placeholder={tLabels('selectDate')}
-                      icon="calendar-outline"
-                      onPress={() => pick('from')}
-                    />
-                  </YStack>
-                  <YStack f={1}>
-                    <FieldBox
-                      label={tLabels('to')}
-                      value={to ? fmt.dateKey(to) : ''}
-                      placeholder={tLabels('selectDate')}
-                      icon="calendar-outline"
-                      onPress={() => pick('to')}
-                    />
-                  </YStack>
+                  {(['from', 'to'] as const).map((end) => {
+                    const key = end === 'from' ? from : to;
+                    const shown = key ? fmt.dateKey(key) : tLabels('selectDate');
+                    return (
+                      <YStack key={end} f={1} minWidth={0} gap={space.xs}>
+                        <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                          {tLabels(end)}
+                        </Text>
+                        <SelectTrigger
+                          label={shown}
+                          icon="calendar"
+                          accessibilityLabel={`${tLabels(end)}: ${shown}`}
+                          onPress={() => pick(end)}
+                        />
+                      </YStack>
+                    );
+                  })}
                 </XStack>
               </YStack>
             ) : null}
@@ -154,11 +163,21 @@ export function FinancePeriodBar({
     <YStack gap={space.sm}>
       {/* Dải tab viên chung (chuẩn màn Đơn thuê, 16/11/2026); khoảng tự chọn thì không ô nào sáng. */}
       {/* Dải kỳ dạng tab gạch chân vàng như Figma (Tổng quan doanh thu); khoảng tự chọn thì không tab nào sáng. */}
-      <UnderlineTabs
-        items={periods.map((period) => ({ key: period as string, label: t(period) }))}
-        value={(active as string | undefined) ?? ''}
-        onChange={(period) => onChange(buildPeriodRange(period as (typeof periods)[number]))}
-      />
+      {look === 'chip' ? (
+        <ChipTabs
+          label={t('label')}
+          items={periods.map((period) => ({ value: period as string, label: t(period) }))}
+          value={(active as string | undefined) ?? ''}
+          onSelect={(period) => onChange(buildPeriodRange(period as (typeof periods)[number]))}
+          gutter={0}
+        />
+      ) : (
+        <UnderlineTabs
+          items={periods.map((period) => ({ key: period as string, label: t(period) }))}
+          value={(active as string | undefined) ?? ''}
+          onChange={(period) => onChange(buildPeriodRange(period as (typeof periods)[number]))}
+        />
+      )}
 
       {customRange ? (
         <>

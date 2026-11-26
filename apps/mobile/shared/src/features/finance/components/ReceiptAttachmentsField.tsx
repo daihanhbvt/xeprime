@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { Ionicons } from '@/components/icons/Ionicons';
-import { Image } from 'expo-image';
-import { Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, Pressable } from 'react-native';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DOCUMENT_UPLOAD_MAX_BYTES } from '@xeprime/types';
-import { FieldLabel, FieldMessage } from '@/components/ui/Field';
-import { BottomSheet } from '@/components/ui/BottomSheet';
+import { FieldMessage } from '@/components/ui/Field';
+import { ReceiptAttachmentRow } from './ReceiptAttachmentRow';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { ImageSourceSheet } from '@/components/ui/ImageSourceSheet';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { logger } from '@/lib/logger';
 import {
-  IMAGE_SOURCE,
   pickImages,
   pickPdfFile,
   uploadImageToR2,
@@ -22,19 +22,13 @@ import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { receiptsApi } from '../api';
 import { RECEIPT_ATTACHMENTS_MAX } from '../constants';
-import { themed, useColors } from '@/theme/ThemeProvider';
-import { fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { radius, space, typeScale } from '@/theme/tokens';
 
-const TILE = 84;
-
-const styles = StyleSheet.create({
-  image: { width: TILE, height: TILE, borderRadius: radius.md },
-});
 
 const MAX_MB = Math.round(DOCUMENT_UPLOAD_MAX_BYTES / (1024 * 1024));
 
 /** Chứng từ là ảnh hay PDF — server không trả MIME, nên đọc từ đuôi URL như web đang làm. */
-const isPdfUrl = (url: string) => url.toLowerCase().split('?')[0]?.endsWith('.pdf') === true;
 
 /**
  * Chứng từ của phiếu thu/chi: ảnh hoá đơn HOẶC file PDF — bản native của
@@ -60,7 +54,6 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
   label: string;
 }) {
   const colors = useColors();
-  const removeStyle = useRemoveStyle();
   const t = useTranslations('Finance.receipts.form.attachments');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
@@ -110,122 +103,94 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
   };
 
   return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={label} />
-
-      <XStack flexWrap="wrap" gap={space.sm}>
-        {urls.map((url) => (
-          <YStack key={url}>
-            {isPdfUrl(url) ? (
-              <YStack
-                w={TILE}
-                h={TILE}
-                br={radius.md}
-                bw={1}
-                bc={colors.border}
-                bg={colors.surfaceMuted}
-                ai="center"
-                jc="center"
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={iconSize.lg}
-                  color={colors.textMuted}
-                />
-              </YStack>
-            ) : (
-              <Image source={{ uri: url }} style={styles.image} contentFit="cover" />
-            )}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={tActions('remove')}
-              onPress={() => drop(url)}
-              style={removeStyle}
-            >
-              <Ionicons name="close" size={iconSize.sm} color={colors.onPrimary} />
-            </Pressable>
-          </YStack>
-        ))}
-
-        {full ? null : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('add')}
-            disabled={busy}
-            onPress={() => setPicking(true)}
+    <YStack gap={space.sm} accessibilityLabel={label}>
+      {/*
+        Figma "File Upload" `24512:130902`: ô viền ĐỨT nền `bg/gray-25`, nút vuông 40 icon Upload,
+        chữ vàng "Nhấn để tải lên…" + dòng định dạng. Tệp đã tải hiện thành ô ảnh/PDF bên dưới.
+      */}
+      {full ? null : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('add')}
+          disabled={busy}
+          onPress={() => setPicking(true)}
+        >
+          <XStack
+            ai="center"
+            gap={space.md}
+            px={space.lg}
+            py={space.md}
+            br={radius.control}
+            bw={1}
+            bc={colors.borderInput}
+            borderStyle="dashed"
+            bg={colors.surfaceFaint}
+            opacity={busy ? 0.5 : 1}
           >
-            <YStack
-              w={TILE}
-              h={TILE}
-              br={radius.md}
-              bw={1}
-              bc={colors.borderInput}
-              ai="center"
-              jc="center"
-              gap={2}
-              opacity={busy ? 0.5 : 1}
-            >
-              <Ionicons name="cloud-upload-outline" size={iconSize.md} color={colors.textMuted} />
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {t('add')}
+            <YStack p={10} br={radius.control} bw={1} bc={colors.borderInput} bg={colors.surface}>
+              <LineIcon name="upload" color={colors.textMuted} />
+            </YStack>
+            <YStack f={1} minWidth={0} gap={2}>
+              <Text col={colors.brandShape} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fontFamily={FONT_FAMILY.medium}>
+                {t('uploadCta')}
+              </Text>
+              <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} fontFamily={FONT_FAMILY.body}>
+                {t('uploadHint', { maxMb: MAX_MB })}
               </Text>
             </YStack>
-          </Pressable>
-        )}
-      </XStack>
+          </XStack>
+        </Pressable>
+      )}
+
+      {/* Figma "_File upload item base" `24512:130902`: mỗi tệp một dòng - icon loại tệp, tên, trạng thái, nút gỡ đỏ (bỏ tải về, chốt 26/11/2026). */}
+      {urls.map((url) => (
+        <ReceiptAttachmentRow
+          key={url}
+          url={url}
+          removeLabel={tActions('remove')}
+          onRemove={drop}
+        />
+      ))}
+      {/* Đang tải tệp lên: một dòng giữ chỗ cùng khuôn dòng tệp, kèm vòng quay - không để màn im lặng. */}
+      {busy ? (
+        <XStack
+          ai="center"
+          gap={space.md}
+          px={space.lg}
+          py={space.md}
+          br={radius.control}
+          bw={1}
+          bc={colors.border}
+          bg={colors.surface}
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={t('uploadingFile')}
+        >
+          <YStack w={40} h={40} ai="center" jc="center" br={radius.sm} bg={colors.surfaceMuted}>
+            <ActivityIndicator size="small" color={colors.brandShape} />
+          </YStack>
+          <YStack f={1} minWidth={0}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={22} fontFamily={FONT_FAMILY.medium}>
+              {t('uploadingFile')}
+            </Text>
+          </YStack>
+        </XStack>
+      ) : null}
 
       <FieldMessage
         error={fieldState.error?.message}
-        hint={full ? t('tooMany', { max: RECEIPT_ATTACHMENTS_MAX }) : t('hint', { maxMb: MAX_MB })}
+        {...(full ? { hint: t('tooMany', { max: RECEIPT_ATTACHMENTS_MAX }) } : {})}
       />
 
-      <BottomSheet open={picking} onClose={() => setPicking(false)} title={t('add')}>
-        <SourceRow
-          icon="camera-outline"
-          label={t('sourceCamera')}
-          onPress={() => void addImage(IMAGE_SOURCE.CAMERA)}
-        />
-        <SourceRow
-          icon="images-outline"
-          label={t('sourceLibrary')}
-          onPress={() => void addImage(IMAGE_SOURCE.LIBRARY)}
-        />
-        <SourceRow icon="document-outline" label={t('sourcePdf')} onPress={() => void addPdf()} />
-      </BottomSheet>
+      {/* Cùng popup chọn nguồn ảnh của cả app (Chụp ảnh · Chọn từ thư viện) + nút PDF bên dưới (chốt 26/11/2026). */}
+      <ImageSourceSheet
+        open={picking}
+        onClose={() => setPicking(false)}
+        title={t('add')}
+        hint={t('uploadHint', { maxMb: MAX_MB })}
+        onPick={(source) => void addImage(source)}
+        extraAction={{ label: t('sourcePdf'), lineIcon: 'doc-align-left-6', onPress: () => void addPdf() }}
+        libraryPrimary
+      />
     </YStack>
-  );
-}
-
-const useRemoveStyle = themed((colors) => ({
-  position: 'absolute' as const,
-  top: -space.xs,
-  right: -space.xs,
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  alignItems: 'center' as const,
-  justifyContent: 'center' as const,
-  backgroundColor: colors.danger,
-}));
-
-function SourceRow({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: 'camera-outline' | 'images-outline' | 'document-outline';
-  label: string;
-  onPress: () => void;
-}) {
-  const colors = useColors();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
-      <XStack ai="center" gap={space.md} py={space.sm}>
-        <Ionicons name={icon} size={iconSize.md} color={colors.textMuted} />
-        <Text col={colors.text} fos={fontSize.body}>
-          {label}
-        </Text>
-      </XStack>
-    </Pressable>
   );
 }

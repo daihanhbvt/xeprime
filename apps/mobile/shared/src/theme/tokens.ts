@@ -205,6 +205,8 @@ const FIGMA_V2_TOKENS = {
     brandIconBg: '#fff5d2',
     /** `stroke/primary-400` #f9d260 — viền nút viền vàng (`Button variant="brandOutline"`). */
     brandBorderStrong: '#f9d260',
+    /** `bg/gray-25` #fdfdfd - nền ô chọn chưa bật ("Liên kết với" của form Tạo phiếu `24512:130736`). */
+    surfaceFaint: '#fdfdfd',
     /** Dấu tích TRẮNG trên ô đã chọn (nền vàng) — `CheckMark`, người dùng chốt 20/11/2026. */
     checkTick: '#ffffff',
     /** `status/success-25` #f6fef9 - nền dòng "Đã xác thực bằng lái" (Quản lý tài xế `24612:138256`). */
@@ -213,6 +215,10 @@ const FIGMA_V2_TOKENS = {
     successTint: '#d1fadf',
     /** `bg/gray-100` #f5f5f5 - cột biểu đồ tháng chưa chọn (Chi tiết tài xế `24512:119081`). */
     barIdle: '#f5f5f5',
+    /** #475569 - địa chỉ + SĐT trên thẻ chi nhánh (Quản lý gian hàng `24231:113714`). */
+    slateText: '#475569',
+    /** #1e293b - chữ viên "15 xe" của thẻ chi nhánh (`24231:113733`). */
+    slateStrong: '#1e293b',
   },
   dark: {
     brandLink: '#f5c33b',
@@ -233,11 +239,14 @@ const FIGMA_V2_TOKENS = {
     brandWash: 'rgba(245, 195, 59, 0.08)',
     brandIconBg: 'rgba(245, 195, 59, 0.18)',
     brandBorderStrong: 'rgba(249, 210, 96, 0.55)',
+    surfaceFaint: 'rgba(255, 255, 255, 0.02)',
     /** Giao diện tối: tích màu chữ tối trên nền vàng sáng (đủ tương phản hơn trắng). */
     checkTick: '#0e0f12',
     successWash: 'rgba(18, 183, 106, 0.08)',
     successTint: 'rgba(18, 183, 106, 0.22)',
     barIdle: 'rgba(255, 255, 255, 0.08)',
+    slateText: '#cbd5e1',
+    slateStrong: '#e2e8f0',
   },
 } as const;
 
@@ -509,6 +518,8 @@ export const gradients = {
    * `bg-gradient-to-r from-#efc423 to-#f3c84a`) — chưa là token ở `@xeprime/ui`, giữ ở đây.
    */
   walletCta: { colors: ['#efc423', '#f3c84a'], locations: [0, 1] } as NativeGradient,
+  /** Viên vai "Chủ gian hàng" của Quản lý gian hàng (Figma `24231:113146`) - cùng một dải ở hai giao diện. */
+  roleChipDark: gradient('gradient-role-dark'),
   /**
    * Nút vàng CHÍNH của app Partner - Figma Partner-XePrime "Footer cố định" `24273:89808`
    * (`from-#e9c336 via-#f0d073 48.077% to-#f9ce31`, người dùng chốt 20/11/2026: CHỈ app Partner,
@@ -704,7 +715,13 @@ export const sizing = {
  * Vùng chạm vẫn đủ `touchTarget` nhờ `hitSlop` (xem `buttonHitSlop`).
  */
 /** Nút cỡ mặc định (`md`) cao 44 = nút "Chọn thuê" — chuẩn nút chung (người dùng chốt 28/10/2026). */
-export const buttonHeight = { sm: px('control-height'), md: px('touch-target-min'), lg: px('touch-target-min') } as const;
+export const buttonHeight = {
+  sm: px('control-height'),
+  /** 36 - nút trong thẻ của Figma Partner ("Thay đổi" / "Xác minh" `24231:108583`: đệm 14/8, chữ 14/20). */
+  card: 36,
+  md: px('touch-target-min'),
+  lg: px('touch-target-min'),
+} as const;
 
 /** `hitSlop` dọc bù cho nút thấp hơn `touchTarget`, để vùng chạm luôn ≥ sàn chạm. */
 export function buttonHitSlop(height: number): number {

@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { isZeroMoney } from '@xeprime/domain';
 import { PERMISSION, SELLER_PROFILE_STATUS, WALLET_STATUS } from '@xeprime/types';
 import { Callout } from '@/components/ui/Callout';
 import { InfoHint } from '@/components/ui/InfoHint';
@@ -191,7 +191,6 @@ export function WalletSummaryCard({
 
 /** Figma `24228:102181` "Wallet balance card": đệm 12, bo 12, khe 12; hàng chỉ số khe 20. */
 const HERO_GAP = toPx(XP_TOKENS['space-12']);
-const HERO_METRIC_GAP = toPx(XP_TOKENS['space-20']);
 
 function HeroSummary({
   data,
@@ -250,17 +249,19 @@ function HeroSummary({
         </Text>
       </YStack>
 
-      {/* "Wallet metrics": hai cột chia đôi - nhãn 12/18 · số 16/24 semibold. */}
-      <XStack gap={HERO_METRIC_GAP} ai="flex-start">
-        <HeroMetric
-          label={t('balance.pending')}
-          value={fmt.money(data.pending)}
-          info={
-            <InfoHint label={t('summary.inTransitInfoLabel')} content={t('summary.inTransitInfo')} />
-          }
-        />
-        <HeroMetric label={t('balance.total')} value={fmt.money(data.total)} />
-      </XStack>
+      {/*
+        Như web `variant="hero"`: không có hàng "Đang chờ" / "Tổng XePrime phải trả" - chỉ một
+        dòng "… đang được chuyển về ngân hàng" kèm ⓘ, và chỉ khi khoản đó khác 0 (người dùng chốt
+        26/11/2026).
+      */}
+      {isZeroMoney(data.pending) ? null : (
+        <XStack ai="center" jc="center" gap={space.xs} flexWrap="wrap">
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} ta="center">
+            {t('summary.inTransit', { amount: fmt.money(data.pending) })}
+          </Text>
+          <InfoHint label={t('summary.inTransitInfoLabel')} content={t('summary.inTransitInfo')} />
+        </XStack>
+      )}
 
       {onWithdraw ? (
         <YStack gap={space.xs}>
@@ -280,35 +281,6 @@ function HeroSummary({
           ) : null}
         </YStack>
       ) : null}
-    </YStack>
-  );
-}
-
-function HeroMetric({ label, value, info }: { label: string; value: string; info?: ReactNode }) {
-  const colors = useColors();
-  return (
-    <YStack f={1} minWidth={0} ai="center">
-      <XStack ai="center" gap={space.xs} maxWidth="100%">
-        <Text
-          col={colors.textMuted}
-          fos={typeScale.label.fontSize}
-          lh={typeScale.label.lineHeight}
-          numberOfLines={1}
-          flexShrink={1}
-        >
-          {label}
-        </Text>
-        {info}
-      </XStack>
-      <Text
-        col={colors.text}
-        fos={typeScale.title.fontSize}
-        lh={typeScale.title.lineHeight}
-        fow={fontWeight.semibold}
-        numberOfLines={1}
-      >
-        {value}
-      </Text>
     </YStack>
   );
 }

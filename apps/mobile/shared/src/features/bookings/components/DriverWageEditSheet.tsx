@@ -109,6 +109,7 @@ function DailyWageEditForm({
 }) {
   const t = useTranslations('Drivers.wage.edit');
   const tForm = useTranslations('Drivers.wage.form');
+  const tDialog = useTranslations('Drivers.booking.wageDialog');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const update = useUpdateDriverWage(bookingId);
@@ -160,7 +161,15 @@ function DailyWageEditForm({
       {wage.days != null && wage.days !== quote.days ? (
         <Callout tone="warning" title={t('daysChanged', { from: wage.days, to: quote.days })} />
       ) : null}
-      <DriverDailyWageFields control={control} quote={quote} canSetDefault={false} />
+      {/* Hộp sửa (web 25/11): nhãn "Tiền công mới/ngày", không chọn nhanh, tổng kèm chênh lệch. */}
+      <DriverDailyWageFields
+        control={control}
+        quote={quote}
+        canSetDefault={false}
+        label={tDialog('newDaily')}
+        showQuick={false}
+        currentTotal={wage.amount === null ? null : Number(wage.amount)}
+      />
       <TextField
         control={control}
         name="reason"

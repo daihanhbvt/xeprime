@@ -5,8 +5,6 @@ import {
   bookingFiltersToParams,
   bookingsApi,
   driversApi,
-  vehicleFiltersToParams,
-  vehiclesApi,
   type AssignableWindow,
   type AssignBookingDriverInput,
   type BookingDetail,
@@ -210,29 +208,6 @@ export function useCreateBooking() {
 export function useCheckConflict() {
   return useMutation({
     mutationFn: (body: CheckConflictInput) => bookingsApi.checkConflict(body),
-  });
-}
-
-/** Bộ chọn hiện một tấm trượt, không phải cả trang — 30 dòng là quá đủ để tìm rồi bấm. */
-const VEHICLE_PICKER_LIMIT = 30;
-
-/**
- * Đội xe cho bộ chọn khi tạo đơn.
- *
- * Tìm ở SERVER (`q`); không kéo cả kho về rồi lọc tại chỗ — seed demo đã có gian hàng 40 xe,
- * và một gian hàng thật có thể vài trăm.
- */
-export function useVehiclePicker(search: string, enabled: boolean, branchId?: string) {
-  const filters = {
-    ...(search ? { q: search } : {}),
-    ...(branchId ? { branchId } : {}),
-    limit: VEHICLE_PICKER_LIMIT,
-  };
-
-  return useQuery({
-    queryKey: queryKeys.vehicles.list(vehicleFiltersToParams(filters)),
-    queryFn: () => vehiclesApi.list(filters),
-    enabled,
   });
 }
 

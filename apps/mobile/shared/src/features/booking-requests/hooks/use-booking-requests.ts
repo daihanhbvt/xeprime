@@ -140,6 +140,8 @@ export function useRejectBookingRequest() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
         queryClient.invalidateQueries({ queryKey: queryKeys.trips.all }),
+        // Lịch vẽ yêu cầu chờ duyệt (web 25/11/2026) — từ chối xong thanh "Cần xử lý" phải biến mất.
+        queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all }),
       ]),
   });
 }

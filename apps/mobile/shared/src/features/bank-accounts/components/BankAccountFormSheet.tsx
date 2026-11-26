@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
-import { VIETNAM_BANKS } from '@xeprime/domain';
+import { findBank, VIETNAM_BANKS } from '@xeprime/domain';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
-import { Callout } from '@/components/ui/Callout';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { useColors } from '@/theme/ThemeProvider';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import {
   BANK_ACCOUNT_SCOPE,
   type BankAccount,
@@ -24,13 +26,16 @@ import { BankLogo } from './BankLogo';
 
 /** Cỡ logo ở mỗi dòng ngân hàng — vuông 32px như dòng của web. */
 const BANK_OPTION_LOGO = 32;
-import { bankAccountSaveOutcome, bankAccountSummary } from '../current-account';
+/** Figma `24228:102974`: chữ 14/22 của khối cảnh báo. */
+const FIGMA_LH_22 = 22;
+/** Logo tròn trước ngân hàng đã chọn trong ô (Figma 24). */
+const BANK_VALUE_LOGO = 24;
+import { bankAccountSaveOutcome } from '../current-account';
 
 const BANK_CODE_MAX = 20;
 const ACCOUNT_NUMBER_MAX = 40;
 const ACCOUNT_NAME_MAX = 160;
 const LABEL_MAX = 60;
-const NOTE_MAX = 500;
 
 /**
  * Khai một tài khoản nhận tiền — bản native của `BankAccountForm`.
@@ -76,6 +81,7 @@ export function BankAccountFormSheet({
   onCreated?: (account: BankAccount) => void;
 }) {
   const t = useTranslations('BankAccounts.form');
+  const colors = useColors();
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -112,9 +118,11 @@ export function BankAccountFormSheet({
         bank.fullName.toLowerCase().includes(needle),
     ).map((bank) => ({
       value: bank.code,
-      label: `${bank.shortName} - ${bank.fullName}`,
+      // Figma `24228:102448`: "Tên đầy đủ (Tên ngắn)", logo nhỏ trước giá trị đã chọn.
+      label: `${bank.fullName} (${bank.shortName})`,
       // Logo trước tên — cùng danh sách chọn có logo của web (Figma `19973:52549`).
       leading: <BankLogo code={bank.code} size={BANK_OPTION_LOGO} radius={6} />,
+      valueLeading: <BankLogo code={bank.code} size={BANK_VALUE_LOGO} radius={BANK_VALUE_LOGO / 2} />,
     }));
   }, [bankSearch]);
 
@@ -135,7 +143,6 @@ export function BankAccountFormSheet({
           .required(t('validation.nameRequired'))
           .max(ACCOUNT_NAME_MAX),
         label: yup.string().trim().max(LABEL_MAX).default(''),
-        note: yup.string().trim().max(NOTE_MAX).default(''),
       }),
     [t],
   );
@@ -147,9 +154,12 @@ export function BankAccountFormSheet({
       accountNumber: '',
       accountName: '',
       label: '',
-      note: '',
     },
   });
+
+  const replacingLabel = replacing
+    ? `${findBank(replacing.bankCode)?.shortName ?? replacing.bankCode} (***${replacing.accountNumberMasked.replace(/\D/g, '').slice(-4)})`
+    : '';
 
   const close = () => {
     reset();
@@ -165,7 +175,6 @@ export function BankAccountFormSheet({
           accountNumber: values.accountNumber,
           accountName: values.accountName,
           ...(values.label ? { label: values.label } : {}),
-          ...(values.note ? { note: values.note } : {}),
         },
         {
           onSuccess: () => {
@@ -251,9 +260,28 @@ export function BankAccountFormSheet({
       >
         <YStack gap={space.md}>
           {replacing ? (
-            <Callout tone="warning">
-              {t('requestIntro', { account: bankAccountSummary(replacing) })}
-            </Callout>
+            /*
+              Figma: khối nền cam nhạt, không viền/icon, chữ cam 14/20, tên ngân hàng + 4 số cuối in
+              đậm (người dùng chốt 26/11/2026 dùng câu của Figma).
+            */
+            <YStack bg={colors.warningSubtle} br={radius.control} p={toPx(XP_TOKENS['space-12'])}>
+              <Text col={colors.warningVivid} fos={typeScale.body.fontSize} lh={FIGMA_LH_22}>
+                {t.rich('replaceIntro', {
+                  account: replacingLabel,
+                  b: (chunks) => (
+                    <Text
+                      col={colors.warningVivid}
+                      fos={typeScale.body.fontSize}
+                      lh={FIGMA_LH_22}
+                      fow={fontWeight.semibold}
+                      fontFamily={FONT_FAMILY.semibold}
+                    >
+                      {chunks}
+                    </Text>
+                  ),
+                })}
+              </Text>
+            </YStack>
           ) : null}
           {/* Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn, đúng `showSearch` của web. */}
           <SelectField
@@ -293,15 +321,6 @@ export function BankAccountFormSheet({
             icon="text-outline"
             placeholder={t('labelPlaceholder')}
           />
-          {requesting ? (
-            <TextField multiline scrollable rows={3}
-              control={control}
-              name="note"
-              label={t('requestNote')}
-              placeholder={t('requestNotePlaceholder')}
-              maxLength={NOTE_MAX}
-            />
-          ) : null}
         </YStack>
       </BottomSheet>
       {/* Hộp đứng NGOÀI tấm form: tấm đã đóng sau khi lưu, hộp vẫn phải còn để báo. */}

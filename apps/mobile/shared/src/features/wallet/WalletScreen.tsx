@@ -7,13 +7,11 @@ import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { nowInAppTz } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
-import { BottomSheet } from '@/components/ui/BottomSheet';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
 import { PayoutNotes } from '@/features/account-payments/components/PayoutNotes';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
-import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
@@ -76,7 +74,6 @@ export function WalletScreen({
   const colors = useColors();
   const t = useTranslations('Wallet');
   const tBank = useTranslations('BankAccounts');
-  const tTax = useTranslations('Finance.taxWithheld');
   /*
    * Cuộn tới khối payout MỘT lần, khi đã đo được vị trí - cùng cách `ShopProfileScreen` cuộn tới
    * `?section=`. Toạ độ khối là tương đối với cột nội dung, nên cộng thêm vị trí của cột.
@@ -118,7 +115,6 @@ export function WalletScreen({
     [scrollToPayout],
   );
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [taxOpen, setTaxOpen] = useState(false);
   /*
    * Kỳ + trang của bảng tổng hợp sống ở state MÀN, không dùng chung `page` với sổ ví: hai danh
    * sách phân trang cùng một biến sẽ kéo nhau mỗi lần một bên lật trang.
@@ -173,8 +169,10 @@ export function WalletScreen({
    * Kỳ của thẻ chỉ số + Tổng hợp tháng: trang 1 của kỳ đang xem. Ở tab tổng hợp dùng đúng bộ lọc
    * của bảng (trùng khoá cache, không thêm request).
    */
-  const monthFilters: WalletStatementFilters =
-    tab === BALANCE_TAB.STATEMENT ? statementFilters : { period: statementFilters.period, page: 1 };
+  // Luôn TRANG 1 - danh sách cuộn vô hạn đổi `page` liên tục, thẻ tổng hợp không được tải lại theo.
+  const monthFilters: WalletStatementFilters = { period: statementFilters.period, page: 1 };
+  /** Tab đang mở đăng ký "tải trang kế" vào đây; `Screen onNearEnd` gọi nó (cuộn vô hạn). */
+  const loadMoreRef = useRef<(() => void) | null>(null);
   // Trang gian hàng là "Quản lý ví" của web (ledger 09 §3.10); ví tài khoản khách giữ tên cũ.
   const title = isShop ? t('manage.title') : t('title.user');
 
@@ -199,6 +197,7 @@ export function WalletScreen({
         scrollRef={scrollRef}
         refreshing={pull.refreshing}
         onRefresh={pull.onRefresh}
+        onNearEnd={() => loadMoreRef.current?.()}
       >
         {/*
           Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) - cùng
@@ -300,32 +299,6 @@ export function WalletScreen({
               <WalletMonthSummary filters={monthFilters} />
 
               {/*
-                Ô ghi chú thuế (web `TaxNote`, design `23948:94510`): ô nền xanh thông tin, "Chi tiết"
-                mở bảng thuế đã khấu trừ trong tấm trượt.
-              */}
-              <YStack
-                p={space.sm}
-                br={radius.lg}
-                bg={colors.infoSurface}
-                bw={1}
-                bc={colors.infoBorder}
-              >
-                <Text col={colors.infoStrong} fos={fontSize.body} fow={fontWeight.medium}>
-                  {t('taxNote.body')}{' '}
-                  <Text
-                    col={colors.infoStrong}
-                    fos={fontSize.body}
-                    fow={fontWeight.semibold}
-                    textDecorationLine="underline"
-                    accessibilityRole="button"
-                    onPress={() => setTaxOpen(true)}
-                  >
-                    {t('taxNote.detail')}
-                  </Text>
-                </Text>
-              </YStack>
-
-              {/*
                 Figma `24612:145584`: MỘT thẻ trắng viền bo 16, đệm 16, khe 12 - hàng tab chia đôi
                 (16/24, gạch vàng 2px), ô tháng trải ngang, rồi nội dung của tab (người dùng chốt
                 cùng một khung cho cả hai tab, 25/11/2026).
@@ -341,7 +314,6 @@ export function WalletScreen({
                 <YStack accessibilityLabel={t('tabs.label')}>
                   <UnderlineTabs
                     stretch
-                    size="lg"
                     items={BALANCE_TABS.map((value) => ({ key: value, label: t(`tabs.${value}`) }))}
                     value={tab}
                     onChange={(value) => {
@@ -353,6 +325,7 @@ export function WalletScreen({
                 {tab === BALANCE_TAB.ACTIVITY ? (
                   <WalletActivityPanel
                     filters={statementFilters}
+                    loadMoreRef={loadMoreRef}
                     onFiltersChange={(patch) =>
                       setStatementFilters((prev) => ({ ...prev, ...patch }))
                     }
@@ -360,6 +333,7 @@ export function WalletScreen({
                 ) : (
                   <WalletStatementPanel
                     filters={statementFilters}
+                    loadMoreRef={loadMoreRef}
                     onFiltersChange={(patch) =>
                       setStatementFilters((prev) => ({ ...prev, ...patch }))
                     }
@@ -372,16 +346,6 @@ export function WalletScreen({
       </Screen>
 
       <WithdrawSheet scope={scope} open={withdrawOpen} onClose={() => setWithdrawOpen(false)} />
-      {isShop ? (
-        <BottomSheet open={taxOpen} onClose={() => setTaxOpen(false)} title={tTax('title')}>
-          {/* Mở đúng tháng đang xem ở trang ví, như web. */}
-          <ShopTaxWithheldCard
-            embedded
-            key={statementFilters.period}
-            initialPeriod={statementFilters.period}
-          />
-        </BottomSheet>
-      ) : null}
     </>
   );
 }

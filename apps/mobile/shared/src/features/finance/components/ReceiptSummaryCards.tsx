@@ -1,30 +1,23 @@
-import { Text, YStack } from 'tamagui';
+import { XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isNegativeMoney } from '@xeprime/domain';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
+import { SummaryTile } from './SummaryTile';
 import type { DebtSummary, ReceiptSummary } from '../api';
 
 /**
- * Bốn thẻ đầu tab "Giao dịch thu chi" — bản native của web `ReceiptSummaryCards` (design
- * Partner-XePrime `23813:58308`, ledger 09 §3.11 #2): Tổng thu · Tổng chi · Cân đối · Công nợ
- * khách hàng.
+ * Bốn thẻ đầu tab "Giao dịch thu chi" (Figma Partner-XePrime "Summary Metrics" `24512:125809`):
+ * lưới 2×2 Tổng thu · Cân đối / Tổng chi · Công nợ khách hàng — mỗi ô một thẻ trắng riêng.
  *
- * Ba thẻ đầu cộng ĐÚNG danh sách đang xem (backend dùng chung `whereOf`): một ô "Tổng thu" không
- * khớp danh sách ngay dưới nó là cách nhanh nhất khiến người dùng thôi tin cả hai con số. Chỉ phiếu
- * ĐÃ DUYỆT được cộng — câu giải thích (ⓘ của web) đứng ngay dưới thẻ.
+ * Ba thẻ đầu cộng ĐÚNG danh sách đang xem (backend dùng chung `whereOf`), chỉ phiếu ĐÃ DUYỆT. Câu
+ * giải thích nằm sau ⓘ cạnh nhãn Tổng thu (chốt 26/11/2026 - Figma không vẽ dòng ghi chú). Dòng
+ * phụ Tổng thu rút gọn tiền như thẻ thống kê của hồ sơ khách (`fmt.moneyCompact`).
  *
- * Thẻ Công nợ thay ô "Số phiếu đã duyệt" cũ (chốt 04/11/2026): số phiếu đã có ở tổng dòng của danh
- * sách, còn khoản khách đang nợ là câu người giữ sổ hỏi ngay sau "tháng này thu bao nhiêu". Chạm
- * vào nó là sang tab Công nợ.
- *
- * Cùng khuôn danh sách thẻ số (`StatGrid` list) với Tổng quan doanh thu và Công nợ — một app, một
- * cách đọc thẻ tiền.
+ * Thẻ Công nợ là số TẠI LÚC NÀY, không theo kỳ đang lọc; chạm vào là sang tab Công nợ.
  */
 export function ReceiptSummaryCards({
   data,
@@ -55,66 +48,41 @@ export function ReceiptSummaryCards({
   const balanceNegative = isNegativeMoney(data.balance);
   const owing = debt?.data !== undefined && debt.data.totalCount > 0;
 
-  const cells: StatCell[] = [
-    {
-      key: 'income',
-      icon: 'arrow-down-circle-outline',
-      label: t('income'),
-      value: fmt.money(data.totalIncome),
-      tone: colors.success,
-      surface: colors.successSurface,
-      hint: t('incomeHint', {
-        cash: fmt.money(data.incomeCash),
-        transfer: fmt.money(data.incomeTransfer),
-      }),
-    },
-    {
-      key: 'expense',
-      icon: 'arrow-up-circle-outline',
-      label: t('expense'),
-      value: fmt.money(data.totalExpense),
-      tone: colors.danger,
-      surface: colors.dangerSurface,
-      valueTone: colors.danger,
-    },
-    {
-      key: 'balance',
-      icon: 'swap-vertical-outline',
-      label: t('balance'),
-      value: fmt.money(data.balance),
-      tone: balanceNegative ? colors.danger : colors.success,
-      valueTone: balanceNegative ? colors.danger : colors.success,
-      hint: t('balanceHint'),
-    },
-    ...(debt
-      ? [
-          {
-            key: 'debt',
-            icon: 'people-outline',
-            label: t('debt'),
-            value: debt.data ? fmt.money(debt.data.totalAmount) : '-',
-            tone: owing ? colors.danger : colors.textMuted,
-            ...(owing ? { surface: colors.dangerSurface, valueTone: colors.danger } : {}),
-            hint: debt.data
-              ? [t('debtHint', { count: debt.data.totalCount }), t('debtInfo')]
-              : t('debtInfo'),
-            onPress: debt.onPress,
-          } satisfies StatCell,
-        ]
-      : []),
-  ];
-
   /* Đổi bộ lọc: GIỮ số cũ và mờ đi, thay vì nháy về skeleton rồi nhảy lại một con số khác. */
   return (
-    <YStack gap={space.xs}>
-      <Card padded={false} accessibilityLabel={t('label')}>
-        <YStack opacity={loading || (debt?.loading ?? false) ? 0.6 : 1}>
-          <StatGrid variant="list" cells={cells} />
-        </YStack>
-      </Card>
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {filtered ? t('infoFiltered') : t('infoWhole')}
-      </Text>
-    </YStack>
+    <XStack
+      flexWrap="wrap"
+      gap={space.md}
+      opacity={loading || (debt?.loading ?? false) ? 0.6 : 1}
+      accessibilityLabel={t('label')}
+    >
+      <SummaryTile
+        label={t('income')}
+        info={{ label: t('infoLabel'), content: filtered ? t('infoFiltered') : t('infoWhole') }}
+        value={fmt.money(data.totalIncome)}
+        valueColor={colors.text}
+        hint={t('incomeHintCompact', {
+          cash: fmt.moneyCompact(data.incomeCash),
+          transfer: fmt.moneyCompact(data.incomeTransfer),
+        })}
+      />
+      <SummaryTile
+        label={t('balance')}
+        value={fmt.money(data.balance)}
+        valueColor={balanceNegative ? colors.danger : colors.success}
+        hint={t('balanceHint')}
+      />
+      <SummaryTile label={t('expense')} value={fmt.money(data.totalExpense)} valueColor={colors.danger} />
+      {debt ? (
+        <SummaryTile
+          label={t('debt')}
+          info={{ label: t('debtInfoLabel'), content: t('debtInfo') }}
+          value={debt.data ? fmt.money(debt.data.totalAmount) : '-'}
+          valueColor={owing ? colors.danger : colors.text}
+          {...(debt.data ? { hint: t('debtHint', { count: debt.data.totalCount }) } : {})}
+          onPress={debt.onPress}
+        />
+      ) : null}
+    </XStack>
   );
 }

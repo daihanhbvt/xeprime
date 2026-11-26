@@ -1,4 +1,4 @@
-import { VEHICLE_IMAGE_TYPE } from '@xeprime/types';
+import { VEHICLE_IMAGE_TYPE, vehicleGallerySlotTypes } from '@xeprime/types';
 import type { VehicleDetail } from './api';
 
 type VehicleMediaItem = NonNullable<VehicleDetail['media']>[number];
@@ -26,29 +26,36 @@ export interface VehicleGalleryItem {
 }
 
 /**
- * MỌI ảnh của một xe theo thứ tự hiển thị — bản native của `vehicleGalleryItems`
- * (`apps/web/src/features/vehicles/media.ts`): ảnh BÌA đầu tiên (kể cả khi nó là cột riêng không
- * nằm trong danh sách ảnh), rồi ảnh theo vị trí có nhãn, hoặc danh sách URL cũ khi xe chưa có
- * ảnh gán vị trí.
- *
- * Khác web ĐÚNG một điểm, theo luật của app: ảnh loại "Ảnh khác" (`VEHICLE_IMAGE_TYPE.OTHER`)
- * KHÔNG được trưng ở thư viện/slider thông tin xe — cùng lý do với `vehicleDisplayMedia`.
+ * Ảnh của THƯ VIỆN ẢNH xe, theo thứ tự góc: ô tô 5 góc (trước · sau · trái · phải · nội thất), xe máy 2
+ * góc (trước · sau, + mặt đồng hồ của dữ liệu cũ) - `vehicleGallerySlotTypes`. Ảnh "Ảnh khác" và ảnh
+ * không thuộc góc nào KHÔNG trưng (người dùng chốt 26/11/2026, web + app cùng luật).
  */
 export function vehicleGalleryItems(
-  vehicle: Pick<VehicleDetail, 'media' | 'images' | 'mainImageUrl'>,
+  vehicle: Pick<VehicleDetail, 'media' | 'images' | 'mainImageUrl' | 'vehicleType'>,
   slotLabel: (type: string | null | undefined) => string,
 ): VehicleGalleryItem[] {
   // `media` có thể vắng ở bản ghi cũ trong cache dù DTO khai bắt buộc.
   const media = vehicle.media ?? [];
-  const typed = media
-    .filter((item) => item.type !== VEHICLE_IMAGE_TYPE.OTHER)
-    .map((item) => ({ url: item.url, label: slotLabel(item.type) }));
-  // Rơi về `images` cũ CHỈ khi xe chưa có ảnh gán vị trí nào — xe chỉ có ảnh "khác" thì không rơi
-  // về, nếu không ảnh vừa bị lọc sẽ quay lại qua cửa sau.
-  const items: VehicleGalleryItem[] =
-    media.length > 0 ? typed : (vehicle.images ?? []).map((url) => ({ url, label: null }));
   const cover = vehicle.mainImageUrl;
-  if (!cover) return items;
-  const coverItem = items.find((item) => item.url === cover) ?? { url: cover, label: null };
-  return [coverItem, ...items.filter((item) => item.url !== cover)];
+  /*
+   * Thư viện CHỈ trưng ảnh theo góc của loại xe (26/11/2026): ô tô 5 góc, xe máy 2 góc (+ mặt đồng
+   * hồ cũ) - mỗi góc một tấm, theo thứ tự góc. Ảnh "Ảnh khác" và ảnh không thuộc góc nào không vào;
+   * ảnh cà vẹt không nằm trong `media` (lưu riêng ở giấy tờ xe). Bìa cột riêng của dữ liệu cũ lấp
+   * vào ô mặt trước khi ô đó trống.
+   */
+  if (media.length > 0) {
+    return vehicleGallerySlotTypes(vehicle.vehicleType).flatMap((type) => {
+      const url =
+        // Ô mặt trước = ẢNH BÌA (chủ xe chọn) trước, rồi mới tới ảnh gán góc trước - bìa hero khớp web.
+        (type === VEHICLE_IMAGE_TYPE.FRONT ? cover : null) ??
+        media.find((item) => item.type === type)?.url ??
+        null;
+      return url ? [{ url, label: slotLabel(type) }] : [];
+    });
+  }
+  // Xe cũ chưa gán góc cho ảnh nào: dùng danh sách URL cũ, bìa đứng đầu, không quá số góc của loại xe.
+  const legacy = [...(cover ? [cover] : []), ...(vehicle.images ?? []).filter((url) => url !== cover)];
+  return legacy
+    .slice(0, vehicleGallerySlotTypes(vehicle.vehicleType).length)
+    .map((url) => ({ url, label: null }));
 }

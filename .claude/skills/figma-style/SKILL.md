@@ -45,6 +45,7 @@ Figma NEVER silently removes a feature, adds a dead button, or overrides an ADR.
    - Unanswered ⇒ don't code that part yet (✅/🎨 work can go ahead).
 6. **Build**:
    - Map Figma values onto existing tokens: app `apps/mobile/shared/src/theme/tokens.ts` (`space`, `typeScale`, `fontSize`, `fontWeight`, `radius`…), `layout.ts`, `elevation.ts`, colours via `useColors()`; web `@xeprime/ui` (`XP_TOKENS`, `tokens.css`) + CSS Modules + AntD tokens. Missing token ⇒ ADD a token (light + dark); never scatter hard-coded hex/px.
+   - **Colour = match by HEX, not by token name**: read the Figma hex (`var(--bg\/gray-50,#fafafa)`), grep that exact hex in `packages/ui/src/tokens/index.ts`, use its `useColors()` key. Names mislead (`surfaceMuted` = gray-100, `borderSubtle` = #f5f5f5). No match ⇒ add a token.
    - A block/style used a second time ⇒ shared component in `apps/mobile/shared/src/components/ui` (applies to both apps). When you change a shared component, check every other screen using it.
    - New copy ⇒ i18n in `packages/domain/messages/{vi,en}`, short hyphen `-` only, date-time/list separators via the shared constants.
    - States the design doesn't draw (loading, empty, error, no permission, read-only, commission track, dark mode, iPad/wide, large font) ⇒ build them yourself in the design's language, list them in the report, don't ask about each.

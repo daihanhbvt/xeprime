@@ -150,7 +150,7 @@ const MethodCard = memo(function MethodCard({
               value ? t('contact.changeAria', { field: label }) : t('contact.addAria', { field: label })
             }
             variant="neutral"
-            size="sm"
+            size="card"
             onPress={onChange}
           />
         </YStack>
@@ -159,7 +159,7 @@ const MethodCard = memo(function MethodCard({
             <Button
               label={t('contact.verify')}
               accessibilityLabel={t('contact.verifyAria', { field: label })}
-              size="sm"
+              size="card"
               onPress={onVerify}
             />
           </YStack>

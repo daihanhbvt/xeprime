@@ -30,7 +30,7 @@
     "bankCode": "Bank",
     "bankCodePlaceholder": "Choose a bank",
     "accountNumber": "Account number",
-    "accountName": "Beneficiary full name",
+    "accountName": "Beneficiary name",
     "accountNameHint": "Type it exactly as registered with your bank - a wrong name gets the transfer bounced.",
     "label": "Nickname",
     "labelPlaceholder": "Optional",
@@ -57,13 +57,14 @@
       "createdDetail": "Payout account added. Your withdrawals will be sent to this account."
     },
     "addSubmit": "Add account",
-    "requestTitle": "Request a payout account change",
+    "requestTitle": "Change payout account",
     "requestIntro": "Account {account} is locked to protect your money. Send the new account and XePrime will call you to verify before switching.",
     "requestSubmit": "Send request",
     "requestSentTitle": "Request sent",
     "requestSent": "Change request sent - XePrime will call you to verify.",
     "requestNote": "Reason for the change",
-    "requestNotePlaceholder": "e.g. switching to the company account"
+    "requestNotePlaceholder": "e.g. switching to the company account",
+    "replaceIntro": "This account will replace <b>{account}</b>. Withdrawals already in progress will still go to the old account!"
   },
   "refund": {
     "title": "Refund destination",

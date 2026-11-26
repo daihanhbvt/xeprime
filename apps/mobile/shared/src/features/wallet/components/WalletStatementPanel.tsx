@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type MutableRefObject, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DeductedAmount } from '@/components/ui/DeductedAmount';
-import { Pagination } from '@/components/ui/Pagination';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
+import { useLoadNextPage } from '@/hooks/use-load-next-page';
 import {
   MONTH_PERIOD_FORMAT,
   MonthPeriodField,
@@ -29,14 +30,13 @@ import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, market, radius, space, typeScale } from '@/theme/tokens';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { ServiceTypeChip } from '@/components/ui/ServiceTypeChip';
 import {
-  WALLET_STATEMENT_PAGE_SIZE,
   type WalletStatementFilters,
   type WalletStatementTrip,
 } from '@/api/wallet/api';
@@ -67,9 +67,12 @@ import { useWalletStatement } from '../hooks/use-wallet';
 export function WalletStatementPanel({
   filters,
   onFiltersChange,
+  loadMoreRef,
 }: {
   filters: WalletStatementFilters;
   onFiltersChange: (patch: Partial<WalletStatementFilters>) => void;
+  /** Màn chứa gọi `current()` khi cuộn gần đáy (`Screen onNearEnd`) - cuộn vô hạn. */
+  loadMoreRef: MutableRefObject<(() => void) | null>;
 }) {
   const colors = useColors();
   const t = useTranslations('Wallet.statement');
@@ -82,7 +85,24 @@ export function WalletStatementPanel({
    */
   const query = useWalletStatement(filters, true);
   const data = query.data;
-  const items = data?.items ?? [];
+  /* Cuộn vô hạn (mobile-feature §5): gộp các trang đã tải, trang 1 thay toàn bộ. */
+  const items = useAccumulatedPages(data?.items, data?.page, (trip) => trip.bookingId);
+  const { hasNext, loadNext } = useLoadNextPage({
+    page: data?.page,
+    limit: data?.limit,
+    total: data?.total,
+    fetching: query.isFetching,
+    onPage: (page) => onFiltersChange({ page }),
+  });
+  useEffect(() => {
+    loadMoreRef.current = loadNext;
+    return () => {
+      if (loadMoreRef.current === loadNext) loadMoreRef.current = null;
+    };
+  }, [loadMoreRef, loadNext]);
+  /** Đang tải lại TỪ ĐẦU (đổi tháng / kéo làm mới) - khung xương thay chỗ các thẻ. */
+  const reloading = query.isFetching && filters.page <= 1;
+  const loadingMore = query.isFetching && filters.page > 1;
   const totals = data?.totals;
   /*
    * Hoa hồng `H` do CHỦ XE chịu (ADR 0064 điều 3) — dòng chỉ hiện khi KỲ có hoa hồng (số của cả kỳ,
@@ -96,7 +116,7 @@ export function WalletStatementPanel({
   const maxPeriod = useMemo(() => nowInAppTz().format(MONTH_PERIOD_FORMAT), []);
 
   return (
-    <YStack gap={space.sm}>
+    <YStack gap={toPx(XP_TOKENS['space-12'])}>
       {/* Ô tháng trải ngang "Tháng 10/2026" ngay dưới hàng tab (Figma `24612:145586`). */}
       <MonthPeriodField
         variant="compact"
@@ -128,7 +148,7 @@ export function WalletStatementPanel({
         ra. Web nói bằng `loading` của `DataTable`; ở đây khung xương THAY CHỖ các thẻ chuyến,
         nên không bao giờ có hai bộ số cùng lúc trên màn.
       */}
-      {query.isFetching ? <MiniRowsSkeleton rows={4} /> : null}
+      {reloading ? <MiniRowsSkeleton rows={4} /> : null}
 
       {!query.isFetching && items.length === 0 ? (
         <Card>
@@ -143,29 +163,21 @@ export function WalletStatementPanel({
         </Card>
       ) : null}
 
-      {query.isFetching ? null : items.map((trip, index) => (
+      {reloading ? null : items.map((trip) => (
             <TripCard
               key={trip.bookingId}
               trip={trip}
-              defaultOpen={index === 0}
-              last={index === items.length - 1}
               showCommission={showCommission}
               showDelivery={showDelivery}
             />
           ))}
 
-      {(data?.total ?? 0) > 0 ? (
-        <YStack gap={space.xs}>
-          <Text col={colors.textMuted} fos={fontSize.label} ta="center">
-            {t('totalLabel', { count: data?.total ?? 0 })}
-          </Text>
-          <Pagination
-            page={data?.page ?? filters.page}
-            limit={data?.limit ?? WALLET_STATEMENT_PAGE_SIZE}
-            total={data?.total ?? 0}
-            onChange={(page) => onFiltersChange({ page })}
-          />
-        </YStack>
+      {/* Đang nối trang kế: khung xương dưới các thẻ đã có. Hết trang: dòng tổng. */}
+      {loadingMore ? <MiniRowsSkeleton rows={2} /> : null}
+      {!reloading && !hasNext && (data?.total ?? 0) > 0 ? (
+        <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+          {t('totalLabel', { count: data?.total ?? 0 })}
+        </Text>
       ) : null}
 
     </YStack>
@@ -335,7 +347,7 @@ export function WalletStatsCard({ filters }: { filters: WalletStatementFilters }
       ai="flex-start"
     >
       <StatCell
-        leading={<LineIcon name="star" size={iconSize.lg} color={colors.warning} />}
+        leading={<LineIcon name="star" size={iconSize.lg} color={market.star} />}
         value={
           stats.ratingAvg == null ? tCommon('labels.emptyValue') : fmt.rating(stats.ratingAvg)
         }
@@ -397,7 +409,6 @@ function TripCard({
   showCommission,
   showDelivery,
   defaultOpen = false,
-  last = false,
 }: {
   trip: WalletStatementTrip;
   /** Kỳ có hoa hồng — cùng cờ với dòng tổng, để mọi thẻ của một kỳ cùng một hình. */
@@ -406,8 +417,6 @@ function TripCard({
   showDelivery: boolean;
   /** Figma vẽ thẻ ĐẦU mở sẵn, các thẻ sau thu gọn. */
   defaultOpen?: boolean;
-  /** Khối cuối danh sách - không kẻ đáy. */
-  last?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const colors = useColors();
@@ -421,15 +430,8 @@ function TripCard({
    * mở ra đủ các dòng tiền của chuyến như bảng web, kèm bảng cộng ví (ADR 0068 điều 5).
    */
   return (
-    /*
-      Nằm TRONG thẻ hai tab (Figma `24612:145584`): mỗi chuyến là một khối kẻ đáy `stroke/gray-low200`,
-      đệm đáy 8, khe 8 - không còn là thẻ viền riêng.
-    */
-    <YStack
-      gap={space.sm}
-      pb={space.sm}
-      {...(last ? {} : { borderBottomWidth: 1, borderColor: colors.border })}
-    >
+    /* Figma "Transaction" `24612:145368`: thẻ trắng viền `stroke/gray-low200`, bo 12, đệm 16, khe 8. */
+    <YStack bg={colors.surface} bw={1} bc={colors.border} br={radius.control} p={space.md} gap={space.sm}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
@@ -493,23 +495,35 @@ function TripCard({
         </YStack>
       </Pressable>
 
+      {/*
+        Thu gọn: một dòng Doanh thu 12/18. Mở: mọi dòng tiền của chuyến (cả bảng cộng ví nối tiếp,
+        ADR 0068 điều 5) cùng cỡ 14/20, chung một cột như Figma `24612:145377`.
+      */}
       <YStack>
-        <LineRow label={t('columns.revenue')} value={fmt.money(trip.revenueAmount)} last={!open} />
+        <LineRow
+          label={t('columns.revenue')}
+          value={fmt.money(trip.revenueAmount)}
+          size={open ? 'md' : 'sm'}
+          last={!open}
+        />
         {open ? (
           <>
             {showCommission ? (
               <LineRow
+                size="md"
                 label={t('columns.commission')}
-                value={<DeductedAmount value={trip.ownerCommissionAmount} size={fontSize.label} />}
+                value={<DeductedAmount value={trip.ownerCommissionAmount} size={fontSize.body} />}
               />
             ) : null}
-            {/* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */}
+            {/* Thuế là khoản TRỪ khỏi tiền chủ xe - hiện dấu trừ, không chỉ là một số nhỏ. */}
             <LineRow
+              size="md"
               label={t('columns.tax')}
-              value={<DeductedAmount value={trip.taxAmount} size={fontSize.label} />}
+              value={<DeductedAmount value={trip.taxAmount} size={fontSize.body} />}
             />
             {showDelivery ? (
               <LineRow
+                size="md"
                 label={t('columns.delivery')}
                 value={
                   isZeroMoney(trip.deliveryAmount)
@@ -519,18 +533,21 @@ function TripCard({
               />
             ) : null}
             <LineRow
+              size="md"
               label={t('columns.balanceChange')}
               last={!trip.ownerPayout}
-              value={<SignedAmount value={trip.balanceChange} compact />}
+              value={<SignedAmount value={trip.balanceChange} compact size={fontSize.body} />}
             />
+            {trip.ownerPayout ? (
+              <OwnerPayoutTable
+                payout={trip.ownerPayout}
+                label={t('payout.label', { code: trip.code })}
+                variant="ledger"
+              />
+            ) : null}
           </>
         ) : null}
       </YStack>
-
-      {/* Bảng cộng ví của CHUYẾN (ADR 0068 điều 5). Đơn cũ không có bảng phí thì không có. */}
-      {open && trip.ownerPayout ? (
-        <OwnerPayoutTable payout={trip.ownerPayout} label={t('payout.label', { code: trip.code })} />
-      ) : null}
     </YStack>
   );
 }
@@ -547,9 +564,12 @@ function LineRow({
   tone,
   emphasis = false,
   last = false,
+  size = 'sm',
 }: {
   label: string;
   value: ReactNode;
+  /** `sm` = 12/18 (mặc định); `md` = 14/20 - dòng tiền của thẻ chuyến đang mở. */
+  size?: 'sm' | 'md';
   /** Lời giải thích - mở bằng ⓘ cạnh nhãn, không chiếm thêm dòng. */
   info?: string;
   tone?: 'danger';
@@ -557,6 +577,7 @@ function LineRow({
   last?: boolean;
 }) {
   const colors = useColors();
+  const type = size === 'md' ? typeScale.body : typeScale.label;
   return (
     <XStack
       ai="center"
@@ -569,8 +590,8 @@ function LineRow({
         <Text
           flexShrink={1}
           col={emphasis ? colors.textMuted : colors.placeholder}
-          fos={typeScale.label.fontSize}
-          lh={typeScale.label.lineHeight}
+          fos={type.fontSize}
+          lh={type.lineHeight}
           fow={emphasis ? fontWeight.semibold : fontWeight.regular}
         >
           {label}
@@ -580,8 +601,8 @@ function LineRow({
       {typeof value === 'string' ? (
         <Text
           col={tone === 'danger' ? colors.danger : colors.text}
-          fos={typeScale.label.fontSize}
-          lh={typeScale.label.lineHeight}
+          fos={type.fontSize}
+          lh={type.lineHeight}
           fow={fontWeight.medium}
         >
           {value}
@@ -604,8 +625,11 @@ export function SignedAmount({
   prominent = false,
   strong = false,
   compact = false,
+  size: sizeOverride,
 }: {
   value: string;
+  /** Cỡ chữ riêng - thắng `prominent`/`compact`. */
+  size?: number;
   prominent?: boolean;
   strong?: boolean;
   /** Cỡ dòng Figma 12/18 medium - giá trị trong "Summary Item" / "Transaction Detail". */
@@ -613,7 +637,7 @@ export function SignedAmount({
 }) {
   const colors = useColors();
   const fmt = useAppFormat();
-  const size = prominent ? fontSize.h4 : compact ? fontSize.label : fontSize.bodySm;
+  const size = sizeOverride ?? (prominent ? fontSize.h4 : compact ? fontSize.label : fontSize.bodySm);
   const weight =
     prominent || strong ? fontWeight.bold : compact ? fontWeight.medium : fontWeight.regular;
 

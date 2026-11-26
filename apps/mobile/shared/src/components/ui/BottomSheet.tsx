@@ -1,6 +1,8 @@
 import { dismissKeyboardFirst } from '@/lib/dismiss-keyboard-first';
 import { usePathname } from 'expo-router';
 import {
+  Fragment,
+  isValidElement,
   useCallback,
   useEffect,
   useId,
@@ -182,6 +184,11 @@ interface BottomSheetProps {
   headerDivider?: boolean;
   /** Chỉ với `chrome="v2"`: một thao tác nhỏ đứng trước nút ✕ (vd link "Đọc tất cả" của tấm Thông báo). */
   headerAction?: ReactNode;
+  /**
+   * Đổi giá trị (khác rỗng) ⇒ cuộn xuống CUỐI nội dung sau lượt vẽ kế tiếp - khi một khối vừa mở
+   * ra ở đáy tấm (thẻ "Thêm danh mục mới") mà người dùng phải thấy ngay, không phải tự cuộn tìm.
+   */
+  scrollToEndKey?: string | number | false | null;
 }
 
 export function BottomSheet(rawProps: BottomSheetProps) {
@@ -268,6 +275,7 @@ function SheetSurface({
   chrome = IS_PARTNER_APP ? 'v2' : 'default',
   headerDivider = IS_PARTNER_APP,
   headerAction,
+  scrollToEndKey,
   mode,
   sheetId,
 }: BottomSheetProps & { mode: SheetMode; sheetId: string }) {
@@ -300,6 +308,12 @@ function SheetSurface({
    */
   const scroller = useRef<ScrollView>(null);
   const scrollY = useRef(0);
+  /* Chờ nội dung đổi cỡ (khối mới đã vẽ) rồi mới cuộn - cuộn ngay thì đáy cũ chưa dài ra. */
+  const pendingScrollEnd = useRef(false);
+  useEffect(() => {
+    if (!scrollToEndKey) return;
+    pendingScrollEnd.current = true;
+  }, [scrollToEndKey]);
   const revealOnFocus = useCallback(() => {
     if (keyboardHeight <= 0) return;
     requestAnimationFrame(() => {
@@ -477,10 +491,16 @@ function SheetSurface({
                       {titleAdornment}
                     </XStack>
                     {subtitle ? (
-                      // Figma: 14/22 `text/gray/low`.
-                      <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={V2_SUBTITLE_LH}>
-                        {subtitle}
-                      </Text>
+                      !isValidElement(subtitle) || subtitle.type === Fragment ? (
+                        // Figma: 14/22 `text/gray/low`.
+                        <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={V2_SUBTITLE_LH}>
+                          {subtitle}
+                        </Text>
+                      ) : (
+                        // MỘT phần tử dựng sẵn (khối nhiều dòng, có chip...) - nơi gọi lo kiểu chữ, không bọc `Text`.
+                        // Chuỗi / mảng `t.rich` vẫn đi nhánh `Text` ở trên (chữ trần ngoài `Text` là crash).
+                        subtitle
+                      )
                     ) : null}
                   </YStack>
                   {headerAction ? <YStack minHeight={V2_CLOSE} jc="center">{headerAction}</YStack> : null}
@@ -530,6 +550,11 @@ function SheetSurface({
                     scrollY.current = event.nativeEvent.contentOffset.y;
                   }}
                   scrollEventThrottle={SCROLL_REPORT_MS}
+                  onContentSizeChange={() => {
+                    if (!pendingScrollEnd.current) return;
+                    pendingScrollEnd.current = false;
+                    scroller.current?.scrollToEnd({ animated: true });
+                  }}
                 >
                   {children}
                 </ScrollView>

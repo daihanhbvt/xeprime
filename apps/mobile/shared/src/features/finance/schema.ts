@@ -37,7 +37,8 @@ export const receiptFormSchema = yup.object({
     .string()
     .required('errors.method')
     .oneOf([...PAYMENT_METHOD_VALUES]),
-  categoryId: yup.string().nullable().default(null),
+  // Bắt buộc như dấu * trên form (chốt 26/11/2026) - trước đây chỉ có dấu * mà không chặn.
+  categoryId: yup.string().nullable().default(null).test('required', 'errors.category', (v) => Boolean(v)),
   /**
    * Phiếu này gắn vào cái gì — xem `RECEIPT_LINK_MODE`.
    *

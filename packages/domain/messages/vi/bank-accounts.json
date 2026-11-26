@@ -30,7 +30,7 @@
     "bankCode": "Ngân hàng",
     "bankCodePlaceholder": "Chọn ngân hàng",
     "accountNumber": "Số tài khoản",
-    "accountName": "Họ và tên người thụ hưởng",
+    "accountName": "Họ tên người thụ hưởng",
     "accountNameHint": "Gõ đúng như đăng ký ở ngân hàng - sai tên là lệnh chuyển bị trả về.",
     "label": "Tên gợi nhớ",
     "labelPlaceholder": "Không bắt buộc",
@@ -57,13 +57,14 @@
       "createdDetail": "Đã thêm tài khoản nhận tiền. Các lệnh rút của bạn sẽ được chuyển vào tài khoản này."
     },
     "addSubmit": "Thêm tài khoản",
-    "requestTitle": "Yêu cầu đổi tài khoản nhận tiền",
+    "requestTitle": "Đổi tài khoản nhận tiền",
     "requestIntro": "Tài khoản {account} đã được khoá để bảo vệ tiền của bạn. Gửi tài khoản mới, XePrime sẽ gọi điện xác minh chính chủ rồi mới đổi.",
     "requestSubmit": "Gửi yêu cầu",
     "requestSentTitle": "Đã gửi yêu cầu",
     "requestSent": "Đã gửi yêu cầu đổi tài khoản - XePrime sẽ gọi cho bạn để xác minh.",
     "requestNote": "Lý do đổi",
-    "requestNotePlaceholder": "Ví dụ: đổi sang tài khoản công ty"
+    "requestNotePlaceholder": "Ví dụ: đổi sang tài khoản công ty",
+    "replaceIntro": "Tài khoản này sẽ thay thế cho <b>{account}</b>. Các lệnh rút tiền đang xử lý trước đó vẫn sẽ chuyển vào tài khoản cũ!"
   },
   "refund": {
     "title": "Tài khoản nhận tiền hoàn",

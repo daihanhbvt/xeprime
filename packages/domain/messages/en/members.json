@@ -190,7 +190,13 @@
       "saved": "Changes saved",
       "created": "Staff account created",
       "passwordReset": "Password reset"
-    }
+    },
+    "chipAll": "All",
+    "branchCount": "{count, plural, one {# branch} other {# branches}}",
+    "menuTitle": "Actions",
+    "menu": "Actions for {name}",
+    "openDetail": "View details of {name}",
+    "statusAria": "Status: {status}"
   },
   "lastActive": {
     "online": "Online now",
@@ -296,7 +302,12 @@
       "fleetManage": "Partial",
       "fleetView": "Partial"
     },
-    "cellAria": "{role} - {row}: {level}"
+    "cellAria": "{role} - {row}: {level}",
+    "chooseRole": "Choose a role to view",
+    "roleGroups": "{count, plural, one {# role} other {# roles}}",
+    "features": "{count, plural, one {# feature} other {# features}}",
+    "legendTitle": "Permission legend:",
+    "roleTabsLabel": "Choose a role"
   },
   "staff": {
     "addButton": "Add staff",
@@ -339,5 +350,13 @@
     "submit": "Reset password",
     "doneTitle": "Password reset",
     "doneBody": "Send the new password to {name}. It is shown only ONCE."
+  },
+  "tabs": {
+    "label": "Staff and roles",
+    "members": "Staff"
+  },
+  "roleHintApp": {
+    "shop_owner": "Full access, including payments & permissions across the whole system.",
+    "shop_manager": "Runs bookings and revenue. Cannot change legal details."
   }
 }

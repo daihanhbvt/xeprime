@@ -1,7 +1,7 @@
-import SafetyCertificateOutlined from '@ant-design/icons-svg/es/asn/SafetyCertificateOutlined';
-import { useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Linking, type LayoutChangeEvent, type ScrollView } from 'react-native';
+import { Linking, StyleSheet, type LayoutChangeEvent, type ScrollView } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import type { ReactNode } from 'react';
@@ -21,13 +21,14 @@ import {
   shopProfileWithContactSchema,
   type ShopProfileWithContactValues,
 } from '@xeprime/validators';
-import { AntIcon } from '@/components/icons/AntIcon';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Screen } from '@/components/layout/Screen';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { ShopProfileSkeleton } from '@/components/ui/Skeleton';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { statusTone } from '@/components/ui/StatusBadge';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -43,10 +44,11 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
 import { metaColor } from '@/lib/status-meta';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
+import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES, SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
+import { fontWeight, gradients, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import type { MyShop, UpdateShopProfileInput } from './api';
 import { ShopBranchesCard } from './components/ShopBranchesCard';
 import {
@@ -64,10 +66,22 @@ import { ShopWelcomeBanner } from './components/ShopWelcomeBanner';
 import { useVehiclesPage } from '@/features/vehicles/hooks/use-vehicles';
 import { useMyShop, useUpdateShopProfile } from './hooks/use-shop';
 
-/** Logo đầu trang 54px (`Avatar size={54}` của `ShopWorkspace` web). */
+/** Logo đầu trang 54 bo 8 có viền (Figma `24231:113121`). */
 const HEAD_LOGO = 54;
-/** Viên vai cao 40 (`.roleChip` web). */
+const HEAD_LOGO_RADIUS = 8;
+/** Chấm trạng thái 8 viền trắng 1.2 ở góc logo (`24231:113141`, đặt tại x 46 · y 45). */
+const STATUS_DOT = 8;
+const STATUS_DOT_RING = 1.2;
+const STATUS_DOT_RIGHT = HEAD_LOGO - 46 - STATUS_DOT;
+const STATUS_DOT_BOTTOM = HEAD_LOGO - 45 - STATUS_DOT;
+/** Thẻ đầu trang (`24231:112115`): đệm 16, khe 12. */
+const HEAD_PAD = 16;
+const HEAD_GAP = 12;
+/** Viên vai cao 40, đệm 12, bo tròn hết (`24231:113146`). */
 const ROLE_CHIP_HEIGHT = 40;
+/** Hướng dải viên vai (106deg ≈ trái → phải, hơi chéo xuống). */
+const ROLE_GRADIENT_START = { x: 0, y: 0.36 } as const;
+const ROLE_GRADIENT_END = { x: 1, y: 0.64 } as const;
 
 /** Dải chào chỉ hỏi "đã có xe nào chưa" — MỘT bản ghi là đủ để trả lời, đúng cỡ web hỏi. */
 const WELCOME_VEHICLE_PAGE = { page: 1, limit: 1 };
@@ -174,9 +188,16 @@ export function ShopProfileScreen({
   variant?: 'settings' | 'profileForm';
 } = {}) {
   const t = useTranslations('Shop');
+  const tNav = useTranslations('Navigation.public');
   const tRegistration = useTranslations('Account.registration');
   const navigateOnce = useNavigateOnce();
-  const shell = header ?? <ManagePageHeader title={t('page.title')} />;
+  const router = useRouter();
+  const goBack = useCallback(() => goBackOr(router, ROUTES.manage.more()), [router]);
+  /*
+   * Figma Partner "Quản lý gian hàng" (`24231:112113`): mũi tên quay lại + tiêu đề "Quản lý gian
+   * hàng" - đúng tên dòng mở màn này ở menu tài khoản. Không có mục để quay về thì về menu "Thêm".
+   */
+  const shell = header ?? <ManagePageHeader title={tNav('manageShop')} onBack={goBack} />;
   const permissions = usePermissions();
   const { tenant } = useTenantScope();
 
@@ -349,6 +370,7 @@ function ProfileForm({
   const colors = useColors();
   const pull = usePartnerProfileRefresh();
   const t = useTranslations('Shop');
+  const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
@@ -473,6 +495,8 @@ function ProfileForm({
     });
   };
 
+  const statusColor = metaColor(TENANT_STATUS_META, status);
+
   return (
     <>
       {shell}
@@ -481,56 +505,126 @@ function ProfileForm({
         scrollRef={scrollRef}
         refreshing={pull.refreshing}
         onRefresh={pull.onRefresh}
+        /*
+         * Footer cố định "Hủy · Lưu thay đổi" (Figma "Footer cố định" `24231:112208`) - CHỈ khi có
+         * logo/ảnh bìa chưa lưu (người dùng chốt 26/11/2026). Các nhóm khác lưu qua tấm sửa của nó.
+         */
+        {...(canEdit && mediaDirty
+          ? {
+              footer: (
+                <XStack gap={HEAD_GAP}>
+                  <YStack flexShrink={0}>
+                    <Button
+                      label={tActions('cancel')}
+                      variant="neutral"
+                      shape="square"
+                      disabled={saving}
+                      onPress={() => resetGroup(SHOP_PROFILE_GROUP.MEDIA)}
+                    />
+                  </YStack>
+                  <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+                    <Button
+                      label={tActions('saveChanges')}
+                      lineIcon="tick"
+                      variant="gradient"
+                      shape="square"
+                      loading={saving}
+                      onPress={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
+                    />
+                  </YStack>
+                </XStack>
+              ),
+            }
+          : {})}
       >
         <YStack gap={layout.section} onLayout={onColumnLayout}>
           {/*
-            Đầu trang (design `23999:111044`, `ShopWorkspace.module.css` `.header`): logo VUÔNG 54
-            bo 12 nền vàng chuyển · tên 20/30 đậm vừa + viên trạng thái cùng dòng · dòng phụ 14 xám;
-            rồi viên vai (đen, chữ vàng, cao 40 bo 12) + nút viền "Xem gian hàng" cao 40.
+            Đầu trang (Figma `24231:112115`): thẻ trắng viền xám; logo VUÔNG 54 bo 8 có chấm trạng
+            thái ở góc · tên 16/24 đậm vừa · dòng phụ 14/20 xám; rồi viên vai (dải đen, Shield Star +
+            chữ vàng, cao 40 bo tròn) + nút viền "Xem gian hàng" (Foreign) cao 40. Gian hàng KHÔNG ở
+            trạng thái hoạt động thì vẫn có viên chữ cạnh tên (người dùng chốt 26/11/2026).
           */}
-          <YStack gap={space.md}>
-            <XStack ai="center" gap={12}>
-              <Avatar
-                name={shop.name}
-                url={shop.profile.logoUrl ?? null}
-                size={HEAD_LOGO}
-                square
-                gradient
-              />
-              <YStack f={1} minWidth={0}>
+          <YStack
+            gap={HEAD_GAP}
+            p={HEAD_PAD}
+            br={radius.card}
+            bw={1}
+            bc={colors.border}
+            bg={colors.surface}
+          >
+            <XStack ai="center" gap={HEAD_GAP}>
+              <YStack
+                w={HEAD_LOGO}
+                h={HEAD_LOGO}
+                accessible
+                accessibilityLabel={domainLabel('tenantStatus', status)}
+              >
+                <Avatar
+                  name={shop.name}
+                  url={shop.profile.logoUrl ?? null}
+                  size={HEAD_LOGO}
+                  square
+                  squareRadius={HEAD_LOGO_RADIUS}
+                  bordered
+                  gradient
+                />
+                <YStack
+                  pos="absolute"
+                  r={STATUS_DOT_RIGHT - STATUS_DOT_RING}
+                  b={STATUS_DOT_BOTTOM - STATUS_DOT_RING}
+                  w={STATUS_DOT + STATUS_DOT_RING * 2}
+                  h={STATUS_DOT + STATUS_DOT_RING * 2}
+                  br={radius.pill}
+                  bw={STATUS_DOT_RING}
+                  bc={colors.surface}
+                  bg={statusTone(statusColor, colors).fg}
+                />
+              </YStack>
+              <YStack f={1} minWidth={0} gap={4}>
                 <XStack ai="center" gap={space.sm} flexWrap="wrap">
                   <Text
                     col={colors.text}
-                    fos={fontSize.lead}
-                    lineHeight={30}
+                    fos={typeScale.title.fontSize}
+                    lh={typeScale.title.lineHeight}
                     fow={fontWeight.semibold}
                     flexShrink={1}
                   >
                     {shop.name}
                   </Text>
-                  <Pill
-                    label={domainLabel('tenantStatus', status)}
-                    tone={pillToneOfStatusColor(metaColor(TENANT_STATUS_META, status))}
-                  />
+                  {isActive ? null : (
+                    <Pill label={domainLabel('tenantStatus', status)} tone={pillToneOfStatusColor(statusColor)} />
+                  )}
                 </XStack>
-                <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20}>
+                <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
                   {t('page.subtitle')}
                 </Text>
               </YStack>
             </XStack>
             {roleKey || isActive ? (
-              <XStack ai="center" gap={12} flexWrap="wrap">
+              <XStack ai="center" gap={HEAD_GAP} flexWrap="wrap">
                 {roleKey ? (
                   <XStack
                     ai="center"
                     gap={6}
                     h={ROLE_CHIP_HEIGHT}
                     px={12}
-                    br={radius.control}
-                    bg={market.inverse}
+                    br={radius.pill}
+                    ov="hidden"
                   >
-                    <AntIcon icon={SafetyCertificateOutlined} size={14} color={colors.goldOnDark} />
-                    <Text col={colors.goldOnDark} fos={fontSize.body} lineHeight={20} fow={fontWeight.medium}>
+                    <LinearGradient
+                      colors={gradients.roleChipDark.colors}
+                      locations={gradients.roleChipDark.locations}
+                      start={ROLE_GRADIENT_START}
+                      end={ROLE_GRADIENT_END}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <LineIcon name="shield-star" size={iconSize.lg} color={colors.goldOnDark} />
+                    <Text
+                      col={colors.goldOnDark}
+                      fos={typeScale.body.fontSize}
+                      lh={typeScale.body.lineHeight}
+                      fow={fontWeight.medium}
+                    >
                       {domainLabel('tenantRole', roleKey)}
                     </Text>
                   </XStack>
@@ -538,8 +632,8 @@ function ProfileForm({
                 {isActive ? (
                   <Button
                     label={t('page.viewPublicPage')}
-                    icon="open-outline"
-                    variant="secondary"
+                    lineIcon="foreign"
+                    variant="neutral"
                     size="md"
                     shape="square"
                     block={false}
@@ -570,11 +664,8 @@ function ProfileForm({
               shop={shop}
               control={form.control}
               canEdit={canEdit}
-              mediaDirty={mediaDirty}
               saving={saving}
               onEdit={() => setEditing(SHOP_PROFILE_GROUP.DISPLAY)}
-              onMediaCancel={() => resetGroup(SHOP_PROFILE_GROUP.MEDIA)}
-              onMediaSave={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
               onLogoPickerReady={onLogoPickerReady}
             />
             {canEdit ? (
@@ -594,6 +685,7 @@ function ProfileForm({
           <YStack onLayout={measure(SHOP_SECTION.LEGAL)}>
             <ShopLegalCard
               shop={shop}
+              look="figma"
               {...(canEdit ? { onEdit: () => setEditing(SHOP_PROFILE_GROUP.LEGAL) } : {})}
               {...(canSeeBranches
                 ? {
@@ -604,7 +696,7 @@ function ProfileForm({
             />
           </YStack>
 
-          {canSeeTax ? <ShopTaxCard onLayout={measure(SHOP_SECTION.TAX)} /> : null}
+          {canSeeTax ? <ShopTaxCard look="figma" onLayout={measure(SHOP_SECTION.TAX)} /> : null}
 
           {canSeeBranches ? <ShopBranchesCard onLayout={measure(SHOP_SECTION.BRANCHES)} /> : null}
 

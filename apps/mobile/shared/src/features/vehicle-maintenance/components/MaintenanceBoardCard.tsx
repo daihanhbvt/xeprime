@@ -1,3 +1,4 @@
+import { Pressable } from 'react-native';
 import { memo, useCallback, useState } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
@@ -26,6 +27,8 @@ import type { BoardAction } from './BoardActionSheets';
 import type { MaintenanceBoardItem } from '../api';
 
 /** Ảnh xe 60 × 42 - Figma 24512:121709. */
+/** Nút ⋮ chỉ 20pt - nới vùng chạm cho đủ sàn ngón tay. */
+const KEBAB_SLOP = 12;
 const THUMB_W = 60;
 const THUMB_H = 42;
 /** Cỡ chữ 14/20 và 12/18 của Figma. */
@@ -72,12 +75,12 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
   const barColor = overdue ? colors.danger : dueSoon ? colors.warningVivid : colors.successVivid;
   const remainingColor = overdue ? colors.danger : dueSoon ? colors.warningHigh : colors.success;
   const record = item.activeRecord;
+  const missingKm = item.currentOdometerKm == null;
   const percent = maintenanceCyclePercent(item.oilChangeIntervalKm, item.remainingKm);
   const subtitle = item.plateNumber || item.vehicleCode;
   const open = useCallback(() => onPress(item), [onPress, item]);
 
   const menu = [
-    { key: 'detail', label: t('actions.detail'), danger: false, show: true, write: false },
     {
       key: 'complete',
       label: t('actions.complete'),
@@ -96,8 +99,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
 
   const runMenu = (key: string) => {
     setMenuOpen(false);
-    if (key === 'detail') open();
-    else if (key === 'complete') onAction({ kind: 'complete', row: item });
+    if (key === 'complete') onAction({ kind: 'complete', row: item });
     else if (key === 'cancel') onAction({ kind: 'cancel', row: item });
   };
 
@@ -105,11 +107,12 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
     /*
       Khuôn thẻ Figma `_Kanban Items` (24512:121616): viền đỏ khi quá hạn, đầu thẻ ảnh 60×42 +
       tên + "biển số · ngày bảo dưỡng gần nhất" + viên hạn; ô xám Odo/mốc/thanh %; ô lịch; hai nút.
-      Thao tác phụ (xem xe, hoàn tất, huỷ lịch) mở bằng NHẤN GIỮ thẻ - người dùng chốt 25/11/2026.
+      Thao tác phụ (hoàn tất, huỷ lịch) mở bằng nút ⋮ cạnh viên hạn (Figma 24520:21513); KHÔNG có
+      "Xem chi tiết" vì chạm thẻ đã mở xe - người dùng chốt 26/11/2026. Không có thao tác nào thì
+      ẩn hẳn nút ⋮, không để một nút bấm ra tấm trống.
     */
     <Card
       onPress={open}
-      onLongPress={() => setMenuOpen(true)}
       accessibilityLabel={item.vehicleName}
       {...(overdue ? { borderColor: colors.danger } : {})}
     >
@@ -135,13 +138,38 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
               </Text>
             </YStack>
           </XStack>
-          <Pill
-            label={domainLabel('maintenanceDueStatus', status, dueMeta.label)}
-            tone={pillToneOfStatusColor(tone)}
-          />
+          <XStack ai="center" gap={space.xs} flexShrink={0}>
+            <Pill
+              label={domainLabel('maintenanceDueStatus', status, dueMeta.label)}
+              tone={pillToneOfStatusColor(tone)}
+            />
+            {menu.length > 0 ? (
+              <Pressable
+                onPress={() => setMenuOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('board.more', { name: item.vehicleName })}
+                hitSlop={KEBAB_SLOP}
+              >
+                <LineIcon name="menu-kebab" size={iconSize.lg} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+          </XStack>
         </XStack>
 
-        {/* Ô xám: Odo · mốc tới / thanh 6pt / còn-quá · % chu kỳ. */}
+        {/*
+          Xe CHƯA CÓ số KM: không có gì để vẽ thanh/mốc - một dòng nhắc cam duy nhất thay cho ô xám
+          rỗng; ô lịch chỉ hiện khi đã có phiếu (người dùng 26/11/2026: thẻ cũ "xấu" vì hai dòng
+          cùng nói "chưa có số" + thanh rỗng + "Chưa cần cập nhật" mâu thuẫn).
+        */}
+        {missingKm ? (
+          <XStack px={12} py={space.sm} br={radius.control} bg={colors.warningSubtle} ai="center" gap={6}>
+            <LineIcon name="info-circle" size={16} color={colors.warningVivid} />
+            <Text col={colors.warningHigh} {...small} fontFamily={FONT_FAMILY.body} f={1} minWidth={0}>
+              {[t('board.missingOdometer'), t('board.needsOdometer')].join(LIST_SEPARATOR)}
+            </Text>
+          </XStack>
+        ) : (
+          /* Ô xám: Odo · mốc tới / thanh 6pt / còn-quá · % chu kỳ. */
         <YStack px={12} py={space.sm} br={radius.control} bg={colors.background} gap={6}>
           <XStack jc="space-between" gap={space.sm}>
             <Text
@@ -188,56 +216,72 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
           </XStack>
         </YStack>
 
-        <ScheduleBox item={item} />
+        )}
 
-        {/* Vạch ngăn + hai nút: Cập nhật ODO (viền xám) · Lên lịch (vàng), không icon - Figma `_Modal actions`. */}
+        {missingKm && !record ? null : <ScheduleBox item={item} />}
+
+        {/*
+          Chân thẻ: vạch mảnh `borderSubtle` ở trên, hai nút CHIA ĐỀU hết bề ngang thẻ (Figma
+          24520:21513 - người dùng chốt 26/11/2026).
+        */}
         {canCorrectOdometer || canManage ? (
-          <YStack gap={12}>
-            <YStack h={1} bg={colors.border} />
-            <XStack gap={12}>
-              {canCorrectOdometer ? (
-                <YStack f={1} minWidth={0}>
-                  <Button
-                    label={t('actions.updateOdometer')}
-                    variant="neutral"
-                    size="compact"
-                    disabled={writeLocked}
-                    onPress={() => onAction({ kind: 'odometer', row: item })}
-                  />
-                </YStack>
-              ) : null}
-              {canManage ? (
-                <YStack f={1} minWidth={0}>
-                  <Button
-                    label={
-                      // Một chữ "Lên lịch ngay" cho mọi xe chưa có lịch - người dùng chốt 25/11/2026.
-                      record ? t('actions.editSchedule') : t('actions.scheduleNow')
-                    }
-                    // Figma 24512:121982: "Sửa lịch" là nút viền xám, chỉ "Lên lịch" mới vàng.
-                    variant={record ? 'neutral' : 'gradient'}
-                    size="compact"
-                    disabled={writeLocked}
-                    onPress={() => onAction({ kind: 'schedule', row: item })}
-                  />
-                </YStack>
-              ) : null}
-            </XStack>
-          </YStack>
+          <XStack
+            gap={12}
+            pt={12}
+            borderTopWidth={1}
+            borderTopColor={colors.borderSubtle}
+          >
+            {canCorrectOdometer ? (
+              <YStack f={1} flexBasis={0} minWidth={0}>
+                <Button
+                  label={t('actions.updateOdometer')}
+                  // Thiếu số KM: việc CẦN làm là nhập ODO - nút đó lên vàng, Lên lịch lùi về viền xám.
+                  variant={missingKm ? 'gradient' : 'neutral'}
+                  size="compact"
+                  disabled={writeLocked}
+                  onPress={() => onAction({ kind: 'odometer', row: item })}
+                />
+              </YStack>
+            ) : null}
+            {canManage ? (
+              <YStack f={1} flexBasis={0} minWidth={0}>
+                <Button
+                  label={record ? t('actions.editSchedule') : t('actions.scheduleNow')}
+                  variant={record || missingKm ? 'neutral' : 'gradient'}
+                  size="compact"
+                  disabled={writeLocked}
+                  onPress={() => onAction({ kind: 'schedule', row: item })}
+                />
+              </YStack>
+            ) : null}
+          </XStack>
         ) : null}
       </YStack>
 
-      <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title={item.vehicleName}>
-        <YStack gap={space.sm}>
-          {menu.map((m) => (
-            <Button
-              key={m.key}
-              label={m.label}
-              variant={m.danger ? 'dangerOutline' : 'outline'}
-              disabled={m.write && writeLocked}
-              onPress={() => runMenu(m.key)}
-            />
+      {/* Tấm thao tác mở từ nút ⋮ (Figma 24520:21513). */}
+      <BottomSheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={item.vehicleName}
+        chrome="v2"
+        headerDivider
+      >
+        {/*
+          MỘT hàng, không icon: "Hủy lịch" viền đỏ bên trái, "Hoàn tất" nền vàng chính bên phải -
+          người dùng chốt 26/11/2026 (`menu` xếp Hoàn tất trước nên đảo lại khi vẽ).
+        */}
+        <XStack gap={12}>
+          {[...menu].reverse().map((m) => (
+            <YStack key={m.key} f={1} flexBasis={0} minWidth={0}>
+              <Button
+                label={m.label}
+                variant={m.danger ? 'dangerOutline' : 'gradient'}
+                disabled={m.write && writeLocked}
+                onPress={() => runMenu(m.key)}
+              />
+            </YStack>
           ))}
-        </YStack>
+        </XStack>
       </BottomSheet>
     </Card>
   );

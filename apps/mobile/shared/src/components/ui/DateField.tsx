@@ -7,7 +7,15 @@ import { useTranslations } from 'use-intl';
 import { dayjs } from '@xeprime/domain';
 import { DatePickerSheet } from './DatePickerSheet';
 import { LineIcon } from '@/components/icons/LineIcon';
-import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
+import {
+  FIELD_V2,
+  FieldLabel,
+  FieldMessage,
+  FieldShell,
+  inLabelHint,
+  belowHint,
+  useFieldGap,
+} from './Field';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { iconSize, space } from '@/theme/tokens';
@@ -56,10 +64,12 @@ export function DateField<T extends FieldValues>({
 
   const value = (field.value as string | null) ?? '';
   const error = fieldState.error?.message;
-  const clearable = Boolean(value) && !disabled;
+  // Ô BẮT BUỘC không có nút xoá - xoá đi chỉ để báo lỗi; giữ icon lịch như Figma.
+  const clearable = Boolean(value) && !disabled && !required;
+  const fieldGap = useFieldGap();
 
   return (
-    <YStack gap={space.xs}>
+    <YStack gap={fieldGap}>
       <FieldLabel label={label} required={required} hint={inLabelHint(hint)} />
 
       <Pressable

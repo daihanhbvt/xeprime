@@ -254,6 +254,8 @@
   --xp-gradient-primary: linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%);
   /* Figma "Gradient/Special" - nút tìm kiếm tròn ở banner trang kết quả (19956:44103). */
   --xp-gradient-special: linear-gradient(90deg, #e9c336 0%, #f0d073 48.077%, #f9ce31 100%);
+  /* Viên vai "Chủ gian hàng" khổ điện thoại (Figma Partner `24231:113146`) - cùng dải ở hai giao diện. */
+  --xp-gradient-role-dark: linear-gradient(106deg, #171209 1.46%, #242426 53.1%, #000000 100%);
   --xp-gradient-text-hero: linear-gradient(90deg, #eeb924 0%, #ba8b26 100%);
   --xp-gradient-text-gold: linear-gradient(90deg, #d3a94d 0%, #cb9c03 100%);
   --xp-gradient-gold-soft: linear-gradient(90deg, #edd3a4 0.89%, #d6a439 100.89%);

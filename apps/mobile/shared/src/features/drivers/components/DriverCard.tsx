@@ -2,8 +2,9 @@ import { memo, useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, holderNameDiffers } from '@xeprime/domain';
 import {
+  DRIVER_LICENCE_STATE,
   DRIVER_LINK_END_PARTY,
   DRIVER_LINK_OPEN_STATUSES,
   DRIVER_LINK_STATUS,
@@ -15,16 +16,17 @@ import { ActionMenuRow } from '@/components/ui/ActionMenuRow';
 import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Card } from '@/components/ui/Card';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
-import type { Driver } from '../api';
+import type { Driver, InternalDriver } from '../api';
 import { DriverStatusLine } from './DriverStatusLine';
 
 /** Ý định trên một liên kết — xác nhận (tạm khoá, kết thúc/thu hồi) nằm ở MÀN, không ở thẻ. */
 export type DriverCardIntent =
-  'view' | 'trips' | 'reinvite' | 'edit' | 'suspend' | 'resume' | 'end';
+  'view' | 'trips' | 'reinvite' | 'licenceCheck' | 'suspend' | 'resume' | 'end';
 
 /** Figma "Vehicle Card" của Quản lý tài xế (`24612:138244`): đệm 16, các khối cách 16. */
 const CARD_GAP = 16;
@@ -74,8 +76,21 @@ function DriverCardImpl({
       : null,
   ].filter(Boolean);
 
+  /* Bằng đã xác thực nhưng tên trên bằng lệch tên đã đặt và chưa ai đối chiếu (web `linkedMenu`). */
+  const needsCheck =
+    driver.licence.state === DRIVER_LICENCE_STATE.VERIFIED &&
+    !driver.licenceCheck &&
+    holderNameDiffers(driver.licence.fullName, driver.name);
+
+  /* Sửa thông tin nằm ở trang chi tiết (web 25/11/2026) — menu thẻ không còn mục "Sửa". */
   const menu = [
-    { key: 'edit' as const, icon: 'edit' as const, label: tCard('editInfo'), show: canManage && open, danger: false },
+    {
+      key: 'licenceCheck' as const,
+      icon: 'tick-circle' as const,
+      label: t('licenceCheck.menu'),
+      show: canManage && open && needsCheck,
+      danger: false,
+    },
     {
       key: 'suspend' as const,
       icon: 'lock' as const,
@@ -226,3 +241,183 @@ function DriverCardImpl({
 
 /** `memo`: HÀNG trong một danh sách dài — màn chứa nó dựng lại vì đủ thứ không liên quan. */
 export const DriverCard = memo(DriverCardImpl);
+
+/** Ý định trên một tài xế nội bộ — xác nhận lưu trữ nằm ở MÀN. */
+export type InternalDriverCardIntent = 'view' | 'archive' | 'restore';
+
+/**
+ * Thẻ tài xế NỘI BỘ (ADR 0108) — native port of web `InternalDriverCard`: ảnh + tên + SĐT, viên
+ * "Nhân viên nội bộ", trạng thái Đang hoạt động / Đã lưu trữ, dòng "Chuyến đang gán", ghi chú. Chạm
+ * thẻ mở chi tiết; menu "⋮": Ngừng hợp tác (lưu trữ) / Khôi phục, theo quyền `drivers.manage`.
+ */
+function InternalDriverCardImpl({
+  driver,
+  canManage,
+  pending,
+  onIntent,
+}: {
+  driver: InternalDriver;
+  canManage: boolean;
+  pending: boolean;
+  onIntent: (driver: InternalDriver, intent: InternalDriverCardIntent) => void;
+}) {
+  const colors = useColors();
+  const t = useTranslations('Drivers');
+  const tCard = useTranslations('Drivers.card');
+  const tApp = useTranslations('Drivers.app');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const archived = driver.archivedAt != null;
+
+  const menu = [
+    {
+      key: 'archive' as const,
+      icon: 'doc-fail' as const,
+      label: t('actions.end'),
+      show: canManage && !archived,
+      danger: true,
+    },
+    {
+      key: 'restore' as const,
+      icon: 'rotate-left' as const,
+      label: t('internal.actions.restore'),
+      show: canManage && archived,
+      danger: false,
+    },
+  ].filter((item) => item.show);
+
+  return (
+    <Card padded={false} lift="flat">
+      <Pressable
+        onPress={() => onIntent(driver, 'view')}
+        accessibilityRole="button"
+        accessibilityLabel={tCard('openDetail', { name: driver.name })}
+      >
+        <YStack p={space.md} gap={CARD_GAP}>
+          <XStack ai="center" gap={12}>
+            <Avatar name={driver.name} url={driver.photoUrl ?? null} size={AVATAR} />
+            <YStack f={1} minWidth={0} gap={space.xs}>
+              <Text
+                col={colors.text}
+                fos={typeScale.title.fontSize}
+                lh={typeScale.title.lineHeight}
+                fow={fontWeight.semibold}
+                numberOfLines={1}
+              >
+                {driver.name}
+              </Text>
+              <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={22} numberOfLines={1}>
+                {driver.phone}
+              </Text>
+            </YStack>
+            {menu.length > 0 ? (
+              <YStack alignSelf="flex-start">
+                <Pressable
+                  onPress={() => setMenuOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={tCard('menu', { name: driver.name })}
+                  hitSlop={KEBAB_SLOP}
+                >
+                  <LineIcon name="menu-kebab" size={iconSize.lg} color={colors.textMuted} />
+                </Pressable>
+              </YStack>
+            ) : null}
+          </XStack>
+
+          {/* Figma `24612:138272`: nhãn loại · ô trạng thái viên xám · dòng "Chuyến đang gán", khe 12. */}
+          <YStack gap={12}>
+            <XStack ai="center" gap={space.sm}>
+              {/* Figma `24612:138274`: viên xám `bg/gray-50`, chữ 12/18 medium `text/gray/medium`. */}
+              <YStack px={space.sm} py={2} br={radius.card} bg={colors.background}>
+                <Text
+                  col={colors.textMuted}
+                  fos={typeScale.label.fontSize}
+                  lh={typeScale.label.lineHeight}
+                  fow={fontWeight.medium}
+                >
+                  {t('roster.typeInternal')}
+                </Text>
+              </YStack>
+              {/* Ghi chú nội bộ: Figma không vẽ trên thẻ - người dùng chốt đưa vào dấu (!) (26/11/2026). */}
+              {driver.note ? (
+                <InfoHint label={t('detailPage.note.title')} content={driver.note} />
+              ) : null}
+            </XStack>
+
+            {/*
+              Figma `24612:138275` "Verification Status": viên `bg/gray-50` bo tròn hẳn, đệm 12/8,
+              nhãn 14 `text/gray/low` trái, giá trị 14 semibold phải (đang hoạt động = success-high).
+            */}
+            <XStack ai="center" gap={6} px={12} py={space.sm} br={radius.pill} bg={colors.background}>
+              <Text f={1} col={colors.placeholder} fos={typeScale.body.fontSize} lh={20}>
+                {t('roster.statusLabel')}
+              </Text>
+              <Text
+                col={archived ? colors.textMuted : colors.success}
+                fos={typeScale.body.fontSize}
+                lh={20}
+                fow={fontWeight.semibold}
+                numberOfLines={1}
+              >
+                {archived ? t('roster.internalArchived') : t('roster.internalActive')}
+              </Text>
+            </XStack>
+
+            <XStack jc="space-between" ai="center" gap={space.sm}>
+              <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                {tCard('activeTrips')}
+              </Text>
+              {driver.activeTripCount > 0 ? (
+                <Text
+                  col={colors.brandLink}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.medium}
+                  textDecorationLine="underline"
+                  numberOfLines={1}
+                >
+                  {t('activeBookings', { count: driver.activeTripCount })}
+                </Text>
+              ) : (
+                <Text
+                  col={colors.textDisabled}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.medium}
+                >
+                  {tApp('noTrips')}
+                </Text>
+              )}
+            </XStack>
+          </YStack>
+        </YStack>
+      </Pressable>
+
+      <BottomSheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={driver.name}
+        chrome="v2"
+        headerDivider
+        padded={false}
+      >
+        <YStack pb={space.sm}>
+          {menu.map((item) => (
+            <ActionMenuRow
+              key={item.key}
+              icon={item.icon}
+              label={item.label}
+              danger={item.danger}
+              disabled={pending}
+              onPress={() => {
+                setMenuOpen(false);
+                onIntent(driver, item.key);
+              }}
+            />
+          ))}
+        </YStack>
+      </BottomSheet>
+    </Card>
+  );
+}
+
+export const InternalDriverCard = memo(InternalDriverCardImpl);

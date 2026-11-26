@@ -522,6 +522,19 @@
     "depositNoticeBody": "A deposit is the customer’s property held in trust and returned at the end of the trip - it appears in the cash book but does not reduce what the customer still owes in rent.",
     "descriptionLabel": "Note (optional)",
     "recordDepositSuccess": "Deposit recorded",
+    "partnerApp": {
+      "title": "Collect payment for booking #{code}",
+      "debtLine": "{label} {amount}",
+      "fillFull": "Collect in full {amount}",
+      "fillHalf": "Collect half {amount}",
+      "referenceLabel": "Transaction code",
+      "referencePlaceholder": "E.g. FT212001...",
+      "descriptionLabel": "Note",
+      "descriptionPlaceholder": "Enter a note",
+      "remainingAfter": "Still owed after this payment: <b>{amount}</b>",
+      "cancel": "Cancel",
+      "submitAmount": "Record {amount}"
+    },
     "validation": {
       "amountRequired": "Enter an amount",
       "amountPositive": "The amount must be greater than 0",

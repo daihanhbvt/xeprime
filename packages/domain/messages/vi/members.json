@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Nhân viên & Phân quyền",
+    "title": "Nhân viên & phân quyền",
     "tableLabel": "Danh sách thành viên",
     "loadError": "Không tải được danh sách thành viên",
     "empty": "Chưa có thành viên nào",
@@ -190,7 +190,13 @@
       "saved": "Đã lưu thay đổi",
       "created": "Đã tạo tài khoản nhân viên",
       "passwordReset": "Đã đặt lại mật khẩu"
-    }
+    },
+    "chipAll": "Tất cả",
+    "branchCount": "{count, plural, other {# chi nhánh}}",
+    "menuTitle": "Thao tác",
+    "menu": "Thao tác với {name}",
+    "openDetail": "Xem chi tiết {name}",
+    "statusAria": "Trạng thái: {status}"
   },
   "lastActive": {
     "online": "Đang trực tuyến",
@@ -262,7 +268,7 @@
     "scopeNote": "Quản lý, Nhân viên và Quan sát viên có thể được giới hạn theo chi nhánh phụ trách - đặt khi mời hoặc chỉnh sửa thành viên. Khi đó họ chỉ thấy xe, đơn và số liệu của các chi nhánh đó.",
     "groups": {
       "operations": "Vận hành",
-      "fleet": "Xe & Tài xế",
+      "fleet": "Xe & tài xế",
       "revenue": "Doanh thu",
       "settings": "Cấu hình",
       "help": "Trợ giúp"
@@ -296,7 +302,12 @@
       "fleetManage": "Một phần",
       "fleetView": "Một phần"
     },
-    "cellAria": "{role} - {row}: {level}"
+    "cellAria": "{role} - {row}: {level}",
+    "chooseRole": "Chọn vai trò xem",
+    "roleGroups": "{count, plural, other {# nhóm vai trò}}",
+    "features": "{count, plural, other {# chức năng}}",
+    "legendTitle": "Chú thích trạng thái quyền:",
+    "roleTabsLabel": "Chọn vai trò"
   },
   "staff": {
     "addButton": "Thêm nhân viên",
@@ -339,5 +350,13 @@
     "submit": "Đặt lại mật khẩu",
     "doneTitle": "Đã đặt lại mật khẩu",
     "doneBody": "Gửi mật khẩu mới cho {name}. Mật khẩu chỉ hiện MỘT lần."
+  },
+  "tabs": {
+    "label": "Nhân viên và vai trò",
+    "members": "Nhân viên"
+  },
+  "roleHintApp": {
+    "shop_owner": "Toàn quyền, gồm thanh toán & phân quyền cho toàn bộ hệ thống.",
+    "shop_manager": "Điều hành đơn, doanh thu. Không sửa thông tin pháp lý."
   }
 }

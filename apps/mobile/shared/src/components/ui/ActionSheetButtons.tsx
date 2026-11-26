@@ -22,6 +22,8 @@ export interface SheetAction {
   readonly loading?: boolean;
   /** Bề rộng CỐ ĐỊNH (dp) thay cho chia đều - Figma "Lưu trữ" rộng 163, "Phân loại" lấy phần còn lại. */
   readonly width?: number;
+  /** Tỉ lệ chia bề ngang với nút cùng hàng (mặc định 1 - chia đều): nhãn ngắn cho số nhỏ hơn nhãn dài. */
+  readonly grow?: number;
   /** Nút VUÔNG chỉ có icon (Figma "Thao tác" của chi tiết xe: thùng rác đỏ 40x40) - chữ chỉ đọc cho trợ năng. */
   readonly iconOnly?: boolean;
 }
@@ -53,7 +55,7 @@ export function ActionSheetButtons({ actions }: { actions: readonly SheetAction[
                 ? { w: BUTTON_HEIGHT, flexShrink: 0 }
                 : action.width
                 ? { w: action.width, flexShrink: 0 }
-                : { f: 1, flexBasis: 0, minWidth: 0 })}
+                : { f: action.grow ?? 1, flexBasis: 0, minWidth: 0 })}
             >
               <ActionButton action={action} />
             </YStack>

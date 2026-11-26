@@ -126,8 +126,14 @@ export function HandoverPhotoGrid({
   ensureHandover,
   variant = 'grid',
   disabled = false,
+  highlightSlots,
 }: {
   bookingId: string;
+  /**
+   * Góc vừa bị cảnh báo "chưa đủ ảnh" (web `highlightSlots`, 25/11/2026) — ô CÒN TRỐNG trong tập này
+   * viền đỏ cho tới khi chụp.
+   */
+  highlightSlots?: ReadonlySet<string> | undefined;
   /**
    * `grid` (mặc định - màn bổ sung biên bản): hai nhóm có tiêu đề, ngoại thất và đồng hồ KM.
    * `row` (chi tiết đơn - web `variant="row"`): mọi góc của loại xe chung một lưới, nhãn dưới ảnh.
@@ -281,6 +287,7 @@ export function HandoverPhotoGrid({
       key={slot}
       slot={slot}
       filled={taken.has(slot)}
+      flagged={!taken.has(slot) && busySlot !== slot && Boolean(highlightSlots?.has(slot))}
       busy={busySlot === slot}
       canOpen={canViewFiles && Boolean(taken.get(slot)?.fileId)}
       thumbnailUrl={photoUrls[taken.get(slot)?.fileId ?? '']}
@@ -450,6 +457,7 @@ const FLOAT_BTN = 28;
 const PhotoSlot = memo(function PhotoSlot({
   slot,
   filled,
+  flagged = false,
   busy,
   canOpen,
   canManage,
@@ -463,6 +471,8 @@ const PhotoSlot = memo(function PhotoSlot({
 }: {
   slot: HandoverPhotoSlot;
   filled: boolean;
+  /** Ô trống vừa bị cảnh báo thiếu ảnh — viền đỏ (web `.flagged`). */
+  flagged?: boolean;
   busy: boolean;
   canOpen: boolean;
   canManage: boolean;
@@ -522,7 +532,7 @@ const PhotoSlot = memo(function PhotoSlot({
           */
           bg={filled && !thumbnail ? colors.successSurface : colors.background}
           // Ô trống KHÔNG viền, chỉ nền xám nhạt - Figma `24158:103039` (người dùng 20/11/2026).
-          bc={filled && !thumbnail ? colors.success : 'transparent'}
+          bc={flagged ? colors.danger : filled && !thumbnail ? colors.success : 'transparent'}
           ai="center"
           jc="center"
           gap={space.xs}

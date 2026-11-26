@@ -1,4 +1,3 @@
-import { Ionicons } from '@/components/icons/Ionicons';
 import { createContext, useContext, type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -17,6 +16,25 @@ import {
   space,
   typeScale,
 } from '@/theme/tokens';
+
+/**
+ * Khe nhãn ↔ khung theo bộ ô hiện hành. MỌI ô (gõ, số, tiền, ngày, chọn) đọc từ đây để một form
+ * trộn nhiều loại ô vẫn đều nhịp - trước 26/11/2026 ô số/tiền/ngày còn dùng khe cũ.
+ */
+export function useFieldGap(): number {
+  return useFieldAppearance() === 'v2' ? FIELD_V2.labelGap : space.xs;
+}
+
+/**
+ * Cỡ chữ + chiều cao của `TextInput` MỘT dòng theo bộ ô hiện hành - một nguồn cho `TextField`,
+ * `TextControl`, `NumberControl`, `MoneyControl`. Người dùng báo 26/11/2026 ô Odo/Chi phí cao
+ * hơn ô bên cạnh (48 so với 44) vì hai ô đó chưa đọc bộ `v2`.
+ */
+export function useSingleLineInputMetrics(): { fontSize: number; minHeight: number } {
+  return useFieldAppearance() === 'v2'
+    ? { fontSize: FIELD_V2.valueFontSize, minHeight: FIELD_V2.height - 2 }
+    : { fontSize: fieldFontSize.value, minHeight: sizing.touchTarget };
+}
 
 /** Gợi ý dài hơn mức này thì gọn vào dấu ⓘ. */
 const HINT_INLINE_MAX = 60;
@@ -79,12 +97,13 @@ export const FIELD_V2 = {
  * "Số điện thoại ⓘ" - chạm mở tấm đọc đủ. Gợi ý ngắn vẫn hiện thẳng dưới ô. Mỗi ô gọi CẢ HAI hàm:
  * `inLabelHint` cho nhãn, `belowHint` cho `FieldMessage` - để một gợi ý không hiện hai lần.
  */
-export function inLabelHint(hint: string | undefined): string | undefined {
-  return hint && hint.length > HINT_INLINE_MAX ? hint : undefined;
+export function inLabelHint(hint: string | undefined, force = false): string | undefined {
+  return hint && (force || hint.length > HINT_INLINE_MAX) ? hint : undefined;
 }
 
-export function belowHint(hint: string | undefined): string | undefined {
-  return inLabelHint(hint) ? undefined : hint;
+/** `force` PHẢI trùng với `inLabelHint` của cùng ô - ép gợi ý lên nhãn thì dưới ô không lặp lại. */
+export function belowHint(hint: string | undefined, force = false): string | undefined {
+  return inLabelHint(hint, force) ? undefined : hint;
 }
 
 export function FieldLabel({
@@ -157,12 +176,10 @@ export function FieldMessage({
   const tLabels = useTranslations('Common.labels');
   if (error) {
     return (
-      <XStack ai="center" gap={space.xs}>
-        <Ionicons name="alert-circle" size={iconSize.xs} color={colors.danger} />
-        <Text f={1} col={colors.danger} fos={fieldFontSize.message}>
-          {error}
-        </Text>
-      </XStack>
+      // Chỉ chữ đỏ, KHÔNG icon (!) - người dùng chốt 26/11/2026, áp cho mọi lỗi ô nhập của app.
+      <Text col={colors.danger} fos={fieldFontSize.message}>
+        {error}
+      </Text>
     );
   }
   if (hint) {

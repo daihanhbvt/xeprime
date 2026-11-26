@@ -41,6 +41,14 @@ export const uploadsApi = {
    * Khác mọi presign còn lại ở đúng chỗ đó: chúng đều đòi một quyền trong một gian hàng, còn ảnh
    * đại diện thuộc về một CON NGƯỜI, và khách thuê xe không thuộc gian hàng nào.
    */
+  /**
+   * Ảnh đại diện TUỲ CHỌN của tài xế NỘI BỘ (ADR 0108) — cần `drivers.manage`. Chỉ là chân dung để
+   * nhận ra người trong danh bạ, không phải giấy tờ (web `presignDriverPhoto`).
+   */
+  driverPhoto(meta: UploadMeta): Promise<UploadPresign> {
+    return getApiClient().post<UploadPresign>('/uploads/driver-photos/presign', meta);
+  },
+
   avatar(meta: UploadMeta): Promise<UploadPresign> {
     return getApiClient().post<UploadPresign>('/uploads/avatar/presign', meta);
   },

@@ -1,21 +1,24 @@
 import BankOutlined from '@ant-design/icons-svg/es/asn/BankOutlined';
-import CarOutlined from '@ant-design/icons-svg/es/asn/CarOutlined';
 import CheckCircleFilled from '@ant-design/icons-svg/es/asn/CheckCircleFilled';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   BILLING_PHASE,
+  PLAN_FEATURE,
   PLAN_VEHICLE_SCOPE,
   VEHICLE_QUOTA_KIND,
   planVehicleScopeOf,
   type PlanVehicleScope,
 } from '@xeprime/types';
-import { nowInAppTz, toAppTz } from '@xeprime/domain';
+import { LIST_SEPARATOR, nowInAppTz, toAppTz } from '@xeprime/domain';
 import type { MySubscription } from '@/api/subscription/api';
+import { images } from '@/assets';
 import { AntIcon } from '@/components/icons/AntIcon';
-import { MotorbikeIcon } from '@/components/icons/BrandIcons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { InfoCard } from '@/components/ui/InfoCard';
@@ -23,10 +26,11 @@ import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { PlanConsultationSheet } from '@/features/app-config/PlanConsultationSheet';
 import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { useMySubscription } from '@/features/subscription/hooks/use-subscription';
+import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, gradients, iconSize, market, radius, space, typeScale } from '@/theme/tokens';
 
 type CurrentPlan = MySubscription['currentPlans'][number];
 type VehicleTypeQuota = MySubscription['vehicleQuotas']['car'];
@@ -35,14 +39,24 @@ type LaneScope = typeof PLAN_VEHICLE_SCOPE.CAR | typeof PLAN_VEHICLE_SCOPE.MOTOR
 /** Thứ tự làn của trang Thông tin cửa hàng - Ô TÔ trước (`SHOP_PLAN_LANE_ORDER` web). */
 const SHOP_PLAN_LANE_ORDER: readonly LaneScope[] = [PLAN_VEHICLE_SCOPE.CAR, PLAN_VEHICLE_SCOPE.MOTORBIKE];
 
-/** Ô icon làn 40 bo 8, icon 22 (`.laneIcon`). */
-const LANE_ICON_BOX = 40;
-const LANE_ICON = 22;
-/** Số "đã dùng / trần" 30/38 (`.usageUsed`). */
-const USAGE_SIZE = 30;
-const USAGE_LINE = 38;
-/** Thanh suất cao 8 (`.progress`). */
+/** Thẻ làn (Figma `24231:113846`): đệm 12, bo 16, các phần cách 12. */
+const LANE_PAD = 12;
+const LANE_GAP = 12;
+/** Ô icon làn: đệm 8 quanh icon 24, bo 8, nền `bg/primary-low` (`24231:113848`). */
+const LANE_ICON_PAD = 8;
+const LANE_ICON = 24;
+/** Số "đã dùng / trần" 24/32 (`24231:113856`). */
+const USAGE_SIZE = 24;
+const USAGE_LINE = 32;
+/** Thanh suất cao 8 (`24231:113858`). */
 const PROGRESS_HEIGHT = 8;
+/** Thẻ "Doanh nghiệp" (`24231:113941`): ô icon kính 40 bo 12, các phần cách 16. */
+const ENTERPRISE_ICON_BOX = 40;
+const ENTERPRISE_GAP = 16;
+/** Ô huy chương góc thẻ (`24231:113810` nút 40, icon Award 1). */
+const AWARD_BOX = 40;
+/** Hai tính năng đầu của gói Doanh nghiệp trên dòng phụ - đúng `EnterpriseOffer` web (`features.slice(0, 2)`). */
+const ENTERPRISE_FEATURES = [PLAN_FEATURE.FINANCE, PLAN_FEATURE.DEBTS] as const;
 
 function currentPlanForScope(plans: readonly CurrentPlan[], scope: PlanVehicleScope): CurrentPlan | null {
   return plans.find((plan) => planVehicleScopeOf(plan.vehicleScope) === scope) ?? null;
@@ -58,22 +72,23 @@ function daysLeftOf(endsAt: string): number {
 }
 
 /**
- * "Gói & hạn mức" của trang Thông tin cửa hàng - bản native của `ShopPlanSection` web ở khổ điện
- * thoại (design `23999:111391` / `23999:111045`): mỗi loại xe một thẻ làn (gói đang dùng + hạn, số
- * xe đã kích hoạt / trần kèm thanh suất, câu tình trạng suất, một lối mua), hoặc khối gói doanh
- * nghiệp đang dùng.
+ * "Gói & hạn mức" - Figma Partner "Quản lý gian hàng" `24231:113809` (bản web: `ShopPlanSection`,
+ * design `23999:111391` / `23999:111045`): mỗi loại xe một thẻ làn (gói đang dùng + hạn, số xe đã
+ * kích hoạt / trần kèm thanh suất, câu tình trạng suất), rồi thẻ tối "Doanh nghiệp"; hoặc khối gói
+ * doanh nghiệp đang dùng.
  *
  * App Partner KHÔNG bán gói và KHÔNG dẫn ra web để mua (Apple 3.1.1/3.1.3, chính sách Thanh toán
  * Google Play - người dùng chốt 19/11/2026): thẻ chỉ CHO XEM gói đang dùng + hạn mức, và lối duy
- * nhất là "Liên hệ tư vấn" (Zalo/hotline, không giá, không link mua). Các nút "Nâng cấp / Đổi gói",
- * "Gia hạn", "Mua gói" mở site partner đã GỠ - đừng thêm lại. Nơi gọi gác cờ khuyến mãi gói +
- * `subscription.view`.
+ * nhất là "Liên hệ tư vấn" (tấm đăng ký tư vấn, không giá, không link mua) - đặt trong thẻ tối
+ * "Doanh nghiệp" của Figma (người dùng chốt 26/11/2026). Các link "Gia hạn" / "Nâng cấp ngay" mà
+ * Figma vẽ trên thẻ làn KHÔNG dựng - đừng thêm lại. Ô huy chương ở góc chỉ là trang trí. Nơi gọi gác
+ * cờ khuyến mãi gói + `subscription.view`.
  */
 export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEvent) => void }) {
+  const colors = useColors();
   const t = useTranslations('Subscription');
   const tShop = useTranslations('Subscription.shopPlan');
   const tCommon = useTranslations('Common');
-  const tPlan = useTranslations('Subscription.mobilePlan');
   const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const me = useMySubscription();
 
@@ -83,20 +98,30 @@ export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEven
 
   return (
     <InfoCard
+      look="figma"
       title={tShop('title')}
       hint={tShop('hint')}
       {...(onLayout ? { onLayout } : {})}
       extra={
-        isPlanPromotionEnabled && data && !enterprise ? (
-          <Button
-            label={tPlan('contactButton')}
-            icon="chatbubbles-outline"
-            variant="secondary"
-            shape="square"
-            block={false}
-            onPress={() => setConsultOpen(true)}
+        <YStack
+          w={AWARD_BOX}
+          h={AWARD_BOX}
+          br={radius.control}
+          ov="hidden"
+          ai="center"
+          jc="center"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <LinearGradient
+            colors={gradients.walletCta.colors}
+            locations={gradients.walletCta.locations}
+            start={GRADIENT_START}
+            end={GRADIENT_END}
+            style={StyleSheet.absoluteFill}
           />
-        ) : undefined
+          <LineIcon name="award-1" size={iconSize.lg} color={colors.onPrimary} />
+        </YStack>
       }
     >
       {me.isLoading ? (
@@ -121,7 +146,7 @@ export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEven
           {...(isPlanPromotionEnabled ? { onContact: () => setConsultOpen(true) } : {})}
         />
       ) : (
-        <YStack gap={20}>
+        <>
           {SHOP_PLAN_LANE_ORDER.map((scope) => (
             <LaneCard
               key={scope}
@@ -130,14 +155,68 @@ export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEven
               quota={scope === PLAN_VEHICLE_SCOPE.CAR ? data.vehicleQuotas.car : data.vehicleQuotas.motorbike}
             />
           ))}
-        </YStack>
+          {isPlanPromotionEnabled ? <EnterpriseOffer onContact={() => setConsultOpen(true)} /> : null}
+        </>
       )}
       <PlanConsultationSheet open={consultOpen} onClose={() => setConsultOpen(false)} />
     </InfoCard>
   );
 }
 
-/** Thẻ MỘT loại xe - `ShopPlanLaneCard` web (design `23999:111394`). */
+/** `bg-gradient-to-r`: trái → phải. */
+const GRADIENT_START = { x: 0, y: 0.5 } as const;
+const GRADIENT_END = { x: 1, y: 0.5 } as const;
+
+/**
+ * Thẻ tối "Doanh nghiệp" (Figma `24231:113941`, cùng nội dung `EnterpriseOffer` web): nền ảnh tối,
+ * viền vàng, ô kính 40 + toà nhà, tiêu đề trắng + dòng phụ (hai tính năng · báo giá riêng), nút vàng
+ * "Liên hệ tư vấn" mở tấm đăng ký tư vấn - không giá, không link mua.
+ */
+function EnterpriseOffer({ onContact }: { onContact: () => void }) {
+  const colors = useColors();
+  const tCombined = useTranslations('Subscription.combined');
+  const tPlan = useTranslations('Subscription.mobilePlan');
+  const domainLabel = useDomainLabel();
+  const summary = [
+    ...ENTERPRISE_FEATURES.map((feature) => domainLabel('planFeature', feature)),
+    tCombined('enterpriseQuote'),
+  ].join(LIST_SEPARATOR);
+
+  return (
+    <YStack gap={ENTERPRISE_GAP} p={LANE_PAD} br={radius.card} bw={1} bc={colors.primaryGlow} ov="hidden">
+      <Image source={images.shopEnterpriseBg} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <XStack ai="flex-start" gap={LANE_GAP}>
+        <YStack
+          w={ENTERPRISE_ICON_BOX}
+          h={ENTERPRISE_ICON_BOX}
+          br={radius.control}
+          bg={market.onDarkGlass}
+          ai="center"
+          jc="center"
+        >
+          <LineIcon name="buildings" size={LANE_ICON} color={colors.brandShape} />
+        </YStack>
+        <YStack f={1} minWidth={0}>
+          <Text col={market.onDark} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
+            {tCombined('enterpriseTitle')}
+          </Text>
+          <Text col={market.onDarkMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            {summary}
+          </Text>
+        </YStack>
+      </XStack>
+      <Button
+        label={tPlan('contactButton')}
+        lineIcon="calling"
+        variant="gradient"
+        shape="square"
+        onPress={onContact}
+      />
+    </YStack>
+  );
+}
+
+/** Thẻ MỘT loại xe - Figma `24231:113846` (web `ShopPlanLaneCard`, design `23999:111394`). */
 function LaneCard({
   scope,
   current,
@@ -165,27 +244,27 @@ function LaneCard({
 
   return (
     <YStack
-      gap={space.md}
-      p={layout.cardPad}
+      gap={LANE_GAP}
+      p={LANE_PAD}
       br={radius.card}
       bw={1}
       bc={colors.border}
       bg={colors.surface}
       accessibilityLabel={tLanes(`title.${scope}`)}
     >
-      <XStack ai="center" gap={12}>
-        <YStack w={LANE_ICON_BOX} h={LANE_ICON_BOX} br={8} bg={colors.primaryLight} ai="center" jc="center">
-          {scope === PLAN_VEHICLE_SCOPE.CAR ? (
-            <AntIcon icon={CarOutlined} size={LANE_ICON} color={colors.primaryStrong} />
-          ) : (
-            <MotorbikeIcon size={LANE_ICON} color={colors.primaryStrong} />
-          )}
+      <XStack ai="center" gap={space.sm}>
+        <YStack p={LANE_ICON_PAD} br={radius.thumb} bg={colors.brandLow}>
+          <LineIcon
+            name={scope === PLAN_VEHICLE_SCOPE.CAR ? 'help-car' : 'motorbike-24'}
+            size={LANE_ICON}
+            color={colors.brandShape}
+          />
         </YStack>
         <YStack f={1} minWidth={0}>
-          <Text col={colors.text} fos={fontSize.bodyLg} lineHeight={24} fow={fontWeight.semibold}>
+          <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
             {current ? current.planName : scopeLabel}
           </Text>
-          <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20}>
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
             {current
               ? tLanes('endsOn', { date: fmt.date(current.endsAt) })
               : quota.kind === VEHICLE_QUOTA_KIND.SCOPE_REQUIRED
@@ -194,11 +273,11 @@ function LaneCard({
           </Text>
         </YStack>
         {current ? (
-          <YStack px={8} py={2} br={radius.pill} bg={warn ? colors.warningSurface : colors.surfaceMuted}>
+          <YStack px={8} py={2} br={radius.card} bg={warn ? colors.warningSurface : colors.surfaceMuted}>
             <Text
               col={warn ? colors.warning : colors.textMuted}
-              fos={fontSize.body}
-              lineHeight={20}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
               fow={fontWeight.medium}
               numberOfLines={1}
             >
@@ -222,7 +301,7 @@ function LaneCard({
               {` / ${quota.limit}`}
             </Text>
           ) : null}
-          <Text col={colors.textMuted} fos={fontSize.body}>
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
             {` ${limited || quota.kind !== VEHICLE_QUOTA_KIND.UNLIMITED ? t('activated') : t('activatedUnlimited')}`}
           </Text>
         </Text>
@@ -236,13 +315,19 @@ function LaneCard({
             accessibilityLabel={t('progressLabel', { scope: scopeLabel })}
             accessibilityValue={{ min: 0, max: quota.limit ?? 0, now: quota.used }}
           >
-            <YStack h="100%" w={`${percent}%`} br={4} bg={full ? colors.danger : colors.warning} />
+            <YStack h="100%" w={`${percent}%`} br={4} bg={full ? colors.danger : colors.warningHigh} />
           </YStack>
         ) : null}
       </YStack>
 
       <XStack flexWrap="wrap" ai="flex-start" jc="space-between" rowGap={8} columnGap={16}>
-        <Text f={1} minWidth={160} col={full ? colors.danger : colors.placeholder} fos={fontSize.body} lineHeight={20}>
+        <Text
+          f={1}
+          minWidth={160}
+          col={full ? colors.danger : colors.placeholder}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+        >
           {full
             ? t('full', { scope: scopeLabel.toLowerCase() })
             : free != null

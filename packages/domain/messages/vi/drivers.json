@@ -759,7 +759,8 @@
     "trips": {
       "total": "Tổng ghi nhận · {month}",
       "statement": "Bảng kê",
-      "rangeDays": "{range} · {days, plural, other {# ngày}}"
+      "rangeDays": "{range} · {days, plural, other {# ngày}}",
+      "customer": "Khách: <b>{name}</b>"
     },
     "invite": {
       "title": "Thêm tài xế mới",

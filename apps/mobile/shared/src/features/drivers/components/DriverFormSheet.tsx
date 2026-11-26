@@ -1,15 +1,28 @@
-import { useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { ActivityIndicator } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { DRIVER_TYPE, DRIVER_TYPE_VALUES } from '@xeprime/types';
+import * as yup from 'yup';
+import {
+  DRIVER_ROSTER_KIND,
+  DRIVER_TYPE,
+  DRIVER_TYPE_VALUES,
+  VN_MOBILE_PHONE_PATTERN,
+  compactPhoneInput,
+  normalizeVnPhoneInput,
+  type DriverRosterKind,
+} from '@xeprime/types';
 import {
   editDriverSchema,
   inviteDriverSchema,
   type EditDriverValues,
   type InviteDriverValues,
 } from '@xeprime/validators';
+import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { SelectField } from '@/components/ui/SelectField';
@@ -21,7 +34,20 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, space } from '@/theme/tokens';
 import type { Driver } from '../api';
-import { useInviteDriver, useUpdateDriver } from '../hooks/use-drivers';
+import { useDriverAccountLookup, useInviteDriver, useUpdateDriver } from '../hooks/use-drivers';
+import { InternalDriverForm } from './InternalDriverFormSheet';
+
+/** Chờ người dùng ngừng gõ rồi mới tra tài khoản (web `LOOKUP_DEBOUNCE_MS`). */
+const LOOKUP_DEBOUNCE_MS = 400;
+
+/**
+ * Hộp mời mới (Figma `23737:46392`, web 25/11/2026) KHÔNG có ô tên: tên lưu là tên tài khoản tra
+ * được. `name` chỉ còn mang tên cũ khi MỜI LẠI một liên kết đã đóng — ghi đè luật bắt buộc của
+ * schema chung, đúng như web `makeInviteDriverSchema`.
+ */
+const inviteFormSchema = inviteDriverSchema.shape({
+  name: yup.string().trim().max(255).default(''),
+});
 
 const EMPTY_INVITE: InviteDriverValues = {
   phone: '',
@@ -66,37 +92,63 @@ function FormActions({
 }
 
 /**
- * MỜI tài xế bằng SĐT (ADR 0063) — bản native của `InviteDriverModal`. Tài xế là TÀI KHOẢN KHÁCH
- * đã xác minh; chưa có thì server trả `DRIVER_ACCOUNT_NOT_FOUND` và câu lỗi hiện NGAY trong tấm
- * (không chỉ toast) — nó nói rõ việc cần làm: nhờ tài xế đăng ký bằng đúng số đó.
+ * Tấm "Thêm tài xế mới" — native port of web `AddDriverModal` (25/11/2026): hai tab "Mời tài xế"
+ * (tài khoản khách đã xác minh, ADR 0063) và "Tài xế nội bộ" (danh bạ không tài khoản, ADR 0108).
+ * MỜI LẠI một liên kết đã đóng thì chỉ có form mời, không có tab.
  */
-export function InviteDriverSheet({
+export function AddDriverSheet({
   open,
   onClose,
   prefill,
 }: {
   open: boolean;
   onClose: () => void;
-  /** "Mời lại" một liên kết đã đóng — điền sẵn SĐT/tên/loại/ghi chú của liên kết cũ. */
   prefill?: InviteDriverValues | null;
 }) {
-  const t = useTranslations('Drivers.form');
-  const tApp = useTranslations('Drivers.app.invite');
+  const t = useTranslations('Drivers');
+  const [tab, setTab] = useState<DriverRosterKind>(DRIVER_ROSTER_KIND.LINKED);
+  const close = () => {
+    setTab(DRIVER_ROSTER_KIND.LINKED);
+    onClose();
+  };
+  const active = prefill ? DRIVER_ROSTER_KIND.LINKED : tab;
+  const tabs = useMemo(
+    () => [
+      { key: DRIVER_ROSTER_KIND.LINKED, label: t('add.tabs.invite') },
+      { key: DRIVER_ROSTER_KIND.INTERNAL, label: t('add.tabs.internal') },
+    ],
+    [t],
+  );
   return (
     <BottomSheet
       open={open}
-      onClose={onClose}
+      onClose={close}
       chrome="v2"
       headerDivider
-      title={prefill ? t('titleReinvite') : tApp('title')}
-      subtitle={tApp('subtitle')}
+      title={prefill ? t('form.titleReinvite') : t('add.title')}
     >
-      {/* Mount theo `open`: mỗi lần mở là một form mới, lỗi của lần mời trước không ở lại. */}
-      {open ? <InviteForm onDone={onClose} defaults={prefill ?? EMPTY_INVITE} /> : null}
+      {/* Mount theo `open`: mỗi lần mở là một form mới, lỗi của lần trước không ở lại. */}
+      {open ? (
+        <YStack gap={space.md}>
+          {prefill ? null : (
+            <SegmentedTabs<DriverRosterKind> items={tabs} value={active} onChange={setTab} />
+          )}
+          {active === DRIVER_ROSTER_KIND.LINKED ? (
+            <InviteForm onDone={close} defaults={prefill ?? EMPTY_INVITE} />
+          ) : (
+            <InternalDriverForm driver={null} onDone={close} onCancel={close} />
+          )}
+        </YStack>
+      ) : null}
     </BottomSheet>
   );
 }
 
+/**
+ * MỜI tài xế bằng SĐT (ADR 0063) — bản native của `InviteDriverModal`. Tài xế là TÀI KHOẢN KHÁCH
+ * đã xác minh; chưa có thì server trả `DRIVER_ACCOUNT_NOT_FOUND` và câu lỗi hiện NGAY trong tấm
+ * (không chỉ toast) — nó nói rõ việc cần làm: nhờ tài xế đăng ký bằng đúng số đó.
+ */
 function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: InviteDriverValues }) {
   const t = useTranslations('Drivers');
   const toast = useAppToast();
@@ -105,7 +157,7 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
   const typeOptions = useTypeOptions();
 
   const resolver = useValidationResolver<InviteDriverValues>(
-    inviteDriverSchema,
+    inviteFormSchema,
     'Drivers.form.errors',
   );
   const { control, handleSubmit } = useForm<InviteDriverValues>({
@@ -113,12 +165,22 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
     defaultValues: defaults,
   });
 
+  // Tra tài khoản khi SĐT đủ dạng di động VN (web `useInviteDriverForm`).
+  const typed = useWatch({ control, name: 'phone' }) ?? '';
+  const normalized = normalizeVnPhoneInput(compactPhoneInput(typed));
+  const debounced = useDebouncedValue(
+    VN_MOBILE_PHONE_PATTERN.test(normalized) ? normalized : null,
+    LOOKUP_DEBOUNCE_MS,
+  );
+  const lookup = useDriverAccountLookup(debounced);
+  const account = lookup.data?.found ? lookup.data : null;
+
   const submit = handleSubmit((values) => {
     if (invite.isPending) return;
     invite.mutate(
       {
         phone: values.phone.trim(),
-        name: values.name.trim(),
+        ...(values.name.trim() ? { name: values.name.trim() } : {}),
         driverType: values.driverType,
         ...(values.note.trim() ? { note: values.note.trim() } : {}),
       },
@@ -143,12 +205,11 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
         autoComplete="tel"
         required
       />
-      <TextField
-        control={control}
-        name="name"
-        label={t('form.name')}
-        placeholder={t('form.namePlaceholder')}
-        required
+      <AccountLookupBox
+        phone={debounced}
+        loading={lookup.isFetching}
+        failed={lookup.isError}
+        account={account}
       />
       <SelectField
         control={control}
@@ -165,11 +226,11 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
         multiline scrollable
         rows={3}
       />
-      {/* Khối "Lưu ý" cuối form như web `InviteDriverModal` (tiêu đề + mô tả). */}
+      {/* Khối "Lưu ý" cuối form như web (tiêu đề + mô tả). */}
       <Callout title={t('form.hintTitle')}>{t('form.inviteHint')}</Callout>
       <FormActions
         saving={invite.isPending}
-        submitLabel={t('app.invite.submit')}
+        submitLabel={t('add.invite.submit')}
         onClose={onDone}
         onSubmit={() => void submit()}
       />
@@ -178,6 +239,66 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
 }
 
 /** SỬA một liên kết — SĐT không đổi được (mời lại là một liên kết mới). Bản native `EditDriverModal`. */
+/**
+ * Ô "Thông tin tài xế" của hộp mời — tên + ảnh tài khoản khách tra theo SĐT (web
+ * `useInviteDriverForm.accountBox`): gợi ý nhập SĐT · đang tra · lỗi tra (vẫn mời được) · tìm thấy
+ * (kèm cảnh báo đã liên kết) · không có tài khoản đã xác minh.
+ */
+function AccountLookupBox({
+  phone,
+  loading,
+  failed,
+  account,
+}: {
+  phone: string | null;
+  loading: boolean;
+  failed: boolean;
+  account: { displayName?: string | null; avatarUrl?: string | null; alreadyLinked: boolean } | null;
+}) {
+  const colors = useColors();
+  const t = useTranslations('Drivers.add.invite');
+  const hint = (text: string, tone: string = colors.textMuted) => (
+    <Text col={tone} fos={fontSize.bodySm}>
+      {text}
+    </Text>
+  );
+  let body;
+  if (!phone) body = hint(t('accountPlaceholder'));
+  else if (loading)
+    body = (
+      <XStack ai="center" gap={space.sm}>
+        <ActivityIndicator size="small" color={colors.primaryActive} />
+        {hint(t('lookingUp'))}
+      </XStack>
+    );
+  else if (failed) body = hint(t('lookupError'));
+  else if (account)
+    body = (
+      <XStack ai="center" gap={space.sm}>
+        <Avatar name={account.displayName ?? ''} url={account.avatarUrl ?? null} size={24} />
+        <Text f={1} col={colors.text} fos={fontSize.body} numberOfLines={1}>
+          {account.displayName}
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {phone}
+        </Text>
+      </XStack>
+    );
+  else body = hint(t('notFound'), colors.danger);
+
+  return (
+    <YStack gap={space.xs} accessibilityLiveRegion="polite">
+      <Text col={colors.text} fos={fontSize.bodySm}>
+        {t('account')}
+      </Text>
+      <YStack p={space.sm} br={8} bw={1} bc={colors.border} bg={colors.background}>
+        {body}
+      </YStack>
+      {account?.alreadyLinked ? hint(t('alreadyLinked'), colors.warningStrong) : null}
+    </YStack>
+  );
+}
+
 export function EditDriverSheet({
   driver,
   onClose,

@@ -43,6 +43,9 @@ export const FINANCE_OVERVIEW_PERIOD_VALUES = [
  */
 export const FINANCE_OVERVIEW_DEFAULT_PERIOD: PeriodKey = 'this_month';
 
+/** Kỳ mặc định khi mở sổ Thu-Chi không kèm bộ lọc (chốt 26/11/2026) - cùng `RECEIPT_DEFAULT_PERIOD` của web. */
+export const RECEIPT_DEFAULT_PERIOD: PeriodKey = 'this_month';
+
 /** Số dòng mỗi trang của hai bảng xếp hạng — cùng con số web dùng. */
 export const VEHICLE_PROFIT_PAGE_SIZE = 10;
 

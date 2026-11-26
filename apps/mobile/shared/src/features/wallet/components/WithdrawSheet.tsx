@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { getErrorCode } from '@xeprime/api-client';
@@ -8,10 +8,12 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { SheetConfirmFooter } from '@/components/ui/SheetConfirmFooter';
 import { FieldLabel } from '@/components/ui/Field';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { MoneyControl } from '@/components/ui/MoneyControl';
-import { BankAccountCard } from '@/features/bank-accounts/components/BankAccountCard';
+import { BankAccountInline } from '@/features/bank-accounts/components/BankAccountInline';
 import { BankAccountFormSheet } from '@/features/bank-accounts/components/BankAccountFormSheet';
 import { currentBankAccount } from '@/features/bank-accounts/current-account';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
@@ -111,7 +113,40 @@ export function WithdrawSheet({
 
   return (
     <>
-      <BottomSheet open={open} onClose={close} title={t('title')}>
+      {/*
+        Cùng khung các tấm của app Partner (`chrome="v2"` + kẻ dưới tiêu đề). Chân tấm
+        là "Huỷ" (trái) + "Gửi yêu cầu rút", không icon (người dùng chốt 26/11/2026).
+      */}
+      <BottomSheet
+        open={open}
+        onClose={close}
+        chrome="v2"
+        headerDivider
+        title={t('title')}
+        /*
+          Cam kết thời gian chuyển ở ⓘ cạnh tiêu đề (người dùng chốt 26/11/2026, thay khung xanh) -
+          vẫn đọc được TRƯỚC khi bấm gửi (ADR 0025 điều 7).
+        */
+        titleAdornment={
+          <InfoHint
+            label={t('title')}
+            content={t('commitment', {
+              days: summary.data?.maxBusinessDays ?? FALLBACK_BUSINESS_DAYS,
+            })}
+          />
+        }
+        footer={
+          <SheetConfirmFooter
+            backLabel={tCommon('cancel')}
+            onBack={close}
+            confirmLabel={t('submit')}
+            onConfirm={submit}
+            tone="primary"
+            disabled={!valid}
+            loading={create.isPending}
+          />
+        }
+      >
         <YStack gap={space.md}>
           {/*
             Ô TIỀN, không phải một ô chữ tự lọc chữ số: số gõ vào được nhóm nghìn NGAY khi gõ —
@@ -134,22 +169,11 @@ export function WithdrawSheet({
 
             {accounts.isError ? <Callout tone="danger">{tBank('loadError')}</Callout> : null}
 
-            {account ? (
-              <BankAccountCard
-                account={account}
-                emphasis
-                action={
-                  <Button
-                    label={tBank('actions.change')}
-                    variant="ghost"
-                    size="sm"
-                    icon="swap-horizontal-outline"
-                    disabled={create.isPending}
-                    onPress={() => setFormOpen(true)}
-                  />
-                }
-              />
-            ) : null}
+            {/*
+              Thẻ gọn như khối "Tài khoản nhận tiền" của ví. KHÔNG có nút đổi ở đây - đổi tài khoản
+              là việc của khối đó trên màn ví (yêu cầu đổi + xác minh), không nằm giữa luồng rút.
+            */}
+            {account ? <BankAccountInline account={account} /> : null}
 
             {/*
               Chưa có tài khoản ⇒ lời mời khai thay cho một dòng "chưa có gì": đây là bước bắt
@@ -160,41 +184,12 @@ export function WithdrawSheet({
                 label={t('accountEmpty')}
                 variant="secondary"
                 size="sm"
-                icon="add"
                 onPress={() => setFormOpen(true)}
               />
             ) : null}
           </YStack>
 
-          {/* Cam kết thời gian chuyển — đọc được TRƯỚC khi gửi, không phải sau (ADR 0025 điều 7). */}
-          <Callout tone="info">
-            {t('commitment', { days: summary.data?.maxBusinessDays ?? FALLBACK_BUSINESS_DAYS })}
-          </Callout>
 
-          <YStack gap={space.sm}>
-            {/* Hai nút một hàng: Huỷ (trái) · Gửi yêu cầu rút vàng (phải) - người dùng 17/11/2026. */}
-            <XStack gap={space.sm}>
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-                <Button
-                  label={tCommon('cancel')}
-                  icon="close-outline"
-                  variant="neutral"
-                  disabled={create.isPending}
-                  onPress={close}
-                />
-              </YStack>
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-                <Button
-                  icon="send-outline"
-                  label={t('submit')}
-                  variant="gradient"
-                  disabled={!valid}
-                  loading={create.isPending}
-                  onPress={submit}
-                />
-              </YStack>
-            </XStack>
-          </YStack>
         </YStack>
       </BottomSheet>
 

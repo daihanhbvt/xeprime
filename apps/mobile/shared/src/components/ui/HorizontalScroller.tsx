@@ -44,6 +44,7 @@ export function HorizontalScroller({
   const [content, setContent] = useState(0);
   const [offset, setOffset] = useState(0);
 
+  const back = viewport > 0 && offset > END_EPSILON;
   const more = viewport > 0 && content - viewport > END_EPSILON && offset + viewport < content - END_EPSILON;
 
   const handleScroll = useCallback(
@@ -75,35 +76,74 @@ export function HorizontalScroller({
       >
         {children}
       </ScrollView>
+      {back ? (
+        <HintButton
+          side="left"
+          hintTop={hintTop}
+          label={t('previous')}
+          onPress={() => ref.current?.scrollTo({ x: Math.max(0, offset - viewport * STEP_RATIO), animated: true })}
+        />
+      ) : null}
       {more ? (
-        <Animated.View
-          entering={FadeIn}
-          exiting={FadeOut}
-          pointerEvents="box-none"
-          style={[styles.wrap, hintTop === undefined ? styles.centered : { top: hintTop }]}
-        >
-          <Pressable
-            onPress={() => ref.current?.scrollTo({ x: Math.min(content - viewport, offset + viewport * STEP_RATIO), animated: true })}
-            accessibilityRole="button"
-            accessibilityLabel={t('next')}
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.button,
-              elevation.raised,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-              pressed ? styles.pressed : null,
-            ]}
-          >
-            <LineIcon name="chevron-right-sm" size={iconSize.md} color={colors.text} />
-          </Pressable>
-        </Animated.View>
+        <HintButton
+          side="right"
+          hintTop={hintTop}
+          label={t('next')}
+          onPress={() => ref.current?.scrollTo({ x: Math.min(content - viewport, offset + viewport * STEP_RATIO), animated: true })}
+        />
       ) : null}
     </View>
   );
 }
 
+/** Nút nổi tròn ở một mép: ">" khi phía sau còn nội dung, "<" khi đã cuộn khỏi đầu (người dùng 26/11/2026). */
+function HintButton({
+  side,
+  hintTop,
+  label,
+  onPress,
+}: {
+  side: 'left' | 'right';
+  hintTop: number | undefined;
+  label: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Animated.View
+      entering={FadeIn}
+      exiting={FadeOut}
+      pointerEvents="box-none"
+      style={[
+        side === 'left' ? styles.left : styles.right,
+        hintTop === undefined ? styles.centered : { top: hintTop },
+      ]}
+    >
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        hitSlop={8}
+        style={({ pressed }) => [
+          styles.button,
+          elevation.raised,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+          pressed ? styles.pressed : null,
+        ]}
+      >
+        {/* Cùng icon "Right" của bộ nét, quay 180° cho chiều về - không mượn glyph bộ khác. */}
+        <Animated.View style={side === 'left' ? styles.flip : null}>
+          <LineIcon name="chevron-right-sm" size={iconSize.md} color={colors.text} />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', right: 4 },
+  left: { position: 'absolute', left: 4 },
+  right: { position: 'absolute', right: 4 },
+  flip: { transform: [{ rotate: '180deg' }] },
   centered: { top: '50%', marginTop: -SIZE / 2 },
   button: {
     width: SIZE,

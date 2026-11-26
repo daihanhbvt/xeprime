@@ -111,7 +111,9 @@
       "attachmentAlt": "Ảnh minh chứng",
       "cancelAction": "Huỷ phiếu",
       "titleWithNo": "Chi tiết phiếu #{no}",
-      "approveAction": "Duyệt phiếu"
+      "approveAction": "Duyệt phiếu",
+      "confirmApprove": "Bạn có chắc chắn muốn duyệt {type, select, income {phiếu thu} other {phiếu chi}} #{no}?",
+      "confirmCancel": "Bạn có chắc chắn muốn huỷ {type, select, income {phiếu thu} other {phiếu chi}} #{no}?"
     },
     "form": {
       "title": "Tạo phiếu thu/chi",
@@ -129,7 +131,7 @@
       "method": "Hình thức",
       "amount": "Số tiền",
       "referenceCode": "Mã giao dịch",
-      "referenceCodePlaceholder": "VD: FT212001...",
+      "referenceCodePlaceholder": "VD: FT212001",
       "description": "Diễn giải",
       "attachments": {
         "label": "Đính kèm chứng từ",
@@ -141,7 +143,10 @@
         "tooMany": "Tối đa {max} tệp",
         "sourceCamera": "Chụp ảnh",
         "sourceLibrary": "Chọn từ thư viện",
-        "sourcePdf": "Chọn tệp PDF"
+        "sourcePdf": "Chọn tệp PDF",
+        "uploadCta": "Nhấn để tải lên Chứng từ đính kèm",
+        "uploadHint": "JPG, PNG, PDF (<{maxMb}Mb), nên đính kèm hóa đơn",
+        "uploadingFile": "Đang tải lên..."
       },
       "submit": {
         "income": "Tạo phiếu thu",
@@ -170,7 +175,8 @@
         "bookingRequired": "Chọn đơn thuê để gắn phiếu",
         "vehicleRequired": "Chọn xe để gắn phiếu",
         "description": "Nhập diễn giải / lý do",
-        "branchRequired": "Chọn chi nhánh phát sinh"
+        "branchRequired": "Chọn chi nhánh phát sinh",
+        "category": "Chọn danh mục"
       },
       "link": {
         "label": "Liên kết với",
@@ -188,7 +194,16 @@
       "typeExpense": "Phiếu chi",
       "bookingField": "Đơn hàng liên kết",
       "vehicleField": "Phương tiện liên kết",
-      "descriptionPlaceholder": "Nhập nội dung"
+      "descriptionPlaceholder": "Nhập nội dung",
+      "typeTab": {
+        "income": "Phiếu thu",
+        "expense": "Phiếu chi"
+      },
+      "linkChip": {
+        "none": "Khoản chung",
+        "booking": "Đơn thuê",
+        "vehicle": "Phương tiện"
+      }
     },
     "summary": {
       "error": "Không tải được số tổng - danh sách bên dưới vẫn đúng",
@@ -217,6 +232,8 @@
         "actions": "Thao tác"
       },
       "addRow": "Thêm danh mục",
+      "addTitle": "Thêm danh mục mới",
+      "addSubmit": "Thêm vào danh sách",
       "edit": "Sửa tên danh mục",
       "save": "Lưu danh mục",
       "discard": "Bỏ thay đổi",
@@ -225,7 +242,11 @@
       "deleteConfirm": "Xoá danh mục \"{name}\"?",
       "systemHint": "Danh mục hệ thống - không sửa hoặc xoá được",
       "empty": "Chưa có danh mục nào",
-      "done": "Đóng"
+      "done": "Đóng",
+      "typeBadge": {
+        "income": "Phiếu thu",
+        "expense": "Phiếu chi"
+      }
     },
     "uncategorized": "Chưa phân loại",
     "booking": {
@@ -239,6 +260,7 @@
       "label": "Số liệu thu chi",
       "income": "Tổng thu",
       "incomeHint": "Tiền mặt {cash} · CK {transfer}",
+      "incomeHintCompact": "TM {cash} · CK {transfer}",
       "expense": "Tổng chi",
       "balance": "Cân đối",
       "balanceHint": "Thu - Chi",
@@ -343,6 +365,26 @@
       "surcharge": "Chi phí phát sinh",
       "none": "Không có",
       "errorTitle": "Không tải được đơn thuê"
+    },
+    "partnerApp": {
+      "tiles": {
+        "within": "Trong hạn",
+        "withinHint": "{count, plural, other {# đơn thanh toán}}",
+        "unpaid": "Chưa thu",
+        "unpaidHint": "{count, plural, =0 {Đơn nào cũng đã thu một phần} other {Chưa thu phần nào}}"
+      },
+      "upcoming": "Sắp hạn",
+      "card": {
+        "dueAt": "Hạn: {date}",
+        "overdueAt": "Quá hạn: {date}",
+        "paid": "Đã thu: {amount}",
+        "debt": "Còn nợ: {amount}",
+        "more": "Thao tác đơn #{code}"
+      },
+      "detail": {
+        "title": "Đơn #{code}",
+        "vehicle": "Xe & Giao nhận"
+      }
     }
   },
   "overview": {
@@ -506,7 +548,8 @@
         "label": "Sắp xếp",
         "revenue": "Doanh thu cao nhất",
         "trips": "Nhiều chuyến nhất"
-      }
+      },
+      "shareOfPeriod": "{value}% doanh thu kỳ"
     },
     "performance": {
       "title": "Hiệu suất kinh doanh",
@@ -593,8 +636,7 @@
     },
     "ratePair": "GTGT {vat, number}% + TNCN {pit, number}%",
     "notSplit": "Dòng cũ - không tách",
-    "monthValue": "Tháng {month}",
-    "periodShortYear": "Tháng {month}/{year}"
+    "monthValue": "Tháng {month}"
   },
   "history": {
     "page": {

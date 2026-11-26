@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -8,33 +9,40 @@ import {
   toLocalVnPhone,
   type BranchStatus,
 } from '@xeprime/types';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { ActionMenuRow } from '@/components/ui/ActionMenuRow';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
-import { FactRow } from '@/components/ui/FactRow';
-import { IconButton } from '@/components/ui/IconButton';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { BRANCH_ACTION, type Branch, type BranchAction } from '@/features/branches/api';
 import type { BranchCardActionState } from '@/features/branches/components/BranchCard';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
+import { fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 
-/** Dọc mỗi hàng 12 - hàng PHẲNG trong thẻ "Chi nhánh", ngăn bằng vạch mảnh. */
-const ROW_PAD_Y = 12;
+/** Thẻ chi nhánh (Figma `24231:113609` "Nhóm thông tin"): đệm 16, bo 16, các hàng cách 12. */
+const CARD_PAD = 16;
+const CARD_GAP = 12;
+/** Viên "15 xe": nền `bg/gray-100`, bo 4, đệm 8/2. */
+const COUNT_RADIUS = 4;
+/** Vùng chạm của nút ⋮ (icon 20). */
+const KEBAB_SLOP = 12;
+
+type MenuKey = 'edit' | BranchAction;
 
 /**
- * MỘT chi nhánh trong thẻ "Chi nhánh" của trang Thông tin cửa hàng - nội dung theo thẻ điện thoại
- * của `BranchesView` web (`renderCard`): tên · viên Mặc định · viên trạng thái; mã; "Phường · Tỉnh"
- * (hoặc viên "Chưa có tỉnh/thành"); viên "Cần soát địa chỉ"; địa chỉ; số xe · SĐT; lý do khoá; rồi
- * thao tác Sửa · Ngừng/Bật lại · "…" (Đặt làm mặc định).
+ * MỘT chi nhánh trong thẻ "Chi nhánh" của Quản lý gian hàng - Figma `24231:113609`:
  *
- * Hàng PHẲNG, không khung thẻ lồng và không vạch màu mép trái: nó đứng TRONG một thẻ đã có viền,
- * nên khung thứ hai chỉ ăn mất bề ngang (người dùng báo 10/11/2026). Màn danh sách Chi nhánh riêng
- * vẫn dùng `BranchCard`.
+ *   Tên chi nhánh [Đang hoạt động]                       ⋮
+ *   CN01 · Mặc định
+ *   ◎ địa chỉ · Phường/Xã · Tỉnh/TP
+ *   ☏ SĐT                                            [15 xe]
+ *
+ * Thao tác (Sửa · Ngừng/Bật lại · Đặt làm mặc định) gom vào tấm mở từ ⋮ (người dùng chốt
+ * 26/11/2026) - cùng luật khoá như trước (`useBranchRowActions`), lý do khoá in trong tấm. Người
+ * chỉ xem vẫn mở được tấm và thấy lý do "không có quyền quản lý", như web khoá kèm lý do.
  */
 export function ShopBranchRow({
   branch,
-  first,
   canManage,
   pendingAction,
   actionState,
@@ -42,7 +50,6 @@ export function ShopBranchRow({
   onAction,
 }: {
   branch: Branch;
-  first: boolean;
   canManage: boolean;
   pendingAction: BranchAction | null;
   actionState: Readonly<Record<BranchAction, BranchCardActionState>>;
@@ -55,115 +62,166 @@ export function ShopBranchRow({
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
   const [menuOpen, setMenuOpen] = useState(false);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   const isActive = branch.status === BRANCH_STATUS.ACTIVE;
   const toggle: BranchAction = isActive ? BRANCH_ACTION.DEACTIVATE : BRANCH_ACTION.ACTIVATE;
   const meta = BRANCH_STATUS_META[branch.status as BranchStatus];
   const area = [branch.wardName, branch.provinceName].filter(Boolean).join(LIST_SEPARATOR);
-  const facts = [
-    t('labels.vehicles', { count: branch.vehicleCount }),
-    branch.phone ? toLocalVnPhone(branch.phone) : null,
-  ]
-    .filter(Boolean)
-    .join(LIST_SEPARATOR);
+  const addressLine = [branch.address, area].filter(Boolean).join(LIST_SEPARATOR);
   const busy = pendingAction !== null;
   const canSetDefault = !branch.isDefault;
+  const locked = busy || !canManage;
 
-  /*
-   * Web (`BranchesView.actionsOf`) vẫn HIỆN thao tác cho người chỉ có `branches.view` - khoá kèm lý
-   * do "không có quyền quản lý". Trên điện thoại không có tooltip nên lý do in ngay dưới hàng.
-   */
   const reasons = canManage
     ? [...(canSetDefault ? [BRANCH_ACTION.SET_DEFAULT] : []), toggle]
         .filter((a) => !actionState[a].enabled)
         .map((a) => actionState[a].reason)
         .filter((r): r is string => Boolean(r))
     : [t('blocked.manage')];
-  const locked = busy || !canManage;
+
+  const menu: { key: MenuKey; icon: LineIconName; label: string; disabled: boolean; danger: boolean }[] = [
+    { key: 'edit', icon: 'edit', label: tActions('edit'), disabled: locked, danger: false },
+    {
+      key: toggle,
+      icon: isActive ? 'danger-circle' : 'rotate-left',
+      label: isActive ? t('actions.deactivate') : t('actions.activate'),
+      disabled: locked || !actionState[toggle].enabled,
+      danger: isActive,
+    },
+    ...(canSetDefault
+      ? [
+          {
+            key: BRANCH_ACTION.SET_DEFAULT as MenuKey,
+            icon: 'tick-circle' as const,
+            label: t('actions.setDefault'),
+            disabled: locked || !actionState[BRANCH_ACTION.SET_DEFAULT].enabled,
+            danger: false,
+          },
+        ]
+      : []),
+  ];
+
+  function runMenu(key: MenuKey) {
+    setMenuOpen(false);
+    if (key === 'edit') onEdit(branch);
+    else onAction(branch, key);
+  }
+
+  const bodyText = {
+    col: colors.slateText,
+    fos: typeScale.body.fontSize,
+    lh: typeScale.body.lineHeight,
+  } as const;
 
   return (
-    // Hàng chi nhánh theo khuôn thẻ danh sách chuẩn: tên + viên, FactRow, nút vàng (người dùng 17/11/2026).
-    <YStack
-      py={ROW_PAD_Y}
-      gap={space.sm}
-      borderTopWidth={first ? 0 : 1}
-      borderTopColor={colors.borderSubtle}
-    >
-      <XStack ai="center" jc="space-between" gap={space.sm}>
-        <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold} flexShrink={1} numberOfLines={1}>
-          {branch.name}
-        </Text>
-        <XStack ai="center" gap={space.xs}>
-          {branch.isDefault ? <Pill label={t('labels.default')} tone="brand" /> : null}
-          <Pill
-            label={domainLabel('branchStatus', branch.status, meta.label)}
-            tone={pillToneOfStatusColor(meta.color)}
-          />
-        </XStack>
+    <YStack p={CARD_PAD} gap={CARD_GAP} br={radius.card} bw={1} bc={colors.border} bg={colors.surface}>
+      <XStack ai="flex-start" gap={12}>
+        <YStack f={1} minWidth={0} gap={4}>
+          <XStack ai="center" gap={6}>
+            <Text
+              flexShrink={1}
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+            >
+              {branch.name}
+            </Text>
+            <Pill
+              label={domainLabel('branchStatus', branch.status, meta.label)}
+              tone={pillToneOfStatusColor(meta.color)}
+            />
+          </XStack>
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            {branch.code}
+            {branch.isDefault ? (
+              <Text col={colors.brandLink} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                {`${LIST_SEPARATOR}${t('labels.default')}`}
+              </Text>
+            ) : null}
+          </Text>
+        </YStack>
+        <Pressable
+          onPress={openMenu}
+          accessibilityRole="button"
+          accessibilityLabel={t('actions.menu', { name: branch.name })}
+          hitSlop={KEBAB_SLOP}
+          disabled={busy}
+        >
+          {busy ? (
+            <ActivityIndicator size="small" color={colors.textMuted} />
+          ) : (
+            <LineIcon name="menu-kebab" size={iconSize.lg} color={colors.textMuted} />
+          )}
+        </Pressable>
       </XStack>
-      <FactRow label={t('labels.code')}>{branch.code}</FactRow>
-      <FactRow label={t('labels.area')}>{area || t('labels.noProvince')}</FactRow>
-      {branch.address ? <FactRow label={t('labels.address')}>{branch.address}</FactRow> : null}
-      <FactRow label={t('labels.vehiclesTitle')}>{facts}</FactRow>
+
+      <XStack ai="flex-start" gap={space.sm}>
+        <LineIcon name="location" size={iconSize.lg} color={colors.textPlaceholder} />
+        {addressLine && branch.provinceCode ? (
+          <Text f={1} {...bodyText}>
+            {addressLine}
+          </Text>
+        ) : (
+          <Text f={1} {...bodyText} col={colors.warningHigh}>
+            {[branch.address, t('labels.noProvince')].filter(Boolean).join(LIST_SEPARATOR)}
+          </Text>
+        )}
+      </XStack>
+
+      <XStack ai="center" gap={space.sm}>
+        <LineIcon name="calling" size={iconSize.lg} color={colors.textPlaceholder} />
+        <Text f={1} {...bodyText} numberOfLines={1}>
+          {branch.phone ? toLocalVnPhone(branch.phone) : ''}
+        </Text>
+        <YStack px={8} py={2} br={COUNT_RADIUS} bg={colors.surfaceMuted}>
+          <Text
+            col={colors.slateStrong}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            fow={fontWeight.medium}
+          >
+            {t('labels.vehicles', { count: branch.vehicleCount })}
+          </Text>
+        </YStack>
+      </XStack>
+
       {branch.needsLocationReview ? (
         <XStack>
           <Pill label={tAddr('review.badge')} tone="warning" />
         </XStack>
       ) : null}
-      {reasons.map((reason) => (
-        <Text key={reason} col={colors.placeholder} fos={fontSize.label} fontStyle="italic">
-          {reason}
-        </Text>
-      ))}
 
-      <XStack gap={space.sm} pt={space.xs}>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
-          <Button
-            label={tActions('edit')}
-            icon="create-outline"
-            variant="gradient"
-            size="compact"
-            disabled={locked}
-            onPress={() => onEdit(branch)}
-          />
+      <BottomSheet open={menuOpen} onClose={closeMenu} title={branch.name} padded={false}>
+        <YStack pb={space.sm}>
+          {menu.map((entry) => (
+            <ActionMenuRow
+              key={entry.key}
+              icon={entry.icon}
+              label={entry.label}
+              danger={entry.danger}
+              disabled={entry.disabled}
+              onPress={() => runMenu(entry.key)}
+            />
+          ))}
+          {reasons.map((reason) => (
+            <Text
+              key={reason}
+              px={space.md}
+              pt={space.xs}
+              col={colors.placeholder}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fontStyle="italic"
+            >
+              {reason}
+            </Text>
+          ))}
         </YStack>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto" minWidth={0}>
-          <Button
-            label={isActive ? t('actions.deactivate') : t('actions.activate')}
-            icon={isActive ? 'pause-circle-outline' : 'play-circle-outline'}
-            variant={isActive ? 'dangerOutline' : 'gradient'}
-            size="compact"
-            loading={pendingAction === toggle}
-            disabled={locked || !actionState[toggle].enabled}
-            onPress={() => onAction(branch, toggle)}
-          />
-        </YStack>
-        {canSetDefault ? (
-          <IconButton
-            icon="ellipsis-horizontal"
-            label={t('actions.setDefault')}
-            disabled={locked}
-            compact
-            onPress={() => setMenuOpen(true)}
-          />
-        ) : null}
-      </XStack>
-
-      {canSetDefault ? (
-        <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title={branch.name}>
-          <Button
-            label={t('actions.setDefault')}
-            icon="checkmark-circle-outline"
-            variant="gradient"
-            loading={pendingAction === BRANCH_ACTION.SET_DEFAULT}
-            disabled={busy || !actionState[BRANCH_ACTION.SET_DEFAULT].enabled}
-            onPress={() => {
-              setMenuOpen(false);
-              onAction(branch, BRANCH_ACTION.SET_DEFAULT);
-            }}
-          />
-        </BottomSheet>
-      ) : null}
+      </BottomSheet>
     </YStack>
   );
 }

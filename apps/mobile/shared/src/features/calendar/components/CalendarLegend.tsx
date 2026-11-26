@@ -3,22 +3,18 @@ import { ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Ionicons } from '@/components/icons/Ionicons';
-import { BOOKING_STATUS_META, OCCUPANCY_SOURCE_TYPE_META } from '@xeprime/types';
+import { OCCUPANCY_SOURCE_TYPE } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
-import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, radius, space } from '@/theme/tokens';
 import {
-  isDashedEvent,
-  LEGEND_BOOKING_STATUSES,
+  LEGEND_SERVICES,
   legendExtraToneOf,
-  LEGEND_SOURCE_TYPES,
+  serviceColorTone,
   sourceTone,
-  statusColorTone,
   type CalendarTone,
 } from '../calendar-tone';
-import { EVENT_ICON } from '../event-tone';
 
 interface LegendItem {
   key: string;
@@ -55,24 +51,24 @@ const SWATCH_ICON = 9;
 export const CalendarLegend = memo(function CalendarLegend() {
   const colors = useColors();
   const t = useTranslations('Calendar');
-  const domainLabel = useDomainLabel();
 
+  /*
+   * Chú giải lịch v2 (web `CalendarLegend`, 25/11/2026): thẻ đơn tô theo DỊCH VỤ · Khoá/Bảo dưỡng
+   * (xám) · Giá riêng · Ngày lễ. Trạng thái đơn nay là viên chữ trên thanh, không còn là màu thẻ.
+   */
   const items: LegendItem[] = [
-    ...LEGEND_BOOKING_STATUSES.map((status) => ({
-      key: `status-${status}`,
-      label: domainLabel('bookingStatus', status, BOOKING_STATUS_META[status].label),
-      tone: statusColorTone(BOOKING_STATUS_META[status].color, colors),
+    ...LEGEND_SERVICES.map((service) => ({
+      key: `service-${service}`,
+      label: t(`legend.service.${service}`),
+      tone: serviceColorTone(service, colors),
     })),
-    ...LEGEND_SOURCE_TYPES.map((type) => {
-      const icon = EVENT_ICON[type];
-      return {
-        key: `source-${type}`,
-        label: domainLabel('occupancySourceType', type, OCCUPANCY_SOURCE_TYPE_META[type]?.label),
-        tone: sourceTone(type, colors),
-        dashed: isDashedEvent(type),
-        ...(icon ? { icon } : {}),
-      };
-    }),
+    {
+      key: 'off',
+      label: t('legend.off'),
+      tone: sourceTone(OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE, colors),
+      dashed: true,
+      icon: 'lock-closed' as IconName,
+    },
     {
       key: 'customPrice',
       label: t('legend.customPrice'),

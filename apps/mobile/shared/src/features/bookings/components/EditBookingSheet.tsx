@@ -102,7 +102,8 @@ export function EditBookingSheet({
   const driverEditable =
     withDriver && isDriverReassignable(booking.status) && permissions.has(PERMISSION.DRIVER_VIEW);
   const currentDriverId = booking.driver
-    ? booking.driver.source === DRIVER_SOURCE.EXTERNAL
+    ? booking.driver.source === DRIVER_SOURCE.EXTERNAL ||
+      booking.driver.source === DRIVER_SOURCE.INTERNAL
       ? EXTERNAL_DRIVER
       : (booking.driver.id ?? null)
     : null;
@@ -171,7 +172,10 @@ export function EditBookingSheet({
     driverId === null
       ? null
       : driverId === EXTERNAL_DRIVER && booking.driver
-        ? `${booking.driver.name}${LIST_SEPARATOR}${tDriverBooking('externalTag')}`
+        ? `${booking.driver.name}${LIST_SEPARATOR}${tDriverBooking(
+            // Tài xế nội bộ (ADR 0108) cũng là "giữ nguyên" — chỉ khác nhãn (web `BookingFormDialog`).
+            booking.driver.source === DRIVER_SOURCE.INTERNAL ? 'internalTag' : 'externalTag',
+          )}`
         : driverId === booking.driver?.id
           ? booking.driver.name
           : (drivers.data?.find((d) => d.id === driverId)?.name ?? null);
@@ -301,8 +305,9 @@ export function EditBookingSheet({
           onClose={() => setPicking(false)}
           booking={booking}
           selectedId={driverId}
-          onSelect={(id) => {
-            setDriverId(id);
+          linkedOnly
+          onSelect={(candidate) => {
+            setDriverId(candidate.id);
             setPicking(false);
           }}
         />

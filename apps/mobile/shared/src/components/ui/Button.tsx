@@ -63,7 +63,10 @@ type Variant =
  * `compact` = nút trong chân thẻ đơn v2 (Figma "Rental Request - MB" "Action Buttons"): cao 32 như
  * `sm` nhưng chữ 14/20 đậm vừa, đệm ngang 12, bo 12 — đứng cạnh đồng hồ đếm ngược.
  */
-type Size = 'sm' | 'md' | 'lg' | 'compact';
+/** `card` = nút trong thẻ Figma Partner: cao 36, đệm ngang 14, chữ 14/20 đậm vừa. */
+const CARD_PAD_X = 14;
+
+type Size = 'sm' | 'card' | 'md' | 'lg' | 'compact';
 /**
  * `pill` là mặc định của app — nút hành động chính chiếm trọn bề ngang, bo tròn hết cỡ.
  *
@@ -270,18 +273,15 @@ export function Button({
     variant === 'ghostDanger' ||
     (isMain && !blocked && (IS_PARTNER_APP || scheme !== 'dark'));
   /*
-   * Chữ nút bị khoá dùng `textMuted`, KHÔNG `textDisabled`: cái sau đặt trên nền `surfaceMuted`
-   * chỉ đạt tương phản ~1.6:1 nên nhãn gần như biến mất, và trạng thái khoá đọc thành "màn hình
-   * lỗi" thay vì "chưa nhập đủ". Cái phân biệt khoá với bấm được là NỀN, không phải độ mờ chữ.
+   * Nút VÔ HIỆU (không phải đang tải) - MỌI biến thể theo Figma "Lưu thay đổi" `24231:108413`
+   * (người dùng chốt 26/11/2026, thay bản vàng nhạt 25/11): nền `bg/gray-100` (`surfaceMuted`),
+   * chữ `text/gray/disable` #d5d7da (`borderInput`), KHÔNG viền. Nút dạng chữ (ghost/text) giữ nền
+   * trong suốt, chỉ chữ nhạt đi. Đang tải giữ dáng cũ (nền xám, chữ `textMuted`) để vòng quay còn rõ.
    */
-  /*
-   * Nút CHÍNH (vàng) bị VÔ HIỆU (không phải đang tải) giữ họ màu vàng ở dạng NHẠT - nền `brandLow`, viền
-   * `brandBorder`, chữ `brandHigh` - thay vì xám thuần của mọi nút khác (người dùng 25/11/2026: "Thu
-   * tiền" bị khoá vì đã thu đủ phải còn đọc ra là nút chính, chỉ là không bấm được).
-   */
-  const mainDisabled = isMain && disabled && !loading;
-  const fg = mainDisabled ? colors.brandHigh : blocked ? colors.textMuted : skin.fg;
-  const showShine = (shine ?? (isMain && size !== 'sm' && !compact)) && !blocked;
+  const textOnly = variant === 'ghost' || variant === 'ghostDanger' || variant === 'text';
+  const disabledLook = disabled && !loading;
+  const fg = disabledLook ? colors.borderInput : blocked ? colors.textMuted : skin.fg;
+  const showShine = (shine ?? (isMain && size !== 'sm' && size !== 'card' && !compact)) && !blocked;
 
   return (
     /*
@@ -311,9 +311,17 @@ export function Button({
         jc="center"
         gap={space.xs}
         overflow="hidden"
-        bg={mainDisabled ? colors.brandLow : blocked && !borderless ? colors.surfaceMuted : skin.bg}
-        bc={mainDisabled ? colors.brandBorder : blocked ? colors.border : skin.border}
-        bw={borderless ? 0 : 1}
+        bg={
+          disabledLook
+            ? textOnly
+              ? skin.bg
+              : colors.surfaceMuted
+            : blocked && !borderless
+              ? colors.surfaceMuted
+              : skin.bg
+        }
+        bc={blocked ? colors.border : skin.border}
+        bw={borderless || disabledLook ? 0 : 1}
         // Chuẩn chung của mọi nút = nút "Chọn thuê" (người dùng chốt 28/10/2026): bo `control` 12, không còn viên thuốc.
         br={shape === 'square' && !compact ? radius.md : radius.control}
         /*
@@ -325,7 +333,7 @@ export function Button({
 
           Nút full-width không mất gì: nhãn ở đó căn giữa nên đệm ngang không ai nhìn thấy.
         */
-        px={tight ? space.xs : compact ? COMPACT_PAD_X : space.md}
+        px={tight ? space.xs : compact ? COMPACT_PAD_X : size === 'card' ? CARD_PAD_X : space.md}
         minHeight={height}
       >
         {(variant === 'gradient' || variant === 'primary') && !blocked ? (
@@ -361,7 +369,9 @@ export function Button({
               fos={
                 size === 'lg'
                   ? fontSize.bodyLg
-                  : size === 'sm'
+                  : size === 'card'
+                    ? typeScale.body.fontSize
+                    : size === 'sm'
                     ? fontSize.bodySm
                     : compact
                       ? typeScale.body.fontSize

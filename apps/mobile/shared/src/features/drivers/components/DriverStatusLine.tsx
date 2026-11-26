@@ -31,6 +31,7 @@ export const DriverStatusLine = memo(function DriverStatusLine({
 }) {
   const colors = useColors();
   const t = useTranslations('Drivers.app.licence');
+  const tCheck = useTranslations('Drivers.licenceCheck');
   const fmt = useAppFormat();
   const licence = driver.licence;
   const classes = (licence.classes ?? []).join(', ');
@@ -47,13 +48,14 @@ export const DriverStatusLine = memo(function DriverStatusLine({
   } else if (licence.state !== DRIVER_LICENCE_STATE.VERIFIED) {
     tone = 'danger';
     text = t('none');
-  } else if (holderNameDiffers(licence.fullName, driver.name)) {
+  } else if (holderNameDiffers(licence.fullName, driver.name) && !driver.licenceCheck) {
+    // Tên trên bằng lệch tên đã đặt — trừ khi bên thuê đã "Đối chiếu" bằng hiện tại (web 25/11).
     tone = 'warning';
     text = t('mismatch');
     trailing = classes ? t('classes', { classes }) : null;
   } else {
     tone = 'success';
-    text = t('verified');
+    text = driver.licenceCheck ? tCheck('checked') : t('verified');
     trailing = classes ? t('classes', { classes }) : null;
   }
 
@@ -69,7 +71,7 @@ export const DriverStatusLine = memo(function DriverStatusLine({
       tone === 'success'
         ? [
             classes ? t('classesUpper', { classes: classes.toUpperCase() }) : null,
-            t('verifiedShort'),
+            driver.licenceCheck ? tCheck('checked') : t('verifiedShort'),
             licence.expiresOn ? t('expiry', { date: fmt.dateKey(licence.expiresOn) }) : t('noExpiry'),
           ]
             .filter(Boolean)

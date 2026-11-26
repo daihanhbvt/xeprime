@@ -21,7 +21,15 @@ const useServiceSkins = themed<{ selfDrive: Skin; withDriver: Skin; longTerm: Sk
  * cùng sắc (người dùng chốt 20/11/2026, web + app cùng bộ màu). Nhãn đọc từ namespace `Domain`
  * (mã là dữ liệu — ADR 0012).
  */
-export function ServiceTypeChip({ value }: { value: string }) {
+export function ServiceTypeChip({
+  value,
+  size = 'sm',
+}: {
+  value: string;
+  /** `md` = chữ 14/20 (Figma "_Badge" của thẻ chuyến ở Quản lý ví `24612:145372`). */
+  size?: 'sm' | 'md';
+}) {
+  const type = size === 'md' ? typeScale.body : typeScale.label;
   const domainLabel = useDomainLabel();
   const skins = useServiceSkins();
   const skin =
@@ -43,7 +51,7 @@ export function ServiceTypeChip({ value }: { value: string }) {
       bc={skin.border}
     >
       {/* CÙNG cỡ viên trạng thái (`Pill` md: chữ 12/18, đệm 2/8) - hai viên đứng cạnh nhau phải đều (20/11/2026). */}
-      <Text col={skin.fg} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
+      <Text col={skin.fg} fos={type.fontSize} lh={type.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
         {domainLabel('serviceType', value as ServiceType)}
       </Text>
     </YStack>

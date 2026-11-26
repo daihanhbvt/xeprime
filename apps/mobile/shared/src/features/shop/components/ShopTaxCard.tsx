@@ -11,7 +11,7 @@ import {
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { InfoCard, InfoRow, InfoRows } from '@/components/ui/InfoCard';
+import { InfoCard, InfoRow, InfoRows, type InfoCardLook } from '@/components/ui/InfoCard';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -31,7 +31,14 @@ import { space } from '@/theme/tokens';
  * sửa được (`seller_profile.manage` + hồ sơ chưa khoá duyệt). Trạng thái khác "nháp" là viên ở góc
  * thẻ; yêu cầu sửa / từ chối kèm ghi chú của nền tảng.
  */
-export function ShopTaxCard({ onLayout }: { onLayout?: (event: LayoutChangeEvent) => void }) {
+export function ShopTaxCard({
+  onLayout,
+  look = 'default',
+}: {
+  onLayout?: (event: LayoutChangeEvent) => void;
+  /** `figma` = thẻ của Quản lý gian hàng (Figma Partner `24231:112112`). */
+  look?: InfoCardLook;
+}) {
   const t = useTranslations('Shop.info.tax');
   const tAccount = useTranslations('Account.tax');
   const tCommon = useTranslations('Common');
@@ -39,14 +46,14 @@ export function ShopTaxCard({ onLayout }: { onLayout?: (event: LayoutChangeEvent
 
   if (query.isLoading) {
     return (
-      <InfoCard title={tAccount('title')} hint={t('hint')} {...(onLayout ? { onLayout } : {})}>
+      <InfoCard look={look} title={tAccount('title')} hint={t('hint')} {...(onLayout ? { onLayout } : {})}>
         <MiniRowsSkeleton rows={3} />
       </InfoCard>
     );
   }
   if (query.isError || !query.data) {
     return (
-      <InfoCard title={tAccount('title')} hint={t('hint')} {...(onLayout ? { onLayout } : {})}>
+      <InfoCard look={look} title={tAccount('title')} hint={t('hint')} {...(onLayout ? { onLayout } : {})}>
         <YStack gap={space.sm}>
           <Callout tone="danger" title={tAccount('loadError')} />
           <XStack>
@@ -63,14 +70,16 @@ export function ShopTaxCard({ onLayout }: { onLayout?: (event: LayoutChangeEvent
       </InfoCard>
     );
   }
-  return <TaxCardBody profile={query.data} {...(onLayout ? { onLayout } : {})} />;
+  return <TaxCardBody profile={query.data} look={look} {...(onLayout ? { onLayout } : {})} />;
 }
 
 function TaxCardBody({
   profile,
+  look,
   onLayout,
 }: {
   profile: SellerProfile;
+  look: InfoCardLook;
   onLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const t = useTranslations('Shop.info.tax');
@@ -88,6 +97,7 @@ function TaxCardBody({
   return (
     <>
       <InfoCard
+        look={look}
         title={tAccount('title')}
         hint={t('hint')}
         editLabel={t('edit')}
@@ -114,7 +124,7 @@ function TaxCardBody({
           </Callout>
         ) : null}
 
-        <InfoRows>
+        <InfoRows {...(look === 'figma' ? { gap: 8 } : {})}>
           <InfoRow
             label={t('entityType')}
             value={domainLabel('sellerEntityType', profile.entityType)}

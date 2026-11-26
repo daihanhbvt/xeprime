@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MAIN_GRADIENT } from '@/components/ui/Button';
 import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import { useRouter } from 'expo-router';
@@ -38,14 +40,13 @@ import { Divider } from '@/components/ui/DataRow';
 import { NumberField } from '@/components/ui/NumberField';
 import { Pagination } from '@/components/ui/Pagination';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { Pill, pillToneOfStatusColor, usePillSkin, type PillTone } from '@/components/ui/Pill';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { DateField } from '@/components/ui/DateField';
-import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -86,9 +87,7 @@ export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
 
   const canView = has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   const back = () => goBackOr(router, ROUTES.manage.vehicleEdit(vehicleId));
-  const title = tEdit('tabs.maintenance');
 
-  const vehicle = useVehicle(vehicleId, has(PERMISSION.VEHICLE_VIEW));
   // Cùng query key với `VehicleMaintenanceWorkspace` — chỉ để kéo-làm-mới, không gọi thêm request.
   const profile = useMaintenanceProfile(vehicleId, canView);
   const records = useMaintenanceRecords(vehicleId, canView);
@@ -306,11 +305,16 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
         onClose={() => setCorrecting(false)}
       />
 
+      {/* Tấm CAO cố định (90% màn) + vùng cuộn riêng - danh sách KM dài vẫn cuộn được (góp ý 26/11/2026). */}
       <BottomSheet
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         title={t('historyTitle')}
+        chrome="v2"
+        headerDivider
+        scroll={false}
       >
+        <ScrollView style={STYLES.fill} contentContainerStyle={STYLES.historyContent} showsVerticalScrollIndicator>
         {history.isPending ? (
           <SkeletonText lines={5} />
         ) : history.isError ? (
@@ -361,6 +365,7 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
             />
           </YStack>
         )}
+        </ScrollView>
       </BottomSheet>
     </Card>
   );
@@ -419,6 +424,10 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
 
   const dueStatus = profile.dueStatus as MaintenanceDueStatus;
   const overdue = dueStatus === MAINTENANCE_DUE_STATUS.OVERDUE;
+  const dueSoon = dueStatus === MAINTENANCE_DUE_STATUS.DUE_SOON;
+  /* CÙNG bảng màu với thẻ của Trung tâm bảo dưỡng (`MaintenanceBoardCard`): xanh lá còn xa · cam sắp đến hạn · đỏ quá hạn. */
+  const barColor = overdue ? colors.danger : dueSoon ? colors.warningVivid : colors.successVivid;
+  const remainingColor = overdue ? colors.danger : dueSoon ? colors.warningHigh : colors.success;
   /* Thiếu một trong ba (KM hiện tại · chu kỳ · KM lần gần nhất) thì không có mốc để vẽ. */
   const hasSchedule =
     profile.nextMaintenanceKm != null && profile.remainingKm != null && profile.usedPercent != null;
@@ -492,7 +501,7 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
             {profile.remainingKm == null ? null : (
             <Text
               flexShrink={1}
-              col={overdue ? colors.danger : colors.infoStrong}
+              col={remainingColor}
               fos={typeScale.label.fontSize}
               lh={typeScale.label.lineHeight}
               fow={fontWeight.medium}
@@ -519,7 +528,7 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
                 h={MILESTONE_BAR}
                 br={radius.pill}
                 w={`${Math.min(Math.max(profile.usedPercent as number, 0), 100)}%`}
-                bg={overdue ? colors.danger : colors.info}
+                bg={barColor}
               />
             </YStack>
           ) : (
@@ -547,11 +556,11 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
         {/* Figma "Save Row": nút vàng co theo chữ, căn phải, icon Tick. */}
         {canManage ? (
           <XStack jc="flex-end">
-            <Button
+            <TabButton
               label={tActions('saveChanges')}
-              lineIcon="tick"
-              variant="gradient"
-              block={false}
+              icon="tick"
+              tone="primary"
+              height={ROW_BUTTON_HEIGHT}
               loading={save.isPending}
               disabled={!formState.isDirty}
               onPress={submit}
@@ -569,6 +578,110 @@ const CARD_GAP = 12;
 const HISTORY_CHIP_RADIUS = 8;
 /** Figma "Milestone Progress": thanh cao 8. */
 const MILESTONE_BAR = 8;
+/** Figma "Actions" (Chỉnh sửa · Hoàn tất): đệm 8/14 + chữ 20 ⇒ cao 36. "Lưu thay đổi" dùng CHUNG khuôn này (người dùng chốt 26/11/2026). */
+const ROW_BUTTON_HEIGHT = 36;
+
+/**
+ * Viên trạng thái phiếu - Figma "_Badge" `24612:146458`: đệm 2/8, chữ 14/20 đậm vừa, bo tròn, CAO 24
+ * (viền nằm TRONG khung). `Pill size="lg"` cộng viền ra ngoài thành 26 - trông mập hơn Figma.
+ */
+function StatusChip({ label, tone }: { label: string; tone: PillTone }) {
+  const skin = usePillSkin()[tone];
+  return (
+    <XStack h={24} px={8} ai="center" jc="center" br={radius.pill} bw={1} bc={skin.border} bg={skin.bg} flexShrink={0}>
+      <Text col={skin.fg} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
+        {label}
+      </Text>
+    </XStack>
+  );
+}
+
+const STYLES = StyleSheet.create({
+  fill: { flex: 1 },
+  historyContent: { paddingBottom: 16 },
+  pressed: { opacity: 0.7 },
+});
+
+/**
+ * Nút của tab Bảo dưỡng, ĐÚNG số đo Figma (`24620:34623` / `24612:146442`): bo 12, icon nét 20 + khe 6
+ * + chữ 14/20 đậm; viền 1. `Button` dùng chung cao 40/44 và chữ 16 nên lệch - dựng riêng ở đây.
+ * Tông: `primary` dải vàng · `brand` vàng nhạt viền vàng · `neutral` trắng viền xám · `danger` viền đỏ.
+ */
+function TabButton({
+  label,
+  icon,
+  tone,
+  height,
+  iconOnly = false,
+  loading = false,
+  disabled = false,
+  onPress,
+}: {
+  label: string;
+  icon: LineIconName;
+  tone: 'primary' | 'brand' | 'neutral' | 'danger';
+  height: number;
+  iconOnly?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const blocked = disabled || loading;
+  const skin = {
+    primary: { bg: 'transparent', bc: 'transparent', fg: colors.text },
+    brand: { bg: colors.brandWash, bc: colors.brandBorderStrong, fg: colors.brandLink },
+    neutral: { bg: colors.surface, bc: colors.borderInput, fg: colors.textMuted },
+    danger: { bg: colors.surface, bc: colors.dangerBorder, fg: colors.danger },
+  }[tone];
+  const gradient = tone === 'primary' && !blocked;
+  const fg = blocked && tone === 'primary' ? colors.brandHigh : skin.fg;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={blocked}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: blocked, busy: loading }}
+      style={({ pressed }) => (pressed ? STYLES.pressed : null)}
+    >
+      <XStack
+        h={height}
+        {...(iconOnly ? { w: height } : { px: 14 })}
+        ai="center"
+        jc="center"
+        gap={6}
+        br={radius.control}
+        ov="hidden"
+        bw={gradient ? 0 : 1}
+        bc={blocked && tone === 'primary' ? colors.brandBorder : skin.bc}
+        bg={blocked && tone === 'primary' ? colors.brandLow : skin.bg}
+      >
+        {gradient ? (
+          <LinearGradient
+            colors={MAIN_GRADIENT.colors}
+            locations={MAIN_GRADIENT.locations}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
+        {loading ? (
+          <ActivityIndicator size="small" color={fg} />
+        ) : (
+          <>
+            <LineIcon name={icon} size={iconSize.lg} color={fg} />
+            {iconOnly ? null : (
+              <Text col={fg} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold} numberOfLines={1}>
+                {label}
+              </Text>
+            )}
+          </>
+        )}
+      </XStack>
+    </Pressable>
+  );
+}
 
 /**
  * Hàng tiêu đề "Nhóm thông tin" của tab Bảo dưỡng (Figma `23664:32461`): tiêu đề 16/24 đậm, mép phải
@@ -728,7 +841,6 @@ function RecordRow({
   const tApp = useTranslations('Vehicles.maintenance.app');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const { has } = usePermissions();
   const tMaintenance = useTranslations('Maintenance');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -769,10 +881,7 @@ function RecordRow({
   const detail = [
     record.cost != null ? tApp('cost', { value: fmt.money(record.cost) }) : null,
     record.odometerKm != null ? tApp('odo', { value: fmt.km(record.odometerKm) }) : null,
-    record.providerName,
-    has(PERMISSION.VEHICLE_MAINTENANCE_FILE_VIEW) && record.attachmentCount > 0
-      ? t('attachmentCount', { count: record.attachmentCount })
-      : null,
+    // Figma chỉ có "Chi phí" · "Odo" - garage, chứng từ, ghi chú xem trong tấm Chỉnh sửa (người dùng chốt 26/11/2026).
   ].filter((part): part is string => Boolean(part));
 
   return (
@@ -782,7 +891,7 @@ function RecordRow({
         <Text f={1} col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
           {record.title || domainLabel('maintenanceType', record.type)}
         </Text>
-        <Pill size="lg" label={domainLabel('maintenanceStatus', status, meta.label)} tone={pillToneOfStatusColor(meta.color)} />
+        <StatusChip label={domainLabel('maintenanceStatus', status, meta.label)} tone={pillToneOfStatusColor(meta.color)} />
       </XStack>
 
       {when ? (
@@ -800,44 +909,40 @@ function RecordRow({
           ))}
         </XStack>
       ) : null}
-      {record.notes ? (
-        <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-          {record.notes}
-        </Text>
-      ) : null}
-
       {canManage ? (
         /*
           Figma "Actions": "Chỉnh sửa" (viền xám) trái · "Hoàn tất" (viền vàng nhạt, chữ vàng) phải,
           chia đều. Cùng hai thao tác như web; `Bắt đầu`/`Huỷ phiếu` vẫn thuộc màn Lịch (04/09/2026).
         */
         <XStack gap={space.sm}>
+          {/* "Huỷ lịch" (không có trong Figma) gọn thành nút vuông thùng rác đứng đầu hàng - hết vỡ hàng riêng. */}
+          <TabButton
+            label={tMaintenance('actions.cancelSchedule')}
+            icon="trash"
+            tone="danger"
+            iconOnly
+            height={ROW_BUTTON_HEIGHT}
+            onPress={() => setConfirmingCancel(true)}
+          />
           <YStack f={1} flexBasis={0}>
-            <Button
+            <TabButton
               label={t('edit')}
-              lineIcon="edit"
-              variant="neutral"
+              icon="edit"
+              tone="neutral"
+              height={ROW_BUTTON_HEIGHT}
               onPress={() => onOpenSheet({ mode: 'edit', record })}
             />
           </YStack>
           <YStack f={1} flexBasis={0}>
-            <Button
+            <TabButton
               label={t('complete')}
-              lineIcon="tick"
-              variant="brandOutline"
+              icon="tick"
+              tone="brand"
+              height={ROW_BUTTON_HEIGHT}
               onPress={() => onOpenSheet({ mode: 'complete', record })}
             />
           </YStack>
         </XStack>
-      ) : null}
-      {canManage ? (
-        <Button
-          label={tMaintenance('actions.cancelSchedule')}
-          icon="trash-outline"
-          variant="ghostDanger"
-          size="sm"
-          onPress={() => setConfirmingCancel(true)}
-        />
       ) : null}
       <AlertDialog
         open={confirmingCancel}
@@ -845,6 +950,8 @@ function RecordRow({
         message={tMaintenance('actions.cancelScheduleConfirm')}
         confirmLabel={tMaintenance('actions.cancelSchedule')}
         destructive
+        // Một nút "Hủy lịch", đóng bằng ✕ ở góc (người dùng chốt 26/11/2026).
+        dismissIcon
         loading={transition.isPending}
         onCancel={() => setConfirmingCancel(false)}
         onConfirm={cancelSchedule}

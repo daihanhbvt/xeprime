@@ -5,8 +5,8 @@ import { radius, space } from '@/theme/tokens';
 
 /**
  * Nút kính mờ nổi trên ảnh - Figma Partner-XePrime "Button" `24175:60983` (Chi tiết xe: ← · ⋮):
- * nền trắng 20% + `backdrop-blur 6`, bo 12, đệm 8, icon trắng 20. Lớp làm mờ ảnh phía sau là thứ
- * làm nút tách khỏi ảnh, kể cả ảnh xe màu trắng - nền trắng 20% một mình sẽ chìm.
+ * kính mờ (`backdrop-blur 6`) bo 12, đệm 8, icon trắng 20. Nền kính TỐI thay trắng 20% của Figma (xem
+ * `glass`) để icon trắng luôn nổi, kể cả trên ảnh sáng.
  *
  * `badge` (tuỳ chọn) vẽ ở góc trên-phải, ngoài khuôn bo của nút (vd. số việc cần xử lý).
  */
@@ -33,7 +33,7 @@ export const GlassIconButton = memo(function GlassIconButton({
         {/* `intensity` 20 ≈ blur 6px của Figma trên cả iOS lẫn Android (Android cần `experimentalBlurMethod`). */}
         <BlurView
           intensity={BLUR_INTENSITY}
-          tint="light"
+          tint="dark"
           experimentalBlurMethod="dimezisBlurView"
           style={StyleSheet.absoluteFill}
         />
@@ -57,8 +57,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Figma: `bg rgba(255,255,255,0.2)` - màu cố định vì nút nằm trên ảnh, không đổi theo theme.
-  glass: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 255, 255, 0.2)' },
+  /*
+   * Kính TỐI (26/11/2026): Figma vẽ kính trắng 20%, nhưng trên ảnh sáng (trời, cây, xe trắng) kính trắng +
+   * blur thành một mảng sáng và icon trắng chìm mất. Kính tối giữ blur, icon trắng nổi trên mọi ảnh.
+   * Màu cố định vì nút nằm trên ảnh, không đổi theo theme.
+   */
+  glass: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 13, 18, 0.28)' },
   badge: { position: 'absolute', top: -6, right: -6 },
   pressed: { opacity: 0.7 },
 });

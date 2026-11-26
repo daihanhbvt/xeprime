@@ -35,6 +35,8 @@ export interface SelectControlOption {
   readonly hint?: string;
   /** Phần tử đứng trước nhãn trong danh sách — vd logo ngân hàng. */
   readonly leading?: ReactNode;
+  /** Phần tử đứng trước giá trị ĐÃ CHỌN trong ô - vd logo ngân hàng nhỏ (Figma `24228:102448`). */
+  readonly valueLeading?: ReactNode;
 }
 
 /**
@@ -140,6 +142,7 @@ export function SelectControl({
         accessibilityState={{ disabled }}
       >
         <FieldShell focused={false} invalid={Boolean(error)} disabled={disabled} align="center">
+          {current?.valueLeading ?? null}
           <Text
             f={1}
             col={current ? colors.text : v2 ? colors.textPlaceholder : colors.placeholder}

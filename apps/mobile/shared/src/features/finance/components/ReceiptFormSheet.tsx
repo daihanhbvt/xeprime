@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -13,13 +14,15 @@ import {
   dayjs,
   isNegativeMoney,
   isZeroMoney,
+  LIST_SEPARATOR,
   vehicleLabel,
 } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Callout } from '@/components/ui/Callout';
 import { Button } from '@/components/ui/Button';
-import type { IconName } from '@/components/ui/Chip';
-import { CheckOption, RadioOption } from '@/components/ui/RadioOption';
+import { CheckMark } from '@/components/ui/CheckMark';
+import { FieldLabel } from '@/components/ui/Field';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { DateField } from '@/components/ui/DateField';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { MoneyField } from '@/components/ui/MoneyField';
@@ -30,7 +33,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { radius, space, typeScale } from '@/theme/tokens';
 import {
   RECEIPT_DESCRIPTION_MAX,
   RECEIPT_LINK_MODE,
@@ -47,7 +51,6 @@ import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { receiptFormSchema, type ReceiptFormValues } from '../schema';
 import { ReceiptAttachmentsField } from './ReceiptAttachmentsField';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { BookingLinkCard, VehicleLinkCard } from './ReceiptLinkCard';
 import { BookingPickerSheet, VehiclePickerSheet } from './ReceiptLinkPicker';
 import type { CreateReceiptInput, ReceiptBookingOption, ReceiptVehicleOption } from '../api';
 
@@ -57,11 +60,6 @@ import type { CreateReceiptInput, ReceiptBookingOption, ReceiptVehicleOption } f
  * Ba lựa chọn phân biệt nhau bằng HÌNH trước khi mắt kịp đọc chữ; thiếu hình thì ba hàng chỉ khác
  * nhau ở một cái tên hai chữ.
  */
-const LINK_MODE_ICON: Readonly<Record<ReceiptLinkMode, IconName>> = {
-  [RECEIPT_LINK_MODE.NONE]: 'pricetag-outline',
-  [RECEIPT_LINK_MODE.BOOKING]: 'document-text-outline',
-  [RECEIPT_LINK_MODE.VEHICLE]: 'car-outline',
-};
 
 const DEFAULTS = (initialVehicleId: string | null): ReceiptFormValues => ({
   type: RECEIPT_TYPE.EXPENSE,
@@ -173,6 +171,10 @@ export function ReceiptFormSheet({
 
   const linkingBooking = linkMode === RECEIPT_LINK_MODE.BOOKING;
   const linkingVehicle = linkMode === RECEIPT_LINK_MODE.VEHICLE;
+  const linkingNone = !linkingBooking && !linkingVehicle;
+  /** Chưa có chi nhánh nào (đã tải xong) - phiếu "Khoản chung" không lưu được, phải nói ra. */
+  const branchMissing = linkingNone && branchOptions.length === 0 && !branches.isLoading;
+  const showBranchField = linkingNone && !branchMissing;
 
   /**
    * Nạp trước XE ĐÃ CHỌN SẴN khi form mở từ hồ sơ xe.
@@ -324,138 +326,149 @@ export function ReceiptFormSheet({
       open={open}
       onClose={close}
       title={t('title')}
+      chrome="v2"
+      headerDivider
       footer={
-        <YStack gap={space.sm}>
-          {/*
-            "Tạo và tiếp tục" là một LỰA CHỌN, không phải nút thứ hai — nên nó là ô tick thật.
-
-            Bản trước dùng `Chip role="button"`: hình dạng của nó là một cái NÚT, đứng ngay trên
-            hai nút thật, nên nó đọc ra như hành động thứ ba của form chứ không như một thiết lập
-            cho hành động sắp bấm.
-          */}
-          <CheckOption
-            label={t('keepOpen')}
-            checked={Boolean(keepOpen)}
-            onPress={() => setValue('keepOpen', !keepOpen)}
-          />
-          <XStack gap={space.sm}>
-            <YStack flexShrink={1}>
-              <Button
-                label={tActions('cancel')}
-                variant="secondary"
-                icon="close-outline"
-                onPress={close}
-              />
-            </YStack>
-            <YStack f={1}>
-              {/*
-                Hình ĐỔI THEO loại phiếu — mũi tên xuống cho tiền vào, lên cho tiền ra, cùng bộ
-                hình mà cả module tài chính đang dùng. Nó cũng là phản hồi cho ô "Loại giao dịch"
-                ở tận đầu form: đổi loại thì nút dưới cùng đổi theo, thấy ngay mà không phải cuộn
-                ngược lên kiểm tra.
-              */}
-              <Button
-                label={t(`submit.${type as 'income' | 'expense'}`)}
-                icon={
-                  type === RECEIPT_TYPE.INCOME
-                    ? 'arrow-down-circle-outline'
-                    : 'arrow-up-circle-outline'
-                }
-                loading={create.isPending}
-                onPress={() => void submit()}
-              />
-            </YStack>
-          </XStack>
-        </YStack>
+        /* Figma "Footer cố định" `24512:130016`: "Hủy" co theo chữ + nút vàng chính giãn hết, không icon. */
+        <XStack gap={space.md}>
+          <Button label={tActions('cancel')} variant="secondary" shape="square" onPress={close} />
+          <YStack f={1}>
+            <Button
+              label={t(`submit.${type as 'income' | 'expense'}`)}
+              variant="gradient"
+              shape="square"
+              loading={create.isPending}
+              onPress={() => void submit()}
+            />
+          </YStack>
+        </XStack>
       }
     >
-      <DateField control={control} name="occurredAt" label={t('occurredAt')} required />
-
-      <SelectField
-        control={control}
-        name="type"
-        label={t('type')}
-        options={RECEIPT_TYPE_VALUES.map((value) => ({
-          value,
-          label: domainLabel('receiptType', value),
+      {/* Figma "Horizontal tabs" `24512:130204`: Phiếu thu / Phiếu chi ở đầu form. */}
+      <SegmentedTabs
+        variant="neutral"
+        items={RECEIPT_TYPE_VALUES.map((value) => ({
+          key: value,
+          label: t(`typeTab.${value as 'income' | 'expense'}`),
         }))}
-        required
+        value={type}
+        onChange={(next) => setValue('type', next, { shouldDirty: true, shouldValidate: true })}
       />
 
       {/*
-        Ba lối liên kết — BA HÀNG lựa chọn xếp dọc, đúng khối "Khoản này là" của web.
-
-        Dải viên nằm ngang chỉ chứa nổi cái tên ("Không gắn" · "Đơn thuê" · "Xe"), nên lời giải
-        thích phải dồn xuống MỘT dòng chú thích chung bên dưới — và nó chỉ nói về viên ĐANG chọn.
-        Người dùng muốn biết "Đơn thuê" khác "Xe" chỗ nào thì phải bấm thử từng viên mới đọc được.
-        Xếp dọc thì cả ba lời giải thích cùng hiện, và đây là câu hỏi ĐẦU TIÊN của form — nó quyết
-        định hình dạng phần còn lại, đáng để chiếm chỗ.
+        Figma "Link Chips" `24512:130736`: mỗi ô rộng theo CHỮ rồi chia đều phần dư (flexGrow, không
+        flexBasis 0) - "Đơn thuê" ngắn thì hẹp hơn; đệm ngang 8 (chốt 26/11/2026). Câu giải thích chỉ của lựa chọn
+        ĐANG chọn, chữ nhỏ ngay dưới (chốt 26/11/2026).
       */}
-      <YStack gap={space.xs}>
-        <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-          {t('linkMode.label')}
+      <YStack gap={6}>
+        <FieldLabel label={t('linkMode.label')} required />
+        <XStack gap={space.sm}>
+          {RECEIPT_LINK_MODE_VALUES.map((mode) => {
+            const active = linkMode === mode;
+            return (
+              <YStack key={mode} flexGrow={1} flexShrink={1} minWidth={0}>
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                onPress={() => changeLinkMode(mode)}
+              >
+                <YStack
+                  h={40}
+                  ai="center"
+                  jc="center"
+                  px={space.xs}
+                  br={radius.control}
+                  bw={1}
+                  bc={active ? colors.brandShape : colors.border}
+                  bg={active ? colors.brandLow : colors.surfaceFaint}
+                >
+                  <Text
+                    col={active ? colors.brandLink : colors.textMuted}
+                    /* 12/18 đúng Figma (`typeScale.label`; `caption` của app là 10) - đệm ngang 4, "Đơn thuê" hẹp nhất. */
+                    fos={typeScale.label.fontSize}
+                    lh={typeScale.label.lineHeight}
+                    fontFamily={active ? FONT_FAMILY.semibold : FONT_FAMILY.medium}
+                    numberOfLines={1}
+                  >
+                    {t(`linkChip.${mode}`)}
+                  </Text>
+                </YStack>
+              </Pressable>
+              </YStack>
+            );
+          })}
+        </XStack>
+        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+          {t(`linkHint.${linkMode}`)}
         </Text>
-        {RECEIPT_LINK_MODE_VALUES.map((mode) => (
-          <RadioOption
-            key={mode}
-            label={t(`linkMode.${mode}`)}
-            hint={t(`linkHint.${mode}`)}
-            icon={LINK_MODE_ICON[mode]}
-            checked={linkMode === mode}
-            onPress={() => changeLinkMode(mode)}
-          />
-        ))}
       </YStack>
 
       {linkingBooking ? (
-        <YStack gap={space.sm}>
-          <FieldBox
-            label={t('link.label')}
-            value={booking?.code ?? bookingId ?? ''}
-            placeholder={t('bookingPlaceholder')}
-            icon="document-text-outline"
-            required
-            onPress={() => setPicking('booking')}
-          />
-          {booking ? <BookingLinkCard booking={booking} /> : null}
-        </YStack>
+        <FieldBox
+          label={t('bookingField')}
+          value={
+            booking
+              ? [
+                  booking.code,
+                  [booking.customerName, booking.plateNumber].filter(Boolean).join(LIST_SEPARATOR),
+                ]
+                  .filter(Boolean)
+                  .join('  ')
+              : (bookingId ?? '')
+          }
+          placeholder={t('bookingPlaceholder')}
+          required
+          onPress={() => setPicking('booking')}
+        />
       ) : null}
 
       {linkingVehicle ? (
         <YStack gap={space.sm}>
           <FieldBox
-            label={t('link.label')}
+            label={t('vehicleField')}
             value={
               selectedVehicle ? vehicleLabel(selectedVehicle.name, selectedVehicle.plateNumber) : ''
             }
             placeholder={t('vehiclePlaceholder')}
-            icon="car-outline"
             required
             onPress={() => setPicking('vehicle')}
           />
           {vehicleMissing ? <Callout tone="danger">{t('vehicleGone')}</Callout> : null}
-          {selectedVehicle ? <VehicleLinkCard vehicle={selectedVehicle} /> : null}
         </YStack>
       ) : null}
 
-      {!linkingBooking && !linkingVehicle ? (
-        branchOptions.length === 0 && !branches.isLoading ? (
-          // Chưa có chi nhánh nào: NÓI RA thay vì để nút Lưu bấm mãi không ăn.
-          <Callout tone="warning">{t('branchEmpty')}</Callout>
-        ) : (
-          <SelectField
-            control={control}
-            name="branchId"
-            label={tBranches('filter.label')}
-            placeholder={t('branchPlaceholder')}
-            hint={t('branchHelp')}
-            options={branchOptions}
-            disabled={branchOptions.length === 1}
-            required
-          />
-        )
+      {/* Chi nhánh CÙNG hàng/vị trí với "Đơn hàng liên kết" / "Phương tiện liên kết" - Khoản chung hiện ô này thay cho ô đối tượng (chốt 26/11/2026). */}
+      {showBranchField ? (
+        <SelectField
+          control={control}
+          name="branchId"
+          label={tBranches('filter.label')}
+          placeholder={t('branchPlaceholder')}
+          options={branchOptions}
+          disabled={branchOptions.length === 1}
+          required
+        />
       ) : null}
 
+      <XStack gap={space.md} ai="flex-start">
+        <YStack f={1} minWidth={0} gap={space.xs}>
+          <MoneyField control={control} name="amount" label={t('amount')} required />
+          {/* Số tiền bằng chữ NGAY DƯỚI ô nhập — chỗ duy nhất bắt được lỗi thừa một số 0 (giữ, chốt 26/11/2026). */}
+          {amount == null ? null : (
+            <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+              {fmt.moneyWords(String(amount))}
+            </Text>
+          )}
+        </YStack>
+        <YStack f={1} minWidth={0}>
+          <DateField control={control} name="occurredAt" label={t('occurredAt')} required />
+        </YStack>
+      </XStack>
+
+      {/*
+        Chi nhánh chỉ khi "Khoản chung" - gắn đơn/xe thì chi nhánh lấy theo xe (giữ nghiệp vụ,
+        chốt 26/11/2026). Ẩn thì Danh mục chiếm trọn hàng.
+      */}
       <SelectField
         control={control}
         name="categoryId"
@@ -464,34 +477,33 @@ export function ReceiptFormSheet({
         options={categoryOptions}
         required
       />
+      {branchMissing ? (
+        // Chưa có chi nhánh nào: NÓI RA thay vì để nút Lưu bấm mãi không ăn.
+        <Callout tone="warning">{t('branchEmpty')}</Callout>
+      ) : null}
 
-      <SelectField
-        control={control}
-        name="paymentMethod"
-        label={t('method')}
-        options={PAYMENT_METHOD_VALUES.map((value) => ({
-          value,
-          label: domainLabel('paymentMethod', value),
-        }))}
-        required
-      />
-
-      <YStack gap={space.xs}>
-        <MoneyField control={control} name="amount" label={t('amount')} required />
-        {/* Số tiền bằng chữ NGAY DƯỚI ô nhập — chỗ duy nhất bắt được lỗi thừa một số 0. */}
-        {amount == null ? null : (
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {fmt.moneyWords(String(amount))}
-          </Text>
-        )}
-      </YStack>
-
-      <TextField
-        control={control}
-        name="referenceCode"
-        label={t('referenceCode')}
-        placeholder={t('referenceCodePlaceholder')}
-      />
+      <XStack gap={space.md} ai="flex-start">
+        <YStack f={1} minWidth={0}>
+          <SelectField
+            control={control}
+            name="paymentMethod"
+            label={t('method')}
+            options={PAYMENT_METHOD_VALUES.map((value) => ({
+              value,
+              label: domainLabel('paymentMethod', value),
+            }))}
+            required
+          />
+        </YStack>
+        <YStack f={1} minWidth={0}>
+          <TextField
+            control={control}
+            name="referenceCode"
+            label={t('referenceCode')}
+            placeholder={t('referenceCodePlaceholder')}
+          />
+        </YStack>
+      </XStack>
 
       <TextField
         control={control}
@@ -504,11 +516,23 @@ export function ReceiptFormSheet({
         maxLength={RECEIPT_DESCRIPTION_MAX}
       />
 
-      <ReceiptAttachmentsField
-        control={control}
-        name="attachments"
-        label={t('attachments.label')}
-      />
+      <ReceiptAttachmentsField control={control} name="attachments" label={t('attachments.label')} />
+
+      {/* "Tạo và giữ form" là LỰA CHỌN cho nút sắp bấm - ô tick ở cuối form như Figma `24512:130945`. */}
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: Boolean(keepOpen) }}
+        accessibilityLabel={t('keepOpen')}
+        onPress={() => setValue('keepOpen', !keepOpen)}
+        hitSlop={space.xs}
+      >
+        <XStack ai="center" gap={space.sm}>
+          <CheckMark checked={Boolean(keepOpen)} size="sm" />
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fontFamily={FONT_FAMILY.body}>
+            {t('keepOpen')}
+          </Text>
+        </XStack>
+      </Pressable>
 
       {picking === 'booking' ? (
         <BookingPickerSheet
