@@ -2,9 +2,17 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BOOKING_REQUEST_STATUS,
+  BOOKING_STATUS,
   OCCUPANCY_SOURCE_TYPE,
+  PERMISSION,
+  PICKUP_PREFERENCE,
+  SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_TYPE,
+  addCalendarMonthsVn,
+  vnDateKey,
+  vnDayStart,
 } from '@xeprime/types';
 import 'reflect-metadata';
 import { CalendarController } from '../src/modules/calendar/calendar.controller';
@@ -204,5 +212,124 @@ describe('GET /calendar/quote — báo giá nội bộ', () => {
         } as never,
       ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+  });
+});
+
+/**
+ * Lịch vẽ thêm yêu cầu CHỜ DUYỆT (thiết kế lại 25/11/2026) — lớp hiển thị, không phải lịch bận.
+ * Điều được khoá: cờ tắt thì tập event y như cũ (app native); cờ bật mà thiếu quyền xem yêu cầu
+ * thì không lộ tên khách; yêu cầu dài hạn chưa chốt lịch vẽ từ ngày nguyện vọng + số tháng gói.
+ */
+describe('GET /calendar/events — yêu cầu chờ duyệt', () => {
+  const withRequests = () =>
+    ({ tenantId, permissions: [PERMISSION.BOOKING_REQUEST_VIEW] }) as unknown as TenantContext;
+  let shortId: string;
+  let longId: string;
+
+  beforeAll(async () => {
+    if (!dbAvailable) return;
+    shortId = newId();
+    longId = newId();
+    await prisma.bookingRequest.createMany({
+      data: [
+        {
+          id: shortId,
+          tenantId,
+          vehicleId: idleId,
+          customerName: 'Khách hỏi ngắn',
+          customerPhone: '0933000101',
+          serviceType: SERVICE_TYPE.SELF_DRIVE,
+          status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+          pickupAt: inHours(30),
+          returnAt: inHours(54),
+          respondBy: inHours(4),
+        },
+        {
+          id: longId,
+          tenantId,
+          vehicleId: idleId,
+          customerName: 'Khách hỏi dài hạn',
+          customerPhone: '0933000102',
+          serviceType: SERVICE_TYPE.LONG_TERM,
+          status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+          longTermPackageMonths: 3,
+          pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
+          requestedPickupDate: new Date(`${vnDateKey(inHours(48))}T00:00:00.000Z`),
+          respondBy: inHours(4),
+        },
+      ],
+    });
+  });
+
+  maybe('cờ tắt: không có yêu cầu nào, mọi event đều chiếm lịch', async () => {
+    const events = await controller.events(withRequests(), rangeQuery());
+    expect(events.some((e) => e.sourceId === shortId || e.sourceId === longId)).toBe(false);
+    expect(events.every((e) => e.occupying)).toBe(true);
+  });
+
+  maybe('cờ bật + quyền xem yêu cầu: có cả hai, không chiếm lịch, kèm dịch vụ', async () => {
+    const events = await controller.events(
+      withRequests(),
+      rangeQuery({ includePendingRequests: true }),
+    );
+    const short = events.find((e) => e.sourceId === shortId);
+    expect(short).toMatchObject({
+      type: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST,
+      status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      occupying: false,
+      customerName: 'Khách hỏi ngắn',
+      serviceType: SERVICE_TYPE.SELF_DRIVE,
+      amount: null,
+      code: null,
+    });
+
+    const long = events.find((e) => e.sourceId === longId);
+    const wishStart = vnDayStart(vnDateKey(inHours(48)));
+    expect(long?.startAt).toBe(wishStart.toISOString());
+    expect(long?.endAt).toBe(addCalendarMonthsVn(wishStart, 3).toISOString());
+  });
+
+  maybe('cờ bật nhưng KHÔNG có quyền xem yêu cầu: không lộ yêu cầu nào', async () => {
+    const events = await controller.events(tenant(), rangeQuery({ includePendingRequests: true }));
+    expect(events.some((e) => !e.occupying)).toBe(false);
+  });
+
+  maybe('đơn thuê mang mã, dịch vụ và tiền thuê', async () => {
+    const bookingId = newId();
+    await prisma.booking.create({
+      data: {
+        id: bookingId,
+        tenantId,
+        vehicleId: idleId,
+        code: `DH${bookingId.slice(-6)}`,
+        customerName: 'Khách có đơn',
+        status: BOOKING_STATUS.RESERVED,
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        pickupAt: inHours(100),
+        returnAt: inHours(120),
+        baseAmount: '1500000',
+        totalAmount: '1500000',
+      },
+    });
+    await prisma.vehicleOccupancy.create({
+      data: {
+        id: newId(),
+        tenantId,
+        vehicleId: idleId,
+        sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
+        sourceId: bookingId,
+        startAt: inHours(100),
+        endAt: inHours(120),
+      },
+    });
+
+    const events = await controller.events(tenant(), rangeQuery());
+    expect(events.find((e) => e.sourceId === bookingId)).toMatchObject({
+      occupying: true,
+      code: `DH${bookingId.slice(-6)}`,
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+      amount: '1500000',
+      status: BOOKING_STATUS.RESERVED,
+    });
   });
 });

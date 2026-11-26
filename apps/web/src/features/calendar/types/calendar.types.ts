@@ -18,10 +18,6 @@ export type CalendarResource = Schemas['CalendarResourceDto'];
  */
 export type CalendarEvent = Schemas['CalendarEventDto'];
 
-/** Hàng "Xe còn trống" — backend đếm trên TOÀN đội xe đã lọc (không chỉ hàng đang render). */
-export type CalendarAvailability = Schemas['CalendarAvailabilityDto'];
-export type CalendarAvailabilityDay = Schemas['CalendarAvailabilityDayDto'];
-
 /** Dấu "giá riêng" trên ô lịch. */
 export type CalendarDailyPrice = Schemas['CalendarDailyPriceDto'];
 
@@ -85,16 +81,4 @@ export interface CalendarFilters {
   branchId: string | null;
   /** Thứ tự hàng xe — chỉ ảnh hưởng `resources`, các query khác không mang nó. */
   sort: CalendarSort;
-}
-
-/** Vị trí của thanh event trong lưới, tính theo phần trăm chiều rộng một ngày. */
-export interface EventBarPosition {
-  /** Offset trái, đơn vị "ngày" (có phần thập phân). */
-  offsetDays: number;
-  /** Chiều dài, đơn vị "ngày". */
-  spanDays: number;
-  /** Event bắt đầu trước khoảng đang xem — vẽ bo góc trái phẳng. */
-  clippedStart: boolean;
-  /** Event kết thúc sau khoảng đang xem. */
-  clippedEnd: boolean;
 }

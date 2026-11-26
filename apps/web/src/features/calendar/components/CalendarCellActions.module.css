@@ -1,9 +1,7 @@
 /*
- * Panel neo cạnh ô — nằm TRONG canvas lịch nên cuộn theo lưới, không trôi lệch.
- *
- * Vì cùng canvas, nó là ANH EM của header ngày, cột xe sticky và hàng "Xe còn trống"; cả ba
- * đều dính và đều có z-index. Panel từng để `z-index: 7` nên hàng "Xe còn trống" (30) đè lên
- * và che mất phần dưới của menu.
+ * Bảng thao tác của ô/khoảng ô (design `24200:99425`, 25/11/2026) — nằm TRONG canvas lịch nên cuộn
+ * theo lưới, không trôi lệch. Cùng canvas với header ngày và cột xe sticky (đều có z-index), nên
+ * panel dùng tầng popover của lịch để không bị chúng đè.
  */
 .panel {
   position: absolute;
@@ -12,32 +10,39 @@
   z-index: var(--xp-z-calendar-popover);
   display: flex;
   flex-direction: column;
-  min-width: 240px;
-  padding: var(--xp-space-xs);
+  gap: var(--xp-space-12);
+  width: 310px;
+  padding: var(--xp-space-12);
   background: var(--xp-color-bg-elevated);
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  box-shadow: var(--xp-shadow-raised);
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-elevation-xl);
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--xp-space-xs) var(--xp-space-sm);
-  border-bottom: 1px solid var(--xp-color-border);
-  margin-bottom: var(--xp-space-xs);
+  gap: var(--xp-space-xs);
+  padding-bottom: var(--xp-space-12);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .headerVehicle {
-  font-weight: 600;
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
+  overflow-wrap: anywhere;
 }
 
 .headerDate {
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
-  text-transform: capitalize;
+  color: var(--xp-color-text-tertiary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
 }
 
 .action {
@@ -45,24 +50,27 @@
   align-items: center;
   gap: var(--xp-space-sm);
   width: 100%;
-  padding: var(--xp-space-xs) var(--xp-space-sm);
-  border: 0;
-  border-radius: var(--xp-border-radius-sm);
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  /* Mục tiêu chạm ≥ 40px cho cả sheet mobile lẫn panel desktop. */
   min-height: 44px;
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
+/* Mục đầu (hành động chính) và mục đang trỏ: nền vàng nhạt + viền vàng như design. */
 .action:hover,
-.action:focus-visible {
-  background: var(--xp-color-bg-hover);
+.action:focus-visible,
+.primary {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
 }
 
 .action:focus-visible {
   outline: 2px solid var(--xp-color-primary);
-  outline-offset: -2px;
+  outline-offset: 1px;
 }
 
 .icon {
@@ -70,31 +78,58 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: 18px;
+}
+
+.primary .icon {
   background: var(--xp-color-primary-light);
   color: var(--xp-color-primary);
 }
 
 .texts {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
 .label {
-  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
 }
 
+.primary .label {
+  color: var(--xp-color-primary);
+}
+
 .hint {
-  font-size: var(--xp-font-size-sm);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-secondary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 12px;
 }
 
 .sheetList {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-sm);
+}
+
+.sheetDate {
+  margin: 0 0 var(--xp-space-12);
+  font-size: var(--xp-font-size-body);
+  color: var(--xp-color-text-tertiary);
 }

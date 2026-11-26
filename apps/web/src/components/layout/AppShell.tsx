@@ -3,7 +3,6 @@
 import { Alert, Button, Spin } from 'antd';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { FEATURE_STATE } from '@xeprime/types';
@@ -19,12 +18,13 @@ import {
   resolvePartnerTrack,
 } from '@/features/auth/post-auth-destination';
 import { shopStatusNotice } from '@/features/shop/status-notice';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureStates, usePlanEndsAt } from '@/hooks/use-feature';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { useWorkspace } from '@/hooks/use-workspace';
-import { destroySession } from '@/services/auth.service';
+import { PartnerThemeScope } from './PartnerThemeScope';
 import { ShellFrame } from './ShellFrame';
+import { ShellSessionUnreachable } from './ShellSessionUnreachable';
+import { useShellSession } from './use-shell-session';
 import { useManageNavTree } from './use-manage-nav-tree';
 import { useNavPreferencesSync } from './use-nav-preferences-sync';
 import styles from './AppShell.module.css';
@@ -62,10 +62,9 @@ const BARE_PATHS: readonly string[] = [ROUTES.MANAGE.ONBOARDING, ROUTES.MANAGE.V
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const tShop = useTranslations('Shop');
-  const router = useRouter();
   const pathname = usePathname();
-  const queryClient = useQueryClient();
-  const { data: user, isLoading, isError } = useCurrentUser();
+  const isPublicPage = isPartnerPublicPage(pathname);
+  const session = useShellSession({ isPublicPage, loginHref: portalLoginWithNext(pathname) });
   const { tenant } = useTenantScope();
   const featureStates = useFeatureStates();
   const planEndsAt = usePlanEndsAt();
@@ -75,41 +74,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   // cùng sửa một state, nên việc lưu không thuộc về riêng cái nào.
   useNavPreferencesSync();
 
-  const isPublicPage = isPartnerPublicPage(pathname);
-  const notAuthenticated = !isPublicPage && !isLoading && (isError || !user);
-
-  // Cookie phiên hỏng/hết hạn: proxy chỉ kiểm tra CÓ cookie chứ không verify, nên vẫn cho vào rồi
-  // `/auth/me` trả 401. Ở đây xoá cookie hỏng (DELETE /auth/session) rồi ra trang đăng nhập — không
-  // xoá thì proxy cứ đá trang đăng nhập ngược lại (loop).
-  useEffect(() => {
-    if (!notAuthenticated) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        await destroySession();
-      } catch {
-        // Lỗi mạng khi xoá phiên vẫn không cản việc điều hướng ra trang đăng nhập.
-      }
-      if (cancelled) return;
-      queryClient.clear();
-      router.replace(portalLoginWithNext(pathname));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [notAuthenticated, pathname, router, queryClient]);
-
   // Đăng nhập, đăng ký, đặt lại mật khẩu, nhận lời mời: tự render lấy — không cần phiên, không khung.
   if (isPublicPage) return <>{children}</>;
 
-  if (isLoading || isError || !user) {
-    // Hoặc đang nạp /auth/me, hoặc đang dọn phiên hỏng để ra trang đăng nhập (effect ở trên).
+  if (session.status === 'unreachable') {
+    return <ShellSessionUnreachable onRetry={session.retry} retrying={session.retrying} />;
+  }
+
+  if (session.status !== 'ready') {
+    // Hoặc đang nạp /auth/me, hoặc đang dọn phiên bị từ chối để ra trang đăng nhập.
     return (
       <div className={styles.centered}>
         <Spin size="large" />
       </div>
     );
   }
+
+  const { user } = session;
 
   const redirect = partnerPageRedirect(user, pathname);
   if (redirect) return <WrongPageRedirect href={redirect} />;
@@ -168,14 +149,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <ShellFrame
-      user={user}
-      layout="topnav"
-      viewport={VIEWPORT_PATHS.includes(pathname)}
-      notices={notices}
-    >
-      {children}
-    </ShellFrame>
+    <PartnerThemeScope>
+      <ShellFrame
+        user={user}
+        layout="topnav"
+        viewport={VIEWPORT_PATHS.includes(pathname)}
+        notices={notices}
+      >
+        {children}
+      </ShellFrame>
+    </PartnerThemeScope>
   );
 }
 

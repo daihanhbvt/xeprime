@@ -16,7 +16,8 @@
     "rangeLength": "Khoảng xem",
     "previousRange": "Lùi {count, plural, other {# ngày}}",
     "nextRange": "Tiến {count, plural, other {# ngày}}",
-    "pagerAriaLabel": "Điều hướng khoảng xem"
+    "pagerAriaLabel": "Điều hướng khoảng xem",
+    "rangeLabel": "{from} - {to}"
   },
   "grid": {
     "ariaLabel": "Lịch thuê xe theo ngày",
@@ -27,7 +28,9 @@
     "availableRow": "Xe còn trống",
     "availableRowShort": "Trống",
     "availableCell": "Ngày {day}: {count, plural, other {# xe còn trống}}",
-    "availableCellPending": "Ngày {day}: chưa có số liệu xe còn trống"
+    "availableCellPending": "Ngày {day}: chưa có số liệu xe còn trống",
+    "resourceTitle": "Phương tiện",
+    "resourceCount": "{cars, plural, =0 {} other {# ô tô}}{both, select, yes {, } other {}}{bikes, plural, =0 {} other {# xe máy}}"
   },
   "cell": {
     "action": "Tạo lịch cho {vehicle} ngày {date}",
@@ -51,7 +54,14 @@
   "legend": {
     "ariaLabel": "Chú giải lịch",
     "customPrice": "Giá riêng",
-    "holiday": "Ngày lễ"
+    "holiday": "Ngày lễ",
+    "title": "Chú thích",
+    "service": {
+      "self_drive": "Thuê theo ngày",
+      "with_driver": "Xe có tài xế",
+      "long_term": "Thuê xe dài hạn"
+    },
+    "off": "Khóa/Bảo dưỡng"
   },
   "vehicleCard": {
     "trigger": "Thông tin xe {vehicle}",
@@ -62,10 +72,11 @@
     "hourlyPrice": "Giá giờ",
     "operationStatus": "Vận hành",
     "pricePerDay": "{price}/ngày",
-    "openVehicle": "Mở hồ sơ xe"
+    "openVehicle": "Mở hồ sơ xe",
+    "priceRich": "<b>{price}</b> / ngày"
   },
   "eventCard": {
-    "bookingHeading": "Chi tiết nhanh đơn đặt",
+    "bookingHeading": "Chi tiết nhanh đơn",
     "vehicle": "Xe",
     "pickupAt": "Nhận xe",
     "returnAt": "Trả xe",
@@ -73,7 +84,14 @@
     "endAt": "Kết thúc",
     "duration": "Thời lượng",
     "openHint": "Bấm vào thanh lịch để xem chi tiết",
-    "barAriaRange": "từ {start} đến {end}"
+    "barAriaRange": "từ {start} đến {end}",
+    "requestHeading": "Chi tiết nhanh yêu cầu",
+    "amount": "Giá trị đơn",
+    "holdPaid": "Đã trả tiền giữ chỗ",
+    "contact": "Liên hệ khách",
+    "openBooking": "Chi tiết đơn",
+    "openRequest": "Xem yêu cầu",
+    "openDetail": "Xem chi tiết"
   },
   "cellActions": {
     "menuAriaLabel": "Chọn thao tác cho ô lịch",
@@ -85,12 +103,20 @@
     },
     "block": {
       "label": "Khóa xe",
-      "hint": "Không nhận đặt trong một khoảng"
+      "hint": "Ngừng nhận đặt xe ngày này",
+      "hintRange": "Ngừng nhận đặt xe những ngày này"
     },
     "price": {
-      "label": "Đặt giá",
-      "hint": "Giá riêng cho ngày này"
-    }
+      "label": "Đặt giá riêng",
+      "hint": "Thiết lập giá riêng cho ngày này",
+      "hintRange": "Thiết lập giá riêng cho những ngày này"
+    },
+    "singleDate": "{weekday}, {date}",
+    "rangeLabel": "{from} - {to} · {count, plural, other {# ngày}}",
+    "free": "Ngày trống",
+    "busy": "Đã có lịch",
+    "dateStatus": "{date} - {status}",
+    "bookingFrom": "Từ ngày {from} → {to}"
   },
   "block": {
     "createTitle": "Khóa xe",
@@ -100,7 +126,7 @@
     "previewConflictTitle": "Xe có thể đã bận khoảng này",
     "previewConflictDescription": "Cảnh báo sớm - hệ thống vẫn kiểm tra lại khi lưu.",
     "vehicle": "Xe",
-    "period": "Thời gian khoá",
+    "period": "Thời gian áp dụng",
     "periodAriaLabel": "Thời gian khoá xe",
     "periodStart": "Bắt đầu",
     "periodEnd": "Kết thúc",
@@ -115,7 +141,8 @@
       "rangeOrder": "Thời điểm kết thúc phải sau thời điểm bắt đầu"
     },
     "created": "Đã khoá xe",
-    "updated": "Đã cập nhật lịch khoá"
+    "updated": "Đã cập nhật lịch khoá",
+    "subtitle": "Ngừng nhận đặt xe trong khoảng thời gian"
   },
   "blockDetail": {
     "title": "Lịch khoá xe",
@@ -136,13 +163,13 @@
     "released": "Đã gỡ khoá xe"
   },
   "dailyPrice": {
-    "title": "Đặt giá theo ngày",
+    "title": "Đặt giá riêng",
     "vehicle": "Xe",
     "defaultPrice": "Giá mặc định",
     "defaultPriceValue": "{daily}/ngày",
     "defaultPriceValueWithHourly": "{daily}/ngày · {hourly}/giờ",
     "noDefaultPrice": "Chưa cấu hình giá",
-    "appliesTo": "Áp dụng cho",
+    "appliesTo": "Thời gian áp dụng",
     "daily": "Giá theo ngày",
     "dailyTooltip": "Thay cả giá thường lẫn giá cuối tuần của đúng các ngày này",
     "dailyAddon": "đ/ngày",
@@ -150,8 +177,8 @@
     "hourlyAddon": "đ/giờ",
     "note": "Ghi chú",
     "notePlaceholder": "Vd: Giá lễ 2/9",
-    "restore": "Khôi phục giá mặc định",
-    "submit": "Lưu giá",
+    "restore": "Khôi phục",
+    "submit": "Áp dụng",
     "saved": "Đã lưu giá riêng",
     "errors": {
       "rangeTooLong": "Khoảng ngày tối đa {max, plural, other {# ngày}}",
@@ -161,7 +188,11 @@
     "confirmRestoreContent": "Xoá giá riêng của {vehicle} trong khoảng {from} - {to}. Giá thường/cuối tuần sẽ áp trở lại.",
     "confirmRestoreOk": "Khôi phục",
     "restored": "Đã khôi phục giá mặc định ({count, plural, other {# ngày}})",
-    "restoredNone": "Không có giá riêng nào trong khoảng này"
+    "restoredNone": "Không có giá riêng nào trong khoảng này",
+    "subtitle": "Thiết lập giá thuê riêng cho ngày lễ, cuối tuần,...",
+    "dayCount": "{count, plural, other {# ngày}}",
+    "delta": "{sign}{amount} ({sign}{percent}%)",
+    "hourlyTooltip": "Giá theo giờ riêng của đúng các ngày này"
   },
   "maintenance": {
     "title": "Lịch bảo dưỡng",
@@ -251,5 +282,19 @@
     "confirmRestoreContent": "Xoá giá riêng của {count, plural, other {# xe}} trong khoảng {from} - {to}. Giá thường/cuối tuần sẽ áp trở lại.",
     "restored": "Đã khôi phục {count, plural, other {# lượt ngày}}",
     "tableMore": "…và {count, plural, other {# xe khác}}"
+  },
+  "page": {
+    "title": "Lịch thuê xe",
+    "subtitle": "Theo dõi toàn bộ lịch nhận - trả xe, tránh trùng lặp và tối ưu hóa thời gian trống cho đội xe của bạn.",
+    "create": "Tạo đơn thuê"
+  },
+  "event": {
+    "blocked": "Đã khóa",
+    "customerHidden": "Khách thuê",
+    "remaining": "Còn: <b>{duration}</b>",
+    "timeRange": "{from} → {to}"
+  },
+  "requestDialog": {
+    "loading": "Chi tiết yêu cầu thuê xe"
   }
 }

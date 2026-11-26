@@ -141,6 +141,7 @@ App Partner (mobile) vẫn có `OwnerTripsScreen` đọc `GET /trips?role=host` 
 | Breadcrumb | Dải dưới header (biến thể Details) chỉ ở **trang con** của một mục (`/vehicles/:id`…) và ở **trang của mục ẩn**: biểu tượng khối › mục menu › `<h1>` của trang |
 | Màn hẹp | ≤1536: thu khoảng cách khối phải · ≤1366: bỏ dấu +/− · ≤1280: bỏ biểu tượng mục cấp 1 · ≤1024: menu ngang nhường cho nút mở drawer + thanh tab dưới đáy (cùng cây menu) |
 | Mục cấp 1 đang chứa trang hiện tại | **Tô như trạng thái Active** (nền vàng nhạt, chữ vàng đậm — 06/11, người dùng chốt, LỆCH design vốn để thường), kể cả ở trang con (`/bookings/:id`…); `aria-current` = `page` khi đúng trang đích của nhãn khối, `true` khi ở trang khác trong khối |
+| Ô nhập · ô chọn · nút (cỡ `large`) | **26/11/2026** - theo "_Select input base"/"Button" của design (`24200:99389`): cao 40, viền `Stroke/gray-low300` (#d5d7da), bo 12, chữ 14/20. Đặt một lần cho cả site partner bằng `partnerControlTheme` (`styles/theme.ts`) qua `PartnerThemeScope` trong `AppShell` - không chỉnh từng màn. Cỡ `middle` và site khách / quản trị không đổi. Header 66px, vùng nội dung đệm + cách khối 20px |
 | Bấm nhãn khối | **Đi tới mục đầu tiên còn hiện của khối** (06/11) — "Vận hành" → "Đơn thuê xe" (nên "Đơn thuê xe" đứng đầu dropdown, trên "Lịch thuê xe"). Rê chuột vẫn mở dropdown; bàn phím: Enter đi, ↓ mở dropdown |
 
 ## 3. Sổ theo màn
@@ -168,6 +169,7 @@ Mỗi màn: route · node design · trạng thái · tính năng phải có mặ
 | Thông tin cửa hàng | `/shop` (+ thanh toán trong khung `/shop/payment/:id`, `/shop/payment/checkout/:id`) | section `23999:111044` (9 frame) | **Xong** 06/11/2026 | Xem §3.13 — kèm hoá đơn gộp (ADR 0083) và giới thiệu có định dạng |
 | Nhân viên & Phân quyền | `/members` (+ `/members/roles`; cả phiên hỗ trợ) | section `24035:71005` (3 frame) | **Xong** 09/11/2026 | Xem §3.14 — ADR 0086 |
 | Tài khoản & bảo mật | `/account` (mọi tài khoản partner; `/security` chuyển tiếp) | section `24131:71661` (5 frame) | **Xong** 17/11/2026 | Xem §3.15 |
+| Lịch thuê xe | `/calendar` (cả hai tuyến, cả phiên hỗ trợ) | `24200:99389` (7 ngày) · `24200:101456` (14) · `24200:103370` (30) · hover `24200:99391` · Đặt giá `24200:99451` · Khoá `24200:99564` | **Xong** 25/11/2026 | Xem §3.18 — kéo chọn nhiều ngày, yêu cầu chờ duyệt hiện trên lịch |
 
 ### 3.1 Yêu cầu đặt xe — kiểm kê và quyết định (02/11/2026)
 
@@ -1037,12 +1039,49 @@ mục người dùng chốt bên dưới.
 | T10 | Màn thành công (`24352:67918`) | ✅ | Wizard nâng cao: 4 mục dẫn tới đúng tab màn sửa (Giấy tờ · Ảnh · Chính sách · Bảo dưỡng "Không bắt buộc"); không hiện "2/3" vì trang không đọc giấy tờ. Luồng nhanh giữ màn kết quả 4 trạng thái của nó |
 | T11 | Lưới ô 3 cột của "Thông tin xe" | 🟡 | Giữ lưới 2 cột của các khối dùng chung với màn sửa (đổi sẽ đổi luôn màn sửa) |
 
+### 3.18 Lịch thuê xe — kiểm kê và quyết định (25/11/2026)
+
+Design: `24200:99389` (7 ngày), `24200:101456` (14 ngày), `24200:103370` (30 ngày), hover + bảng thao tác
+`24200:99391` (thẻ nhanh `24200:99396`, bảng ô `24200:99425`), Đặt giá riêng `24200:99451` (hộp `24200:99512`),
+Khoá xe `24200:99564` (hộp `24200:99625`). Code: `features/calendar/` — `CalendarScheduler` (điều phối) ·
+`CalendarEventBar` (thẻ + thẻ nhanh) · `CalendarCellActions` · `CalendarDayHeader` · `CalendarLegend` ·
+`CalendarRequestDialog` · `CalendarVehicleSummary` · `hooks/use-day-range-select` · `utils/calendar-event-model`.
+API: `GET /calendar/events` thêm `occupying` · `code` · `serviceType` · `amount` và cờ `includePendingRequests`.
+
+| # | Hạng mục | Mark | Quyết định |
+| --- | --- | --- | --- |
+| 1 | Tiêu đề trang + phụ đề + nút "Tạo đơn thuê" | 🆕→✅ | Nút mở `StaffBookingDialog` ở bước chọn xe (cùng lối của màn Đơn thuê xe), gác `useCanCreateBooking` (tuyến hoa hồng không có). Bản cũ cố ý không có tiêu đề để nhường chỗ cho lưới — design thắng |
+| 2 | Hàng lọc: tìm · chi nhánh · sắp xếp · loại xe · 7/14/30 ngày · Hôm nay · ‹ khoảng › | ✅ | Nhãn khoảng nằm giữa hai nút lùi/tiến; ngày theo ngôn ngữ. Nút "Quay lại" (`?back=`) giữ |
+| 3 | Dải "CHÚ THÍCH": Thuê theo ngày · Xe có tài xế · Thuê xe dài hạn · Khoá/Bảo dưỡng · Giá riêng · Ngày lễ | ✅ | **Sắc thẻ đổi trục: theo DỊCH VỤ** (trước theo trạng thái đơn). Token mới `--xp-color-event-with-driver(-bg)` |
+| 4 | Thẻ đơn: vạch màu · chip trạng thái · mã · số tiền + khách · giờ; "N ngày"; dài hạn "Còn: …" | ✅ | **Chip = 4 nhóm của màn Đơn thuê xe** (Cần xử lý · Chờ khách thanh toán · Chờ giao xe · Đang thuê — người dùng chốt), cùng nhãn `Bookings.board.stage.*`, cùng sắc. Thẻ hẹp (14/30 ngày) rút gọn bằng container query: tiền gọn "800k", bỏ mã/thời lượng |
+| 5 | Chip đỏ "Cần xử lý" | 🆕→✅ | **Người dùng chốt: hiện yêu cầu CHỜ DUYỆT lên lịch.** Lớp HIỂN THỊ, không chiếm lịch (ADR 0044 điều 1): `occupying = false`, viền đứt, không làm ngày thành "Đã có lịch". Server chỉ trả khi có `booking_requests.view`; dài hạn chưa chốt lịch vẽ từ ngày nguyện vọng + số tháng gói. Bấm mở CHÍNH hộp chi tiết + duyệt/từ chối của màn Đơn thuê xe; từ chối làm mới lịch |
+| 6 | Thẻ khoá xe "Đã khoá" + lý do; bảo dưỡng | ✅ | Thẻ xám nét đứt, icon khoá / cờ lê |
+| 7 | Giá riêng = nền vàng nhạt cả ô; ngày lễ + cuối tuần = header đỏ; hôm nay = viên vàng | ✅ | Ngày lễ giữ cờ + nhãn trợ năng (màu không là tín hiệu duy nhất) |
+| 8 | **Kéo chuột chọn nhiều ngày** | 🆕→✅ | Nhấn giữ chuột trái trên ô trống, kéo ngang cùng hàng, thả ⇒ bảng thao tác cho cả khoảng ("12/10 - 14/10 · 3 ngày - Ngày trống/Đã có lịch"). Đặt xe: nhận 8h ngày đầu → trả 8h sáng sau ngày cuối (N ô = N ngày); Khoá: trọn ngày đầu 00:00 → sau ngày cuối 00:00; Đặt giá: đúng các ngày. Chỉ chuột; chạm/bàn phím vẫn chọn một ngày rồi đổi khoảng trong hộp. Lưới tự cuộn ngang khi kéo chạm mép; Esc huỷ lượt kéo |
+| 9 | Bảng thao tác ô (Đặt xe · Khoá xe · Đặt giá riêng), mục đầu viền vàng | ✅ | Theo quyền như cũ |
+| 10 | Thẻ "Chi tiết nhanh đơn": khách + dịch vụ + SĐT + mã · Xe · Nhận · Trả · Giá trị đơn · "Liên hệ khách" + "Chi tiết đơn" | ✅/⚠️ | SĐT không vào dữ liệu lưới: nạp chi tiết đơn khi mở thẻ (cổng ADR 0056). Nhãn "Đã cọc giữ chỗ" ⇒ **"Đã trả tiền giữ chỗ"** (ADR 0044 điều 9, người dùng chốt), chỉ khi `holdPaidAmount > 0`. Yêu cầu: thẻ "Chi tiết nhanh yêu cầu" không SĐT |
+| 11 | Hộp "Đặt giá riêng": thẻ xe · thời gian áp dụng · giá ngày + chênh "+200.000 đ (+25%)" · giá giờ · ghi chú · Khôi phục / Huỷ / Áp dụng | ✅ | Khoảng mặc định = khoảng đã chọn. Chênh chỉ để so sánh, không vào dòng tiền |
+| 12 | Hộp "Khoá xe": thẻ xe · thời gian áp dụng · lý do · ghi chú · Huỷ / Khoá xe (đỏ) | ✅/🟡 | **Giữ chọn GIỜ** (design chỉ vẽ ngày — người dùng chốt): mặc định trọn các ngày đã chọn |
+| 13 | Hàng "Xe còn trống" (sticky đáy) | 🟡→gỡ | **Gỡ** (người dùng chốt). `/calendar/availability` vẫn sống cho app native |
+| 14 | Bảng thao tác cả-đội-xe khi bấm ô ngày ở header (khoá nhanh, khoá nhiều ngày, giá riêng toàn bộ xe) | 🟡→✅ | **Giữ**, restyle theo khuôn mục của bảng thao tác ô |
+| 15 | Nút thu gọn cột xe | 🟡→✅ | **Giữ**, nút nhỏ ở ô "PHƯƠNG TIỆN" (kèm "N ô tô, M xe máy") |
+| 16 | Thẻ xem nhanh cho khoá / bảo dưỡng / thông tin xe, nút X đóng | 🟡→✅ | **Giữ**, cùng khuôn thẻ "Chi tiết nhanh" |
+| 17 | Dòng "Chưa có lịch trong khoảng này - chọn ngày trống để tạo lịch" | 🟡→gỡ | **Gỡ** (26/11/2026, người dùng chốt) - lưới trống tự nói; khoá message giữ cho app native |
+| 18 | Giá ngày ở cột xe | ✅ | Viết gọn "680k / ngày" (giá đầy đủ ở thẻ thông tin xe). Đội > 4 xe: "biển số · giá" cùng dòng, giá sát biển số (ngăn bằng `LIST_SEPARATOR`), chữ 12, hàng hạ từ 136 xuống 112px để thấy thêm xe; ≤ 4 xe: dòng riêng như cũ (26/11/2026, người dùng chốt) |
+| 20 | Vị trí thẻ đơn trong ngày | ✅ | **Theo Ô NGÀY, không theo tỉ lệ giờ** (26/11/2026, người dùng chốt - bản tỉ lệ vẽ hai chuyến cùng ngày 08h/13h lệch sang ngày kế): thẻ phủ trọn các ô từ ngày nhận tới ngày trả; mỗi đầu hở theo giờ - nhận trước 07h / trả sau 19h (hoặc đúng 00h hôm sau) khít, nhận 07-12h / trả 12-19h hở ít (8% ô), nhận từ 12h / trả từ 12h trở về trước hở nhiều (16% ô). Hai chuyến cùng ngày xếp hai tầng trong cùng ô (`computeDaySnap`) |
+| 19 | Hàng lọc: Tìm · Chi nhánh · Lịch gần nhất · nhóm nút loại xe; phải: nhóm nút 7/14/30 · Hôm nay · ‹ khoảng › | ✅ | Ô 40px theo §2.3 "Ô nhập · ô chọn · nút", chữ thường, không icon; nhóm nút = `SegmentedTabs` khung 40 không đệm |
+
+Tự dựng thêm: điện thoại (thẻ 52px hai dòng, bỏ dòng giờ; không kéo chọn); hàng nhiều tầng thẻ cao theo
+số tầng; trạng thái tải / lỗi + thử lại / không xe / không khớp lọc / khoảng trống lịch; không quyền xem.
+Namespace `Calendar` dùng CHUNG với app native: khoá mobile đang dùng giữ nguyên tham số, chỉ thêm khoá mới.
+
 ## 4. Node Figma đã dùng
 
 Ghi lại để phiên sau khỏi tốn lượt đọc lại.
 
 | Node | Là gì |
 | --- | --- |
+| `24200:99389` | Lịch thuê xe (PC 1920, 7 ngày): Main Content `24200:95727` · 14 ngày `24200:101456` · 30 ngày `24200:103370` · hover `24200:99391` (thẻ nhanh `24200:99396`, bảng ô `24200:99425`) · Đặt giá riêng `24200:99451` (hộp `24200:99512`) · Khoá xe `24200:99564` (hộp `24200:99625`) |
 | `24138:80351` | Tổng quan (PC 1920): đầu trang `24138:80354` · bốn ô `24138:80355` · lịch giao nhận `24138:80394` · so sánh tháng `24138:80446` · thu chi `24138:80477` · đơn & chuyến `24138:80517` · cột phải `24138:80589` |
 | `23649:27690` | Header, biến thể Default |
 | `23661:22492` | Header, biến thể Details (có dải breadcrumb `23659:20986`) |

@@ -8,6 +8,8 @@ import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeStore } from '@/store/make-store';
+import { destroySession } from '@/services/auth.service';
+import { ApiClientError } from '@/services/api-client';
 import { XP_TOKENS } from '@/styles/theme';
 
 import { AppShell } from './AppShell';
@@ -26,7 +28,8 @@ const nav = vi.hoisted(() => ({ replace: vi.fn(), pathname: '/manage' }));
 const state = vi.hoisted(() => ({
   user: null as unknown,
   isLoading: false,
-  isError: false,
+  error: null as unknown,
+  refetch: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -38,7 +41,9 @@ vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({
     data: state.user,
     isLoading: state.isLoading,
-    isError: state.isError,
+    error: state.error,
+    refetch: state.refetch,
+    isFetching: false,
   }),
 }));
 
@@ -127,7 +132,9 @@ beforeEach(() => {
   state.user = null;
   state.isLoading = false;
   features.states = {};
-  state.isError = false;
+  state.error = null;
+  state.refetch.mockReset();
+  vi.mocked(destroySession).mockClear();
 });
 
 afterEach(cleanup);
@@ -204,15 +211,48 @@ describe('AppShell - route thoát khỏi khung portal', () => {
 });
 
 describe('AppShell - phiên hỏng', () => {
-  it('/auth/me lỗi → dọn phiên và về portal login kèm next, không loop', async () => {
+  it('/auth/me 401 → dọn phiên và về portal login kèm next, không loop', async () => {
     nav.pathname = '/manage/vehicles';
     state.user = null;
-    state.isError = true;
+    state.error = new ApiClientError({ code: 'SESSION_EXPIRED', message: 'x', status: 401 });
     renderShell();
 
     await waitFor(() =>
       expect(nav.replace).toHaveBeenCalledWith('/manage/login?next=%2Fmanage%2Fvehicles'),
     );
+    expect(destroySession).toHaveBeenCalledTimes(1);
+  });
+
+  /*
+   * Hồi quy 26/11/2026: API khởi động lại / 429 / 5xx từng bị coi là "chưa đăng nhập" - khung gọi
+   * DELETE /auth/session (thu hồi phiên đang sống) rồi đá ra đăng nhập.
+   */
+  it.each([
+    ['429 quá tần suất', new ApiClientError({ code: 'RATE_LIMITED', message: 'x', status: 429 })],
+    ['502 API chưa lên', new ApiClientError({ code: 'INTERNAL_ERROR', message: 'x', status: 502 })],
+    ['mất mạng', new TypeError('Failed to fetch')],
+  ])('/auth/me lỗi tạm thời (%s) → GIỮ phiên, hiện thử lại', async (_label, error) => {
+    nav.pathname = '/manage/calendar';
+    state.user = null;
+    state.error = error;
+    renderShell();
+
+    const retry = await screen.findByRole('button', { name: 'Thử lại' });
+    retry.click();
+    expect(state.refetch).toHaveBeenCalledTimes(1);
+    expect(destroySession).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('page')).toBeNull();
+  });
+
+  it('đã có người dùng mà lượt làm mới /auth/me lỗi tạm thời → vẫn dựng trang', () => {
+    nav.pathname = '/manage/calendar';
+    state.user = OWNER;
+    state.error = new ApiClientError({ code: 'RATE_LIMITED', message: 'x', status: 429 });
+    renderShell();
+
+    expect(screen.getByTestId('page')).toBeTruthy();
+    expect(destroySession).not.toHaveBeenCalled();
   });
 
   it('đang nạp /auth/me → chưa dựng khung, chưa đá đi đâu', () => {

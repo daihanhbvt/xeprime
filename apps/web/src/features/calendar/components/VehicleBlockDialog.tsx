@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert, App, Button, Form, Input, Select } from 'antd';
+import { DialogHeading } from '@/components/overlay/DialogHeading';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
@@ -23,20 +24,34 @@ import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import type { Dayjs } from '@/lib/datetime';
 import { useCreateVehicleBlock, useUpdateVehicleBlock } from '../hooks/use-calendar-mutations';
 import type { VehicleBlock } from '../types/calendar.types';
+import { CalendarVehicleSummary, type CalendarVehicleInfo } from './CalendarVehicleSummary';
 import styles from './VehicleBlockDialog.module.css';
 
-/** Tạo mới từ ô lịch (biết xe + ngày) hoặc sửa một block đang có. */
+/**
+ * Tạo mới từ ô lịch (biết xe + khoảng NGÀY đã chọn — một ô hoặc kéo nhiều ô) hoặc sửa một block
+ * đang có. `vehicle` là hàng xe của lưới để dựng thẻ xe đầu hộp; vắng (mở từ nơi khác) thì thẻ
+ * chỉ có tên + biển số.
+ */
 export type VehicleBlockDialogState =
-  | { mode: 'create'; vehicleId: string; vehicleName: string; date: string }
-  | { mode: 'edit'; block: VehicleBlock }
+  | {
+      mode: 'create';
+      vehicleId: string;
+      vehicleName: string;
+      date: string;
+      /** Ngày CUỐI của khoảng chọn (tính cả). Vắng = đúng một ngày `date`. */
+      endDate?: string;
+      vehicle?: CalendarVehicleInfo;
+    }
+  | { mode: 'edit'; block: VehicleBlock; vehicle?: CalendarVehicleInfo }
   | null;
 
 /**
  * Khoá xe — nghiệp vụ THẬT: block + occupancy ghi cùng transaction ở backend (ADR 0006).
  * Preview trùng lịch chỉ là cảnh báo sớm; chốt chặn là exclusion constraint (409 khi lưu).
  *
- * Mặc định khoá TRỌN NGÀY được bấm (00:00 → 00:00 hôm sau, giờ VN) — người dùng chỉnh lại
- * bằng cùng control chọn khoảng thuê của toàn hệ thống.
+ * Mặc định khoá TRỌN các ngày đã chọn (00:00 ngày đầu → 00:00 sau ngày cuối, giờ VN) — người
+ * dùng chỉnh lại tới từng GIỜ bằng cùng control chọn khoảng thuê của toàn hệ thống (giữ chọn giờ
+ * dù design chỉ vẽ ngày — người dùng chốt 25/11/2026).
  */
 export function VehicleBlockDialog({
   state,
@@ -53,11 +68,20 @@ export function VehicleBlockDialog({
       size="md"
       mobileMode="fullscreen"
       footer={null}
-      title={t(state?.mode === 'edit' ? 'block.editTitle' : 'block.createTitle')}
+      title={
+        <DialogHeading
+          title={t(state?.mode === 'edit' ? 'block.editTitle' : 'block.createTitle')}
+          hint={t('block.subtitle')}
+        />
+      }
     >
       {state ? (
         <BlockForm
-          key={state.mode === 'edit' ? state.block.id : `${state.vehicleId}-${state.date}`}
+          key={
+            state.mode === 'edit'
+              ? state.block.id
+              : `${state.vehicleId}-${state.date}-${state.endDate ?? state.date}`
+          }
           state={state}
           onClose={onClose}
         />
@@ -90,10 +114,12 @@ function BlockForm({
   const [range, setRange] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>(() => {
     // Mốc UTC đang lưu → giờ VIỆT NAM cho hộp chọn khoảng (CLAUDE.md §9).
     if (editing) return { pickupAt: toAppTz(editing.startAt), returnAt: toAppTz(editing.endAt) };
-    const dayStart = dayjs
-      .tz(state.mode === 'create' ? state.date : '', APP_TIME_ZONE)
-      .startOf('day');
-    return { pickupAt: dayStart, returnAt: dayStart.add(1, 'day') };
+    const first = state.mode === 'create' ? state.date : '';
+    const last = state.mode === 'create' ? (state.endDate ?? state.date) : '';
+    return {
+      pickupAt: dayjs.tz(first, APP_TIME_ZONE).startOf('day'),
+      returnAt: dayjs.tz(last, APP_TIME_ZONE).startOf('day').add(1, 'day'),
+    };
   });
   const [mode, setMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
   const [reason, setReason] = useState<VehicleBlockReason>(
@@ -194,9 +220,17 @@ function BlockForm({
         />
       ) : null}
 
-      <Form.Item label={t('block.vehicle')}>
-        <Input value={vehicleName} disabled />
-      </Form.Item>
+      <CalendarVehicleSummary
+        vehicle={
+          state.vehicle ?? {
+            name: editing ? editing.vehicleName : vehicleName,
+            plateNumber: editing ? (editing.vehiclePlate ?? null) : null,
+            imageUrl: null,
+            weekdayPrice: null,
+            hourlyPrice: null,
+          }
+        }
+      />
 
       <Form.Item
         label={t('block.period')}
@@ -237,13 +271,16 @@ function BlockForm({
         />
       </Form.Item>
 
-      <div className={styles.actions}>
-        <Button onClick={onClose} disabled={pending}>
-          {tCommon('actions.cancel')}
-        </Button>
-        <Button type="primary" htmlType="submit" loading={pending}>
-          {t(editing ? 'block.submitEdit' : 'block.submitCreate')}
-        </Button>
+      <div className={styles.footer}>
+        <div className={styles.footerEnd}>
+          <Button onClick={onClose} disabled={pending}>
+            {tCommon('actions.cancel')}
+          </Button>
+          {/* Khoá là NGỪNG nhận đặt — nút đỏ như design; sửa một lịch khoá thì là nút chính thường. */}
+          <Button type="primary" danger={!editing} htmlType="submit" loading={pending}>
+            {t(editing ? 'block.submitEdit' : 'block.submitCreate')}
+          </Button>
+        </div>
       </div>
     </Form>
   );

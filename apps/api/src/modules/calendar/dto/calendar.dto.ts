@@ -8,8 +8,17 @@ import {
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
-import { IsDate, IsIn, IsInt, IsOptional, IsString, Length, ValidateIf } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsDate,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  ValidateIf,
+} from 'class-validator';
 import { BranchIdQuery } from '../../../common/dto/branch-scope';
 
 /**
@@ -49,6 +58,25 @@ export class CalendarRangeQueryDto {
   @IsOptional()
   @IsIn(CALENDAR_SORT_VALUES)
   sort?: CalendarSort;
+}
+
+/**
+ * Query của `GET /calendar/events` — khoảng xem dùng chung + cờ vẽ thêm YÊU CẦU chờ duyệt.
+ *
+ * Cờ mặc định TẮT để client cũ (app native) nhận đúng tập event như trước: yêu cầu chờ duyệt
+ * KHÔNG chiếm lịch (ADR 0044 điều 1), nên chúng chỉ là một lớp hiển thị mà client tự chọn bật.
+ */
+export class CalendarEventsQueryDto extends CalendarRangeQueryDto {
+  @ApiPropertyOptional({
+    type: Boolean,
+    default: false,
+    description:
+      'true = kèm yêu cầu đặt xe CHỜ DUYỆT (không chiếm lịch, chỉ hiển thị). Cần quyền xem yêu cầu',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  includePendingRequests?: boolean;
 }
 
 /** Báo giá NỘI BỘ cho xe của chính gian hàng (không đòi xe public như /public quote). */
@@ -155,11 +183,49 @@ export class CalendarEventDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'BookingStatus khi type=booking · VehicleBlockReason khi type=blocked_range',
+    description:
+      'BookingStatus khi type=booking · VehicleBlockReason khi type=blocked_range · ' +
+      'BookingRequestStatus khi type=booking_request (`awaiting_hold` đang giữ chỗ, ' +
+      '`pending_host_approval` chờ duyệt - chỉ có khi gửi `includePendingRequests`)',
   })
   status!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true }) sourceId!: string | null;
+
+  /*
+   * Optional trên contract chỉ để client cũ (app native, dữ liệu mẫu trong test của nó) không phải
+   * khai thêm trường; server LUÔN gửi. Client đọc `occupying !== false`.
+   */
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'false = KHÔNG chiếm lịch xe: yêu cầu chờ duyệt (ADR 0044 điều 1). Mọi event đọc từ ' +
+      '`vehicle_occupancies` là true. Server luôn gửi',
+  })
+  occupying!: boolean;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã đơn (type=booking). Yêu cầu chưa thành đơn không có mã',
+  })
+  code!: string | null;
+
+  @ApiPropertyOptional({
+    enum: SERVICE_TYPE_VALUES,
+    nullable: true,
+    description: 'Dịch vụ của đơn/yêu cầu - null với khoá xe và bảo dưỡng',
+  })
+  serviceType!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tiền thuê đã chốt (VND string): `bookings.total_amount` của đơn, snapshot giá của khoản ' +
+      'giữ chỗ. null với yêu cầu chờ duyệt (chưa có giá chốt), khoá xe, bảo dưỡng',
+  })
+  amount!: string | null;
 }
 
 /**

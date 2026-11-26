@@ -1,43 +1,69 @@
+/* Hàng lọc ngoài thẻ lịch (design `24186:85623`): trái bộ lọc, phải khoảng xem; ô cao 40, bo 12. */
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--xp-space-sm) var(--xp-space-md);
+  gap: var(--xp-space-12) var(--xp-space-md);
   flex-wrap: wrap;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-bottom: 1px solid var(--xp-color-border);
-  background: var(--xp-color-bg-container);
 }
 
 .filters,
 .rangeControls {
   display: flex;
   align-items: center;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-12);
   flex-wrap: wrap;
   min-width: 0;
 }
 
-.search {
-  width: 200px;
+/*
+ * Kèm `:global(.ant-input-affix-wrapper)`: AntD bơm `width: 100%` cho ô có tiền tố SAU stylesheet CSS
+ * Modules — cùng độ đặc hiệu thì bản chèn sau thắng và ô tìm chiếm trọn hàng.
+ */
+.search,
+.search:global(.ant-input-affix-wrapper) {
+  width: 269px;
 }
 
 .sortSelect {
-  min-width: 160px;
+  width: 185px;
 }
 
-/* Rộng hơn ô sắp xếp vì nhãn là `Tên chi nhánh · Tỉnh`, dài hơn hẳn "Lịch gần nhất". */
+/*
+ * Nhóm nút (loại xe · khoảng xem) cùng hàng ô 40px (design `24186:85627`): khung không đệm, tab
+ * đang chọn cao trọn khung, tab còn lại 36 canh giữa - khác hàng tab trạng thái của các màn danh
+ * sách (đệm 2, cao 42) nên ghi đè ở đây chứ không sửa `SegmentedTabs`. Nhân đôi class: cùng độ
+ * đặc hiệu với `.list` của SegmentedTabs thì thứ tự nạp CSS quyết.
+ */
+.tabs.tabs {
+  flex: none;
+  align-items: center;
+  height: 40px;
+  padding: 0;
+}
+
+.tabs [aria-selected='true'] {
+  align-self: stretch;
+  height: auto;
+  /* Không còn đệm 2px giữa khung và tab ⇒ bo cùng 12 như khung, không phải 10. */
+  border-radius: var(--xp-border-radius-control);
+}
+
 .branchSelect {
-  min-width: 200px;
+  width: 185px;
 }
 
+/* ‹ 11/11 - 24/11/2026 › — nhãn khoảng nằm GIỮA hai nút lùi/tiến (design `24186:87161`). */
 .pager {
   display: inline-flex;
-  gap: 4px;
+  align-items: center;
+  gap: var(--xp-space-12);
 }
 
 .rangeLabel {
-  font-weight: 600;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-medium);
   color: var(--xp-color-text);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -50,7 +76,6 @@
  */
 @media (max-width: 640px) {
   .toolbar {
-    padding: var(--xp-space-xs) var(--xp-space-sm);
     gap: var(--xp-space-xs);
   }
 
@@ -59,7 +84,8 @@
     gap: var(--xp-space-xs);
   }
 
-  .search {
+  .search,
+  .search:global(.ant-input-affix-wrapper) {
     flex: 1 1 100%;
     width: auto;
   }
@@ -67,6 +93,7 @@
   /* Sắp xếp đứng cạnh bộ lọc loại xe trên CÙNG một hàng, chia nhau bề ngang còn lại. */
   .sortSelect {
     flex: 1 1 auto;
+    width: auto;
     min-width: 132px;
   }
 
@@ -74,6 +101,7 @@
      đều bị cắt giữa chừng, mà tên chi nhánh cắt dở thì không phân biệt được với nhau. */
   .branchSelect {
     flex: 1 1 100%;
+    width: auto;
     min-width: 0;
   }
 

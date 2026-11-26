@@ -98,6 +98,8 @@ export interface AppFormat {
    * mà không viết một định dạng thứ hai; `weekday` rỗng nếu message không để thứ ở đầu.
    */
   rentalPointParts: (value: Dayjs) => { weekday: string; rest: string };
+  /** Chỉ GIỜ của một mốc thuê, cùng kiểu với {@link rentalPoint}: `11h00` (vi) · `11:00` (en). */
+  rentalTime: (value: Dayjs) => string;
   /**
    * Mốc thuê xe ở dạng NGẮN NHẤT còn đọc được: `14/09 17:00` (vi) · `09/14 17:00` (en).
    *
@@ -389,6 +391,8 @@ export function createAppFormat(
     weekdayLong: (value) => format.dateTime(value.toDate(), 'weekdayLong'),
     rentalPoint: (value, opts) => rentalPointText(value, opts?.withTime !== false),
     rentalPointParts,
+    rentalTime: (value) =>
+      t('units.rentalTime', { hour: value.format('HH'), minute: value.format('mm') }),
     rentalPointCompact: (value) => compactPoint(value),
     rentalAt: (value) => (value ? rentalPointText(toAppTz(value), true) : empty),
     rentalRange: (from, to) =>

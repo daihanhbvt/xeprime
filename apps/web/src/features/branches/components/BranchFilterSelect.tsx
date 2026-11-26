@@ -29,6 +29,7 @@ export function BranchFilterSelect({
   className,
   size,
   prefix,
+  appearance = 'pill',
 }: {
   branch: BranchFilterState;
   /** `branchId` trên URL — nguồn sự thật duy nhất của bộ lọc (ADR 0004). */
@@ -36,6 +37,11 @@ export function BranchFilterSelect({
   className?: string;
   size?: 'small' | 'middle' | 'large';
   prefix?: ReactNode;
+  /**
+   * `pill` (mặc định): ô chọn chữ đậm của Figma `24138:80354`. `field`: ô chọn THƯỜNG cùng
+   * kiểu các ô lọc bên cạnh (lịch thuê xe `24200:99389` - chữ thường, theme control partner).
+   */
+  appearance?: 'pill' | 'field';
 }) {
   const t = useTranslations('Branches');
 
@@ -52,7 +58,7 @@ export function BranchFilterSelect({
 
   return (
     <Select
-      className={cx(styles.select, className)}
+      className={cx(appearance === 'pill' && styles.select, className)}
       size={size}
       value={value ?? ALL_FILTER}
       onChange={(next: string) => branch.select(next === ALL_FILTER ? undefined : next)}

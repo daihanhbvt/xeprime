@@ -180,6 +180,9 @@ export const XP_DARK_TOKENS = {
   // Cùng giá trị khối `[data-theme='dark']` của packages/ui tokens.css (PR #289 thêm tím vào CSS).
   'color-purple': '#9b8afb',
   'color-purple-bg': 'rgba(105, 56, 239, 0.14)',
+  // Thẻ đơn 'có tài xế' trên lịch (25/11/2026): hồng đỏ sáng lên + nền pha trong suốt.
+  'color-event-with-driver': '#fd6f8e',
+  'color-event-with-driver-bg': 'rgba(227, 27, 84, 0.14)',
   'color-purple-border': 'rgba(189, 180, 254, 0.45)',
   'color-warning-strong': '#fb6514',
   'color-info-strong': '#53b1fd',
@@ -234,3 +237,49 @@ export const antdDarkComponents: NonNullable<ThemeConfig['components']> = {
     defaultColor: XP_DARK_TOKENS['color-text-secondary'],
   },
 };
+
+/**
+ * Ô nhập · ô chọn · nút của SITE PARTNER theo bộ component Figma Partner-XePrime ("_Select input
+ * base", "Button" - đo trên `24200:99389`, 26/11/2026): viền `Stroke/gray-low300`, bo 12, chữ
+ * 14px ở cỡ `large` (40px). Mặc định của AntD ở cỡ đó là viền `gray-low200`, bo 10, chữ 16px -
+ * lệch design ở MỌI hàng lọc partner.
+ *
+ * Chỉ bọc site partner (`PartnerThemeScope` trong `AppShell`): site khách và site quản trị đi
+ * theo bộ design riêng của chúng. Cỡ `middle` (32px) giữ nguyên - chỉ cỡ `large` đổi.
+ */
+export function partnerControlTheme(mode: 'light' | 'dark'): ThemeConfig {
+  const border =
+    mode === 'dark' ? XP_DARK_TOKENS['color-border-strong'] : XP_TOKENS['color-border-strong'];
+  const radius = toPx(XP_TOKENS['border-radius-control']);
+  const fontSize = toPx(XP_TOKENS['font-size']);
+  // Dòng chữ 20px của ô nhập Figma ("_Select input base": 14/20).
+  const fieldLineHeight = 20;
+  const field = {
+    colorBorder: border,
+    borderRadiusLG: radius,
+    inputFontSizeLG: fontSize,
+    // Design đệm 14px tính từ mép ngoài; AntD đệm BÊN TRONG viền 1px.
+    paddingInlineLG: 13,
+  };
+  return {
+    components: {
+      Input: field,
+      InputNumber: field,
+      DatePicker: field,
+      /*
+       * Select 6 tính đệm dọc = (controlHeightLG − fontHeightLG) / 2, và hai token chiều cao chữ
+       * suy từ `fontSizeLG` GỐC (16) chứ không từ bản ghi đè - phải ghi đè đủ bộ, không thì ô chỉ
+       * cao 37px. `fontHeightLG` là token tầng map: kiểu của AntD không khai nó cho component
+       * nhưng lúc chạy component đọc nó từ chính bộ token đã gộp - ép kiểu có chủ đích.
+       */
+      Select: {
+        colorBorder: border,
+        borderRadiusLG: radius,
+        fontSizeLG: fontSize,
+        fontHeightLG: fieldLineHeight,
+        lineHeightLG: fieldLineHeight / fontSize,
+      } as NonNullable<ThemeConfig['components']>['Select'],
+      Button: { defaultBorderColor: border, borderRadiusLG: radius, contentFontSizeLG: fontSize },
+    },
+  };
+}
