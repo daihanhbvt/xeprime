@@ -438,6 +438,7 @@
       "legend": "Chú giải biểu đồ",
       "weekRange": "{from} - {to}",
       "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc.",
+      "sourceDescription": "Cột chồng là doanh thu theo nguồn đơn, cột đỏ là chi phí, đường xanh là lợi nhuận. Đã loại tiền cọc.",
       "titleShort": "Dòng tiền & Lợi nhuận"
     },
     "categories": {
@@ -526,19 +527,6 @@
     "periodSheet": {
       "title": "Chọn kỳ",
       "custom": "Khoảng ngày tự chọn"
-    },
-    "sources": {
-      "title": "Doanh thu theo nguồn đơn",
-      "total": "Tổng doanh thu",
-      "marketplace": "Qua XePrime",
-      "direct": "Tự khai thác",
-      "row": "{name} · {count, plural, other {# chuyến}}",
-      "share": "{percent}%",
-      "unlinked": "Thu không gắn đơn",
-      "error": "Không tải được doanh thu theo nguồn đơn",
-      "retry": "Thử lại",
-      "empty": "Kỳ này chưa có số liệu",
-      "emptyHint": "Chọn kỳ khác hoặc ghi nhận khoản thu của các đơn trong kỳ."
     }
   },
   "entity": {
@@ -627,19 +615,6 @@
     "subtitle": "Doanh thu theo nguồn, chi phí vận hành và lợi nhuận của xe theo kỳ",
     "openLedger": "Xem sổ Thu-Chi",
     "createReceipt": "Tạo phiếu thu/chi",
-    "sources": {
-      "label": "Xem theo nguồn doanh thu",
-      "viewing": "Đang xem: <b>{name}</b>",
-      "all": "Tất cả nguồn",
-      "xeprime": "Qua sàn XePrime",
-      "direct": "Nguồn ngoài (tự khai thác)",
-      "trips": "{count, plural, other {# chuyến}}",
-      "split": "Sàn {marketplace, number}% · Ngoài {direct, number}%",
-      "xeprimeHint": "Đơn khách đặt qua XePrime",
-      "directHint": "Khách quen, vãng lai, mạng xã hội...",
-      "share": "{percent, number}%",
-      "error": "Không tải được doanh thu theo nguồn"
-    },
     "kpi": {
       "revenue": {
         "all": "Doanh thu",
@@ -665,34 +640,7 @@
       "revenueInfoLabel": "Cách tính doanh thu"
     },
     "chart": {
-      "title": "Doanh thu theo nguồn & lợi nhuận",
-      "description": "Cột chồng là doanh thu theo nguồn đơn, cột đỏ là chi phí, đường xanh là lợi nhuận của cả xe.",
-      "marketplace": "Qua XePrime",
-      "direct": "Nguồn ngoài",
-      "unlinked": "Thu khác (không qua đơn)",
-      "cost": "Chi phí",
-      "profit": "Lợi nhuận",
-      "legend": "Chú giải biểu đồ"
-    },
-    "breakdown": {
-      "title": "Chi tiết doanh thu từng nguồn",
-      "subtitle": "Tiền đã thu trong kỳ, chia theo nguồn của đơn",
-      "total": "Tổng: {amount}",
-      "tag": {
-        "marketplace": "Sàn",
-        "direct": "Tự khai thác",
-        "unlinked": "Phiếu lẻ"
-      },
-      "trips": "{count, plural, other {# chuyến}}",
-      "booked": "Giá trị chuyến {amount}",
-      "bookedInfo": "Giá trị chuyến là tổng tiền thuê đã chốt của các chuyến nhận xe trong kỳ. Số đã thu có thể khác vì tiền có thể về trước hoặc sau kỳ.",
-      "bookedInfoLabel": "Giá trị chuyến là gì",
-      "share": "{percent, number}% tổng thu",
-      "empty": "Kỳ này chưa có doanh thu từ nguồn này",
-      "emptyHint": "Chọn kỳ khác, hoặc chọn \"Tất cả nguồn\".",
-      "error": "Không tải được chi tiết theo nguồn",
-      "unlinkedName": "Thu khác không gắn đơn",
-      "unlinkedHint": "Phiếu thu nhập tay cho xe, không thuộc chuyến nào"
+      "description": "Cột chồng là doanh thu theo nguồn đơn, cột đỏ là chi phí, đường xanh là lợi nhuận của cả xe."
     },
     "costTitle": "Cơ cấu chi phí của xe",
     "capital": {
@@ -737,5 +685,49 @@
       "profitAll": "Lợi nhuận toàn bộ"
     },
     "allTime": "Toàn bộ"
+  },
+  "bySource": {
+    "cards": {
+      "label": "Xem theo nguồn doanh thu",
+      "viewing": "Đang xem: <b>{name}</b>",
+      "all": "Tất cả nguồn",
+      "xeprime": "Qua sàn XePrime",
+      "direct": "Nguồn ngoài (tự khai thác)",
+      "trips": "{count, plural, other {# chuyến}}",
+      "split": "Sàn {marketplace, number}% · Ngoài {direct, number}%",
+      "xeprimeHint": "Đơn khách đặt qua XePrime",
+      "directHint": "Khách quen, vãng lai, mạng xã hội...",
+      "share": "{percent, number}%",
+      "error": "Không tải được doanh thu theo nguồn"
+    },
+    "rows": {
+      "title": "Chi tiết doanh thu từng nguồn",
+      "subtitle": "Tiền đã thu trong kỳ, chia theo nguồn của đơn",
+      "total": "Tổng: {amount}",
+      "tag": {
+        "marketplace": "Sàn",
+        "direct": "Tự khai thác",
+        "unlinked": "Phiếu lẻ"
+      },
+      "trips": "{count, plural, other {# chuyến}}",
+      "booked": "Giá trị chuyến {amount}",
+      "bookedInfo": "Giá trị chuyến là tổng tiền thuê đã chốt của các chuyến nhận xe trong kỳ. Số đã thu có thể khác vì tiền có thể về trước hoặc sau kỳ.",
+      "bookedInfoLabel": "Giá trị chuyến là gì",
+      "share": "{percent, number}% tổng thu",
+      "empty": "Kỳ này chưa có doanh thu từ nguồn này",
+      "emptyHint": "Chọn kỳ khác, hoặc chọn \"Tất cả nguồn\".",
+      "error": "Không tải được chi tiết theo nguồn",
+      "unlinkedName": "Thu khác không gắn đơn",
+      "unlinkedHint": "Phiếu thu nhập tay, không thuộc chuyến nào"
+    },
+    "chart": {
+      "title": "Doanh thu theo nguồn & lợi nhuận",
+      "marketplace": "Qua XePrime",
+      "direct": "Nguồn ngoài",
+      "unlinked": "Thu khác (không qua đơn)",
+      "cost": "Chi phí",
+      "profit": "Lợi nhuận",
+      "legend": "Chú giải biểu đồ"
+    }
   }
 }

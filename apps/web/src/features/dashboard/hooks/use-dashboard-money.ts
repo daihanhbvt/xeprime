@@ -4,14 +4,20 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
 import type { ReceiptListResult } from '@/features/finance/api';
-import type { FinanceSeries, FinanceSummary } from '@/features/finance/types';
+import type {
+  FinanceSeries,
+  FinanceSourceBreakdown,
+  FinanceSummary,
+} from '@/features/finance/types';
 import { useFeature } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import {
+  dashboardFinanceBySourceParams,
   dashboardFinanceSeriesParams,
   dashboardFinanceSummaryParams,
   dashboardPreviousFinanceSummaryParams,
   dashboardTodayReceiptParams,
+  fetchDashboardFinanceBySource,
   fetchDashboardFinanceSeries,
   fetchDashboardFinanceSummary,
   fetchDashboardPreviousFinanceSummary,
@@ -33,6 +39,8 @@ export interface DashboardMoney {
   previousSummary: UseQueryResult<FinanceSummary>;
   /** Doanh thu · chi phí · lợi nhuận theo ngày, 30 ngày gần nhất. */
   series: UseQueryResult<FinanceSeries>;
+  /** Doanh thu theo nguồn đơn (ADR 0110) của cùng 30 ngày - tỷ trọng sàn / tự khai thác. */
+  bySource: UseQueryResult<FinanceSourceBreakdown>;
   todayReceipts: UseQueryResult<ReceiptListResult>;
 }
 
@@ -72,6 +80,13 @@ export function useDashboardMoney(branchId?: string): DashboardMoney {
     staleTime: 60_000,
   });
 
+  const bySource = useQuery({
+    queryKey: queryKeys.finance.bySource(dashboardFinanceBySourceParams(branchId)),
+    queryFn: () => fetchDashboardFinanceBySource(branchId),
+    enabled: visible,
+    staleTime: 60_000,
+  });
+
   const todayReceipts = useQuery({
     queryKey: queryKeys.receipts.list(dashboardTodayReceiptParams(branchId)),
     queryFn: () => fetchDashboardTodayReceipts(branchId),
@@ -79,5 +94,5 @@ export function useDashboardMoney(branchId?: string): DashboardMoney {
     staleTime: 60_000,
   });
 
-  return { visible, summary, previousSummary, series, todayReceipts };
+  return { visible, summary, previousSummary, series, bySource, todayReceipts };
 }

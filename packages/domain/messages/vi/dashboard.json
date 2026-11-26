@@ -193,6 +193,14 @@
     "cost": "Chi phí",
     "profit": "Lợi nhuận",
     "revenueSummaryTitle": "Thu chi {days} ngày gần nhất",
+    "sources": {
+      "title": "Doanh thu theo nguồn",
+      "detail": "Xem chi tiết",
+      "trips": "{count, plural, other {# chuyến}}",
+      "share": "{percent, number}%",
+      "error": "Chưa tải được doanh thu theo nguồn.",
+      "legend": "Chú giải nguồn doanh thu"
+    },
     "legendTotal": "{label}: {count}"
   },
   "market": {

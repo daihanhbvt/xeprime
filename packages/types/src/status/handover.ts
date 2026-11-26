@@ -263,13 +263,15 @@ export const HANDOVER_PREP_ITEM_VALUES = Object.values(HANDOVER_PREP_ITEM) as Ha
  * vẫn đếm góc trống là một ô thừa. `PHOTOS` còn trong `HANDOVER_PREP_ITEM` vì DB có dấu cũ; server
  * bỏ qua các dấu đó khi trả về và từ chối dấu mới.
  */
-export const HANDOVER_PREP_MANUAL_ITEM_VALUES: readonly HandoverPrepItem[] = [
+export type HandoverPrepManualItem = Exclude<HandoverPrepItem, typeof HANDOVER_PREP_ITEM.PHOTOS>;
+
+export const HANDOVER_PREP_MANUAL_ITEM_VALUES: readonly HandoverPrepManualItem[] = [
   HANDOVER_PREP_ITEM.DOCUMENTS,
   HANDOVER_PREP_ITEM.CONTRACT,
   HANDOVER_PREP_ITEM.DRIVER,
 ];
 
-export function isHandoverPrepManualItem(item: string): item is HandoverPrepItem {
+export function isHandoverPrepManualItem(item: string): item is HandoverPrepManualItem {
   return (HANDOVER_PREP_MANUAL_ITEM_VALUES as readonly string[]).includes(item);
 }
 

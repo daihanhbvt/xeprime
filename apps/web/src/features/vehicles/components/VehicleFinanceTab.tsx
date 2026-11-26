@@ -1,10 +1,10 @@
 'use client';
 
-import { Alert, Segmented, Skeleton } from 'antd';
+import { Alert, Segmented } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo, type CSSProperties, type ReactNode } from 'react';
-import { LIST_SEPARATOR, moneyChangePercent, moneyPerPart } from '@xeprime/domain';
+import { useMemo } from 'react';
+import { moneyChangePercent, moneyPerPart } from '@xeprime/domain';
 import {
   FINANCE_GRANULARITY,
   FINANCE_GRANULARITY_VALUES,
@@ -18,11 +18,10 @@ import {
 } from '@/components/chart/SourceRevenueTrendChart';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { MoneyStat } from '@/components/data-display/MoneyStat';
-import { useBookingSourceText } from '@/components/data-display/BookingSourceChip';
-import { EmptyState } from '@/components/feedback/EmptyState';
 import { receiptsPath } from '@/constants/routes';
 import { ChangeBadge } from '@/features/dashboard/components/ChangeBadge';
 import { CategoryBreakdown } from '@/features/finance/components/CategoryBreakdown';
+import { RevenueSourceCards, RevenueSourceRows } from '@/features/finance/components/RevenueSource';
 import { FINANCE_OVERVIEW_PERIOD_VALUES } from '@/features/finance/constants';
 import {
   useFinanceByCategory,
@@ -40,14 +39,10 @@ import {
   REVENUE_SOURCE_PARAM,
   REVENUE_SOURCE_VIEW,
   comparablePreviousRange,
-  itemMatchesView,
   parseRevenueSourceView,
   revenueOf,
-  sharePercent,
-  sourceGroupOf,
   tripsOf,
   type RevenueSourceView,
-  type SourceGroup,
 } from '@/features/finance/vehicle-finance';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -110,6 +105,7 @@ export function VehicleFinanceTab({
 }: VehicleFinanceTabProps) {
   const t = useTranslations('Finance.vehicle');
   const tEntity = useTranslations('Finance.entity');
+  const tSource = useTranslations('Finance.bySource');
   const fmt = useAppFormat();
   const scope = useMemo<FinanceScope>(() => ({ vehicleId: vehicle.id }), [vehicle.id]);
 
@@ -264,7 +260,7 @@ export function VehicleFinanceTab({
           </div>
         </div>
 
-        <SourceSelector
+        <RevenueSourceCards
           data={bySource.data}
           loading={bySource.isFetching && !bySource.data}
           error={bySource.isError && !bySource.data}
@@ -294,7 +290,7 @@ export function VehicleFinanceTab({
         className={styles.chartCard}
         points={series.data?.buckets ?? []}
         labelOf={labelOf}
-        title={t('chart.title')}
+        title={tSource('chart.title')}
         description={t('chart.description')}
         actions={<SourceRevenueTrendLegend showUnlinked={showUnlinkedLegend} />}
         height={240}
@@ -319,13 +315,34 @@ export function VehicleFinanceTab({
       />
 
       <div className={styles.columns}>
-        <SourceRows
-          data={bySource.data}
-          loading={bySource.isFetching && !bySource.data}
-          error={bySource.isError && !bySource.data}
-          onRetry={() => void bySource.refetch()}
-          view={view}
-        />
+        <Panel
+          className={cx(styles.rowsPanel, styles.wrapHead)}
+          title={
+            <span className={styles.titleWithInfo}>
+              {tSource('rows.title')}
+              <InfoHint
+                content={tSource('rows.bookedInfo')}
+                label={tSource('rows.bookedInfoLabel')}
+              />
+            </span>
+          }
+          subtitle={tSource('rows.subtitle')}
+          extra={
+            bySource.data ? (
+              <span className={styles.rowsTotal}>
+                {tSource('rows.total', { amount: fmt.money(revenueOf(bySource.data, view)) })}
+              </span>
+            ) : null
+          }
+        >
+          <RevenueSourceRows
+            data={bySource.data}
+            loading={bySource.isFetching && !bySource.data}
+            error={bySource.isError && !bySource.data}
+            onRetry={() => void bySource.refetch()}
+            view={view}
+          />
+        </Panel>
         <div className={styles.side}>
           <CategoryBreakdown
             title={t('costTitle')}
@@ -350,180 +367,6 @@ export function VehicleFinanceTab({
         </div>
       </div>
     </div>
-  );
-}
-
-/* ─── Ba thẻ chọn nguồn ────────────────────────────────────────────────────── */
-
-function SourceSelector({
-  data,
-  loading,
-  error,
-  onRetry,
-  view,
-  onChange,
-}: {
-  data: FinanceSourceBreakdown | undefined;
-  loading: boolean;
-  error: boolean;
-  onRetry: () => void;
-  view: RevenueSourceView | null;
-  onChange: (view: RevenueSourceView | null) => void;
-}) {
-  const t = useTranslations('Finance.vehicle.sources');
-  const tCommon = useTranslations('Common');
-  const fmt = useAppFormat();
-
-  if (error) {
-    return (
-      <Alert
-        type="warning"
-        showIcon
-        title={t('error')}
-        action={
-          <button type="button" className={styles.retry} onClick={onRetry}>
-            {tCommon('actions.retry')}
-          </button>
-        }
-      />
-    );
-  }
-
-  const total = data?.total ?? '0';
-  const marketplaceShare = data ? sharePercent(data.marketplaceAmount, total) : 0;
-  const directShare = data ? sharePercent(data.directAmount, total) : 0;
-  const unlinkedShare = data ? sharePercent(data.unlinkedAmount, total) : 0;
-  const viewName = view === null ? t('all') : t(view);
-
-  const cards: {
-    key: RevenueSourceView | null;
-    group: 'all' | SourceGroup;
-    label: string;
-    amount: string | null;
-    trips: number | null;
-    footer: ReactNode;
-    bar: ReactNode;
-  }[] = [
-    {
-      key: null,
-      group: 'all',
-      label: t('all'),
-      amount: data?.total ?? null,
-      trips: data ? tripsOf(data.items, null) : null,
-      footer: (
-        <>
-          <span>{t('split', { marketplace: marketplaceShare, direct: directShare })}</span>
-        </>
-      ),
-      bar: (
-        <span className={styles.track}>
-          <Segment share={marketplaceShare} group="marketplace" />
-          <Segment share={directShare} group="direct" />
-          <Segment share={unlinkedShare} group="unlinked" />
-        </span>
-      ),
-    },
-    {
-      key: REVENUE_SOURCE_VIEW.MARKETPLACE,
-      group: 'marketplace',
-      label: t('xeprime'),
-      amount: data?.marketplaceAmount ?? null,
-      trips: data ? tripsOf(data.items, REVENUE_SOURCE_VIEW.MARKETPLACE) : null,
-      footer: (
-        <>
-          <span>{t('xeprimeHint')}</span>
-          <span className={styles.shareMarketplace}>
-            {t('share', { percent: marketplaceShare })}
-          </span>
-        </>
-      ),
-      bar: (
-        <span className={styles.track}>
-          <Segment share={marketplaceShare} group="marketplace" />
-        </span>
-      ),
-    },
-    {
-      key: REVENUE_SOURCE_VIEW.DIRECT,
-      group: 'direct',
-      label: t('direct'),
-      amount: data?.directAmount ?? null,
-      trips: data ? tripsOf(data.items, REVENUE_SOURCE_VIEW.DIRECT) : null,
-      footer: (
-        <>
-          <span>{t('directHint')}</span>
-          <span className={styles.shareDirect}>{t('share', { percent: directShare })}</span>
-        </>
-      ),
-      bar: (
-        <span className={styles.track}>
-          <Segment share={directShare} group="direct" />
-        </span>
-      ),
-    },
-  ];
-
-  return (
-    <div className={styles.sources}>
-      <div className={styles.sourcesHead}>
-        <span className={styles.sourcesLabel}>{t('label')}</span>
-        <span className={styles.sourcesViewing}>
-          {t.rich('viewing', { name: viewName, b: (chunks) => <b>{chunks}</b> })}
-        </span>
-      </div>
-      <div className={styles.sourceCards} role="group" aria-label={t('label')}>
-        {cards.map((card) => {
-          const active = card.key === view;
-          return (
-            <button
-              key={card.group}
-              type="button"
-              aria-pressed={active}
-              className={cx(
-                styles.sourceCard,
-                active && styles.sourceCardActive,
-                active && card.group === 'direct' && styles.sourceCardActiveDirect,
-              )}
-              onClick={() => onChange(card.key)}
-            >
-              <span className={styles.sourceCardHead}>
-                <span className={cx(styles.sourceName, styles[`name_${card.group}`])}>
-                  {card.group !== 'all' ? (
-                    <span className={cx(styles.dot, styles[`dot_${card.group}`])} aria-hidden />
-                  ) : null}
-                  {card.label}
-                </span>
-                {card.trips !== null ? (
-                  <span className={cx(styles.tripPill, styles[`pill_${card.group}`])}>
-                    {t('trips', { count: card.trips })}
-                  </span>
-                ) : null}
-              </span>
-              {loading ? (
-                <Skeleton.Input active size="small" />
-              ) : (
-                <span className={styles.sourceAmount}>
-                  {card.amount !== null ? fmt.money(card.amount) : '-'}
-                </span>
-              )}
-              {card.bar}
-              <span className={styles.sourceFooter}>{card.footer}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/** Một khúc của thanh tỷ trọng - bề rộng chỉ biết lúc chạy ⇒ CSS custom property (ngoại lệ ADR 0003). */
-function Segment({ share, group }: { share: number; group: SourceGroup }) {
-  if (share <= 0) return null;
-  return (
-    <span
-      className={cx(styles.segment, styles[`bar_${group}`])}
-      style={{ '--xp-bar-width': `${share}%` } as CSSProperties}
-    />
   );
 }
 
@@ -635,104 +478,5 @@ function KpiTiles({
         }
       />
     </div>
-  );
-}
-
-/* ─── Chi tiết từng nguồn ──────────────────────────────────────────────────── */
-
-function SourceRows({
-  data,
-  loading,
-  error,
-  onRetry,
-  view,
-}: {
-  data: FinanceSourceBreakdown | undefined;
-  loading: boolean;
-  error: boolean;
-  onRetry: () => void;
-  view: RevenueSourceView | null;
-}) {
-  const t = useTranslations('Finance.vehicle.breakdown');
-  const tCommon = useTranslations('Common');
-  const fmt = useAppFormat();
-  const sourceText = useBookingSourceText();
-
-  const items = data?.items.filter((item) => itemMatchesView(item, view)) ?? [];
-  const nameOf = (item: FinanceSourceBreakdown['items'][number]) =>
-    item.source ? sourceText(item.source, item.sourceLabel) : t('unlinkedName');
-
-  return (
-    <Panel
-      className={cx(styles.rowsPanel, styles.wrapHead)}
-      title={
-        <span className={styles.titleWithInfo}>
-          {t('title')}
-          <InfoHint content={t('bookedInfo')} label={t('bookedInfoLabel')} />
-        </span>
-      }
-      subtitle={t('subtitle')}
-      extra={
-        data ? (
-          <span className={styles.rowsTotal}>
-            {t('total', { amount: fmt.money(revenueOf(data, view)) })}
-          </span>
-        ) : null
-      }
-    >
-      {error ? (
-        <Alert
-          type="warning"
-          showIcon
-          title={t('error')}
-          action={
-            <button type="button" className={styles.retry} onClick={onRetry}>
-              {tCommon('actions.retry')}
-            </button>
-          }
-        />
-      ) : loading ? (
-        <Skeleton active title={false} paragraph={{ rows: 4 }} />
-      ) : items.length === 0 ? (
-        <EmptyState variant="empty" title={t('empty')} description={t('emptyHint')} />
-      ) : (
-        <ol className={styles.rows}>
-          {items.map((item) => {
-            const group = sourceGroupOf(item);
-            return (
-              <li key={`${item.source ?? ''}|${item.sourceLabel ?? ''}`} className={styles.row}>
-                <div className={styles.rowLine}>
-                  <span className={styles.rowName}>
-                    <span className={styles.rowNameText}>{nameOf(item)}</span>
-                    <span className={cx(styles.tag, styles[`pill_${group}`])}>
-                      {t(`tag.${group}`)}
-                    </span>
-                  </span>
-                  <span className={styles.rowAmount}>{fmt.money(item.amount)}</span>
-                </div>
-                <div className={styles.rowMeta}>
-                  <span>
-                    {/* Khoản không gắn đơn không có chuyến - nói nó LÀ gì thay cho "0 chuyến". */}
-                    {group === 'unlinked' ? t('unlinkedHint') : t('trips', { count: item.trips })}
-                    {!isZeroMoney(item.bookedAmount) ? (
-                      <>
-                        {LIST_SEPARATOR}
-                        {t('booked', { amount: fmt.money(item.bookedAmount) })}
-                      </>
-                    ) : null}
-                  </span>
-                  <span className={styles.rowShare}>
-                    {t('share', { percent: item.sharePercent })}
-                  </span>
-                </div>
-                <span className={styles.track}>
-                  <Segment share={item.sharePercent} group={group} />
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-    </Panel>
   );
 }

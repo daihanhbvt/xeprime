@@ -2,7 +2,7 @@ import {
   HANDOVER_PREP_ITEM,
   handoverPhotoSlotsFor,
   type HandoverPhotoSlot,
-  type HandoverPrepItem,
+  type HandoverPrepManualItem,
 } from '@xeprime/types';
 import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import type { BookingHandoverPrep } from '../../types';
@@ -18,7 +18,7 @@ export interface PrepRowState {
   /** Xong theo dữ liệu thật (server suy). */
   autoDone: boolean;
   /** Việc đánh dấu tay được — hai việc TIỀN không bao giờ có (03/11/2026). */
-  manualItem?: HandoverPrepItem;
+  manualItem?: HandoverPrepManualItem;
   /** Dấu tay đang có — chỉ tính khi việc CHƯA tự xong. */
   manual: ManualCheck | null;
   done: boolean;
@@ -43,9 +43,13 @@ export function prepRowStates(
   prep: BookingHandoverPrep,
   can: { collect: boolean; contract: boolean },
 ): PrepRowState[] {
-  const manualOf = (item: HandoverPrepItem) =>
+  const manualOf = (item: HandoverPrepManualItem) =>
     prep.manualChecks.find((check) => check.item === item) ?? null;
-  const row = (key: PrepKey, autoDone: boolean, manualItem?: HandoverPrepItem): PrepRowState => {
+  const row = (
+    key: PrepKey,
+    autoDone: boolean,
+    manualItem?: HandoverPrepManualItem,
+  ): PrepRowState => {
     const manual = manualItem && !autoDone ? manualOf(manualItem) : null;
     return { key, autoDone, manualItem, manual, done: autoDone || manual !== null };
   };

@@ -438,6 +438,7 @@
       "legend": "Chart legend",
       "weekRange": "{from} - {to}",
       "description": "Bars are revenue and costs, the line is profit. Deposits excluded.",
+      "sourceDescription": "Stacked bars show revenue by booking source, red bars are costs, the green line is profit. Deposits excluded.",
       "titleShort": "Cash flow & Profit"
     },
     "categories": {
@@ -526,19 +527,6 @@
     "periodSheet": {
       "title": "Select period",
       "custom": "Custom date range"
-    },
-    "sources": {
-      "title": "Revenue by booking source",
-      "total": "Total revenue",
-      "marketplace": "Through XePrime",
-      "direct": "Own channels",
-      "row": "{name} · {count, plural, one {# trip} other {# trips}}",
-      "share": "{percent}%",
-      "unlinked": "Income not linked to a booking",
-      "error": "Could not load revenue by booking source",
-      "retry": "Try again",
-      "empty": "No data for this period",
-      "emptyHint": "Pick another period or record the payments of bookings in this period."
     }
   },
   "entity": {
@@ -627,19 +615,6 @@
     "subtitle": "Revenue by source, operating costs and profit of this vehicle by period",
     "openLedger": "Open ledger",
     "createReceipt": "New receipt/expense",
-    "sources": {
-      "label": "View by revenue source",
-      "viewing": "Viewing: <b>{name}</b>",
-      "all": "All sources",
-      "xeprime": "Via XePrime marketplace",
-      "direct": "External (self-sourced)",
-      "trips": "{count, plural, one {# trip} other {# trips}}",
-      "split": "Marketplace {marketplace, number}% · External {direct, number}%",
-      "xeprimeHint": "Bookings made through XePrime",
-      "directHint": "Repeat, walk-in, social media...",
-      "share": "{percent, number}%",
-      "error": "Could not load revenue by source"
-    },
     "kpi": {
       "revenue": {
         "all": "Revenue",
@@ -665,34 +640,7 @@
       "revenueInfoLabel": "How revenue is calculated"
     },
     "chart": {
-      "title": "Revenue by source & profit",
-      "description": "Stacked bars show revenue by booking source, red bars are costs, the green line is whole-vehicle profit.",
-      "marketplace": "Via XePrime",
-      "direct": "External",
-      "unlinked": "Other (no booking)",
-      "cost": "Costs",
-      "profit": "Profit",
-      "legend": "Chart legend"
-    },
-    "breakdown": {
-      "title": "Revenue by source in detail",
-      "subtitle": "Money collected in the period, by booking source",
-      "total": "Total: {amount}",
-      "tag": {
-        "marketplace": "Marketplace",
-        "direct": "Self-sourced",
-        "unlinked": "Standalone"
-      },
-      "trips": "{count, plural, one {# trip} other {# trips}}",
-      "booked": "Trip value {amount}",
-      "bookedInfo": "Trip value is the agreed rental of trips picked up in the period. Collected money may differ because payments can arrive before or after the period.",
-      "bookedInfoLabel": "What trip value means",
-      "share": "{percent, number}% of revenue",
-      "empty": "No revenue from this source in this period",
-      "emptyHint": "Pick another period, or choose \"All sources\".",
-      "error": "Could not load the source breakdown",
-      "unlinkedName": "Other income, no booking",
-      "unlinkedHint": "Income entered manually for this vehicle, not tied to a trip"
+      "description": "Stacked bars show revenue by booking source, red bars are costs, the green line is whole-vehicle profit."
     },
     "costTitle": "Vehicle cost structure",
     "capital": {
@@ -737,5 +685,49 @@
       "profitAll": "Profit to date"
     },
     "allTime": "All time"
+  },
+  "bySource": {
+    "cards": {
+      "label": "View by revenue source",
+      "viewing": "Viewing: <b>{name}</b>",
+      "all": "All sources",
+      "xeprime": "Via XePrime marketplace",
+      "direct": "External (self-sourced)",
+      "trips": "{count, plural, one {# trip} other {# trips}}",
+      "split": "Marketplace {marketplace, number}% · External {direct, number}%",
+      "xeprimeHint": "Bookings made through XePrime",
+      "directHint": "Repeat, walk-in, social media...",
+      "share": "{percent, number}%",
+      "error": "Could not load revenue by source"
+    },
+    "rows": {
+      "title": "Revenue by source in detail",
+      "subtitle": "Money collected in the period, by booking source",
+      "total": "Total: {amount}",
+      "tag": {
+        "marketplace": "Marketplace",
+        "direct": "Self-sourced",
+        "unlinked": "Standalone"
+      },
+      "trips": "{count, plural, one {# trip} other {# trips}}",
+      "booked": "Trip value {amount}",
+      "bookedInfo": "Trip value is the agreed rental of trips picked up in the period. Collected money may differ because payments can arrive before or after the period.",
+      "bookedInfoLabel": "What trip value means",
+      "share": "{percent, number}% of revenue",
+      "empty": "No revenue from this source in this period",
+      "emptyHint": "Pick another period, or choose \"All sources\".",
+      "error": "Could not load the source breakdown",
+      "unlinkedName": "Other income, no booking",
+      "unlinkedHint": "Income entered manually, not tied to a trip"
+    },
+    "chart": {
+      "title": "Revenue by source & profit",
+      "marketplace": "Via XePrime",
+      "direct": "External",
+      "unlinked": "Other (no booking)",
+      "cost": "Costs",
+      "profit": "Profit",
+      "legend": "Chart legend"
+    }
   }
 }

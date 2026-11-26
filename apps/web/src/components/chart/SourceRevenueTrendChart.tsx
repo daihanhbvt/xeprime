@@ -64,7 +64,7 @@ const DIMMED_OPACITY = 0.25;
 const DENSE_BUCKETS = 16;
 
 /**
- * Doanh thu THEO NGUỒN ĐƠN · Chi phí · Lợi nhuận theo thời gian (tab Tài chính của hồ sơ xe).
+ * Doanh thu THEO NGUỒN ĐƠN · Chi phí · Lợi nhuận theo thời gian (hồ sơ xe · Tổng quan doanh thu).
  *
  * Cột doanh thu là cột CHỒNG ba phần (qua sàn · tự khai thác · không gắn đơn) - tổng chiều cao vẫn
  * là doanh thu của kỳ, như cột doanh thu của `RevenueTrendChart`. Chi phí là cột riêng đứng cạnh,
@@ -83,7 +83,7 @@ export function SourceRevenueTrendChart({
   empty,
   className,
 }: SourceRevenueTrendChartProps) {
-  const t = useTranslations('Finance.vehicle.chart');
+  const t = useTranslations('Finance.bySource.chart');
   const fmt = useAppFormat();
 
   const rows: Row[] = points.map((p) => ({
@@ -239,7 +239,7 @@ export function SourceRevenueTrendChart({
  * màu với tooltip; `showUnlinked` theo đúng điều kiện biểu đồ có vẽ phần đó hay không.
  */
 export function SourceRevenueTrendLegend({ showUnlinked }: { showUnlinked: boolean }) {
-  const t = useTranslations('Finance.vehicle.chart');
+  const t = useTranslations('Finance.bySource.chart');
   const items = [
     { key: 'marketplace', label: t('marketplace'), className: styles.swatchMarketplace },
     { key: 'direct', label: t('direct'), className: styles.swatchDirect },

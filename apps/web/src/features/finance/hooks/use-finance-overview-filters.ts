@@ -13,6 +13,7 @@ import {
   VEHICLE_PROFIT_PAGE_SIZE,
 } from '../constants';
 import type { FinanceOverviewFilters, FinancePeriodFilters } from '../types';
+import { REVENUE_SOURCE_PARAM, parseRevenueSourceView } from '../vehicle-finance';
 
 /**
  * KỲ trên URL — phần dùng chung giữa màn Tổng quan doanh thu và mọi khối tiền nhúng trong hồ sơ
@@ -57,6 +58,7 @@ export function useFinanceOverviewFilters() {
     customerSort: oneOf(sp.get('customerSort'), CUSTOMER_REVENUE_SORT_VALUES),
     customerPage: positiveIntParam(sp, 'customerPage'),
     customerLimit: positiveIntParam(sp, 'customerLimit') ?? VEHICLE_PROFIT_PAGE_SIZE,
+    revenueSource: parseRevenueSourceView(sp.get(REVENUE_SOURCE_PARAM)) ?? undefined,
   }));
 }
 

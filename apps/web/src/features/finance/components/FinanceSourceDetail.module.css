@@ -1,0 +1,36 @@
+/* Đầu thẻ "Chi tiết doanh thu từng nguồn": tiêu đề + mô tả bên trái, tổng bên phải; hẹp thì xuống dòng. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+}
+
+.heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.titleWithInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.total {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}
