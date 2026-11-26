@@ -18,6 +18,10 @@ import {
   HOLD_SETTLE_REASON,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
+  PAYMENT_METHOD,
+  RECEIPT_SOURCE,
+  RECEIPT_TYPE,
+  SYSTEM_FINANCE_CATEGORY,
   isOutcomeAllowed,
   isWithinFreeCancel,
   type AuditActorScope,
@@ -41,6 +45,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduledCreditService } from '../wallet/scheduled-credit.service';
 import { WalletService, type CreditInput, type WalletOwner } from '../wallet/wallet.service';
 import { AuditService } from '../audit/audit.service';
+import { ReceiptsService } from '../finance/receipts.service';
 import { NotificationService } from '../notification/notification.service';
 import { formatMoneyVndVi } from '@xeprime/domain';
 import { holdSettleReason, NO_OPEN_SETTLEMENT_CASES } from './hold-settle-queue';
@@ -81,6 +86,8 @@ export class HoldSettlementService {
     private readonly wallet: WalletService,
     /** Khoản cộng ví hẹn giờ — tiền hoàn/chủ xe khi khách huỷ chờ vài giờ (biên bản 19/11/2026). */
     private readonly scheduledCredits: ScheduledCreditService,
+    /** Sổ Thu-Chi của gian hàng - phần chủ xe trong lượt quyết toán thành phiếu tự động. */
+    private readonly receipts: ReceiptsService,
   ) {}
 
   /**
@@ -796,6 +803,7 @@ export class HoldSettlementService {
       customerUserId: string | null;
       outcome: BookingHoldOutcome;
       refundReason: HoldRefundReason | null;
+      actorUserId: string | null;
       note: string | null;
     },
     /** Phân bổ đã tính ở `applyOutcomeWithinTx` — không tính lại để hai nơi không ra hai số. */
@@ -845,6 +853,14 @@ export class HoldSettlementService {
       );
     }
 
+    await this.recordOwnerReceiptsWithinTx(tx, {
+      holdId: input.holdId,
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      ownerAmount: toOwner,
+      taxAmount: sumFor(allocation, ALLOCATION_TARGET.TAX_LEDGER),
+    });
+
     /*
      * Phần của XePrime (`platform_revenue`) KHÔNG đi qua ví: nền tảng không có ví. Nó được đóng
      * băng thành cột `settled_platform_amount` ở `applyOutcomeWithinTx` — cùng câu lệnh với
@@ -852,6 +868,70 @@ export class HoldSettlementService {
      * thêm một sổ riêng ở `booking_insurance_policies` (Phase 7).
      */
     return refundId;
+  }
+
+  /**
+   * Phần của CHỦ XE trong lượt quyết toán lên sổ Thu-Chi của gian hàng - cùng transaction với lượt
+   * chốt (migration `20261126150000_xeprime_payout_receipts`).
+   *
+   *  - phiếu THU `xeprime_payout` = phần chủ xe TRƯỚC thuế (`ownerAmount + taxAmount`): đó là tiền
+   *    thuê khách đã trả cho chuyến này qua XePrime. Thiếu phiếu này thì doanh thu đơn qua sàn hụt
+   *    đúng phần trả trước online;
+   *  - phiếu CHI `tax_withheld` = thuế XePrime khấu trừ, nộp thay (ADR 0068). Thu trừ chi = số thật
+   *    vào Ví điểm.
+   *
+   * Ghi theo SỐ đã chốt (không tính lại) và mốc là lúc chốt. Unique `(tenant, source, hold)` chặn
+   * ghi đôi; lượt chốt vốn chỉ chạy một lần nhờ `outcome IS NULL`.
+   */
+  private async recordOwnerReceiptsWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      holdId: string;
+      tenantId: string;
+      actorUserId: string | null;
+      ownerAmount: Prisma.Decimal;
+      taxAmount: Prisma.Decimal;
+    },
+  ): Promise<void> {
+    const gross = input.ownerAmount.plus(input.taxAmount);
+    if (gross.lte(0)) return;
+    const hold = await tx.bookingHold.findUnique({
+      where: { id: input.holdId },
+      select: {
+        booking: { select: { id: true, code: true, vehicleId: true, tenantCustomerId: true } },
+      },
+    });
+    const booking = hold?.booking;
+    // Khoản giữ chỗ chưa thành đơn thì không có gì của chủ xe để ghi (không có chuyến, không có xe).
+    if (!booking) return;
+    const occurredAt = new Date();
+    const link = {
+      bookingId: booking.id,
+      vehicleId: booking.vehicleId,
+      tenantCustomerId: booking.tenantCustomerId,
+      paymentMethod: PAYMENT_METHOD.OTHER,
+      sourceRefId: input.holdId,
+      occurredAt,
+    };
+
+    await this.receipts.createApprovedWithinTx(tx, input.tenantId, input.actorUserId, {
+      ...link,
+      type: RECEIPT_TYPE.INCOME,
+      amount: gross.toString(),
+      source: RECEIPT_SOURCE.XEPRIME_PAYOUT,
+      categoryKey: SYSTEM_FINANCE_CATEGORY.XEPRIME_PAYOUT,
+      description: `Tiền thuê khách trả trước qua XePrime - đơn ${booking.code}`,
+    });
+    if (input.taxAmount.gt(0)) {
+      await this.receipts.createApprovedWithinTx(tx, input.tenantId, input.actorUserId, {
+        ...link,
+        type: RECEIPT_TYPE.EXPENSE,
+        amount: input.taxAmount.toString(),
+        source: RECEIPT_SOURCE.TAX_WITHHELD,
+        categoryKey: SYSTEM_FINANCE_CATEGORY.TAX_WITHHELD,
+        description: `Thuế XePrime khấu trừ, nộp thay - đơn ${booking.code}`,
+      });
+    }
   }
 
   private async applyOutcomeWithinTx(

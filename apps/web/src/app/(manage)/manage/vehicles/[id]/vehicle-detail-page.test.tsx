@@ -186,12 +186,12 @@ vi.mock('@/hooks/use-permissions', () => ({
 }));
 
 /**
- * Khối tiền của xe có bề mặt và test riêng (`FinanceEntityPanel`); ở đây chỉ cần chứng minh nó
+ * Tab tiền của xe có bề mặt và test riêng (`VehicleFinanceTab`); ở đây chỉ cần chứng minh nó
  * được dựng hay không theo quyền. Mock luôn tránh phải bọc `QueryClientProvider` cho test trang.
  */
-vi.mock('@/features/finance/components/FinanceEntityPanel', () => ({
-  FinanceEntityPanel: ({ scope }: { scope: { vehicleId?: string } }) => (
-    <div data-testid="vehicle-finance-panel">{scope.vehicleId}</div>
+vi.mock('@/features/vehicles/components/VehicleFinanceTab', () => ({
+  VehicleFinanceTab: ({ vehicle }: { vehicle: { id: string } }) => (
+    <div data-testid="vehicle-finance-panel">{vehicle.id}</div>
   ),
 }));
 
@@ -770,7 +770,7 @@ describe('/manage/vehicles/[id] - khối tổng hợp (summary)', () => {
   /**
    * Thẻ "Hiệu suất" nay CHỈ nói chuyện vận hành.
    *
-   * Doanh thu từng nằm ở đây dưới dạng một con số luỹ kế; nó đã dời sang `FinanceEntityPanel`
+   * Doanh thu từng nằm ở đây dưới dạng một con số luỹ kế; nó đã dời sang `VehicleFinanceTab`
    * (có kỳ). Giữ cả hai nghĩa là đặt hai số tiền với hai ý nghĩa thời gian khác nhau trên cùng
    * một màn — test này khoá lại chuyện đó không quay về.
    */

@@ -846,6 +846,8 @@ export const API_ERROR_CODE = {
   BOOKING_COLLATERAL_NOT_FOUND: 'BOOKING_COLLATERAL_NOT_FOUND',
   /** Không thêm/gỡ tài sản được: đơn đã khép, đã đủ số món, hoặc món đã trả. */
   BOOKING_COLLATERAL_LOCKED: 'BOOKING_COLLATERAL_LOCKED',
+  /** Đổi nguồn của một đơn QUA SÀN - nguồn `xeprime` do server gắn, không sửa được (ADR 0110). */
+  BOOKING_SOURCE_LOCKED: 'BOOKING_SOURCE_LOCKED',
   /** Nhóm `other` khi rút chuyến mà thiếu ghi chú đủ dài (ADR 0074). */
   DRIVER_DROP_NOTE_REQUIRED: 'DRIVER_DROP_NOTE_REQUIRED',
 

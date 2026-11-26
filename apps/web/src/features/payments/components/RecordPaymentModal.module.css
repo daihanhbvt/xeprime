@@ -1,7 +1,42 @@
-.lead {
+/*
+ * Hộp thu tiền / thu cọc - khuôn hộp thoại chung (`DecisionReasonDialog.module.css`). Nhịp dọc
+ * 16px do `DialogForm labelPosition="top"` lo cho từng ô; viên tóm tắt và hàng đôi đứng cùng nhịp.
+ */
+.form > :not(:last-child) {
   margin-bottom: var(--xp-space-md);
 }
 
-.note {
-  margin-bottom: var(--xp-space-md);
+/* "Cọc còn phải thu ............ 5.000.000 đ" - nhãn trái, số phải. */
+.summary {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summaryLabel {
+  color: var(--xp-color-text-secondary);
+}
+
+.summaryAmount {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* Số tiền · hình thức chung một hàng; màn hẹp xếp chồng. */
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--xp-space-12);
+}
+
+@media (max-width: 480px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--xp-space-md);
+  }
+}
+
+/* Hàng đôi tự mang nhịp 16px của nó - hai ô bên trong không cộng thêm. */
+.pair :global(.ant-form-item) {
+  margin-bottom: 0;
 }

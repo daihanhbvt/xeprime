@@ -24,7 +24,6 @@ import {
   CurrentUser,
   Realms,
   RequirePermissions,
-  SubscriptionTrackOnly,
   SupportAction,
   TenantScoped,
 } from '../../common/decorators';
@@ -37,11 +36,13 @@ import {
   BookingHandoverPrepDto,
   BookingListQueryDto,
   BookingPageDto,
+  BookingSourceLabelsDto,
   CreateBookingDto,
   SetHandoverPrepCheckDto,
   TransitionBookingDto,
   UpdateBookingDeliveryFeeDto,
   UpdateBookingDto,
+  UpdateBookingSourceDto,
 } from './dto/booking.dto';
 import { BookingCollateralsService } from './booking-collaterals.service';
 import { BookingsService } from './bookings.service';
@@ -78,6 +79,20 @@ export class BookingsController {
     ) as Promise<BookingPageDto>;
   }
 
+  /*
+   * ⚠️ Đứng TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự khai báo.
+   */
+  @Get('source-labels')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @ApiOperation({
+    summary: 'Nhãn nguồn đơn gian hàng đã từng nhập (gợi ý cho hộp lập đơn và bộ lọc - ADR 0110)',
+  })
+  @ApiOkResponse({ type: BookingSourceLabelsDto })
+  sourceLabels(@CurrentTenant() tenant: TenantContext): Promise<BookingSourceLabelsDto> {
+    return this.bookings.sourceLabels(tenant.tenantId);
+  }
+
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Get(':id')
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
@@ -92,14 +107,12 @@ export class BookingsController {
   }
 
   /*
-   * LẬP ĐƠN TAY chỉ dành cho gian hàng tuyến gói (26/10/2026). Đơn lập tay không qua chợ nên không
-   * mang phí sàn `S` lẫn hoa hồng `H`: mở nó cho tuyến hoa hồng là cho chủ xe kéo khách từ chợ ra
-   * ngoài rồi ghi lại chuyến với `H = 0`, và nó còn tự ghi sổ khách — công cụ của gói (ADR 0027
-   * điều 1). Chủ xe cá nhân giữ lịch cho chuyến ngoài chợ bằng KHOÁ LỊCH. Mọi route còn lại của
-   * controller mở cho cả hai tuyến: đơn đã có (từ chợ) là việc vận hành của bậc cơ bản.
+   * LẬP ĐƠN TAY mở cho MỌI chủ xe, cả hai tuyến (ADR 0110, ghi đè quyết định 26/10/2026 từng khoá
+   * nó cho tuyến gói). Đơn lập tay nằm NGOÀI SÀN: không phí sàn, không hoa hồng, không thuế, không
+   * bảo hiểm, và mang NGUỒN chủ xe chọn (`source` — không bao giờ `xeprime`). Chủ xe dùng XePrime
+   * làm lịch gốc cho mọi kênh; giao dịch ngoài sàn được chấp nhận là thứ không chặn được bằng code.
    */
   @Post()
-  @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BOOKING_CREATE)
   @ApiOperation({ summary: 'Tạo đơn thuê (giữ chỗ lịch, chặn trùng bằng constraint DB)' })
   @ApiCreatedResponse({ type: BookingDetailDto })
@@ -109,6 +122,23 @@ export class BookingsController {
     @Body() dto: CreateBookingDto,
   ): Promise<BookingDetailDto> {
     return this.bookings.create(tenant.tenantId, user.id, dto);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Patch(':id/source')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({
+    summary:
+      'Đổi nguồn của một đơn tự lập (có audit). Đơn qua sàn: 409 `BOOKING_SOURCE_LOCKED` - ADR 0110',
+  })
+  @ApiOkResponse({ type: BookingDetailDto })
+  updateSource(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingSourceDto,
+  ): Promise<BookingDetailDto> {
+    return this.bookings.updateSource(tenant.tenantId, id, user.id, dto);
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
@@ -173,6 +203,24 @@ export class BookingsController {
     @Body() dto: BookingCollateralInputDto,
   ): Promise<BookingCollateralListDto> {
     return this.collaterals.add(tenant.tenantId, id, user.id, dto);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Patch(':id/collaterals/:collateralId')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({
+    summary:
+      'Sửa loại / mô tả một món tài sản (đơn chưa khép, món chưa trả - 409 `BOOKING_COLLATERAL_LOCKED`)',
+  })
+  @ApiOkResponse({ type: BookingCollateralListDto })
+  updateCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+    @Body() dto: BookingCollateralInputDto,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.update(tenant.tenantId, id, collateralId, user.id, dto);
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)

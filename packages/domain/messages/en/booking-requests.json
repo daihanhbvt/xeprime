@@ -778,26 +778,18 @@
       },
       "collateral": {
         "title": "Deposit & collateral",
-        "lead": "Record exactly what the customer leaves for this booking so you can check it at return.",
-        "modeLabel": "Security type",
-        "mode": {
-          "cash": "Cash",
-          "asset": "Items",
-          "both": "Both",
-          "none": "No deposit"
-        },
-        "cash": "Cash deposit collected directly",
+        "lead": "Fill in only what applies. With no deposit, leave the cash deposit at 0 and add no items.",
+        "cash": "Cash deposit",
         "cashHint": "Paid to your shop at pickup and returned at drop-off.",
-        "assetsTitle": "Items held",
-        "assetsHint": "ID card, driving licence, motorbike with plate… Mark them returned on the booking.",
+        "assetsTitle": "Collateral items",
+        "assetsHint": "No items recorded. Use \"Add item\" if the customer leaves an ID card, licence, motorbike…",
         "type": "Type",
         "description": "Description",
         "descriptionPlaceholder": "Document number (optional)",
         "descriptionMotorbike": "Plate, e.g. 59A1-12345",
         "descriptionOther": "What it is, e.g. Dell laptop",
         "add": "Add item",
-        "remove": "Remove item",
-        "noneHint": "The customer leaves no deposit for this booking."
+        "remove": "Remove item"
       }
     },
     "validation": {

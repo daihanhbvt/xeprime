@@ -481,7 +481,9 @@
     "payment": "Booking payment",
     "deposit": "Deposit received",
     "deposit_refund": "Deposit refund",
-    "maintenance": "Maintenance"
+    "maintenance": "Maintenance",
+    "xeprime_payout": "Via XePrime",
+    "tax_withheld": "Tax withheld"
   },
   "receiptStatus": {
     "draft": "Draft",
@@ -517,6 +519,15 @@
     "5": "5 seats",
     "7": "7 seats",
     "8plus": "7+ seats"
+  },
+  "bookingSource": {
+    "xeprime": "XePrime",
+    "walk_in": "Walk-in",
+    "repeat_customer": "Returning customer",
+    "referral": "Referral",
+    "social": "Social media",
+    "other_platform": "Other platform",
+    "other": "Other source"
   },
   "serviceType": {
     "self_drive": "Self-drive",

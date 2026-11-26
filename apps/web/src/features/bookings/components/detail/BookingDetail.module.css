@@ -21,7 +21,31 @@
 .headerButtons {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-12);
+}
+
+.headerBtn.headerBtn {
+  height: 40px;
+  padding-inline: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.headerBtn:not(:global(.ant-btn-primary)) {
+  border-color: var(--xp-color-border-strong);
+  color: var(--xp-color-text-secondary);
+}
+
+/*
+ * Tiêu đề mọi thẻ của trang - Figma 18/28 SemiBold (`SectionCard` chung là 16 Bold; chỉ trang này
+ * theo khung 23845:49956).
+ */
+.layout h2 {
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
 }
 
 .banner {
@@ -127,14 +151,17 @@
 }
 
 .stepLabel {
-  color: var(--xp-color-text);
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-medium);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
   text-align: center;
 }
 
+/* Figma `23845:49962`: chặng đang đứng - nhãn và dòng mốc cùng vàng `Text/Brand/primary`. */
 .step_current .stepLabel {
-  color: var(--xp-color-primary-strong);
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .step_failed .stepLabel {
@@ -142,13 +169,14 @@
 }
 
 .stepHint {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
   text-align: center;
 }
 
 .step_current .stepHint {
-  color: var(--xp-color-primary-strong);
+  color: var(--xp-color-primary);
 }
 
 /* ── Chuẩn bị bàn giao ───────────────────────────────────────────────────── */
@@ -157,14 +185,14 @@
   display: inline-flex;
   align-items: center;
   gap: var(--xp-space-12);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
 }
 
 .prepTrack {
   position: relative;
   display: inline-block;
-  width: 240px;
+  width: 300px;
   height: 6px;
   overflow: hidden;
   border-radius: var(--xp-border-radius-pill);
@@ -184,18 +212,21 @@
   grid-auto-flow: column;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(var(--prep-rows, 3), auto);
-  gap: var(--xp-space-xs) var(--xp-space-xl);
+  gap: 0 var(--xp-space-lg);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/*
+ * Hàng gọn (26/11/2026): bỏ chiều cao tối thiểu, chữ 14/12 thay vì 16/14, nút thấp 28px - vòng
+ * tròn bám dòng tiêu đề, nút căn giữa hàng.
+ */
 .prepRow {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--xp-space-12);
-  min-height: 76px;
+  column-gap: var(--xp-space-12);
   /* Đệm ngang + lề âm: chữ vẫn thẳng mép tiêu đề, còn viền cảnh báo có chỗ nằm TRONG hàng. */
   margin-inline: calc(-1 * var(--xp-space-sm));
   padding: var(--xp-space-12) var(--xp-space-sm);
@@ -204,7 +235,14 @@
   font-size: var(--xp-font-size-body);
 }
 
+/* Hàng đầu mỗi cột không cần vạch ngăn - tiêu đề thẻ đã tách nó ra. */
+.prepRowFirst {
+  border-top-color: transparent;
+}
+
 .prepCheck {
+  align-self: start;
+  margin-top: 1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -246,17 +284,44 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--xp-space-2);
 }
 
 .prepTitle {
   color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
 }
 
 .prepBody {
   min-width: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/*
+ * Nút của từng việc: thấp 30px, chữ 12 SemiBold `Text/Gray/medium`, viền `gray-low300`. Lặp lớp
+ * để thắng cỡ 38px riêng của bộ nút liên hệ (`CustomerContactButtons`) - trong danh sách này
+ * mọi nút cùng một chiều cao.
+ */
+.prepAction.prepAction :global(.ant-btn) {
+  height: 30px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.prepAction.prepAction :global(.ant-btn:not(.ant-btn-icon-only)) {
+  padding: 0 var(--xp-space-12);
+  border-color: var(--xp-color-border-strong);
   color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.prepAction.prepAction :global(.ant-btn-icon-only) {
+  width: 30px;
+  padding: 0;
 }
 
 .prepBody b {
@@ -311,6 +376,11 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
   }
+
+  /* Một cột: chỉ hàng đầu danh sách bỏ vạch ngăn. */
+  .prepRowFirst:not(:first-child) {
+    border-top-color: var(--xp-color-border);
+  }
 }
 
 @media (max-width: 767px) {
@@ -342,6 +412,11 @@
   height: 100%;
 }
 
+.fillCard dl {
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
 @media (max-width: 991px) {
   .pairRow {
     grid-template-columns: minmax(0, 1fr);
@@ -356,7 +431,7 @@
 }
 
 .tripBlock + .tripBlock {
-  margin-top: var(--xp-space-lg);
+  margin-top: var(--xp-space-md);
 }
 
 .tripHead {
@@ -364,7 +439,13 @@
   justify-content: space-between;
   gap: var(--xp-space-md);
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.tripHead > :last-child {
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .tripTrack {
@@ -390,12 +471,13 @@
 
 .tripLine {
   margin: 0;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .tripMuted {
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text-placeholder);
   font-style: italic;
 }
 
@@ -413,8 +495,9 @@
 
 .photoHint {
   margin: var(--xp-space-md) 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
   font-style: italic;
 }
 
@@ -440,8 +523,9 @@
 .sideTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-h3);
   font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
 }
 
 .vehicleHead {
@@ -455,10 +539,10 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 100px;
+  width: 110px;
   height: 64px;
   overflow: hidden;
-  border-radius: var(--xp-border-radius-sm);
+  border-radius: var(--xp-border-radius-control);
   background: var(--xp-color-bg-muted);
   color: var(--xp-color-text-tertiary);
   font-size: 24px;
@@ -482,23 +566,25 @@
   overflow: hidden;
   max-width: 100%;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-h3);
   font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 a.vehicleName:hover {
-  color: var(--xp-color-primary-strong);
+  color: var(--xp-color-primary-hover);
 }
 
 .plate {
-  padding: 0 var(--xp-space-6);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .sideFacts {
@@ -511,14 +597,16 @@ a.vehicleName:hover {
   display: flex;
   justify-content: space-between;
   gap: var(--xp-space-md);
+  min-height: 44px;
   padding: var(--xp-space-12) 0;
-  border-top: 1px solid var(--xp-color-border-subtle);
-  font-size: var(--xp-font-size-body-sm);
+  border-bottom: 1px solid var(--xp-color-bg);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .sideFacts dt {
   flex: none;
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text-tertiary);
 }
 
 .sideFacts dd {
@@ -528,7 +616,17 @@ a.vehicleName:hover {
   align-items: flex-end;
   margin: 0;
   color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
   text-align: right;
+}
+
+.sideFacts dd b {
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.sideFacts dd span {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-regular);
 }
 
 .sideNote dd {
@@ -543,10 +641,11 @@ a.vehicleName:hover {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--xp-color-primary-strong);
+  color: var(--xp-color-primary-hover);
   font: inherit;
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
   cursor: pointer;
 }
 
@@ -556,14 +655,21 @@ a.vehicleName:hover {
 }
 
 .customerName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
   margin: 0;
   color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
 }
 
 .customerPhone {
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .customerLinks {
@@ -590,18 +696,25 @@ a.vehicleName:hover {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--xp-space-md);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .moneyRows dt {
   display: flex;
   flex-direction: column;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* "Tiền thuê" đậm hơn một bậc (`Text/Gray/medium`) - dòng gốc của phép trừ. */
+.moneyRowRent dt {
   color: var(--xp-color-text-secondary);
 }
 
 .moneyRows dt small {
   color: var(--xp-color-text-tertiary);
-  font-size: 12px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .moneyRows dd {
@@ -623,51 +736,6 @@ a.vehicleName:hover {
   gap: var(--xp-space-4);
 }
 
-/*
- * Ô "Còn phải thu của khách" — con số người dùng cần nhất trên thẻ (06/11/2026), nên tách khỏi
- * các dòng chi tiết: nền vàng nhạt, số lớn, câu nói rõ thu lúc nào. Thu đủ rồi ⇒ nền xanh.
- */
-.moneyDue {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: baseline;
-  gap: var(--xp-space-4) var(--xp-space-md);
-  margin-top: var(--xp-space-md);
-  padding: var(--xp-space-12) var(--xp-space-md);
-  border: 1px solid var(--xp-color-primary-border);
-  border-radius: var(--xp-border-radius-md);
-  background: var(--xp-color-primary-bg);
-}
-
-.moneyDueLabel {
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.moneyDueAmount {
-  color: var(--xp-color-primary-strong);
-  font-size: var(--xp-font-size-h3);
-  font-weight: var(--xp-font-weight-bold);
-  text-align: right;
-  white-space: nowrap;
-}
-
-.moneyDueHint {
-  grid-column: 1 / -1;
-  color: var(--xp-color-text-secondary);
-  font-size: 12px;
-}
-
-.moneyDueSettled {
-  border-color: var(--xp-color-success-border);
-  background: var(--xp-color-success-subtle);
-}
-
-.moneyDueSettled .moneyDueAmount {
-  color: var(--xp-color-success);
-}
-
 .negative {
   color: var(--xp-color-error);
 }
@@ -682,7 +750,7 @@ a.vehicleName:hover {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--xp-color-primary-strong);
+  color: var(--xp-color-primary-hover);
   cursor: pointer;
 }
 
@@ -702,18 +770,14 @@ a.vehicleName:hover {
 }
 
 /*
- * Hai nút chia đều MỘT hàng, cùng cỡ `large`. Nút bàn giao luôn ở ô phải hàng đầu; nút còn lại
- * ("Hủy đơn") lấp ô trái, "Khách không đến" nếu có xuống hàng dưới. Một nút duy nhất ⇒ cả hàng.
+ * Hàng nút cuối cột phải - Figma `23845:50152`: hàng 1 "Hủy đơn" (vừa chữ, viền đỏ nhạt) +
+ * "Ghi nhận khách không đến" (giãn hết phần còn lại, viền xám); hàng 2 nút bàn giao trải hết bề
+ * ngang. Nút 14/20 SemiBold, cao 40, bo 12, khe 16.
  */
 .sideActionsRow {
   display: grid;
-  /*
-   * 1 : 2, không chia đôi: cột phải ~395px chia đôi thì nhãn "Xác nhận đã giao xe" / "Xác nhận
-   * đã nhận lại xe" (kèm biểu tượng) không vừa một dòng và nút vỡ thành hai dòng. Cùng hàng, cùng
-   * chiều cao, chữ một dòng.
-   */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: var(--xp-space-sm);
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--xp-space-md);
 }
 
 .sideActionsRow:empty {
@@ -726,24 +790,44 @@ a.vehicleName:hover {
 
 .sideActionsRow :global(.ant-btn) {
   min-width: 0;
-  padding-inline: var(--xp-space-12);
+  height: 40px;
+  padding-inline: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
 }
 
-/* "Ghi nhận khách không đến" xuống hàng riêng, trải hết bề ngang, nút viền (16/11/2026 - trước bị
-   dồn vào ô hẹp của lưới 1:2 và tràn chữ ra ngoài). */
+.sideActionsRow > :global(.ant-btn-dangerous:not(.ant-btn-primary)) {
+  border-color: var(--xp-color-error-border);
+  color: var(--xp-color-error);
+}
+
+/* "Ghi nhận khách không đến": nút viền xám, chữ `Text/Gray/medium`. */
 .sideActionsRow > :global(.ant-btn-text) {
-  grid-row: 2;
-  grid-column: 1 / -1;
-  border: 1px solid var(--xp-color-border);
+  grid-row: 1;
+  grid-column: 2;
+  border: 1px solid var(--xp-color-border-strong);
   background: var(--xp-color-bg-container);
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-secondary);
 }
 
 .primaryCta {
+  grid-row: 2;
+  grid-column: 1 / -1;
+}
+
+/*
+ * Không có "khách không đến" (chưa tới giờ nhận / đơn đang thuê): "Hủy đơn" và nút bàn giao chung
+ * MỘT hàng 1 : 2 như trước - không để một nút đỏ đứng trơ một mình trên một hàng.
+ */
+.sideActionsRow:not(:has(> :global(.ant-btn-text))) {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+.sideActionsRow:not(:has(> :global(.ant-btn-text))) > .primaryCta {
   grid-row: 1;
   grid-column: 2;
-  font-weight: var(--xp-font-weight-semibold);
 }
 
 .primaryCta:only-child {
@@ -753,7 +837,7 @@ a.vehicleName:hover {
 .ledgerLink {
   display: inline-block;
   margin-top: var(--xp-space-12);
-  color: var(--xp-color-primary-strong);
+  color: var(--xp-color-primary-hover);
 }
 
 /* "Vẫn tiếp tục" trong thông báo còn thiếu — link đỏ sát lề trái, ngay dưới nội dung như design. */
@@ -773,11 +857,42 @@ a.vehicleName:hover {
  * Thẻ "Thanh toán" và "Lợi nhuận chuyến" theo design app: thẻ trắng viền mảnh, bo 16, đệm 16.
  * Desktop KHÔNG đổi - các biến thể chỉ-điện-thoại mặc định ẩn ở đây và chỉ bật trong media.
  */
+/*
+ * "Còn lại (phải thu)" - Figma `23777:48877`: đường kẻ 1px rồi MỘT dòng, nhãn 14/20 `low`, số 18/28
+ * SemiBold vàng thương hiệu; thu đủ ⇒ xanh. Mọi khổ màn hình (thay ô nổi bật nền vàng 06/11).
+ */
 .moneyDuePhone {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  margin-top: var(--xp-space-xs);
+  padding-top: var(--xp-space-12);
+  border-top: 1px solid var(--xp-color-border);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.moneyDuePhoneAmount {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  white-space: nowrap;
+}
+
+.moneyDuePhoneSettled .moneyDuePhoneAmount {
+  color: var(--xp-color-success);
 }
 
 @media (max-width: 640px) {
+  /* Bốn bước chỉ còn ~90px mỗi bước: mốc giờ 12/18 để "Cần giao xe lúc 08:00 03/10" không gãy ba dòng. */
+  .stepHint {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+
   .paymentCard {
     gap: var(--xp-space-sm);
     padding: var(--xp-space-md);
@@ -816,35 +931,8 @@ a.vehicleName:hover {
     order: -1;
   }
 
-  .moneyRows > .moneyDesktopOnly,
-  .moneyDue.moneyDesktopOnly {
+  .moneyRows > .moneyDesktopOnly {
     display: none;
-  }
-
-  /* "Còn lại (phải thu)" - đường kẻ 1px rồi một dòng, số 18/28 vàng thương hiệu; thu đủ ⇒ xanh. */
-  .moneyDuePhone {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--xp-space-md);
-    margin-top: var(--xp-space-xs);
-    padding-top: var(--xp-space-12);
-    border-top: 1px solid var(--xp-color-border);
-    color: var(--xp-color-text-secondary);
-    font-size: var(--xp-font-size-body);
-    line-height: var(--xp-line-height-body);
-  }
-
-  .moneyDuePhoneAmount {
-    color: var(--xp-color-price);
-    font-size: var(--xp-font-size-h3);
-    font-weight: var(--xp-font-weight-semibold);
-    line-height: var(--xp-line-height-h3);
-    white-space: nowrap;
-  }
-
-  .moneyDuePhoneSettled .moneyDuePhoneAmount {
-    color: var(--xp-color-success);
   }
 
   /* "Lợi nhuận chuyến" - cùng khung thẻ với "Thanh toán", tiêu đề 18/28. */
@@ -855,5 +943,4 @@ a.vehicleName:hover {
     box-shadow: none;
     gap: var(--xp-space-12);
   }
-
 }

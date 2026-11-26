@@ -72,6 +72,13 @@ vi.mock('@/features/finance/hooks/use-finance-overview', () => ({
   useFinanceSummaryOverview: () => summaryQuery,
   useFinanceSeries: () => seriesQuery,
   useFinanceByCategory: () => categoryQuery,
+  // Khối "Doanh thu theo nguồn đơn" (ADR 0110) có dữ liệu riêng - ở đây để rỗng.
+  useFinanceBySource: () => ({
+    data: undefined,
+    isFetching: false,
+    isError: false,
+    refetch: () => undefined,
+  }),
   useVehicleProfit: (filters: unknown) => {
     vehicleQuery.lastFilters = filters;
     return vehicleQuery;

@@ -78,6 +78,8 @@ export interface ReceiptFilters {
 export type FinanceSeries = Schemas['FinanceSeriesDto'];
 export type FinanceSeriesBucket = Schemas['FinanceSeriesBucketDto'];
 export type FinanceCategoryBreakdown = Schemas['FinanceCategoryBreakdownDto'];
+/** Doanh thu theo nguồn đơn (ADR 0110) - tổng, phần qua sàn, phần tự khai thác, từng nguồn. */
+export type FinanceSourceBreakdown = Schemas['FinanceSourceBreakdownDto'];
 export type FinanceCategoryBreakdownItem = Schemas['FinanceCategoryBreakdownItemDto'];
 export type VehicleProfit = Schemas['VehicleProfitItemDto'];
 export type CustomerRevenue = Schemas['CustomerRevenueItemDto'];

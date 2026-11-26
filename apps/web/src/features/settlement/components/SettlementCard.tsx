@@ -6,7 +6,6 @@ import { useState } from 'react';
 import {
   DEPOSIT_STATUS,
   DEPOSIT_STATUS_META,
-  PAYMENT_KIND,
   PERMISSION,
   REFUND_METHOD_LABEL,
   SURCHARGE_CATEGORY_LABEL,
@@ -17,9 +16,7 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
-import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { cx } from '@/lib/cx';
-import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import { useSettlement } from '../hooks';
 import { ExcessMileageFacts } from './ExcessMileageFacts';
 import { RecordRefundDialog } from './RecordRefundDialog';
@@ -31,7 +28,12 @@ import { useTranslations } from 'next-intl';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
 /**
- * Thẻ "Phát sinh & Tiền cọc" trên chi tiết đơn (Wave 10).
+ * Thẻ "Phát sinh" trên chi tiết đơn (Wave 10).
+ *
+ * Gom cọc về MỘT nhà (26/11/2026): trước lúc quyết toán, cọc theo đơn / cọc đã nhận / nút thu cọc
+ * sống ở thẻ "Cọc & thế chấp" cột phải (`CollateralSideCard`). Thẻ này chỉ đưa cọc trở lại khi
+ * tới lúc QUYẾT TOÁN (chờ hoàn, đã hoàn, đã quyết toán) - lúc đó "cọc đã nhận − phát sinh = hoàn lại"
+ * là chính phép tính của thẻ.
  *
  * Ranh giới quan trọng nhất ở đây: **cọc CẤU HÌNH không phải cọc ĐÃ THU**. Chưa có bằng chứng
  * thu tiền thì thẻ nói thẳng `Chưa ghi nhận đã thu cọc` và KHÔNG mời hoàn tiền — tạo một việc
@@ -69,7 +71,7 @@ export function SettlementCard({
 
   const { has } = usePermissions();
   const canRecord = has(PERMISSION.PAYMENT_RECORD);
-  // Ghi tiền MỚI (phát sinh, thu cọc) — hoàn cọc dùng `canRecord` trần, vẫn mở trên đơn huỷ.
+  // Ghi tiền MỚI (phát sinh) — hoàn cọc dùng `canRecord` trần, vẫn mở trên đơn huỷ.
   const canRecordNew = canRecord && !moneyClosed;
   const canCorrect = has(PERMISSION.PAYMENT_VOID);
   const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.SETTLEMENT);
@@ -77,7 +79,6 @@ export function SettlementCard({
   const { data, isLoading, isError, error, refetch } = useSettlement(bookingId, visible);
 
   const [surchargeOpen, setSurchargeOpen] = useState(false);
-  const [depositOpen, setDepositOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [correcting, setCorrecting] = useState(false);
 
@@ -112,31 +113,24 @@ export function SettlementCard({
   const status = data.depositStatus as DepositStatus;
   const hasSurcharges = data.surcharges.length > 0;
   const needsMore = Number(data.additionalDue) > 0;
-  // Cọc còn THIẾU so với cấu hình trên đơn. Dùng phép trừ trên chuỗi tiền, không `Number`
-  // (ADR 0007) — đây là số sẽ điền sẵn vào ô nhập tiền.
-  const depositOutstanding = subtractMoney(data.depositRequired, data.depositReceived);
-  // Chỉ mời thu cọc khi còn thiếu VÀ chưa bước sang giai đoạn hoàn: sau khi đã hoàn thì "thu
-  // thêm" là một nghiệp vụ khác hẳn, không phải thu nốt cọc.
-  const canTakeDeposit =
-    !isNegativeMoney(depositOutstanding) &&
-    !isZeroMoney(depositOutstanding) &&
-    (status === DEPOSIT_STATUS.NOT_RECEIVED || status === DEPOSIT_STATUS.RECEIVED);
 
   // Dòng "hoàn lại" chỉ có nghĩa khi còn tiền để trả hoặc đã trả rồi.
   const showRefundLine =
     status === DEPOSIT_STATUS.AWAITING_REFUND ||
     status === DEPOSIT_STATUS.REFUNDED ||
     status === DEPOSIT_STATUS.PARTIALLY_REFUNDED;
+  // Chặng QUYẾT TOÁN: cọc quay lại thẻ này làm cơ sở của phép hoàn. Trước đó nó ở thẻ cọc.
+  const settling = showRefundLine || status === DEPOSIT_STATUS.SETTLED;
 
   return (
     <SectionCard
       title={tSettlement('cardTitle')}
       className={cx(styles.card, className)}
-      // Chặng cọc chỉ đáng nêu khi đã có tiền trong tay — "chưa thu" đã nói ngay ở dòng "Cọc đã nhận".
+      // Chặng cọc chỉ nêu ở lúc quyết toán - trước đó thẻ "Cọc & thế chấp" đã nói.
       extra={
-        status === DEPOSIT_STATUS.NOT_RECEIVED ? undefined : (
+        settling ? (
           <StatusTag value={status} meta={DEPOSIT_STATUS_META} group="depositStatus" />
-        )
+        ) : undefined
       }
     >
       {/*
@@ -198,52 +192,34 @@ export function SettlementCard({
           </section>
         ) : null}
 
-        <dl className={styles.rows}>
-          <div className={styles.row}>
-            <dt>{tSettlement('depositRequiredShort')}</dt>
-            <dd className={styles.money}>{fmt.money(data.depositRequired)}</dd>
-          </div>
-          <div className={styles.row}>
-            <dt>{tSettlement('depositReceivedShort')}</dt>
-            <dd className={styles.rowValue}>
-              {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
-                // Nói THẲNG là chưa có bằng chứng thu tiền, không hiện một số 0 mập mờ.
-                <span>{tSettlement('depositNotRecorded')}</span>
-              ) : (
-                <b className={styles.money}>{fmt.money(data.depositReceived)}</b>
-              )}
-              {/* Chỉ mở khi còn thiếu so với cọc theo đơn và chưa bước sang giai đoạn hoàn. */}
-              {canRecordNew && canTakeDeposit ? (
-                <button
-                  type="button"
-                  className={styles.inlineLink}
-                  onClick={() => setDepositOpen(true)}
-                >
-                  {tSettlement('takeDeposit')}
-                </button>
-              ) : null}
-            </dd>
-          </div>
-          {hasSurcharges ? (
+        {settling ? (
+          <dl className={styles.rows}>
             <div className={styles.row}>
-              <dt>{tSettlement('surchargeTotalShort')}</dt>
-              <dd className={styles.moneyNegative}>−{fmt.money(data.surchargeTotal)}</dd>
+              <dt>{tSettlement('depositReceivedShort')}</dt>
+              <dd className={styles.money}>{fmt.money(data.depositReceived)}</dd>
             </div>
-          ) : null}
-          {/*
-            Chỉ nói chuyện hoàn tiền khi thật sự có tiền trong tay. `RECEIVED` (đang thuê, cọc còn
-            giữ) chưa tới lúc đó; `SETTLED` thì phát sinh đã ăn hết — mời "hoàn 0đ" là một việc
-            không có thật.
-          */}
-          {showRefundLine ? (
-            <div className={styles.rowTotal}>
-              <dt>{data.refund ? tSettlement('refunded') : tSettlement('proposedRefundShort')}</dt>
-              <dd className={styles.moneyStrong}>
-                {fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
+            {hasSurcharges ? (
+              <div className={styles.row}>
+                <dt>{tSettlement('surchargeTotalShort')}</dt>
+                <dd className={styles.moneyNegative}>−{fmt.money(data.surchargeTotal)}</dd>
+              </div>
+            ) : null}
+            {/*
+              `SETTLED` thì phát sinh đã ăn hết — mời "hoàn 0đ" là một việc không có thật, nên dòng
+              hoàn chỉ có ở chờ hoàn / đã hoàn.
+            */}
+            {showRefundLine ? (
+              <div className={styles.rowTotal}>
+                <dt>
+                  {data.refund ? tSettlement('refunded') : tSettlement('proposedRefundShort')}
+                </dt>
+                <dd className={styles.moneyStrong}>
+                  {fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        ) : null}
 
         {needsMore ? (
           <Alert
@@ -338,20 +314,6 @@ export function SettlementCard({
         />
       ) : null}
 
-      {/*
-        Dùng LẠI đúng modal thu tiền của đơn, chỉ đổi `kind` — hai loại tiền cùng đi qua một
-        đường ghi (`PaymentsService`), nên dựng một hộp thoại thứ hai là mở đường cho hai luồng
-        ghi tiền lệch nhau.
-      */}
-      {depositOpen ? (
-        <RecordPaymentModal
-          bookingId={bookingId}
-          debtAmount={depositOutstanding}
-          kind={PAYMENT_KIND.DEPOSIT}
-          open
-          onClose={() => setDepositOpen(false)}
-        />
-      ) : null}
     </SectionCard>
   );
 }

@@ -152,6 +152,7 @@ export function makeHoldSettlementService(
     notifications,
     wallet,
     scheduled ?? new ImmediateScheduledCreditService(prisma, wallet, audit),
+    new ReceiptsService(prisma, audit),
   );
 }
 

@@ -1136,3 +1136,44 @@ button.actionItem:focus-visible {
   outline: 2px solid var(--xp-color-primary);
   outline-offset: 1px;
 }
+
+/* ── Dấu trên thẻ đơn (ADR 0110) ───────────────────────────────────────── */
+
+/* Dấu NGUỒN ĐƠN tự khai thác: chữ cái đầu của nguồn trong ô tròn, màu theo nguồn (`bookingSourceToneClass`). */
+.sourceMark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 50%;
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: normal;
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 1;
+}
+
+/* Dấu THANH TOÁN: thu đủ = dấu tích xanh, thu một phần = số phần trăm. */
+.paidFull {
+  flex: none;
+  align-self: center;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body);
+}
+
+.paidPartial {
+  flex: none;
+  align-self: center;
+  padding: 0 var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
+}

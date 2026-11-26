@@ -7,6 +7,7 @@ import {
   PERMISSION,
   PLATFORM_DASHBOARD_TREND_DAYS,
   PLATFORM_ROLE,
+  BOOKING_REQUEST_STATUS,
   SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -56,6 +57,7 @@ beforeAll(async () => {
 afterAll(async () => {
   if (dbAvailable && ownerId) {
     await prisma.approvalTask.deleteMany({ where: { id: approvalId } });
+    await prisma.bookingRequest.deleteMany({ where: { bookingId } });
     await prisma.booking.deleteMany({ where: { id: bookingId } });
     await prisma.publicListing.deleteMany({ where: { id: listingId } });
     await prisma.vehicle.deleteMany({ where: { id: vehicleId } });
@@ -124,6 +126,24 @@ describe('Platform dashboard (Phase 7)', () => {
         customerName: 'Khách test',
         pickupAt: new Date(),
         returnAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
+    // Tổng quan của sàn chỉ đếm đơn QUA SÀN (ADR 0110) — đơn fixture phải sinh ra từ một yêu cầu;
+    // trigger ở DB tự gắn nguồn `xeprime` khi yêu cầu trỏ vào đơn.
+    await prisma.bookingRequest.create({
+      data: {
+        id: newId(),
+        tenantId: tActive,
+        vehicleId,
+        status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+        customerName: 'Khách test',
+        customerPhone: '0909000444',
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        pickupAt: new Date(),
+        returnAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        respondBy: new Date(),
+        decidedAt: new Date(),
+        bookingId,
       },
     });
     await prisma.approvalTask.create({

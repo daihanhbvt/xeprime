@@ -161,6 +161,45 @@ export class BookingCollateralsService {
     });
   }
 
+  /**
+   * Sửa loại / mô tả của một món (26/11/2026 - cọc linh động theo từng đơn). Cùng luật với gỡ: đơn
+   * chưa khép, món chưa trả (đã trả là sự kiện đã xảy ra - hoàn tác trước nếu ghi nhầm). Không đổi gì
+   * thì không ghi audit.
+   */
+  async update(
+    tenantId: string,
+    bookingId: string,
+    collateralId: string,
+    userId: string,
+    input: BookingCollateralInputDto,
+  ): Promise<BookingCollateralListDto> {
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await this.lockBooking(tx, tenantId, bookingId);
+      if (!isBookingCollateralEditable(booking.status)) throw closed();
+      const item = await this.findItem(tx, bookingId, collateralId);
+      if (item.returnedAt) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.BOOKING_COLLATERAL_LOCKED,
+          message: 'Tài sản đã trả cho khách - hoàn tác "đã trả" trước khi sửa',
+        });
+      }
+      const description = input.description ?? null;
+      if (item.collateralType !== input.collateralType || item.description !== description) {
+        await tx.bookingCollateral.update({
+          where: { id: collateralId },
+          data: { collateralType: input.collateralType, description },
+        });
+        await this.record(tx, tenantId, userId, bookingId, BOOKING_COLLATERAL_AUDIT_ACTION.UPDATE, {
+          collateralId,
+          collateralType: input.collateralType,
+          before: { collateralType: item.collateralType, description: item.description },
+          description,
+        });
+      }
+      return { data: await this.rows(tx, bookingId) };
+    });
+  }
+
   /** Đánh dấu đã trả (`returned = true`) hoặc hoàn tác — idempotent, mọi trạng thái đơn. */
   async setReturned(
     tenantId: string,
@@ -236,7 +275,7 @@ export class BookingCollateralsService {
   private async findItem(tx: Prisma.TransactionClient, bookingId: string, collateralId: string) {
     const item = await tx.bookingCollateral.findFirst({
       where: { id: collateralId, bookingId },
-      select: { id: true, collateralType: true, returnedAt: true },
+      select: { id: true, collateralType: true, description: true, returnedAt: true },
     });
     if (!item) {
       throw new NotFoundException({

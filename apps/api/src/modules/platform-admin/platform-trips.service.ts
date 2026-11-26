@@ -95,6 +95,8 @@ const DRIVER_ROW_SELECT = {
   code: true,
   status: true,
   serviceType: true,
+  source: true,
+  sourceLabel: true,
   customerName: true,
   customerPhone: true,
   pickupAt: true,

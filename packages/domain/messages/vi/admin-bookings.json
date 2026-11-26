@@ -11,7 +11,10 @@
     "statusLabel": "Lọc theo trạng thái đơn",
     "allStatuses": "Tất cả trạng thái",
     "dateFieldLabel": "Khoảng ngày áp theo",
-    "dateRangeLabel": "Khoảng ngày"
+    "dateRangeLabel": "Khoảng ngày",
+    "sourceLabel": "Lọc theo nguồn đơn",
+    "allSources": "Tất cả nguồn đơn",
+    "directSources": "Chủ xe tự lập (ngoài sàn)"
   },
   "pending": {
     "intro": "Khách đã gửi yêu cầu nhưng chưa chuyển tiền giữ chỗ - đang chờ chủ xe duyệt hoặc chờ khách chuyển tiền. Hạn gần nhất lên đầu. Hết hạn mà chưa có tiền thì yêu cầu tự đóng và sang tab Không thành để gọi lại khách.",
@@ -47,7 +50,8 @@
     "tenant": "Gian hàng",
     "vehicle": "Xe",
     "service": "Dịch vụ",
-    "note": "Ghi chú"
+    "note": "Ghi chú",
+    "source": "Nguồn đơn"
   },
   "timeline": {
     "title": "Lịch trình",

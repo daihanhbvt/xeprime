@@ -1,11 +1,12 @@
 'use client';
 
 import { Button, Popover } from 'antd';
-import { CloseOutlined, LockOutlined, ToolOutlined } from '@ant-design/icons';
+import { CheckCircleFilled, CloseOutlined, LockOutlined, ToolOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BOOKING_STATUS_META,
+  isMarketplaceBooking,
   OCCUPANCY_SOURCE_TYPE_META,
   PERMISSION,
   SERVICE_TYPE,
@@ -17,6 +18,11 @@ import {
   type VehicleBlockReason,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import {
+  BookingSourceChip,
+  bookingSourceToneClass,
+  useBookingSourceText,
+} from '@/components/data-display/BookingSourceChip';
 import { ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { ServiceTypeChip } from '@/components/data-display/ServiceTypeChip';
 import { CustomerContactButtons } from '@/features/booking-requests/components/CustomerContactButtons';
@@ -92,9 +98,13 @@ export function CalendarEventBar({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const stageLabel = useStageLabel();
+  const sourceText = useBookingSourceText();
   const [tipOpen, setTipOpen] = useState(false);
 
   const kind = eventKind(event);
+  const source = eventSource(event);
+  const sourceName = source ? sourceText(source.code, source.label) : null;
+  const paid = eventPaidLabel(event, t);
   const off = kind === 'blocked' || kind === 'maintenance';
   const stage = eventStage(event);
   const pending = !isOccupying(event);
@@ -105,6 +115,8 @@ export function CalendarEventBar({
     stage ? stageLabel(stage) : offLabel(),
     event.customerName,
     event.code,
+    sourceName ? t('event.sourceAria', { source: sourceName }) : null,
+    paid,
     t('eventCard.barAriaRange', { start: fmt.rentalPoint(start), end: fmt.rentalPoint(end) }),
   ]
     .filter(Boolean)
@@ -211,6 +223,16 @@ export function CalendarEventBar({
                     <span className={styles.amountCompact}>{fmt.moneyCompact(event.amount)}</span>
                   </span>
                 ) : null}
+                <EventPaidMark event={event} />
+                {source && sourceName ? (
+                  <span
+                    className={cx(styles.sourceMark, bookingSourceToneClass(source.code))}
+                    title={sourceName}
+                    aria-hidden
+                  >
+                    {sourceInitial(sourceName)}
+                  </span>
+                ) : null}
                 <span className={styles.eventCustomer}>
                   {event.customerName ?? t('event.customerHidden')}
                 </span>
@@ -221,6 +243,52 @@ export function CalendarEventBar({
         )}
       </button>
     </Popover>
+  );
+}
+
+/**
+ * Nguồn của một thẻ (ADR 0110): đơn mang nguồn của nó; yêu cầu (chờ duyệt / đang giữ chỗ) luôn tới
+ * từ sàn. Khoá xe và bảo dưỡng không có nguồn.
+ */
+function eventSource(event: CalendarEvent): { code: string; label: string | null } | null {
+  const kind = eventKind(event);
+  // Đơn qua sàn (và yêu cầu - luôn qua sàn) là nguồn MẶC ĐỊNH: không dấu, không dòng nguồn.
+  if (kind === 'booking' && event.bookingSource && !isMarketplaceBooking(event.bookingSource)) {
+    return { code: event.bookingSource, label: event.bookingSourceLabel ?? null };
+  }
+  return null;
+}
+
+/** Chữ cái đầu của tên nguồn - dấu nhận nhanh trên thẻ hẹp, mang màu của nguồn. */
+function sourceInitial(name: string): string {
+  return name.trim().charAt(0).toUpperCase();
+}
+
+/** Câu thanh toán của một ĐƠN: thu đủ / đã thu n% / chưa thu. `null` với mọi thẻ không phải đơn. */
+function eventPaidLabel(event: CalendarEvent, t: CalendarT): string | null {
+  const percent = event.paidPercent;
+  if (eventKind(event) !== 'booking' || percent == null) return null;
+  if (percent >= 100) return t('event.paidFull');
+  return percent > 0 ? t('event.paidPartial', { percent }) : t('event.unpaid');
+}
+
+/**
+ * Dấu thanh toán trên thẻ đơn: thu đủ ⇒ dấu tích xanh, thu một phần ⇒ số phần trăm, chưa thu ⇒ không
+ * có gì (thẻ không gánh thêm một dấu cho trạng thái mặc định). Số do SERVER tính (`paidPercent`).
+ */
+function EventPaidMark({ event }: { event: CalendarEvent }) {
+  const t = useTranslations('Calendar');
+  const percent = event.paidPercent;
+  if (eventKind(event) !== 'booking' || percent == null || percent <= 0) return null;
+  if (percent >= 100) {
+    return (
+      <CheckCircleFilled className={styles.paidFull} title={t('event.paidFull')} aria-hidden />
+    );
+  }
+  return (
+    <span className={styles.paidPartial} title={t('event.paidPartial', { percent })} aria-hidden>
+      {percent}%
+    </span>
   );
 }
 
@@ -351,6 +419,8 @@ function EventQuickCard({
   ) : null;
 
   const hasPerson = kind === 'booking' || kind === 'request';
+  const source = eventSource(event);
+  const paid = eventPaidLabel(event, t);
 
   return (
     <div className={styles.quickCard}>
@@ -410,6 +480,20 @@ function EventQuickCard({
           <div className={styles.quickRow}>
             <dt>{t('eventCard.duration')}</dt>
             <dd>{fmt.rentalDuration(start, end)}</dd>
+          </div>
+        ) : null}
+        {paid ? (
+          <div className={styles.quickRow}>
+            <dt>{t('eventCard.payment')}</dt>
+            <dd>{paid}</dd>
+          </div>
+        ) : null}
+        {source ? (
+          <div className={styles.quickRow}>
+            <dt>{t('eventCard.source')}</dt>
+            <dd>
+              <BookingSourceChip source={source.code} sourceLabel={source.label} size="sm" />
+            </dd>
           </div>
         ) : null}
         {holdPaid ? <span className={styles.quickPaid}>{t('eventCard.holdPaid')}</span> : null}

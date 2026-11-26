@@ -778,26 +778,18 @@
       },
       "collateral": {
         "title": "Cọc & thế chấp",
-        "lead": "Ghi đúng những gì khách để lại cho đơn này để đối chiếu khi trả xe.",
-        "modeLabel": "Hình thức bảo đảm",
-        "mode": {
-          "cash": "Tiền",
-          "asset": "Tài sản",
-          "both": "Cả hai",
-          "none": "Không cọc"
-        },
-        "cash": "Tiền cọc thu trực tiếp",
-        "cashHint": "Khoản khách nộp cho gian hàng khi nhận xe, trả lại khi trả xe.",
-        "assetsTitle": "Tài sản giữ lại",
-        "assetsHint": "CCCD, bằng lái, xe máy kèm biển số… Đánh dấu đã trả ở chi tiết đơn.",
+        "lead": "Nhập khoản nào thì đơn ghi khoản đó. Không cọc thì để tiền cọc bằng 0 và không thêm tài sản.",
+        "cash": "Tiền cọc",
+        "cashHint": "Khách nộp cho gian hàng khi nhận xe, trả lại khi trả xe.",
+        "assetsTitle": "Tài sản thế chấp",
+        "assetsHint": "Chưa ghi tài sản nào. Bấm \"Thêm tài sản\" nếu khách để lại CCCD, bằng lái, xe máy…",
         "type": "Loại",
         "description": "Mô tả",
         "descriptionPlaceholder": "Số giấy tờ (không bắt buộc)",
         "descriptionMotorbike": "Biển số, ví dụ 59A1-12345",
         "descriptionOther": "Món gì, ví dụ laptop Dell",
         "add": "Thêm tài sản",
-        "remove": "Gỡ tài sản",
-        "noneHint": "Khách không đặt cọc cho đơn này."
+        "remove": "Gỡ tài sản"
       }
     },
     "validation": {

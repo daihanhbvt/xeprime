@@ -335,6 +335,8 @@ export const queryKeys = {
      * mới riêng tiền tố `historyAll`.
      */
     historyAll: ['bookings', 'history'] as const,
+    /** Nhãn nguồn đơn gian hàng đã từng nhập (`GET /bookings/source-labels`, ADR 0110). */
+    sourceLabels: ['bookings', 'source-labels'] as const,
     history: (params: QueryParams) => ['bookings', 'history', params] as const,
     detail: (id: string) => ['bookings', 'detail', id] as const,
     /** Bàn giao xe của một đơn (Wave 7) - nằm dưới nhánh `bookings` vì xác nhận bàn giao
@@ -463,6 +465,8 @@ export const queryKeys = {
     /** Chuỗi thu-chi theo thời gian - khoá mang cả độ mịn vì đổi độ mịn là đổi dữ liệu. */
     series: (params: QueryParams) => ['finance', 'series', params] as const,
     byCategory: (params: QueryParams) => ['finance', 'by-category', params] as const,
+    /** Doanh thu theo nguồn đơn (`GET /finance/by-source`, ADR 0110). */
+    bySource: (params: QueryParams) => ['finance', 'by-source', params] as const,
     byVehicle: (params: QueryParams) => ['finance', 'by-vehicle', params] as const,
     byCustomer: (params: QueryParams) => ['finance', 'by-customer', params] as const,
   },

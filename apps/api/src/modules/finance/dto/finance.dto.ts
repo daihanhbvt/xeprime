@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_SOURCE_VALUES,
   BOOKING_STATUS_VALUES,
   CUSTOMER_REVENUE_SORT_VALUES,
   DEBT_FILTER,
@@ -554,12 +555,16 @@ export class FinanceSeriesQueryDto {
   @BranchIdQuery()
   branchId?: string;
 
-  @ApiPropertyOptional({ description: 'Từ ngày - `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ' })
+  @ApiPropertyOptional({
+    description:
+      'Từ ngày - `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ. Bỏ trống = TOÀN BỘ thời gian: trục ' +
+      'bắt đầu ở phiếu sớm nhất trong phạm vi (chưa có phiếu ⇒ đầu tháng này)',
+  })
   @IsOptional()
   @IsDateString()
   from?: string;
 
-  @ApiPropertyOptional({ description: 'Đến ngày - cùng quy ước với `from`' })
+  @ApiPropertyOptional({ description: 'Đến ngày - cùng quy ước với `from`; bỏ trống = hôm nay' })
   @IsOptional()
   @IsDateString()
   to?: string;
@@ -596,6 +601,16 @@ export class FinanceSeriesBucketDto {
   @ApiProperty({ description: 'Doanh thu trong bucket (đã loại cọc), string' }) revenue!: string;
   @ApiProperty({ description: 'Chi phí trong bucket (đã loại hoàn cọc), string' }) cost!: string;
   @ApiProperty({ description: 'revenue − cost, string' }) profit!: string;
+  /*
+   * Ba phần của `revenue` theo NGUỒN ĐƠN (ADR 0110) - cộng lại luôn bằng `revenue`, cùng phép
+   * phân loại với `/finance/by-source` (phiếu không gắn đơn là phần riêng, không bị bỏ đi).
+   */
+  @ApiProperty({ description: 'Phần doanh thu từ đơn QUA SÀN XePrime, string' })
+  marketplaceRevenue!: string;
+  @ApiProperty({ description: 'Phần doanh thu từ đơn chủ xe TỰ LẬP (mọi nguồn ngoài sàn), string' })
+  directRevenue!: string;
+  @ApiProperty({ description: 'Phần doanh thu không gắn đơn nào, string' })
+  unlinkedRevenue!: string;
   @ApiProperty({ description: 'Tiền vào quỹ, GỒM cọc, string' }) cashIn!: string;
   @ApiProperty({ description: 'Tiền ra quỹ, GỒM hoàn cọc, string' }) cashOut!: string;
 }
@@ -677,6 +692,44 @@ export class FinanceCategoryBreakdownDto {
   total!: string;
   @ApiProperty({ type: [FinanceCategoryBreakdownItemDto] })
   items!: FinanceCategoryBreakdownItemDto[];
+}
+
+/**
+ * Doanh thu theo NGUỒN ĐƠN (ADR 0110) - trả lời ba câu của chủ xe trong một lần: tổng doanh thu của
+ * kỳ, phần đến từ sàn XePrime, phần đến từ các kênh tự khai thác (và từng kênh là bao nhiêu).
+ */
+export class FinanceSourceBreakdownItemDto {
+  @ApiProperty({
+    required: true,
+    type: String,
+    nullable: true,
+    enum: BOOKING_SOURCE_VALUES,
+    description: 'Nguồn đơn - MÃ. `null` = khoản thu không gắn đơn nào (phiếu thu nhập tay rời)',
+  })
+  source!: string | null;
+  @ApiProperty({
+    required: true,
+    type: String,
+    nullable: true,
+    description: 'Nhãn tự nhập của nguồn `other_platform` / `other` - mỗi nhãn một dòng',
+  })
+  sourceLabel!: string | null;
+  @ApiProperty({ description: 'Doanh thu ĐÃ THU trong kỳ từ các đơn của nguồn này, string' })
+  amount!: string;
+  @ApiProperty({ description: 'Tỷ trọng % trên tổng doanh thu của kỳ' }) sharePercent!: number;
+  @ApiProperty({ description: 'Số chuyến nhận xe trong kỳ (không tính đơn huỷ)' }) trips!: number;
+  @ApiProperty({ description: 'Tổng giá trị các chuyến đó (tiền thuê đã chốt), string' })
+  bookedAmount!: string;
+}
+
+export class FinanceSourceBreakdownDto {
+  @ApiProperty({ description: 'Tổng doanh thu của kỳ - khớp `revenue` ở summary' }) total!: string;
+  @ApiProperty({ description: 'Phần doanh thu từ đơn QUA SÀN XePrime' }) marketplaceAmount!: string;
+  @ApiProperty({ description: 'Phần doanh thu từ đơn chủ xe TỰ LẬP (mọi nguồn ngoài sàn)' })
+  directAmount!: string;
+  @ApiProperty({ description: 'Phần doanh thu không gắn đơn nào' }) unlinkedAmount!: string;
+  @ApiProperty({ type: [FinanceSourceBreakdownItemDto] })
+  items!: FinanceSourceBreakdownItemDto[];
 }
 
 export class VehicleProfitQueryDto {

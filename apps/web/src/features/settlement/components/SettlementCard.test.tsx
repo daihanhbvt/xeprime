@@ -98,10 +98,12 @@ function renderCard(props: { moneyClosed?: boolean } = {}) {
 }
 
 describe('SettlementCard - trạng thái cọc', () => {
-  it('đang thuê + đã thu cọc: `Đã nhận cọc`, không phải `Không có cọc`', () => {
+  it('đang thuê + đã thu cọc: cọc nằm ở thẻ "Cọc & thế chấp", thẻ này chỉ còn phát sinh', () => {
     renderCard();
-    expect(screen.getByText('Đã nhận cọc')).toBeTruthy();
-    expect(screen.queryByText('Không có cọc')).toBeNull();
+    // Gom cọc về một nhà (26/11/2026): trước quyết toán, không nhãn chặng cọc, không dòng cọc.
+    expect(screen.queryByText('Đã nhận cọc')).toBeNull();
+    expect(screen.queryByText('Cọc đã nhận')).toBeNull();
+    expect(screen.getByText('Chi phí phát sinh')).toBeTruthy();
     // Chưa xong chuyến thì chưa mời hoàn tiền, và cũng không hiện dòng đề xuất hoàn.
     expect(screen.queryByText('Đề xuất hoàn lại')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Đánh dấu đã hoàn cọc' })).toBeNull();
@@ -111,6 +113,8 @@ describe('SettlementCard - trạng thái cọc', () => {
     query.data = { ...BASE, depositStatus: DEPOSIT_STATUS.AWAITING_REFUND };
     renderCard();
     expect(screen.getByText('Chờ hoàn cọc')).toBeTruthy();
+    // Chặng quyết toán: cọc quay lại làm cơ sở của phép hoàn.
+    expect(screen.getByText('Cọc đã nhận')).toBeTruthy();
     expect(screen.getByText('Đề xuất hoàn lại')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Đánh dấu đã hoàn cọc' })).toBeTruthy();
   });
@@ -140,7 +144,7 @@ describe('SettlementCard - trạng thái cọc', () => {
     expect(screen.getByText(/không còn khoản nào phải hoàn lại/)).toBeTruthy();
   });
 
-  it('có cấu hình cọc nhưng chưa thu: vẫn nói thẳng là chưa ghi nhận', () => {
+  it('có cấu hình cọc nhưng chưa thu: thẻ không bàn chuyện cọc (thẻ cọc nói "Chưa thu")', () => {
     query.data = {
       ...BASE,
       depositReceived: '0.00',
@@ -148,8 +152,7 @@ describe('SettlementCard - trạng thái cọc', () => {
       depositStatus: DEPOSIT_STATUS.NOT_RECEIVED,
     };
     renderCard();
-    // Dòng `Cọc đã nhận` nói thẳng — không có số 0 mập mờ, không cần nhãn trạng thái thứ hai.
-    expect(screen.getByText('Chưa ghi nhận')).toBeTruthy();
+    expect(screen.queryByText('Cọc đã nhận')).toBeNull();
     expect(screen.queryByText('0 ₫')).toBeNull();
     expect(screen.queryByText('Đề xuất hoàn lại')).toBeNull();
   });
@@ -160,11 +163,11 @@ describe('SettlementCard - trạng thái cọc', () => {
  * hai link vắng hẳn. Cọc lỡ thu thì vẫn phải hoàn được.
  */
 describe('SettlementCard - đơn huỷ / khách không đến', () => {
-  it('đơn còn nhận tiền: có Ghi nhận phát sinh và Xác nhận đã thu cọc', () => {
+  it('đơn còn nhận tiền: có Ghi nhận phát sinh; thu cọc đã chuyển sang thẻ cọc', () => {
     query.data = { ...BASE, depositReceived: '0.00', depositStatus: DEPOSIT_STATUS.NOT_RECEIVED };
     renderCard();
     expect(screen.getByRole('button', { name: 'Ghi nhận phát sinh' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xác nhận đã thu cọc' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Xác nhận đã thu cọc' })).toBeNull();
   });
 
   it('moneyClosed: không có hai link ghi tiền mới', () => {

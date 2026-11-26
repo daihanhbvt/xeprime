@@ -48,6 +48,11 @@ import {
 import { VehicleBusyDaysDto, VehicleBusyDaysQueryDto } from './dto/busy-days.dto';
 import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
 import { fromDateOnly } from '../../common/date-only';
+import {
+  bookingPaidPercentOf,
+  emptyMoneySides,
+  loadBookingMoneySides,
+} from '../../common/booking-money';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** Asia/Ho_Chi_Minh = UTC+7 cố định (không DST) — đủ để gán nhãn ngày local. */
@@ -470,6 +475,12 @@ export class CalendarController {
               status: true,
               serviceType: true,
               totalAmount: true,
+              // Nguồn đơn + phần đã thu (ADR 0110) — biểu tượng nguồn và thanh toán trên thanh đơn.
+              source: true,
+              sourceLabel: true,
+              paidAmount: true,
+              priceSnapshot: true,
+              hold: { select: { paidAmount: true } },
             },
           })
         : [],
@@ -497,6 +508,8 @@ export class CalendarController {
     ]);
 
     const bookingById = new Map(bookings.map((b) => [b.id, b]));
+    // Một lượt nạp ba tổng phụ (phụ phí, phiếu tay, cọc) cho mọi đơn của khung nhìn — không N+1.
+    const moneySides = await loadBookingMoneySides(this.prisma, bookingIds);
     const blockById = new Map(blocks.map((b) => [b.id, b]));
     const holdById = new Map(holdRequests.map((r) => [r.id, r]));
 
@@ -520,6 +533,12 @@ export class CalendarController {
           code: booking.code,
           serviceType: booking.serviceType,
           amount: booking.totalAmount.toFixed(0),
+          bookingSource: booking.source,
+          bookingSourceLabel: booking.sourceLabel,
+          paidPercent: bookingPaidPercentOf(
+            booking,
+            moneySides.get(booking.id) ?? emptyMoneySides(),
+          ),
         };
       }
       const hold = holdById.get(o.sourceId);

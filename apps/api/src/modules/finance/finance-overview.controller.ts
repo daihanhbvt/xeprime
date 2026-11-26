@@ -18,6 +18,7 @@ import {
   FinanceCategoryBreakdownQueryDto,
   FinanceSeriesDto,
   FinanceSeriesQueryDto,
+  FinanceSourceBreakdownDto,
   FinanceSummaryDto,
   FinanceSummaryQueryDto,
   VehicleProfitPageDto,
@@ -105,6 +106,22 @@ export class FinanceOverviewController {
     @Query() query: FinanceCategoryBreakdownQueryDto,
   ): Promise<FinanceCategoryBreakdownDto> {
     return this.overview.byCategory(tenant.tenantId, query, tenant.allowedBranchIds);
+  }
+
+  @Get('finance/by-source')
+  @RequiresFeature(PLAN_FEATURE.FINANCE)
+  @RequirePermissions(PERMISSION.FINANCE_VIEW)
+  @ApiOperation({
+    summary:
+      'Doanh thu theo nguồn đơn trong kỳ: tổng, phần qua sàn XePrime, phần tự khai thác theo từng ' +
+      'kênh (ADR 0110). Tổng các dòng khớp `revenue` của `/finance/summary`',
+  })
+  @ApiOkResponse({ type: FinanceSourceBreakdownDto })
+  bySource(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: FinanceSummaryQueryDto,
+  ): Promise<FinanceSourceBreakdownDto> {
+    return this.overview.bySource(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @Get('finance/by-vehicle')

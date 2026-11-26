@@ -2293,6 +2293,13 @@ model Booking {
   /// được — snapshot `customer_name`/`customer_phone` ở trên vẫn là sự thật của đơn và KHÔNG
   /// bị hồ sơ khách ghi đè khi ai đó sửa tên khách về sau.
   tenantCustomerId        String?   @map("tenant_customer_id") @db.Char(26)
+  /// @xeprime/types → BookingSource — NGUỒN ĐƠN (ADR 0110). `xeprime` = đơn qua sàn, chỉ có khi đơn
+  /// sinh ra từ một yêu cầu đặt xe: trigger ở `booking_requests` tự gắn, trigger DEFERRED
+  /// `bookings_source_matches_request` từ chối lượt ghi lệch (cả hai viết tay ở migration). Giá trị
+  /// khác = đơn chủ xe tự lập, ngoài sàn — không phí, không thuế, không bảo hiểm.
+  source                  String    @default("other") @db.VarChar(30)
+  /// Nhãn tự nhập của nguồn `other_platform` / `other` (tên nền tảng, tên nguồn). CHECK ở migration.
+  sourceLabel             String?   @map("source_label") @db.VarChar(50)
   createdBy               String?   @map("created_by") @db.Char(26)
   createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -2345,6 +2352,8 @@ model Booking {
   @@index([driverUserId, pickupAt])
   /// Lịch sử thuê theo khách + mọi số liệu tổng hợp của sổ khách gom theo cột này.
   @@index([tenantId, tenantCustomerId])
+  /// Bộ lọc "Nguồn đơn" của danh sách đơn + thống kê theo nguồn (ADR 0110).
+  @@index([tenantId, source, pickupAt])
   /// Ba index dưới phục vụ màn "Đơn thuê toàn hệ thống" của admin (không có tenant_id):
   /// lọc trạng thái xuyên tenant, tra theo SĐT khách, tìm theo mã đơn/tên khách.
   @@index([status, createdAt])

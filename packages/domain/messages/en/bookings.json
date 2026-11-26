@@ -1017,28 +1017,28 @@
       },
       "title": "Handover preparation",
       "progress": "{done}/{total} done",
-      "confirm": "Booking & customer details confirmed",
+      "confirm": "Booking & customer confirmed",
       "documents": "Customer documents",
-      "documentsPending": "No driving licence / ID on file to check at handover",
+      "documentsPending": "No licence / ID yet",
       "documentsDone": "Documents checked",
-      "documentsAction": "Add details",
+      "documentsAction": "Add",
       "rent": "Collect rental",
-      "rentPending": "Collect at pickup: <b>{amount}</b>",
+      "rentPending": "Due at pickup: <b>{amount}</b>",
       "rentDone": "Rental fully collected",
       "deposit": "Collect security deposit",
-      "depositPending": "Deposit for this booking: <b>{amount}</b>",
+      "depositPending": "Booking deposit: <b>{amount}</b>",
       "depositDone": "Deposit received {amount}",
-      "collectAction": "Mark as collected",
+      "collectAction": "Confirm",
       "contract": "Rental contract",
-      "contractNone": "No contract created for this trip yet",
-      "contractDraft": "Contract created, to be signed at handover",
+      "contractNone": "No contract yet",
+      "contractDraft": "Created, sign at handover",
       "contractSigned": "Contract signed",
       "contractCreate": "Create",
       "contractView": "View",
-      "photos": "Handover details",
-      "photosPending": "Add vehicle photos before handing it over ({count}/{total})",
+      "photos": "Handover photos",
+      "photosPending": "Photos before handover ({count}/{total})",
       "photosDone": "Pre-handover photos complete",
-      "photosAction": "Upload photos",
+      "photosAction": "Upload",
       "driver": "Assign a driver",
       "driverPending": "No driver has accepted this trip yet",
       "driverDone": "A driver is assigned to this trip",
@@ -1126,6 +1126,10 @@
         "heldCount": "Holding {held}/{total}",
         "cash": "Cash deposit",
         "noCash": "No cash deposit",
+        "cashNotReceived": "Not collected",
+        "cashReceived": "Fully received",
+        "cashPartial": "Received {received}, {amount} still due",
+        "takeDeposit": "Mark as collected",
         "empty": "No collateral recorded yet.",
         "returnedTag": "Returned",
         "returnedBy": "Returned by {name} at {time}",
@@ -1141,7 +1145,21 @@
         "descriptionPlaceholder": "Document number (optional)",
         "descriptionMotorbike": "Plate, e.g. 59A1-12345",
         "descriptionOther": "What it is, e.g. Dell laptop",
-        "descriptionRequired": "Describe the item before adding it"
+        "descriptionRequired": "Describe the item before adding it",
+        "edit": "Edit item",
+        "updated": "Collateral item updated",
+        "editCash": "Edit cash deposit",
+        "cashDialog": {
+          "title": "Edit cash deposit",
+          "current": "On this booking",
+          "none": "No cash deposit",
+          "field": "Cash deposit",
+          "hint": "Enter 0 if this booking takes no cash deposit. Amounts already collected stay in the payment history.",
+          "invalid": "Enter a valid amount",
+          "negative": "The deposit cannot be negative",
+          "required": "Enter the deposit (0 for none)",
+          "saved": "Cash deposit updated"
+        }
       }
     },
     "stepAt": {
@@ -1169,7 +1187,8 @@
       "confirmBody": "The customer’s return report will be withdrawn and XePrime will open a dispute to verify with both sides. The trip’s money stays on hold until the case is closed.",
       "confirmOk": "Report not returned",
       "rejected": "Reported as not returned - XePrime will get in touch to verify"
-    }
+    },
+    "breadcrumb": "Booking details"
   },
   "documentsDialog": {
     "title": "{name}'s documents",
@@ -1319,5 +1338,29 @@
     },
     "note": "Notes",
     "signHint": "(Sign and print full name)"
+  },
+  "source": {
+    "label": "Booking source",
+    "placeholder": "Select a source",
+    "nameLabel": "Source name",
+    "namePlaceholder": "Example: hotel partner",
+    "platformLabel": "Platform name",
+    "platformPlaceholder": "Enter the platform name",
+    "validation": {
+      "required": "Please select a booking source",
+      "nameRequired": "Please enter the source name",
+      "nameMax": "The source name can be at most {max} characters"
+    },
+    "filter": {
+      "label": "Booking source",
+      "all": "All sources",
+      "direct": "Own channels (outside XePrime)"
+    },
+    "edit": {
+      "action": "Change source",
+      "title": "Change source of booking {code}",
+      "save": "Save source",
+      "success": "Booking source updated"
+    }
   }
 }

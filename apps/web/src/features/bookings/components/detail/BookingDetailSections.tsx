@@ -288,6 +288,7 @@ export function HandoverPrepCard() {
 
   const rows = prepRowStates(prep, can);
   const done = rows.filter((row) => row.done).length;
+  const rowsPerColumn = Math.ceil(rows.length / 2);
 
   return (
     <SectionCard
@@ -315,18 +316,24 @@ export function HandoverPrepCard() {
       <ul
         className={styles.prepList}
         // Hai cột đổ theo CỘT (trái hết rồi mới sang phải) — số hàng chỉ biết lúc chạy.
-        style={{ '--prep-rows': Math.ceil(rows.length / 2) } as React.CSSProperties}
+        style={{ '--prep-rows': rowsPerColumn } as React.CSSProperties}
       >
-        {rows.map((row) => {
+        {rows.map((row, index) => {
           const { title, body, action } = content[row.key];
           const isFlagged = !row.done && flagged.has(row.key);
           const manualLabel = row.manual
             ? t('unmark', { item: title })
             : t('markDone', { item: title });
+          // Hàng đầu của mỗi cột (danh sách đổ theo CỘT) - không vạch ngăn trên cùng.
+          const firstInColumn = index === 0 || index === rowsPerColumn;
           return (
             <li
               key={row.key}
-              className={cx(styles.prepRow, isFlagged && styles.prepFlagged)}
+              className={cx(
+                styles.prepRow,
+                firstInColumn && styles.prepRowFirst,
+                isFlagged && styles.prepFlagged,
+              )}
               data-flagged={isFlagged || undefined}
             >
               {row.manualItem && (row.manual || !row.done) && can.markPrep ? (
@@ -650,9 +657,11 @@ const STAGE_COLOR: Record<Stage, StatusColor> = {
 export function BookingStageChip({
   status,
   cancellationParty,
+  className,
 }: {
   status: string;
   cancellationParty?: string | null;
+  className?: string;
 }) {
   const t = useTranslations('Bookings.detailPage.stage');
   const domainLabel = useDomainLabel();
@@ -663,5 +672,9 @@ export function BookingStageChip({
       : stage === 'cancelled' && cancellationParty === CANCELLATION_PARTY.HOST
         ? domainLabel('bookingHistoryOutcome', BOOKING_HISTORY_OUTCOME.CANCELLED_BY_HOST)
         : t(stage);
-  return <ToneDotBadge color={STAGE_COLOR[stage]}>{label}</ToneDotBadge>;
+  return (
+    <ToneDotBadge color={STAGE_COLOR[stage]} className={className}>
+      {label}
+    </ToneDotBadge>
+  );
 }

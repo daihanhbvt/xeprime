@@ -61,7 +61,9 @@
       "with_driver": "Xe có tài xế",
       "long_term": "Thuê xe dài hạn"
     },
-    "off": "Khóa/Bảo dưỡng"
+    "off": "Khóa/Bảo dưỡng",
+    "direct": "Đơn tự khai thác",
+    "paidFull": "Đã thu đủ"
   },
   "vehicleCard": {
     "trigger": "Thông tin xe {vehicle}",
@@ -91,7 +93,9 @@
     "contact": "Liên hệ khách",
     "openBooking": "Chi tiết đơn",
     "openRequest": "Xem yêu cầu",
-    "openDetail": "Xem chi tiết"
+    "openDetail": "Xem chi tiết",
+    "source": "Nguồn đơn",
+    "payment": "Thanh toán"
   },
   "cellActions": {
     "menuAriaLabel": "Chọn thao tác cho ô lịch",
@@ -292,7 +296,11 @@
     "blocked": "Đã khóa",
     "customerHidden": "Khách thuê",
     "remaining": "Còn: <b>{duration}</b>",
-    "timeRange": "{from} → {to}"
+    "timeRange": "{from} → {to}",
+    "paidFull": "Đã thu đủ",
+    "paidPartial": "Đã thu {percent}%",
+    "unpaid": "Chưa thu",
+    "sourceAria": "nguồn {source}"
   },
   "requestDialog": {
     "loading": "Chi tiết yêu cầu thuê xe"

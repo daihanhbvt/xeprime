@@ -1,9 +1,9 @@
 'use client';
 
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Form, Segmented } from 'antd';
+import { Button, Form } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useFieldArray, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { useFieldArray, useWatch, type Control } from 'react-hook-form';
 import {
   BOOKING_COLLATERAL_MAX_ITEMS,
   BOOKING_COLLATERAL_TYPE,
@@ -13,117 +13,48 @@ import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { useDomainLabel } from '@/i18n/use-domain-label';
-import {
-  STAFF_COLLATERAL_MODE,
-  STAFF_COLLATERAL_MODE_VALUES,
-  collateralModeHasAssets,
-  collateralModeHasCash,
-  type StaffBookingValues,
-  type StaffCollateralMode,
-} from '../staff-booking-schema';
+import type { StaffBookingValues } from '../staff-booking-schema';
 import reviewStyles from './BookingReviewStep.module.css';
 import styles from './StaffBookingCards.module.css';
 
 /**
- * Thẻ "Cọc & thế chấp" của luồng ĐẶT HỘ (ADR 0109): khách cọc TIỀN, để lại TÀI SẢN (CCCD, bằng lái,
- * xe máy kèm biển số…), cả hai, hoặc không cọc — mức cọc thay đổi theo từng khách, không cố định theo
- * xe. Cọc tiền điền sẵn từ chính sách xe; danh sách tài sản in lên đơn và hợp đồng, đánh dấu đã trả
- * ở chi tiết đơn khi khách trả xe.
+ * Thẻ "Cọc & thế chấp" của luồng ĐẶT HỘ (ADR 0109): một ô tiền cọc và một danh sách tài sản (CCCD, bằng
+ * lái, xe máy kèm biển số…). Nhập khoản nào thì đơn ghi khoản đó - tiền cọc để 0 và danh sách trống
+ * nghĩa là không cọc. Không có ô chọn "hình thức": server vốn suy chế độ từ dữ liệu (cọc tiền > 0, có
+ * dòng tài sản), nên bắt người dùng chọn trước rồi mới nhập là thừa một bước.
+ *
+ * Tiền cọc điền sẵn từ chính sách xe; danh sách tài sản in lên đơn và hợp đồng, đánh dấu đã trả ở chi
+ * tiết đơn khi khách trả xe.
  */
-export function StaffBookingCollateralCard({
-  control,
-  setValue,
-}: {
-  control: Control<StaffBookingValues>;
-  setValue: UseFormSetValue<StaffBookingValues>;
-}) {
+export function StaffBookingCollateralCard({ control }: { control: Control<StaffBookingValues> }) {
   const t = useTranslations('BookingRequests.staffFlow.review.collateral');
   const domainLabel = useDomainLabel();
-  const mode = useWatch({ control, name: 'collateralMode' }) as StaffCollateralMode;
   const items = useFieldArray({ control, name: 'collaterals' });
   const types = useWatch({ control, name: 'collaterals' });
-
-  const changeMode = (next: StaffCollateralMode) => {
-    setValue('collateralMode', next, { shouldDirty: true });
-    // Chọn có tài sản mà danh sách còn trống ⇒ mở sẵn một dòng (CCCD là thứ khách hay để lại nhất).
-    if (collateralModeHasAssets(next) && items.fields.length === 0) {
-      items.append({ collateralType: BOOKING_COLLATERAL_TYPE.CITIZEN_ID, description: '' });
-    }
-  };
+  const canAdd = items.fields.length < BOOKING_COLLATERAL_MAX_ITEMS;
 
   return (
     <section className={reviewStyles.card} aria-label={t('title')}>
       <h3 className={reviewStyles.cardTitle}>{t('title')}</h3>
       <p className={reviewStyles.cardLead}>{t('lead')}</p>
-      <Segmented<StaffCollateralMode>
-        block
-        value={mode}
-        onChange={changeMode}
-        aria-label={t('modeLabel')}
-        options={STAFF_COLLATERAL_MODE_VALUES.map((value) => ({
-          value,
-          label: t(`mode.${value}`),
-        }))}
-      />
       <Form component={false} layout="vertical" colon={false}>
-        {collateralModeHasCash(mode) ? (
-          <NumberField
-            control={control}
-            name="depositAmount"
-            label={t('cash')}
-            help={t('cashHint')}
-            money
-            min={0}
-          />
-        ) : null}
+        <NumberField
+          control={control}
+          name="depositAmount"
+          label={t('cash')}
+          help={t('cashHint')}
+          money
+          min={0}
+        />
 
-        {collateralModeHasAssets(mode) ? (
-          <>
-            <div className={styles.listHead}>
-              <span className={styles.listTitle}>{t('assetsTitle')}</span>
-              <span className={styles.listHint}>{t('assetsHint')}</span>
-            </div>
-            {items.fields.map((field, index) => {
-              const type = types?.[index]?.collateralType;
-              return (
-                <div key={field.id} className={styles.lineRow}>
-                  <SelectField
-                    control={control}
-                    name={`collaterals.${index}.collateralType`}
-                    label={t('type')}
-                    options={BOOKING_COLLATERAL_TYPE_VALUES.map((value) => ({
-                      value,
-                      label: domainLabel('bookingCollateralType', value),
-                    }))}
-                  />
-                  <TextField
-                    control={control}
-                    name={`collaterals.${index}.description`}
-                    label={t('description')}
-                    placeholder={
-                      type === BOOKING_COLLATERAL_TYPE.MOTORBIKE
-                        ? t('descriptionMotorbike')
-                        : type === BOOKING_COLLATERAL_TYPE.OTHER
-                          ? t('descriptionOther')
-                          : t('descriptionPlaceholder')
-                    }
-                    required={type === BOOKING_COLLATERAL_TYPE.OTHER}
-                    autoComplete="off"
-                  />
-                  <Button
-                    type="text"
-                    className={styles.removeBtn}
-                    icon={<DeleteOutlined />}
-                    aria-label={t('remove')}
-                    onClick={() => items.remove(index)}
-                  />
-                </div>
-              );
-            })}
-            {items.fields.length < BOOKING_COLLATERAL_MAX_ITEMS ? (
+        <div className={styles.assets}>
+          <div className={styles.assetsHead}>
+            <span className={styles.listTitle}>{t('assetsTitle')}</span>
+            {canAdd ? (
               <Button
-                type="dashed"
-                block
+                type="link"
+                size="small"
+                className={styles.assetsAdd}
                 icon={<PlusOutlined />}
                 onClick={() =>
                   items.append({
@@ -135,12 +66,52 @@ export function StaffBookingCollateralCard({
                 {t('add')}
               </Button>
             ) : null}
-          </>
-        ) : null}
+          </div>
 
-        {mode === STAFF_COLLATERAL_MODE.NONE ? (
-          <p className={styles.listHint}>{t('noneHint')}</p>
-        ) : null}
+          {items.fields.length === 0 ? (
+            <p className={styles.listHint}>{t('assetsHint')}</p>
+          ) : (
+            <ul className={styles.assetList}>
+              {items.fields.map((field, index) => {
+                const type = types?.[index]?.collateralType;
+                return (
+                  <li key={field.id} className={styles.assetRow}>
+                    <SelectField
+                      control={control}
+                      name={`collaterals.${index}.collateralType`}
+                      label={t('type')}
+                      options={BOOKING_COLLATERAL_TYPE_VALUES.map((value) => ({
+                        value,
+                        label: domainLabel('bookingCollateralType', value),
+                      }))}
+                    />
+                    <TextField
+                      control={control}
+                      name={`collaterals.${index}.description`}
+                      label={t('description')}
+                      placeholder={
+                        type === BOOKING_COLLATERAL_TYPE.MOTORBIKE
+                          ? t('descriptionMotorbike')
+                          : type === BOOKING_COLLATERAL_TYPE.OTHER
+                            ? t('descriptionOther')
+                            : t('descriptionPlaceholder')
+                      }
+                      required={type === BOOKING_COLLATERAL_TYPE.OTHER}
+                      autoComplete="off"
+                    />
+                    <Button
+                      type="text"
+                      className={styles.assetRemove}
+                      icon={<DeleteOutlined />}
+                      aria-label={t('remove')}
+                      onClick={() => items.remove(index)}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </Form>
     </section>
   );

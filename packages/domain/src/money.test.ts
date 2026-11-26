@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   absoluteMoney,
   moneyPerPart,
+  moneyPercentOf,
   applyDiscountPercent,
   compactMoneyParts,
   formatMoneyVnd,
@@ -338,5 +339,22 @@ describe('moneyPerPart', () => {
 
   it('số phần không hợp lệ thì trả nguyên số tiền', () => {
     expect(moneyPerPart('149000', 0)).toBe('149000');
+  });
+});
+
+describe('moneyPercentOf', () => {
+  it('lấy phần trăm và làm tròn tới đồng (nửa xa 0)', () => {
+    expect(moneyPercentOf('24800000', '75')).toBe('18600000');
+    expect(moneyPercentOf('1001', '50')).toBe('501');
+    expect(moneyPercentOf('333333', 12.5)).toBe('41667');
+    expect(moneyPercentOf('-1001', '50')).toBe('-501');
+  });
+
+  it('đầu vào không hợp lệ ⇒ null, không phải 0', () => {
+    expect(moneyPercentOf(null, '30')).toBeNull();
+    expect(moneyPercentOf('1000', null)).toBeNull();
+    expect(moneyPercentOf('abc', '30')).toBeNull();
+    expect(moneyPercentOf('1000', '-5')).toBeNull();
+    expect(moneyPercentOf('1000', '12.345')).toBeNull();
   });
 });

@@ -280,15 +280,41 @@ describe('Tài sản thế chấp theo đơn', () => {
     expect(added.data).toHaveLength(3);
     const cccd = added.data[0]!;
 
+    // Sửa linh động một món đang giữ (26/11/2026): đổi loại + mô tả; giữ nguyên thì không audit.
+    const bike = added.data[1]!;
+    const edited = await collaterals.update(tenantId, detail.id, bike.id, ownerId, {
+      collateralType: BOOKING_COLLATERAL_TYPE.OTHER,
+      description: 'Xe máy Vision 59A1-99999',
+    });
+    expect(edited.data[1]).toMatchObject({
+      id: bike.id,
+      collateralType: BOOKING_COLLATERAL_TYPE.OTHER,
+      description: 'Xe máy Vision 59A1-99999',
+    });
+    await collaterals.update(tenantId, detail.id, bike.id, ownerId, {
+      collateralType: BOOKING_COLLATERAL_TYPE.OTHER,
+      description: 'Xe máy Vision 59A1-99999',
+    });
+    expect(
+      await prisma.auditLog.count({
+        where: { targetId: detail.id, action: BOOKING_COLLATERAL_AUDIT_ACTION.UPDATE },
+      }),
+    ).toBe(1);
+
     const returned = await collaterals.setReturned(tenantId, detail.id, cccd.id, ownerId, true);
     expect(returned.data[0]).toMatchObject({ returnedByName: 'Chủ thoả thuận' });
     expect(returned.data[0]?.returnedAt).not.toBeNull();
     // Idempotent.
     await collaterals.setReturned(tenantId, detail.id, cccd.id, ownerId, true);
-    // Món đã trả không gỡ được.
+    // Món đã trả không gỡ, không sửa được.
     await expect(collaterals.remove(tenantId, detail.id, cccd.id, ownerId)).rejects.toMatchObject(
       code(API_ERROR_CODE.BOOKING_COLLATERAL_LOCKED),
     );
+    await expect(
+      collaterals.update(tenantId, detail.id, cccd.id, ownerId, {
+        collateralType: BOOKING_COLLATERAL_TYPE.PASSPORT,
+      }),
+    ).rejects.toMatchObject(code(API_ERROR_CODE.BOOKING_COLLATERAL_LOCKED));
     const undone = await collaterals.setReturned(tenantId, detail.id, cccd.id, ownerId, false);
     expect(undone.data[0]?.returnedAt).toBeNull();
     const afterRemove = await collaterals.remove(tenantId, detail.id, cccd.id, ownerId);
@@ -332,6 +358,11 @@ describe('Tài sản thế chấp theo đơn', () => {
       const first = detail.collaterals[0]!;
       await expect(
         collaterals.remove(tenantId, detail.id, first.id, ownerId),
+      ).rejects.toMatchObject(code(API_ERROR_CODE.BOOKING_COLLATERAL_LOCKED));
+      await expect(
+        collaterals.update(tenantId, detail.id, first.id, ownerId, {
+          collateralType: BOOKING_COLLATERAL_TYPE.PASSPORT,
+        }),
       ).rejects.toMatchObject(code(API_ERROR_CODE.BOOKING_COLLATERAL_LOCKED));
       await expect(
         collaterals.setReturned(tenantId, detail.id, first.id, ownerId, true),

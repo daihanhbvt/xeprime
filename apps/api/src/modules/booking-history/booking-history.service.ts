@@ -5,6 +5,9 @@ import {
   BOOKING_HISTORY_OUTCOME,
   BOOKING_HISTORY_TAB,
   BOOKING_REQUEST_STATUS,
+  BOOKING_SOURCE,
+  BOOKING_SOURCE_FILTER_DIRECT,
+  isMarketplaceBooking,
   BOOKING_STATUS,
   CANCELLATION_PARTY,
   hostSeesCustomerContact,
@@ -177,6 +180,16 @@ export class BookingHistoryService {
       ? (alias: string) => Prisma.sql` AND ${Prisma.raw(alias)}.service_type = ${query.serviceType}`
       : () => Prisma.empty;
     const term = query.q?.trim();
+    // Nguồn đơn (ADR 0110): `direct` = mọi nguồn ngoài sàn. Mã đến từ union đã validate ở DTO.
+    const sourceFilter = query.source;
+    const bookingSource =
+      sourceFilter === BOOKING_SOURCE_FILTER_DIRECT
+        ? Prisma.sql` AND b.source <> ${BOOKING_SOURCE.XEPRIME}`
+        : sourceFilter
+          ? Prisma.sql` AND b.source = ${sourceFilter}`
+          : Prisma.empty;
+    // Yêu cầu không thành đơn là của SÀN — lọc một nguồn ngoài sàn thì không còn dòng yêu cầu nào.
+    const requestsInScope = !sourceFilter || isMarketplaceBooking(sourceFilter);
 
     const bookings = Prisma.sql`
       SELECT ${code(BOOKING_HISTORY_KIND.BOOKING)}::text AS kind,
@@ -198,9 +211,9 @@ export class BookingHistoryService {
        WHERE b.tenant_id = ${tenantId}
          AND b.deleted_at IS NULL
          AND b.status IN (${codes(ENDED_BOOKING_STATUSES)})
-         ${branch}${service('b')}${term ? Prisma.sql` AND ${bookingSearchSql(term)}` : Prisma.empty}`;
+         ${branch}${service('b')}${bookingSource}${term ? Prisma.sql` AND ${bookingSearchSql(term)}` : Prisma.empty}`;
 
-    if (!includeRequests) return bookings;
+    if (!includeRequests || !requestsInScope) return bookings;
 
     const requestOutcome = Prisma.join(
       CLOSED_REQUEST_STATUSES.map(
@@ -250,6 +263,8 @@ export class BookingHistoryService {
               id: true,
               code: true,
               serviceType: true,
+              source: true,
+              sourceLabel: true,
               longTermPackageMonths: true,
               vehicleId: true,
               customerName: true,
@@ -292,6 +307,8 @@ export class BookingHistoryService {
           ...base,
           code: b.code,
           serviceType: b.serviceType,
+          source: b.source,
+          sourceLabel: b.sourceLabel,
           longTermPackageMonths: b.longTermPackageMonths,
           vehicleId: b.vehicleId,
           vehicleName: b.vehicle.name,
@@ -310,6 +327,8 @@ export class BookingHistoryService {
         ...base,
         code: null,
         serviceType: r.serviceType,
+        source: BOOKING_SOURCE.XEPRIME,
+        sourceLabel: null,
         longTermPackageMonths: r.longTermPackageMonths,
         vehicleId: r.vehicleId,
         vehicleName: r.vehicle.name,

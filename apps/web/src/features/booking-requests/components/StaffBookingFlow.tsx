@@ -18,6 +18,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   RENTAL_MODE,
   API_ERROR_CODE,
+  BOOKING_SOURCE_LABEL_MAX,
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
   PRICE_ROW,
@@ -41,6 +42,7 @@ import {
 import { TextField } from '@/components/form/TextField';
 import { bookingPath } from '@/constants/routes';
 import { checkConflict } from '@/features/bookings/api';
+import { bookingSourcePayload } from '@/features/bookings/source-schema';
 import { useCreateBooking } from '@/features/bookings/hooks/use-booking-mutations';
 import { fetchCalendarBusyDays, fetchCalendarQuote } from '@/features/calendar/api';
 import type { CalendarQuote } from '@/features/calendar/types/calendar.types';
@@ -57,19 +59,14 @@ import { queryKeys } from '@/services/query-keys';
 import { BUSY_DAYS_LOOKAHEAD } from '../api';
 import { pickupPointText } from '../pickup-point';
 import { PICKUP_METHOD } from '../schema';
-import {
-  STAFF_COLLATERAL_MODE,
-  collateralModeHasAssets,
-  collateralModeHasCash,
-  staffBookingSchema,
-  type StaffBookingValues,
-} from '../staff-booking-schema';
+import { staffBookingSchema, type StaffBookingValues } from '../staff-booking-schema';
 import { BookingJourney } from './BookingJourney';
 import { BookingResult, BookingResultTotal } from './BookingResult';
 import { StaffBookingReviewStep } from './StaffBookingReviewStep';
 import { BookingTripCard, type BookingTrip } from './BookingTripCard';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
+import staffStyles from './StaffBookingCards.module.css';
 import resultStyles from './BookingSuccessStep.module.css';
 
 /** Ba chặng của luồng đặt hộ — cùng tên với `StaffJourneyStage` của thanh tiến trình. */
@@ -144,6 +141,7 @@ export function StaffBookingFlow({
 }: StaffBookingFlowProps) {
   const t = useTranslations('BookingRequests.staffFlow');
   const tFlow = useTranslations('BookingRequests.flow');
+  const tSource = useTranslations('Bookings.source');
   const fmt = useAppFormat();
   const dl = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -179,7 +177,15 @@ export function StaffBookingFlow({
     setServiceType(vehicleServices[0] as ServiceType);
   }
 
-  const schema = useMemo(() => staffBookingSchema(t), [t]);
+  const schema = useMemo(
+    () =>
+      staffBookingSchema(t, {
+        required: tSource('validation.required'),
+        nameRequired: tSource('validation.nameRequired'),
+        nameMax: tSource('validation.nameMax', { max: BOOKING_SOURCE_LABEL_MAX }),
+      }),
+    [t, tSource],
+  );
   const { control, trigger, getValues, setValue, formState } = useForm<StaffBookingValues>({
     resolver: yupResolver(schema),
     // Dịch vụ nằm ở state (Segmented) — đưa vào schema qua yup context ($serviceType).
@@ -197,13 +203,14 @@ export function StaffBookingFlow({
       pickupAddress: '',
       destination: '',
       note: '',
+      source: '',
+      sourceLabel: '',
       manualBaseAmount: null,
       depositAmount: null,
       negotiated: false,
       manualDiscount: null,
       manualDeliveryFee: null,
       extraCharges: [],
-      collateralMode: STAFF_COLLATERAL_MODE.CASH,
       collaterals: [],
     },
   });
@@ -263,15 +270,7 @@ export function StaffBookingFlow({
     if (!formState.dirtyFields.depositAmount) {
       setValue('depositAmount', Number(quote.depositAmount ?? 0));
     }
-    // Chế độ bảo đảm mở theo chính sách xe: có cọc tiền ⇒ "Tiền", không ⇒ "Không cọc" — trừ khi
-    // nhân viên đã tự chọn (ADR 0109: mức cọc thay đổi theo từng khách).
-    if (!formState.dirtyFields.collateralMode) {
-      setValue(
-        'collateralMode',
-        Number(quote.depositAmount ?? 0) > 0 ? STAFF_COLLATERAL_MODE.CASH : STAFF_COLLATERAL_MODE.NONE,
-      );
-    }
-  }, [quote, formState.dirtyFields.depositAmount, formState.dirtyFields.collateralMode, setValue]);
+  }, [quote, formState.dirtyFields.depositAmount, setValue]);
 
   /**
    * Bật "Giá thoả thuận" (ADR 0109): giá hệ thống thành GỢI Ý — điền sẵn các ô còn trống từ báo giá
@@ -367,13 +366,14 @@ export function StaffBookingFlow({
     setStepError(null);
     // Xe chưa có giá ⇒ giá thoả thuận là con đường DUY NHẤT (không tạo đơn 0đ âm thầm).
     const negotiated = quoteUnavailable || getValues('negotiated');
-    const mode = getValues('collateralMode');
     const fields = [
       'customerName',
       'customerPhone',
       'note',
-      ...(collateralModeHasCash(mode) ? (['depositAmount'] as const) : []),
-      ...(collateralModeHasAssets(mode) ? (['collaterals'] as const) : []),
+      'source',
+      'sourceLabel',
+      'depositAmount',
+      'collaterals',
       ...(negotiated
         ? ([
             'manualBaseAmount',
@@ -445,8 +445,9 @@ export function StaffBookingFlow({
               // Giao tận nơi phí 0 lúc tạo — chủ xe chốt phí đã thoả thuận sau.
               deliveryFee: '0',
             }),
-        depositAmount: collateralModeHasCash(mode) ? String(v.depositAmount ?? 0) : '0',
-        ...(collateralModeHasAssets(mode) && v.collaterals.length > 0
+        // Cọc & thế chấp (ADR 0109): nhập khoản nào ghi khoản đó - cọc 0 và không tài sản là không cọc.
+        depositAmount: String(v.depositAmount ?? 0),
+        ...(v.collaterals.length > 0
           ? {
               collaterals: v.collaterals.map((c) => ({
                 collateralType: c.collateralType,
@@ -454,6 +455,8 @@ export function StaffBookingFlow({
               })),
             }
           : {}),
+        // Nguồn đơn (ADR 0110) — server từ chối `xeprime`; nhãn chỉ đi kèm nguồn nhận nhãn.
+        ...bookingSourcePayload(v),
         ...(note ? { note } : {}),
       },
       {
@@ -552,7 +555,6 @@ export function StaffBookingFlow({
         vehicleImageUrl={vehicleThumbUrl}
         trip={tripSummary}
         control={control}
-        setValue={setValue}
         onToggleNegotiated={toggleNegotiated}
         quote={quote}
         quoteLoading={quoteQ.isLoading}
@@ -580,7 +582,7 @@ export function StaffBookingFlow({
         : t('trip.barTotal');
 
   return (
-    <div className={styles.layout}>
+    <div className={cx(styles.layout, staffStyles.tone)}>
       <div className={styles.left}>
         {onChangeVehicle ? (
           <Button
@@ -729,8 +731,10 @@ export function StaffBookingFlow({
                 {hasRange ? (
                   <>
                     <ClockCircleOutlined aria-hidden />{' '}
-                    {rentalMode === RENTAL_MODE.HOURLY ? tFlow('time.modeHourly') : tFlow('time.modeDaily')} ·{' '}
-                    {tFlow('time.changeHint')}
+                    {rentalMode === RENTAL_MODE.HOURLY
+                      ? tFlow('time.modeHourly')
+                      : tFlow('time.modeDaily')}{' '}
+                    · {tFlow('time.changeHint')}
                   </>
                 ) : (
                   tFlow('time.empty')
@@ -879,23 +883,28 @@ export function StaffBookingFlow({
           ) : null}
         </section>
 
-        {/* Dòng tổng + nút: MỘT khối dính đáy cột phải, như luồng của khách. */}
+        {/* Tổng bên trái, nút bên phải - MỘT hàng dính đáy cột phải, cùng chỗ với bước Xem lại. */}
         <div className={styles.dock}>
-          <div className={styles.staffBar}>
-            <span className={styles.staffBarLabel}>{barLabel}</span>
-            {quote && hasPriceSelection ? (
-              <b className={styles.staffBarAmount}>{fmt.money(quote.totalAmount)}</b>
-            ) : null}
-          </div>
-          <footer className={styles.footer}>
-            <Button onClick={onClose}>{tFlow('actions.cancel')}</Button>
-            <Button
-              type="primary"
-              loading={availabilityM.isPending}
-              onClick={() => void continueFromTrip()}
-            >
-              {availabilityM.isPending ? tFlow('actions.checking') : tFlow('actions.continue')}
-            </Button>
+          <footer className={staffStyles.dockRow}>
+            <div className={staffStyles.dockTotal}>
+              <span className={staffStyles.dockLabel}>{barLabel}</span>
+              {quote && hasPriceSelection ? (
+                <b className={staffStyles.dockAmount}>{fmt.money(quote.totalAmount)}</b>
+              ) : null}
+            </div>
+            <div className={staffStyles.dockActions}>
+              <Button size="large" onClick={onClose}>
+                {tFlow('actions.cancel')}
+              </Button>
+              <Button
+                type="primary"
+                size="large"
+                loading={availabilityM.isPending}
+                onClick={() => void continueFromTrip()}
+              >
+                {availabilityM.isPending ? tFlow('actions.checking') : tFlow('actions.continue')}
+              </Button>
+            </div>
           </footer>
         </div>
       </div>

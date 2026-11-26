@@ -100,6 +100,33 @@ export function moneyPerPart(value: MoneyString, parts: number): MoneyString {
   return fromCents((negative ? -dong : dong) * 100n);
 }
 
+/**
+ * `percent`% của một số tiền - phép `bigint` trên xu, làm tròn tới ĐỒNG (nửa xa 0 - ADR 0069: khoản
+ * tính ra từ tỷ lệ đúng tới đồng, không tới 1.000đ). `percent` nhận chuỗi thập phân của server
+ * (`"30"`, `"12.5"`) hoặc số, tối đa hai chữ số lẻ; giá trị không hợp lệ ⇒ `null`.
+ *
+ * Chỉ để HIỂN THỊ một con số ước tính (vd phần chia doanh thu của xe hợp tác) - không vào sổ.
+ */
+export function moneyPercentOf(
+  value: MoneyString | null | undefined,
+  percent: string | number | null | undefined,
+): MoneyString | null {
+  if (!value || percent === null || percent === undefined || percent === '') return null;
+  const trimmed = value.trim();
+  if (!MONEY_WIRE_SHAPE.test(trimmed)) return null;
+  const percentText = String(percent).trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(percentText)) return null;
+  const [whole = '0', fraction = ''] = percentText.split('.');
+  // Phần trăm quy về "phần vạn" (hai chữ số lẻ) để cả phép nhân lẫn phép chia đều là số nguyên.
+  const basisPoints = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));
+  const product = toCents(trimmed) * basisPoints;
+  const divisor = 10_000n * 100n;
+  const negative = product < 0n;
+  const absolute = negative ? -product : product;
+  const dong = (absolute + divisor / 2n) / divisor;
+  return fromCents((negative ? -dong : dong) * 100n);
+}
+
 /** Số tiền có âm không - đọc trên chuỗi, cùng lý do như `isZeroMoney`. */
 export function isNegativeMoney(value: MoneyString | null | undefined): boolean {
   return Boolean(value) && toCents(value as MoneyString) < 0n;

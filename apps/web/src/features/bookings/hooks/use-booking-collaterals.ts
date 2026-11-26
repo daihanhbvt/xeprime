@@ -6,6 +6,7 @@ import {
   addBookingCollateral,
   removeBookingCollateral,
   setBookingCollateralReturned,
+  updateBookingCollateral,
 } from '../api';
 import type { BookingCollateral, BookingCollateralInput, BookingDetail } from '../types';
 
@@ -36,6 +37,12 @@ export const useAddBookingCollateral = (bookingId: string) =>
 export const useRemoveBookingCollateral = (bookingId: string) =>
   useCollateralMutation(bookingId, (collateralId: string) =>
     removeBookingCollateral(bookingId, collateralId),
+  );
+
+/** Sửa loại / mô tả một món chưa trả (26/11/2026). */
+export const useUpdateBookingCollateral = (bookingId: string) =>
+  useCollateralMutation(bookingId, ({ id, body }: { id: string; body: BookingCollateralInput }) =>
+    updateBookingCollateral(bookingId, id, body),
   );
 
 export const useSetBookingCollateralReturned = (bookingId: string) =>

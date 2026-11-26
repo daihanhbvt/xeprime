@@ -31,6 +31,7 @@ import type {
   SetHandoverPrepCheckInput,
   TransitionInput,
   UpdateBookingInput,
+  UpdateBookingSourceInput,
   UpdateDeliveryFeeInput,
   UpdateDriverWageInput,
 } from './types';
@@ -48,6 +49,8 @@ export function filtersToParams(filters: BookingFilters): QueryParams {
     vehicleId: filters.vehicleId ?? null,
     serviceType: filters.serviceType ?? null,
     branchId: filters.branchId ?? null,
+    source: filters.source ?? null,
+    sourceLabel: filters.sourceLabel ?? null,
     returnFrom: filters.returnFrom ?? null,
     returnTo: filters.returnTo ?? null,
     sort: filters.sort ?? null,
@@ -75,13 +78,16 @@ export function historyFiltersToParams(filters: BookingHistoryFilters): QueryPar
     q: filters.q ?? null,
     serviceType: filters.serviceType ?? null,
     branchId: filters.branchId ?? null,
+    source: filters.source ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BOOKING_HISTORY_DEFAULT_LIMIT,
   };
 }
 
 /** Đơn đã đóng + yêu cầu không thành đơn, MỘT danh sách xếp theo lúc kết thúc (05/11/2026). */
-export const fetchBookingHistory = (filters: BookingHistoryFilters): Promise<BookingHistoryResult> =>
+export const fetchBookingHistory = (
+  filters: BookingHistoryFilters,
+): Promise<BookingHistoryResult> =>
   fetchPage<BookingHistoryItem, BookingHistoryMeta>(
     '/booking-history',
     historyFiltersToParams(filters),
@@ -96,6 +102,16 @@ export const createBooking = (body: CreateBookingInput): Promise<BookingDetail> 
 
 export const updateBooking = (id: string, body: UpdateBookingInput): Promise<BookingDetail> =>
   apiPatch<BookingDetail>(`/bookings/${id}`, body);
+
+/** Đổi nguồn của một đơn TỰ LẬP (ADR 0110) - đơn qua sàn trả 409 `BOOKING_SOURCE_LOCKED`. */
+export const updateBookingSource = (
+  id: string,
+  body: UpdateBookingSourceInput,
+): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/source`, body);
+
+/** Nhãn nguồn gian hàng đã từng nhập - nuôi ô gợi ý của hộp lập đơn và bộ lọc. */
+export const fetchBookingSourceLabels = (): Promise<string[]> =>
+  apiGet<{ labels: string[] }>('/bookings/source-labels').then((res) => res.labels);
 
 export const transitionBooking = (id: string, body: TransitionInput): Promise<BookingDetail> =>
   apiPost<BookingDetail>(`/bookings/${id}/transition`, body);
@@ -178,6 +194,13 @@ export const addBookingCollateral = (
   body: BookingCollateralInput,
 ): Promise<BookingCollateral[]> =>
   apiPost<BookingCollateral[]>(`/bookings/${id}/collaterals`, body);
+
+export const updateBookingCollateral = (
+  id: string,
+  collateralId: string,
+  body: BookingCollateralInput,
+): Promise<BookingCollateral[]> =>
+  apiPatch<BookingCollateral[]>(`/bookings/${id}/collaterals/${collateralId}`, body);
 
 export const removeBookingCollateral = (id: string, collateralId: string) =>
   apiDelete<BookingCollateral[]>(`/bookings/${id}/collaterals/${collateralId}`);

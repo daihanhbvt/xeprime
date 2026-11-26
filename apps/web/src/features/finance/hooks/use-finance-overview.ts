@@ -7,6 +7,7 @@ import {
   customerRevenueParams,
   fetchCustomerRevenue,
   fetchFinanceByCategory,
+  fetchFinanceBySource,
   fetchFinanceSeries,
   fetchFinanceSummary,
   fetchVehicleProfit,
@@ -53,6 +54,20 @@ export function useFinanceByCategory(
   return useQuery({
     queryKey: queryKeys.finance.byCategory({ ...overviewRangeParams(filters, scope), type }),
     queryFn: () => fetchFinanceByCategory(filters, type, scope),
+  });
+}
+
+/** Doanh thu theo nguồn đơn (ADR 0110) — cùng kỳ và phạm vi với thẻ tổng. */
+export function useFinanceBySource(
+  filters: FinancePeriodFilters,
+  scope?: FinanceScope,
+  /** Tắt khi không có kỳ để hỏi (vd kỳ so sánh của một kỳ chưa bắt đầu). */
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.finance.bySource(overviewRangeParams(filters, scope)),
+    queryFn: () => fetchFinanceBySource(filters, scope),
+    enabled,
   });
 }
 

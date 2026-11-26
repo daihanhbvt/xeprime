@@ -1,0 +1,17 @@
+/* Viên nguồn + nút bút: một cụm, đứng cạnh nhãn chặng trên dòng tiêu đề. */
+.control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 20px;
+}
+
+.edit.edit {
+  color: var(--xp-color-text-tertiary);
+}
+
+.edit.edit:hover {
+  color: var(--xp-color-primary-hover);
+}

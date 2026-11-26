@@ -6,6 +6,7 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
 import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 import { BookingDetailContent } from '@/features/bookings/components/BookingDetailContent';
+import { BookingSourceControl } from '@/features/bookings/components/BookingSourceControl';
 import { BookingStageChip } from '@/features/bookings/components/detail/BookingDetailSections';
 import { useAppFormat } from '@/i18n/use-app-format';
 import styles from './BookingDetailPage.module.css';
@@ -35,13 +36,17 @@ export function BookingDetailPage() {
         onNotFoundAction={{ label: t('detail.backToList'), onClick: back }}
         renderHeader={(booking, actions) => (
           <ManagePageHeader
+            className={styles.header}
+            breadcrumbTitle={t('detailPage.breadcrumb')}
             title={
               <span className={styles.title}>
                 {t('detailPage.title', { code: booking.code })}
                 <BookingStageChip
                   status={booking.status}
                   cancellationParty={booking.cancellationParty}
+                  className={styles.stageChip}
                 />
+                <BookingSourceControl booking={booking} />
               </span>
             }
             subtitle={t('detailPage.createdAt', { date: fmt.date(booking.createdAt) })}

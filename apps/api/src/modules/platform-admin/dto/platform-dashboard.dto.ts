@@ -30,8 +30,12 @@ export class PlatformDashboardSummaryDto {
   @ApiProperty({ description: 'Listing đang hiển thị trên marketplace' }) listingActive!: number;
   @ApiProperty({ description: 'Tổng listing (mọi trạng thái)' }) listingTotal!: number;
 
-  @ApiProperty({ description: 'Tổng đơn thuê toàn nền tảng (chưa xoá)' }) bookingTotal!: number;
-  @ApiProperty({ description: 'Đơn thuê tạo trong tháng này (giờ VN)' }) bookingThisMonth!: number;
+  @ApiProperty({
+    description: 'Tổng đơn QUA SÀN (chưa xoá) - không tính đơn chủ xe tự lập (ADR 0110)',
+  })
+  bookingTotal!: number;
+  @ApiProperty({ description: 'Đơn QUA SÀN tạo trong tháng này (giờ VN)' })
+  bookingThisMonth!: number;
 
   @ApiProperty({ description: 'Hồ sơ chờ duyệt (mọi loại)' }) approvalPending!: number;
   @ApiProperty({ description: 'Chờ duyệt: gian hàng' }) approvalPendingTenant!: number;
@@ -69,7 +73,9 @@ export class PlatformDashboardDayDto {
 export class PlatformDashboardActivityDto {
   @ApiProperty({
     type: PlatformPeriodCountDto,
-    description: 'Đơn thuê RA ĐỜI trong kỳ, mọi trạng thái - cùng phép đếm `bookingThisMonth`.',
+    description:
+      'Đơn QUA SÀN ra đời trong kỳ, mọi trạng thái - cùng phép đếm `bookingThisMonth`. Đơn chủ xe ' +
+      'tự lập nằm ngoài mọi số ở khối này (ADR 0110).',
   })
   bookings!: PlatformPeriodCountDto;
 
