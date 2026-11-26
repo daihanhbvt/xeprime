@@ -3,15 +3,16 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { queryKeys } from '@/services/query-keys';
-import {
-  fetchCalendarAvailability,
-  fetchCalendarDailyPrices,
-  fetchCalendarEvents,
-  fetchCalendarResources,
-} from '../api';
-import type { CalendarEvent } from '../types/calendar.types';
+import { fetchCalendarDailyPrices, fetchCalendarEvents, fetchCalendarResources } from '../api';
+import type { CalendarEvent, CalendarResource } from '../types/calendar.types';
 import { buildRange } from '../utils/calendar-date.util';
 import { useCalendarFilters } from './use-calendar-filters';
+
+/**
+ * Mảng rỗng DÙNG CHUNG khi chưa có dữ liệu: `data ?? []` đẻ một mảng mới mỗi lần render, và mọi
+ * `useMemo` phía sau (bố cục hàng của lưới) sẽ tính lại vô tận.
+ */
+const NO_RESOURCES: CalendarResource[] = [];
 
 /** Khoá tra dấu giá riêng của một ô: `vehicleId:YYYY-MM-DD`. */
 export function priceMarkerKey(vehicleId: string, date: string): string {
@@ -19,13 +20,16 @@ export function priceMarkerKey(vehicleId: string, date: string): string {
 }
 
 /**
- * Nạp xe + event + hàng "Xe còn trống" + dấu giá riêng cho khoảng đang xem.
+ * Nạp xe + event (kèm yêu cầu chờ duyệt) + dấu giá riêng cho khoảng đang xem.
  *
  * Không gửi `tenantId` lên — backend tự lấy từ membership (CLAUDE.md mục 6, lằn ranh 1).
  * Nếu thấy chỗ nào thêm tenantId vào query thì đó là bug bảo mật, không phải tính năng.
  *
  * `keepPreviousData` trên mọi query: đổi khoảng/bộ lọc hay refetch nền GIỮ lưới cũ (mờ nhẹ)
  * thay vì thay bằng skeleton — người đang đọc lịch không bị giật về trắng.
+ *
+ * Hàng "Xe còn trống" cũ đã gỡ khỏi lưới (thiết kế lại 25/11/2026, người dùng chốt) — endpoint
+ * `/calendar/availability` vẫn sống cho app native.
  */
 export function useCalendarData() {
   const { filters } = useCalendarFilters();
@@ -43,8 +47,8 @@ export function useCalendarData() {
     ...(filters.branchId ? { branchId: filters.branchId } : {}),
   };
 
-  // `sort` CHỈ vào query của resources: đổi thứ tự hàng không có lý do gì bắt events /
-  // availability / dấu giá refetch lại (chúng không phụ thuộc thứ tự).
+  // `sort` CHỈ vào query của resources: đổi thứ tự hàng không có lý do gì bắt events / dấu giá
+  // refetch lại (chúng không phụ thuộc thứ tự).
   const resourceQuery = { ...query, sort: filters.sort };
   const resources = useQuery({
     queryKey: queryKeys.calendar.resources(resourceQuery),
@@ -52,15 +56,14 @@ export function useCalendarData() {
     placeholderData: keepPreviousData,
   });
 
+  /*
+   * Lưới vẽ cả yêu cầu CHỜ DUYỆT (nhóm "Cần xử lý" - người dùng chốt 25/11/2026). Chúng không chiếm
+   * lịch (`occupying = false`); server chỉ trả khi người xem có quyền xem yêu cầu.
+   */
+  const eventQuery = { ...query, includePendingRequests: true };
   const events = useQuery({
-    queryKey: queryKeys.calendar.events(query),
-    queryFn: () => fetchCalendarEvents(query),
-    placeholderData: keepPreviousData,
-  });
-
-  const availability = useQuery({
-    queryKey: queryKeys.calendar.availability(query),
-    queryFn: () => fetchCalendarAvailability(query),
+    queryKey: queryKeys.calendar.events(eventQuery),
+    queryFn: () => fetchCalendarEvents(eventQuery),
     placeholderData: keepPreviousData,
   });
 
@@ -81,7 +84,7 @@ export function useCalendarData() {
     return map;
   }, [events.data]);
 
-  /** `vehicleId:date` → có giá riêng — tra O(1) khi vẽ marker từng ô. */
+  /** `vehicleId:date` → có giá riêng — tra O(1) khi tô ô. */
   const priceMarkers = useMemo(() => {
     const map = new Map<string, { dailyPrice: string | null; hourlyPrice: string | null }>();
     for (const row of dailyPrices.data ?? []) {
@@ -93,20 +96,12 @@ export function useCalendarData() {
     return map;
   }, [dailyPrices.data]);
 
-  /** `YYYY-MM-DD` → số xe trống — hàng tổng kết đọc theo cột ngày. */
-  const availableByDay = useMemo(
-    () => new Map((availability.data?.days ?? []).map((d) => [d.date, d.availableCount])),
-    [availability.data],
-  );
-
   return {
     range,
     filters,
-    resources: resources.data ?? [],
+    resources: resources.data ?? NO_RESOURCES,
     eventsByResource,
     priceMarkers,
-    availableByDay,
-    totalVehicles: availability.data?.totalVehicles ?? null,
     /** Tải LẦN ĐẦU (chưa có gì để vẽ) — refetch nền không tính. */
     isLoading: resources.isLoading || events.isLoading,
     /** Refetch nền — lưới giữ nguyên, chỉ mờ nhẹ. */
@@ -115,7 +110,6 @@ export function useCalendarData() {
     refetch: () => {
       void resources.refetch();
       void events.refetch();
-      void availability.refetch();
       void dailyPrices.refetch();
     },
   };

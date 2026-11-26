@@ -16453,9 +16453,20 @@ export interface components {
              * @example 2026-07-15T04:00:00.000Z
              */
             endAt: string;
-            /** @description BookingStatus khi type=booking · VehicleBlockReason khi type=blocked_range */
+            /** @description BookingStatus khi type=booking · VehicleBlockReason khi type=blocked_range · BookingRequestStatus khi type=booking_request (`awaiting_hold` đang giữ chỗ, `pending_host_approval` chờ duyệt - chỉ có khi gửi `includePendingRequests`) */
             status?: string | null;
             sourceId?: string | null;
+            /** @description false = KHÔNG chiếm lịch xe: yêu cầu chờ duyệt (ADR 0044 điều 1). Mọi event đọc từ `vehicle_occupancies` là true. Server luôn gửi */
+            occupying?: boolean;
+            /** @description Mã đơn (type=booking). Yêu cầu chưa thành đơn không có mã */
+            code?: string | null;
+            /**
+             * @description Dịch vụ của đơn/yêu cầu - null với khoá xe và bảo dưỡng
+             * @enum {string|null}
+             */
+            serviceType?: "self_drive" | "with_driver" | "long_term" | null;
+            /** @description Tiền thuê đã chốt (VND string): `bookings.total_amount` của đơn, snapshot giá của khoản giữ chỗ. null với yêu cầu chờ duyệt (chưa có giá chốt), khoá xe, bảo dưỡng */
+            amount?: string | null;
         };
         CalendarResourceDto: {
             id: string;
@@ -46053,6 +46064,8 @@ export interface operations {
                 /** @description Id chi nhánh (ULID) - chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
+                /** @description true = kèm yêu cầu đặt xe CHỜ DUYỆT (không chiếm lịch, chỉ hiển thị). Cần quyền xem yêu cầu */
+                includePendingRequests?: boolean;
             };
             header?: never;
             path?: never;

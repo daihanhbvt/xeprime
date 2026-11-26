@@ -15,7 +15,8 @@
   display: flex;
   align-items: center;
   gap: 48px;
-  height: var(--xp-shell-partner-header-height);
+  /* Token là chiều cao TỔNG của header (66px) - trừ kẻ dưới 1px của `.header`. */
+  height: calc(var(--xp-shell-partner-header-height) - 1px);
   padding-inline: max(var(--xp-space-lg), calc((100% - var(--xp-shell-partner-max-width)) / 2));
 }
 

@@ -226,6 +226,10 @@ export const XP_TOKENS = {
   'color-event-request': '#e9ac29',
   'color-event-blocked': '#8c8069',
   'color-event-maintenance': '#7c3aed',
+  // Lịch thuê xe v2 (Partner-XePrime `24200:99389`, 25/11/2026): thẻ đơn tô theo DỊCH VỤ - vạch trái + chữ
+  // mã + nền thẻ. Tự lái dùng `info-strong`, dài hạn dùng `purple`; riêng 'có tài xế' là sắc hồng đỏ.
+  'color-event-with-driver': '#e31b54', // v2 Status/rose-high
+  'color-event-with-driver-bg': '#fff1f3', // v2 Status/rose-low
 
   // ─── Typography ───────────────────────────────────────────────────────────
   // v2 dùng MỘT họ chữ: Google Sans Flex (biến Figma `font-googlesan`), tự host qua next/font
@@ -524,9 +528,10 @@ export const XP_TOKENS = {
   // Khung site partner menu ngang (Figma Partner-XePrime Header `23649:27690`): 1920 − 2 × 180.
   // Header và vùng nội dung canh trên cùng một cột.
   'shell-partner-max-width': '1560px',
-  // Thanh header site partner: đệm 16 + nút 42 + đệm 16. Phần dính (sticky) của các màn canh theo
-  // `--xp-shell-header-offset`, khung partner đặt nó bằng số này (site quản trị: topbar 56px).
-  'shell-partner-header-height': '74px',
+  // Thanh header site partner: đệm 12 + nút 42 + đệm 12 = 66px TỔNG, đã gồm kẻ dưới 1px (Figma
+  // `24200:99389`, 26/11/2026). Phần dính (sticky) của các màn canh theo `--xp-shell-header-offset`,
+  // khung partner đặt nó bằng số này (site quản trị: topbar 56px).
+  'shell-partner-header-height': '66px',
   'shell-sidebar-width': '232px', // 14:1424 (Foundations sở hữu giá trị; 47:5 = 240 lệch nhịp)
   'shell-sidebar-collapsed-width': '64px', // 14:1532 = 47:77
   'shell-bottom-nav-height': '64px', // 14:1641

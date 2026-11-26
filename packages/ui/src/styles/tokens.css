@@ -146,6 +146,9 @@
   --xp-color-event-request: #e9ac29;
   --xp-color-event-blocked: #8c8069;
   --xp-color-event-maintenance: #7c3aed;
+  /* Lịch thuê xe v2 (25/11/2026): thẻ đơn "có tài xế" (Status/rose-*). */
+  --xp-color-event-with-driver: #e31b54;
+  --xp-color-event-with-driver-bg: #fff1f3;
 
   /* ─── Typography (v2: một họ chữ Google Sans Flex, thang 12 → 48) ────── */
   --xp-font-family:
@@ -406,9 +409,10 @@
   /* Khung site partner menu ngang (Figma Partner-XePrime Header `23649:27690`): 1920 − 2 × 180.
      Header và vùng nội dung canh trên cùng một cột. */
   --xp-shell-partner-max-width: 1560px;
-  /* Thanh header site partner: đệm 16 + nút 42 + đệm 16. Phần dính (sticky) của các màn canh theo
-     `--xp-shell-header-offset`, khung partner đặt nó bằng số này (site quản trị: topbar 56px). */
-  --xp-shell-partner-header-height: 74px;
+  /* Thanh header site partner: đệm 12 + nút 42 + đệm 12 = 66px TỔNG, đã gồm kẻ dưới 1px (Figma
+     `24200:99389`, 26/11/2026). Phần dính (sticky) của các màn canh theo `--xp-shell-header-offset`,
+     khung partner đặt nó bằng số này (site quản trị: topbar 56px). */
+  --xp-shell-partner-header-height: 66px;
 
   /* ─── Lịch resource timeline ──────────────────────────────────────────── */
   --xp-calendar-resource-col-width: 220px;
@@ -536,6 +540,8 @@
   --xp-color-pink-border: rgba(250, 167, 224, 0.45);
   --xp-color-purple: #9b8afb;
   --xp-color-purple-bg: rgba(105, 56, 239, 0.14);
+  --xp-color-event-with-driver: #fd6f8e;
+  --xp-color-event-with-driver-bg: rgba(227, 27, 84, 0.14);
   --xp-color-purple-border: rgba(189, 180, 254, 0.45);
   --xp-color-warning-strong: #fb6514;
   --xp-color-info-strong: #53b1fd;

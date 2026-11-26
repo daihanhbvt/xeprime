@@ -39,8 +39,14 @@
   --xp-shell-header-offset: var(--xp-shell-partner-header-height);
 }
 
+/*
+ * Nhịp dọc của site partner (Figma `24200:99389`, 26/11/2026): header → tiêu đề trang 20px, các khối
+ * cách nhau 20px (`--xp-page-header-gap` cho khoảng tiêu đề → khối kế).
+ */
 .contentTopnav {
-  padding: var(--xp-space-lg)
+  --xp-page-header-gap: var(--xp-space-20);
+  gap: var(--xp-space-20);
+  padding: var(--xp-space-20)
     max(var(--xp-space-lg), calc((100% - var(--xp-shell-partner-max-width)) / 2));
 }
 
@@ -121,6 +127,12 @@
       calc(
         var(--xp-space-md) + var(--xp-shell-bottom-nav-height) + env(safe-area-inset-bottom, 0px)
       );
+  }
+
+  /* Nhịp 20px của Figma là bản desktop; vỏ compact giữ nhịp thang mobile như các khối khác. */
+  .contentTopnav {
+    --xp-page-header-gap: var(--xp-space-md);
+    gap: var(--xp-space-md);
   }
 
   /* Route viewport không render MobileNav → không chừa đáy; padding gọn cho lịch. */

@@ -7,7 +7,6 @@ import {
   type QueryParams,
 } from '@/services/api-client';
 import type {
-  CalendarAvailability,
   CalendarBusyDays,
   CalendarDailyPrice,
   CalendarEvent,
@@ -36,10 +35,6 @@ export const fetchCalendarResources = (query: QueryParams): Promise<CalendarReso
 
 export const fetchCalendarEvents = (query: QueryParams): Promise<CalendarEvent[]> =>
   apiGet<CalendarEvent[]>('/calendar/events', query);
-
-/** Hàng "Xe còn trống" — backend đếm trên toàn đội xe đã lọc, không phụ thuộc hàng đang render. */
-export const fetchCalendarAvailability = (query: QueryParams): Promise<CalendarAvailability> =>
-  apiGet<CalendarAvailability>('/calendar/availability', query);
 
 /** Dấu "giá riêng" cho mọi xe đang lọc trong khoảng xem — MỘT request cho cả lưới. */
 export const fetchCalendarDailyPrices = (query: QueryParams): Promise<CalendarDailyPrice[]> =>

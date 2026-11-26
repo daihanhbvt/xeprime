@@ -4,6 +4,8 @@ import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeStore } from '@/store/make-store';
+import { destroySession } from '@/services/auth.service';
+import { ApiClientError } from '@/services/api-client';
 
 import { AdminShell } from './AdminShell';
 
@@ -18,7 +20,7 @@ const nav = vi.hoisted(() => ({ replace: vi.fn(), pathname: '/admin' }));
 const state = vi.hoisted(() => ({
   user: null as unknown,
   isLoading: false,
-  isError: false,
+  error: null as unknown,
 }));
 const logout = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -28,7 +30,13 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/hooks/use-current-user', () => ({
-  useCurrentUser: () => ({ data: state.user, isLoading: state.isLoading, isError: state.isError }),
+  useCurrentUser: () => ({
+    data: state.user,
+    isLoading: state.isLoading,
+    error: state.error,
+    refetch: vi.fn(),
+    isFetching: false,
+  }),
 }));
 
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({ usePortalLogout: () => logout }));
@@ -60,7 +68,8 @@ beforeEach(() => {
   nav.pathname = '/admin';
   state.user = null;
   state.isLoading = false;
-  state.isError = false;
+  state.error = null;
+  vi.mocked(destroySession).mockClear();
   logout.mockReset();
 });
 
@@ -79,8 +88,8 @@ describe('AdminShell', () => {
     },
   );
 
-  it('phiên hỏng → về trang đăng nhập của site quản trị, giữ next', async () => {
-    state.isError = true;
+  it('phiên hỏng (401) → về trang đăng nhập của site quản trị, giữ next', async () => {
+    state.error = new ApiClientError({ code: 'SESSION_EXPIRED', message: 'x', status: 401 });
     nav.pathname = '/admin/tenants';
     renderShell();
 
@@ -88,6 +97,16 @@ describe('AdminShell', () => {
       expect(nav.replace).toHaveBeenCalledWith('/admin/login?next=%2Fadmin%2Ftenants'),
     );
     expect(screen.queryByTestId('page')).toBeNull();
+  });
+
+  it('/auth/me lỗi tạm thời (5xx) → giữ phiên, hiện thử lại thay vì đá ra đăng nhập', async () => {
+    state.error = new ApiClientError({ code: 'INTERNAL_ERROR', message: 'x', status: 503 });
+    nav.pathname = '/admin/tenants';
+    renderShell();
+
+    expect(await screen.findByRole('button', { name: 'Thử lại' })).toBeTruthy();
+    expect(destroySession).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   it('tài khoản platform đã bị gỡ vai → 403 kèm đăng xuất, không chuyển đi đâu', () => {

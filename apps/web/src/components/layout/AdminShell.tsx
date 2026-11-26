@@ -1,19 +1,18 @@
 'use client';
 
 import { Button, Spin } from 'antd';
-import { usePathname, useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ROUTES, tenantSupportContextIdFromPath } from '@/constants/routes';
 import { tenantSupportHref } from '@/constants/tenant-support-routes';
 import { adminLoginWithNext, isAdminPublicPage } from '@/features/auth/post-auth-destination';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { SupportSessionBoundary } from '@/features/tenant-support/components/SupportWorkspaceProvider';
-import { useCurrentUser } from '@/hooks/use-current-user';
-import { destroySession } from '@/services/auth.service';
 import { ShellFrame } from './ShellFrame';
+import { ShellSessionUnreachable } from './ShellSessionUnreachable';
+import { useShellSession } from './use-shell-session';
 import { useNavPreferencesSync } from './use-nav-preferences-sync';
 import styles from './AppShell.module.css';
 
@@ -32,44 +31,28 @@ import styles from './AppShell.module.css';
  */
 export function AdminShell({ children }: { children: ReactNode }) {
   const t = useTranslations('ManageCommon.adminGate');
-  const router = useRouter();
   const pathname = usePathname();
-  const queryClient = useQueryClient();
   const logout = usePortalLogout();
-  const { data: user, isLoading, isError } = useCurrentUser();
-  useNavPreferencesSync();
-
   const isPublicPage = isAdminPublicPage(pathname);
-  const notAuthenticated = !isPublicPage && !isLoading && (isError || !user);
-
-  // Phiên hỏng/hết hạn: dọn cookie rồi về trang đăng nhập của site quản trị (cùng lý do `AppShell`).
-  useEffect(() => {
-    if (!notAuthenticated) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        await destroySession();
-      } catch {
-        // Lỗi mạng khi xoá phiên vẫn không cản việc điều hướng ra trang đăng nhập.
-      }
-      if (cancelled) return;
-      queryClient.clear();
-      router.replace(adminLoginWithNext(pathname));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [notAuthenticated, pathname, router, queryClient]);
+  // Phiên bị từ chối: dọn cookie rồi về trang đăng nhập của site quản trị (cùng cổng với `AppShell`).
+  const session = useShellSession({ isPublicPage, loginHref: adminLoginWithNext(pathname) });
+  useNavPreferencesSync();
 
   if (isPublicPage) return <>{children}</>;
 
-  if (isLoading || isError || !user) {
+  if (session.status === 'unreachable') {
+    return <ShellSessionUnreachable onRetry={session.retry} retrying={session.retrying} />;
+  }
+
+  if (session.status !== 'ready') {
     return (
       <div className={styles.centered}>
         <Spin size="large" />
       </div>
     );
   }
+
+  const { user } = session;
 
   if (!user.platformRole) {
     return (
