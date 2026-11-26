@@ -56,6 +56,8 @@ import shopCardTexture from '../assets/images/shops/card-texture.webp';
 import shopTileLegal from '../assets/images/shops/tile-legal.webp';
 import shopTileMaintenance from '../assets/images/shops/tile-maintenance.webp';
 import shopTileWallet from '../assets/images/shops/tile-wallet.webp';
+// Nền thẻ "Doanh nghiệp" của Gói & hạn mức (Figma Partner `24231:113941`) — CHÉP NGUYÊN apps/web/public/shops/plans/enterprise-bg.png.
+import shopEnterpriseBg from '../assets/images/shops/enterprise-bg.png';
 
 /**
  * Ảnh tĩnh gom một chỗ vì Metro nội suy đường dẫn lúc build — không dựng động được.
@@ -103,6 +105,7 @@ export const images = {
   tripRequestSent,
   shopCrown,
   shopCardTexture,
+  shopEnterpriseBg,
   shopTileLegal,
   shopTileMaintenance,
   shopTileWallet,

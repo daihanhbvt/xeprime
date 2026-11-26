@@ -26,6 +26,7 @@ import {
   VEHICLE_IMAGE_TYPE,
   VEHICLE_SOURCE_TYPE,
   requiredVehicleImageTypes,
+  vehicleGallerySlotTypes,
   topVehicleAlertSeverity,
   type ServiceType,
   type VehicleAlertSeverity,
@@ -358,16 +359,17 @@ export function MediaCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdi
       media.find((item) => item.type === type)?.url ??
       (type === VEHICLE_IMAGE_TYPE.FRONT ? legacyCover : null),
   }));
+  /*
+   * Ngoài các góc bắt buộc CHỈ còn mặt đồng hồ cũ của xe máy (`vehicleGallerySlotTypes`); ảnh "Ảnh
+   * khác" và ảnh không thuộc góc nào (cà vẹt…) không vào thư viện (người dùng chốt 26/11/2026).
+   */
   const slotTypes = new Set<string>(slots.map((slot) => slot.type));
-  // Ảnh ngoài các góc bắt buộc ("Khác", hoặc ảnh cũ chỉ có URL) đứng sau, không có ô trống.
-  const extras =
-    media.length > 0
-      ? media
-          .filter((item) => !slotTypes.has(item.type ?? ''))
-          .map((item, index) => ({ key: `extra-${index}`, type: item.type, url: item.url }))
-      : vehicle.images
-          .filter((url) => url !== legacyCover)
-          .map((url, index) => ({ key: `legacy-${index}`, type: null, url }));
+  const extras = vehicleGallerySlotTypes(vehicle.vehicleType)
+    .filter((type) => !slotTypes.has(type))
+    .flatMap((type) => {
+      const item = media.find((entry) => entry.type === type);
+      return item ? [{ key: `extra-${type}`, type: item.type, url: item.url }] : [];
+    });
   const tiles = [...slots, ...extras];
   const overflow = tiles.length - GALLERY_VISIBLE;
 

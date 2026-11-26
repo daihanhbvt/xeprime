@@ -1,12 +1,20 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { TextInput } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
-import { FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
+import {
+  FieldLabel,
+  FieldMessage,
+  FieldShell,
+  inLabelHint,
+  belowHint,
+  useFieldGap,
+  useSingleLineInputMetrics,
+} from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { themed, useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { fieldFontSize, fontWeight, sizing } from '@/theme/tokens';
 
 /** Không phụ thuộc prop/state nào — dựng MỘT lần ở module scope, không phải mỗi lần render. */
 const useInputStyle = themed(
@@ -18,6 +26,8 @@ const useInputStyle = themed(
       fontFamily: FONT_FAMILY.body,
       minHeight: sizing.touchTarget,
       paddingVertical: 0,
+      // Android tự đệm ~4dp hai bên TextInput: chữ gõ lệch khỏi chữ ô chọn/ngày cùng form.
+      paddingHorizontal: 0,
     }) as const,
 );
 
@@ -64,13 +74,19 @@ export function MoneyControl({
   editable?: boolean;
 }) {
   const colors = useColors();
-  const INPUT_STYLE = useInputStyle();
+  const baseInputStyle = useInputStyle();
+  const { fontSize: inputFontSize, minHeight: inputHeight } = useSingleLineInputMetrics();
+  const fieldGap = useFieldGap();
+  const INPUT_STYLE = useMemo(
+    () => ({ ...baseInputStyle, fontSize: inputFontSize, minHeight: inputHeight }),
+    [baseInputStyle, inputFontSize, inputHeight],
+  );
   const inputRef = useRef<TextInput>(null);
   const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);
 
   return (
-    <YStack gap={space.xs}>
+    <YStack gap={fieldGap}>
       <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint)} />
 
       <FieldShell

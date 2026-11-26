@@ -1,16 +1,15 @@
-import EnvironmentOutlined from '@ant-design/icons-svg/es/asn/EnvironmentOutlined';
 import { useState } from 'react';
 import { Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BRANCH_STATUS_VALUES, PERMISSION } from '@xeprime/types';
-import { AntIcon } from '@/components/icons/AntIcon';
+import { PERMISSION } from '@xeprime/types';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
 import { InfoCard } from '@/components/ui/InfoCard';
 import { SearchInput } from '@/components/ui/SearchInput';
-import { SelectControl } from '@/components/ui/SelectControl';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -19,27 +18,29 @@ import { BranchFormSheet } from '@/features/branches/components/BranchFormSheet'
 import { useBranchRowActions } from '@/features/branches/hooks/use-branch-row-actions';
 import { useBranches } from '@/features/branches/hooks/use-branches';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { ShopBranchRow } from './ShopBranchRow';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 
 const SEARCH_DEBOUNCE_MS = 300;
-/** Sentinel "Tất cả trạng thái" - lọc là chuyện giao diện, không xuống API. */
-const STATUS_ALL = '';
-/** Dải "chưa có tỉnh/thành" - đệm 12, icon 18 (`.reviewBanner`/`.reviewIcon`). */
+/** Dải "chưa có tỉnh/thành" (Figma `24231:113601`): nền `status/orange-low`, đệm 12, bo 12, khe 6. */
 const REVIEW_PAD = 12;
-const REVIEW_ICON = 18;
+const REVIEW_GAP = 6;
+/** Các thẻ chi nhánh cách nhau 16 (khe của thẻ cha `24231:113475`). */
+const ROW_GAP = 16;
 
 /**
- * Thẻ "Chi nhánh" trong trang Thông tin cửa hàng — bản native của `BranchesView variant="section"`
- * web ở khổ điện thoại (S13 của sổ redesign):
+ * Thẻ "Chi nhánh" của Quản lý gian hàng (Figma `24231:113475`):
  *
- *   Chi nhánh                                   [ tìm ][ trạng thái ][ + Thêm chi nhánh ]
+ *   Chi nhánh                                                   [+]
  *   Tổng N chi nhánh · M đang hoạt động (xanh)
- *   [! N chi nhánh chưa có tỉnh/thành. … · Bổ sung ngay]
- *   thẻ chi nhánh (bút chì + "…") …
+ *   [ tìm ]
+ *   [◎ N chi nhánh chưa có tỉnh/thành. … / Bổ sung ngay]
+ *   thẻ chi nhánh (⋮) …
+ *
+ * Ô lọc trạng thái đã bỏ trên app (người dùng chốt 26/11/2026 theo Figma) - tìm kiếm vẫn còn. Nút
+ * "+" vẫn hiện với người chỉ xem nhưng khoá, như web khoá kèm lý do.
  *
  * Danh sách nằm NGAY trong thẻ như web (không còn bản tóm tắt dẫn sang màn khác); sửa / thêm mở
  * `BranchFormSheet`, thao tác theo hàng đi qua `useBranchRowActions` — cùng bản với màn Chi nhánh.
@@ -53,27 +54,22 @@ export function ShopBranchesCard({
   const t = useTranslations('Branches');
   const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const canManage = permissions.has(PERMISSION.BRANCH_MANAGE);
 
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string>(STATUS_ALL);
   const [editing, setEditing] = useState<Branch | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const debounced = useDebouncedValue(search, SEARCH_DEBOUNCE_MS).trim();
 
-  const query = useBranches({
-    ...(debounced ? { q: debounced } : {}),
-    ...(status ? { status } : {}),
-  });
+  const query = useBranches(debounced ? { q: debounced } : {});
   const { runAction, actionStateOf, pending, canWrite, deactivateConfirm } = useBranchRowActions();
 
   const data = query.data;
   const items = data?.items ?? [];
   const needsReview = data?.needsReviewCount ?? 0;
   const firstToReview = items.find((row) => !row.provinceCode || row.needsLocationReview) ?? null;
-  const filtered = Boolean(debounced || status);
+  const filtered = Boolean(debounced);
 
   function openCreate() {
     setEditing(null);
@@ -90,68 +86,61 @@ export function ShopBranchesCard({
     ok: (chunks) => <Text col={colors.success}>{chunks}</Text>,
   });
 
-  const statusOptions = [
-    { value: STATUS_ALL, label: t('toolbar.allStatuses') },
-    ...BRANCH_STATUS_VALUES.map((value) => ({ value, label: domainLabel('branchStatus', value) })),
-  ];
-
   return (
     <InfoCard
+      look="figma"
       title={t('page.title')}
       hint={
-        <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20}>
+        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
           {summary}
         </Text>
       }
-      {...(onLayout ? { onLayout } : {})}
-    >
-      {/*
-        Thanh công cụ ở khổ điện thoại (`.toolbar` ≤640px của web: xếp CỘT, kéo giãn): ô tìm, ô lọc
-        trạng thái (không nhãn trên - `aria-label`), nút thêm - mỗi ô hết bề ngang.
-      */}
-      <YStack gap={space.sm}>
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          label={t('toolbar.searchLabel')}
-          placeholder={t('toolbar.searchPlaceholder')}
-          variant="field"
-        />
-        <SelectControl
-          label={t('toolbar.statusLabel')}
-          hideLabel
-          value={status}
-          options={statusOptions}
-          onChange={setStatus}
-        />
-        {/* Web hiện nút cho cả người chỉ xem - khoá kèm lý do (`blocked.manage`), không ẩn. */}
-        <Button
+      extra={
+        /* Web hiện nút cho cả người chỉ xem - khoá kèm lý do (`blocked.manage`), không ẩn. */
+        <IconSquareButton
           label={t('page.add')}
-          icon="add-outline"
-          variant="gradient"
-          shape="square"
+          tone="brand"
+          size="card"
           disabled={!canManage || !canWrite}
           onPress={openCreate}
-        />
-      </YStack>
+        >
+          <LineIcon name="add" size={iconSize.lg} color={colors.onPrimary} />
+        </IconSquareButton>
+      }
+      {...(onLayout ? { onLayout } : {})}
+    >
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        label={t('toolbar.searchLabel')}
+        placeholder={t('toolbar.searchPlaceholder')}
+        variant="field"
+      />
 
       {needsReview > 0 ? (
         /*
-         * Dải "chưa có tỉnh/thành" (`.reviewBanner`): nền vàng nhạt, chữ cam. Ở khổ điện thoại lối
-         * "Bổ sung ngay" xuống DƯỚI đoạn chữ - đứng cạnh, nó bóp đoạn chữ thành một cột hẹp.
+         * Dải "chưa có tỉnh/thành" (Figma `24231:113601`): nền cam nhạt, chữ cam 12/18 với cụm đầu
+         * đậm vừa; "Bổ sung ngay" 14/20 gạch chân xuống DƯỚI đoạn chữ, thẳng mép trái của dải.
          */
         <YStack
-          gap={space.xs}
+          gap={REVIEW_GAP}
           p={REVIEW_PAD}
           br={radius.control}
-          bg={colors.warningSubtle}
+          bg={colors.orangeLow}
           accessibilityRole="alert"
         >
-          <XStack ai="flex-start" gap={space.sm}>
-            <AntIcon icon={EnvironmentOutlined} size={REVIEW_ICON} color={colors.warning} />
-            <Text f={1} col={colors.warning} fos={fontSize.body} lineHeight={20}>
-              <Text fow={fontWeight.semibold}>{`${t('page.needsReview', { count: needsReview })}.`}</Text>{' '}
-              {t('page.needsReviewHint')}
+          <XStack ai="flex-start" gap={REVIEW_GAP}>
+            <LineIcon name="location" size={iconSize.lg} color={colors.warningHigh} />
+            <Text f={1} col={colors.warningHigh} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+              <Text
+                col={colors.warningHigh}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+                fow={fontWeight.semibold}
+              >
+                {t('page.needsReview', { count: needsReview })}
+              </Text>
+              {`. ${t('page.needsReviewHint')}`}
             </Text>
           </XStack>
           {canManage && firstToReview ? (
@@ -163,8 +152,9 @@ export function ShopBranchesCard({
               style={styles.fixNow}
             >
               <Text
-                col={colors.warning}
-                fos={fontSize.body}
+                col={colors.warningHigh}
+                fos={typeScale.body.fontSize}
+                lh={typeScale.body.lineHeight}
                 fow={fontWeight.semibold}
                 textDecorationLine="underline"
               >
@@ -203,12 +193,11 @@ export function ShopBranchesCard({
             : {})}
         />
       ) : (
-        <YStack>
-          {items.map((branch, index) => (
+        <YStack gap={ROW_GAP}>
+          {items.map((branch) => (
             <ShopBranchRow
               key={branch.id}
               branch={branch}
-              first={index === 0}
               canManage={canManage}
               pendingAction={pending?.id === branch.id ? pending.action : null}
               actionState={actionStateOf(branch)}
@@ -228,6 +217,6 @@ export function ShopBranchesCard({
 }
 
 const styles = StyleSheet.create({
-  // Lối "Bổ sung ngay" thẳng mép trái đoạn chữ (sau icon 18 + khe 8).
-  fixNow: { alignSelf: 'flex-start', marginLeft: REVIEW_ICON + 8 },
+  // Lối "Bổ sung ngay" thẳng mép trái của dải (Figma `24231:113604` ở x 12, cùng mép icon).
+  fixNow: { alignSelf: 'flex-start' },
 });

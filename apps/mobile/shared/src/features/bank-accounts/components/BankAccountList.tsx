@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react';
+import { Pressable } from 'react-native';
+import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -10,11 +12,12 @@ import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { BANK_ACCOUNT_SCOPE, type BankAccount, type BankAccountScope } from '@/api/bank-accounts/api';
 import { bankAccountTitle, currentBankAccount } from '../current-account';
 import { BankAccountCard } from './BankAccountCard';
+import { BankAccountInline } from './BankAccountInline';
 import { BankAccountFormSheet } from './BankAccountFormSheet';
 import {
   useBankAccounts,
@@ -99,18 +102,43 @@ export function BankAccountList({
     <>
       <YStack gap={walletLook ? toPx(XP_TOKENS['space-12']) : space.sm} {...(walletLook ? { p: space.sm } : {})}>
         {title && walletLook ? (
-          <Text
-            col={colors.text}
-            fos={typeScale.title.fontSize}
-            lh={typeScale.title.lineHeight}
-            fow={fontWeight.semibold}
-          >
-            {title}
-          </Text>
+          /* Web `.partner .head`: tiêu đề + link "Đổi tài khoản" màu thương hiệu cùng hàng. */
+          <XStack ai="center" jc="space-between" gap={space.md}>
+            <Text
+              f={1}
+              col={colors.text}
+              fos={typeScale.title.fontSize}
+              lh={typeScale.title.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {title}
+            </Text>
+            {account && showAddButton && canChange ? (
+              <Pressable
+                onPress={() => setFormOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('actions.change')}
+                hitSlop={8}
+              >
+                <XStack ai="center" gap={space.xs}>
+                  {/* Frame Figma không có icon cho thao tác này - web dùng `SwapOutlined`. */}
+                  <Ionicons name="swap-horizontal" size={iconSize.sm} color={colors.primary} />
+                  <Text
+                    col={colors.primary}
+                    fos={typeScale.body.fontSize}
+                    lh={typeScale.body.lineHeight}
+                    fow={fontWeight.semibold}
+                  >
+                    {t('actions.change')}
+                  </Text>
+                </XStack>
+              </Pressable>
+            ) : null}
+          </XStack>
         ) : title ? (
           <SectionHeader icon="card-outline">{title}</SectionHeader>
         ) : null}
-        {hint && !(walletLook && !account) ? (
+        {hint && !walletLook ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {hint}
           </Text>
@@ -128,6 +156,7 @@ export function BankAccountList({
           <CurrentAccount
             account={account}
             detailed={detailed}
+            walletLook={walletLook}
             showChange={showAddButton && canChange}
             onChange={() => setFormOpen(true)}
           />
@@ -250,18 +279,32 @@ export function BankAccountList({
  * chủ luôn giữ đúng một tài khoản nhận tiền, đổi là THAY chứ không gỡ (gỡ xong thì lệnh rút/hoàn
  * tiền kế tiếp kẹt cho tới khi khai lại).
  */
+
 function CurrentAccount({
   account,
   detailed,
+  walletLook = false,
   showChange,
   onChange,
 }: {
   account: BankAccount;
   detailed: boolean;
+  /** Khối trong thẻ ví - cùng ngôn ngữ trạng thái rỗng Figma `24228:102193`. */
+  walletLook?: boolean;
   showChange: boolean;
   onChange: () => void;
 }) {
   const t = useTranslations('BankAccounts');
+  const colors = useColors();
+
+  if (walletLook) {
+    /*
+      Như web `BankAccountCard variant="compact"` (người dùng chốt 26/11/2026): không khung, logo
+      80, tên người thụ hưởng viết hoa đậm · số đã che · tên đầy đủ ngân hàng. Nút đổi nằm ở hàng
+      tiêu đề (link vàng), không đứng dưới thẻ.
+    */
+    return <BankAccountInline account={account} />;
+  }
 
   return (
     <BankAccountCard

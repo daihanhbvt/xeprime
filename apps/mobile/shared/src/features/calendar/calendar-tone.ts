@@ -4,11 +4,13 @@ import {
   BOOKING_STATUS_OCCUPYING,
   OCCUPANCY_SOURCE_TYPE,
   OCCUPANCY_SOURCE_TYPE_META,
+  SERVICE_TYPE,
   STATUS_COLOR,
   type BookingStatus,
   type OccupancySourceType,
   type StatusColor,
 } from '@xeprime/types';
+import { XP_TOKENS } from '@xeprime/ui';
 import { mixHex } from '@/theme/color-mix';
 import { byPalette, useColors } from '@/theme/ThemeProvider';
 import type { AppColors } from '@/theme/tokens';
@@ -158,27 +160,77 @@ export function sourceTone(type: OccupancySourceType, colors: AppColors): Calend
 }
 
 /** Tông của một thanh event: LOẠI nguồn trước, rồi tới trạng thái đơn. */
+/**
+ * Tông của thẻ đơn / yêu cầu theo DỊCH VỤ (lịch v2, web `calendar-event-model.serviceTone`,
+ * Partner-XePrime `24200:99389`, 25/11/2026): tự lái xanh `info-strong`, có tài xế hồng đỏ
+ * `color-event-with-driver`, dài hạn tím `purple`; không biết dịch vụ (yêu cầu giữ chỗ khi người xem
+ * không có quyền xem yêu cầu) ⇒ trung tính.
+ */
+export type ServiceTone = 'selfDrive' | 'withDriver' | 'longTerm' | 'neutral';
+
+export function serviceTone(serviceType: string | null | undefined): ServiceTone {
+  switch (serviceType) {
+    case SERVICE_TYPE.SELF_DRIVE:
+      return 'selfDrive';
+    case SERVICE_TYPE.WITH_DRIVER:
+      return 'withDriver';
+    case SERVICE_TYPE.LONG_TERM:
+      return 'longTerm';
+    default:
+      return 'neutral';
+  }
+}
+
+const serviceToneOf = byPalette(
+  (colors) =>
+    ({
+      selfDrive: tone(colors.infoStrong, colors.infoSurface),
+      withDriver: tone(
+        XP_TOKENS['color-event-with-driver'],
+        mixHex(XP_TOKENS['color-event-with-driver'], colors.surface, 0.08),
+      ),
+      longTerm: tone(colors.purple, colors.purpleSurface),
+      neutral: { fg: colors.textMuted, bg: colors.surfaceMuted, border: colors.borderInput },
+    }) as const satisfies Readonly<Record<ServiceTone, CalendarTone>>,
+);
+
+export function serviceColorTone(serviceType: string | null | undefined, colors: AppColors): CalendarTone {
+  return serviceToneOf(colors)[serviceTone(serviceType)];
+}
+
+/** `false` = KHÔNG chiếm lịch (yêu cầu chờ duyệt — ADR 0044 điều 1). Thiếu trường = chiếm lịch. */
+export function isOccupying(event: Pick<CalendarEvent, 'occupying'>): boolean {
+  return event.occupying !== false;
+}
+
 export function eventTone(
-  event: Pick<CalendarEvent, 'type' | 'status'>,
+  event: Pick<CalendarEvent, 'type' | 'status' | 'serviceType' | 'occupying'>,
   colors: AppColors,
 ): CalendarTone {
   const type = event.type as OccupancySourceType;
-  if (type !== OCCUPANCY_SOURCE_TYPE.BOOKING) return sourceTone(type, colors);
-  return statusColorTone(
-    event.status ? BOOKING_STATUS_META[event.status as BookingStatus]?.color : undefined,
-    colors,
-  );
+  if (type === OCCUPANCY_SOURCE_TYPE.BOOKING || type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST) {
+    const base = serviceColorTone(event.serviceType, colors);
+    // Yêu cầu chờ duyệt: nền trắng, viền đứt màu dịch vụ (web `.eventPending`).
+    return isOccupying(event) ? base : { ...base, bg: colors.surface, border: base.fg };
+  }
+  return sourceTone(type, colors);
 }
 
 /**
  * Event vẽ nét ĐỨT: chỗ bị giữ mà chưa phải một chuyến đang chạy — xe bị khoá thủ công và khoản
  * giữ chỗ chờ tiền. Nét đứt là tín hiệu KHÔNG dựa vào màu, và chú giải dùng lại đúng nó.
  */
-export function isDashedEvent(type: string): boolean {
-  return (
-    type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE || type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST
-  );
+/** Nét ĐỨT: khoá xe, và yêu cầu chưa chiếm lịch (chờ duyệt) — web `.eventOff` / `.eventPending`. */
+export function isDashedEvent(event: Pick<CalendarEvent, 'type' | 'occupying'>): boolean {
+  return event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE || !isOccupying(event);
 }
+
+/** Ba dịch vụ của chú giải lịch v2 (web `CalendarLegend.LEGEND_SERVICES`). */
+export const LEGEND_SERVICES = [
+  SERVICE_TYPE.SELF_DRIVE,
+  SERVICE_TYPE.WITH_DRIVER,
+  SERVICE_TYPE.LONG_TERM,
+] as const;
 
 /**
  * Trạng thái đơn ĐƯỢC CHÚ GIẢI: `BOOKING_STATUS_OCCUPYING` trừ `confirmed`.

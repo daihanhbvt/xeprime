@@ -863,6 +863,14 @@ export const ROUTES = {
         ...(opts?.tab ? { tab: opts.tab } : {}),
       },
     }),
+    /**
+     * Chi tiết một tài xế NỘI BỘ (ADR 0108, web `/manage/drivers/internal/[id]`) — hồ sơ, đơn đang
+     * gán, các chuyến theo tháng.
+     */
+    internalDriverDetail: (driverId: string, opts?: { month?: string }): Href => ({
+      pathname: '/manage/drivers/internal/[id]',
+      params: { id: driverId, ...(opts?.month ? { month: opts.month } : {}) },
+    }),
 
     /**
      * Inbox GIAN HÀNG (`side = shop`) — cùng địa chỉ với web (`/manage/chat`).

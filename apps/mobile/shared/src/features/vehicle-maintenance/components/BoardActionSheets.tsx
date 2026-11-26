@@ -64,6 +64,8 @@ export function BoardActionSheets({
         message={t('actions.cancelScheduleConfirm')}
         confirmLabel={t('actions.cancelSchedule')}
         destructive
+        // Một nút "Hủy lịch", đóng bằng ✕ ở góc (người dùng chốt 26/11/2026).
+        dismissIcon
         loading={transition.isPending}
         onCancel={onClose}
         onConfirm={() => {

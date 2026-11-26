@@ -13,6 +13,8 @@ export { vehiclesApi, vehicleFiltersToParams } from '@/api/vehicles/api';
 
 export type {
   AssignBookingDriverInput,
+  BookingCollateral,
+  BookingCollateralInput,
   BookingDetail,
   BookingDriverSummary,
   BookingDriverHistoryItem,

@@ -111,7 +111,9 @@
       "attachmentAlt": "Proof photo",
       "cancelAction": "Cancel voucher",
       "titleWithNo": "Voucher #{no}",
-      "approveAction": "Approve voucher"
+      "approveAction": "Approve voucher",
+      "confirmApprove": "Are you sure you want to approve {type, select, income {income voucher} other {expense voucher}} #{no}?",
+      "confirmCancel": "Are you sure you want to cancel {type, select, income {income voucher} other {expense voucher}} #{no}?"
     },
     "form": {
       "title": "New cash book entry",
@@ -129,7 +131,7 @@
       "method": "Method",
       "amount": "Amount",
       "referenceCode": "Transaction code",
-      "referenceCodePlaceholder": "e.g. FT212001...",
+      "referenceCodePlaceholder": "e.g. FT212001",
       "description": "Description",
       "attachments": {
         "label": "Supporting documents",
@@ -141,7 +143,10 @@
         "tooMany": "At most {max} files",
         "sourceCamera": "Take a photo",
         "sourceLibrary": "Choose from library",
-        "sourcePdf": "Choose a PDF file"
+        "sourcePdf": "Choose a PDF file",
+        "uploadCta": "Tap to upload supporting documents",
+        "uploadHint": "JPG, PNG, PDF (<{maxMb}MB), attaching the invoice is recommended",
+        "uploadingFile": "Uploading..."
       },
       "submit": {
         "income": "Create income voucher",
@@ -170,7 +175,8 @@
         "bookingRequired": "Choose the booking to link this voucher to",
         "vehicleRequired": "Choose the vehicle to link this voucher to",
         "description": "Enter a description or reason",
-        "branchRequired": "Select the branch"
+        "branchRequired": "Select the branch",
+        "category": "Choose a category"
       },
       "link": {
         "label": "Linked to",
@@ -188,7 +194,16 @@
       "typeExpense": "Expense voucher",
       "bookingField": "Linked booking",
       "vehicleField": "Linked vehicle",
-      "descriptionPlaceholder": "Enter a description"
+      "descriptionPlaceholder": "Enter a description",
+      "typeTab": {
+        "income": "Income",
+        "expense": "Expense"
+      },
+      "linkChip": {
+        "none": "General",
+        "booking": "Booking",
+        "vehicle": "Vehicle"
+      }
     },
     "summary": {
       "error": "Could not load the totals - the list below is still correct",
@@ -217,6 +232,8 @@
         "actions": "Actions"
       },
       "addRow": "Add category",
+      "addTitle": "New category",
+      "addSubmit": "Add to list",
       "edit": "Rename category",
       "save": "Save category",
       "discard": "Discard changes",
@@ -225,7 +242,11 @@
       "deleteConfirm": "Delete category \"{name}\"?",
       "systemHint": "System category - cannot be renamed or deleted",
       "empty": "No categories yet",
-      "done": "Close"
+      "done": "Close",
+      "typeBadge": {
+        "income": "Income",
+        "expense": "Expense"
+      }
     },
     "uncategorized": "Uncategorised",
     "booking": {
@@ -239,6 +260,7 @@
       "label": "Ledger figures",
       "income": "Total income",
       "incomeHint": "Cash {cash} · Transfer {transfer}",
+      "incomeHintCompact": "Cash {cash} · Transfer {transfer}",
       "expense": "Total expenses",
       "balance": "Balance",
       "balanceHint": "Income - Expenses",
@@ -343,6 +365,26 @@
       "surcharge": "Extra charges",
       "none": "None",
       "errorTitle": "Could not load the booking"
+    },
+    "partnerApp": {
+      "tiles": {
+        "within": "Within term",
+        "withinHint": "{count, plural, one {# booking to settle} other {# bookings to settle}}",
+        "unpaid": "Unpaid",
+        "unpaidHint": "{count, plural, =0 {Every booking has paid something} other {Nothing paid yet}}"
+      },
+      "upcoming": "Due soon",
+      "card": {
+        "dueAt": "Due: {date}",
+        "overdueAt": "Overdue: {date}",
+        "paid": "Paid: {amount}",
+        "debt": "Owed: {amount}",
+        "more": "Actions for booking #{code}"
+      },
+      "detail": {
+        "title": "Booking #{code}",
+        "vehicle": "Vehicle & handover"
+      }
     }
   },
   "overview": {
@@ -509,7 +551,8 @@
         "label": "Sort by",
         "revenue": "Highest revenue",
         "trips": "Most trips"
-      }
+      },
+      "shareOfPeriod": "{value}% of period revenue"
     },
     "performance": {
       "title": "Business performance",
@@ -596,8 +639,7 @@
     },
     "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
     "notSplit": "Legacy row - not split",
-    "monthValue": "{month}",
-    "periodShortYear": "Month {month}/{year}"
+    "monthValue": "{month}"
   },
   "history": {
     "page": {

@@ -2,8 +2,8 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { Redirect } from 'expo-router';
-import { Text, YStack } from 'tamagui';
+import { Redirect, useFocusEffect } from 'expo-router';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import {
@@ -18,12 +18,13 @@ import {
   type DebtFilter,
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/domain';
-import { space } from '@/theme/tokens';
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ROUTES } from '@/navigation/routes';
@@ -56,6 +57,8 @@ import type { DebtItem, DebtSummary } from './api';
 
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
+/** Hai nút của tấm ⋮ cách 12. */
+const MENU_GAP = 12;
 
 /**
  * Trạng thái đơn chọn được ở bộ lọc — đơn huỷ / khách không đến không mang công nợ (chuyến không
@@ -98,10 +101,13 @@ const keyOf = (debt: DebtItem) => debt.bookingId;
 export function DebtListScreen() {
   const colors = useColors();
   const t = useTranslations('Finance.debts');
+  /* Chữ riêng của app theo Figma (người dùng chốt 26/11/2026) - web giữ chữ của nó. */
+  const tApp = useTranslations('Finance.debts.partnerApp');
+  const tActions = useTranslations('Finance.debts.table.actions');
   const navigateOnce = useNavigateOnce();
   // Hai tab của "Lịch sử giao dịch" dùng CHUNG tiêu đề + mô tả của web (ledger 09 §3.11).
   const tHistory = useTranslations('Finance.history.page');
-  const tCommon = useTranslations('Common.labels');
+  const tStatusAll = useTranslations('Bookings.list');
   /* Câu thiếu quyền là CHUNG cho cả tuyến tiền — dùng lại đúng chuỗi của màn Tổng quan. */
   const tForbidden = useTranslations('Finance.overview.forbidden');
   const permissions = usePermissions();
@@ -121,11 +127,31 @@ export function DebtListScreen() {
   const [sort, setSort] = useState<string>(DEFAULT_DEBT_SORT);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(FIRST_PAGE);
-  const [collecting, setCollecting] = useState<Pick<DebtItem, 'bookingId' | 'debtAmount'> | null>(
+  const [collecting, setCollecting] = useState<Pick<DebtItem, 'bookingId' | 'debtAmount' | 'code'> | null>(
     null,
   );
   /* "Xem" mở tấm chi tiết khoản nợ (web `DebtDetailDialog`); tấm mới có lối mở hồ sơ đơn đầy đủ. */
   const [detailId, setDetailId] = useState<string | null>(null);
+  /* Dữ liệu thẻ vừa chạm - đầu tấm chi tiết hiện ngay mã/trạng thái/xe trong lúc chờ API. */
+  const [detailPreview, setDetailPreview] = useState<DebtItem | null>(null);
+  /* Đơn đang mở tấm thao tác ⋮ - MỘT tấm cho cả danh sách, không mỗi thẻ một tấm. */
+  const [menuDebt, setMenuDebt] = useState<DebtItem | null>(null);
+  /*
+   * Tấm chi tiết TẠM ẨN trong lúc người dùng ở màn mở từ nó (chi tiết đơn thuê, hợp đồng…): tấm vẽ
+   * ở host gốc của app nên phải ẩn, không thì nó đè lên màn mới. Lui về (màn này focus lại) ⇒ tấm
+   * hiện lại đúng đơn đang xem: Công nợ → chi tiết → chi tiết đơn thuê → lui (người dùng 26/11/2026).
+   */
+  const [detailParked, setDetailParked] = useState(false);
+  const parkDetail = useCallback(() => setDetailParked(true), []);
+  const closeDetail = useCallback(() => {
+    setDetailId(null);
+    setDetailParked(false);
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      setDetailParked(false);
+    }, []),
+  );
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const trimmedSearch = debouncedSearch.trim();
   /* Ô "Chi nhánh" (ADR 0052) — công nợ gắn với đơn, đơn gắn với xe, xe thuộc một chi nhánh. */
@@ -181,7 +207,8 @@ export function DebtListScreen() {
         value: status,
         resetValue: FILTER_ALL,
         options: [
-          { value: FILTER_ALL, label: tCommon('all') },
+          // Chưa chọn thì đọc "Tất cả trạng thái" thay cho "Tất cả" trơn (người dùng 26/11/2026).
+          { value: FILTER_ALL, label: tStatusAll('statusAll') },
           ...DEBT_STATUS_OPTIONS.map((value) => ({
             value,
             label: domainLabel('bookingStatus', value),
@@ -197,22 +224,26 @@ export function DebtListScreen() {
         options: DEBT_SORT_VALUES.map((value) => ({ value, label: t(`sort.${value}`) })),
       },
     ],
-    [t, tCommon, domainLabel, status, sort],
+    [t, tStatusAll, domainLabel, status, sort],
   );
 
-  const openBooking = useCallback((debt: DebtItem) => setDetailId(debt.bookingId), []);
+  const openBooking = useCallback((debt: DebtItem) => {
+    setDetailPreview(debt);
+    setDetailId(debt.bookingId);
+  }, []);
+  /* ⋮ chỉ có khi người xem có ít nhất một thao tác - không vẽ một nút mở ra tấm rỗng. */
+  const hasMenu = canViewBooking || canRecord;
 
   const renderItem = useCallback<ListRenderItem<DebtItem>>(
     ({ item }) => (
       <DebtCard
         debt={item}
         canView={canViewBooking}
-        canCollect={canRecord}
         onView={openBooking}
-        onCollect={setCollecting}
+        onMenu={hasMenu ? setMenuDebt : undefined}
       />
     ),
-    [canViewBooking, canRecord, openBooking],
+    [canViewBooking, hasMenu, openBooking],
   );
 
   const filtered = group !== DEBT_FILTER.ALL || status !== FILTER_ALL || trimmedSearch.length > 0;
@@ -244,17 +275,41 @@ export function DebtListScreen() {
         <ManageListShell
           variant="page"
           title={tHistory('title')}
-          subtitle={tHistory('subtitle')}
           {...(meta === undefined ? {} : { total: t('table.totalLabel', { count: meta.total }) })}
           searchValue={search}
           searchLabel={t('filters.searchLabel')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
           branchFilter={{ filter: branchFilter, value: branchId }}
+          searchBelowSummary
           summary={
+            /*
+              Figma `24512:126964`: hai tab Thu-Chi / Công nợ → chip nhóm hạn → lưới 2×2 → ô tìm.
+              Không có dòng mô tả trang ở tab này (người dùng chốt 26/11/2026).
+            */
             <>
-              <TransactionHistoryTabs value={TRANSACTION_HISTORY_VIEW.DEBTS} />
-              <YStack px={layout.screenX} pt={space.sm} pb={space.sm}>
+              <TransactionHistoryTabs value={TRANSACTION_HISTORY_VIEW.DEBTS} debtCount={summary.data?.totalCount} />
+              {/* Nhóm hạn: chip lọc kèm số đếm (số đếm đọc từ dải thẻ nên không đổi theo chip). */}
+              <ChipTabs
+                label={t('filters.groupLabel')}
+                value={group}
+                onSelect={changeGroup}
+                gutter={layout.screenX}
+                items={DEBT_FILTER_VALUES.map((item) => {
+                  const count = groupCount(summary.data, item);
+                  return {
+                    value: item as string,
+                    label:
+                      item === DEBT_FILTER.ALL
+                        ? t('filters.all')
+                        : item === DEBT_FILTER.UPCOMING
+                          ? tApp('upcoming')
+                          : t(`filters.${item}`),
+                    ...(count === null ? {} : { count }),
+                  };
+                })}
+              />
+              <YStack px={layout.screenX}>
                 <DebtSummaryCards
                   data={summary.data}
                   loading={summary.isFetching}
@@ -262,23 +317,6 @@ export function DebtListScreen() {
                 />
               </YStack>
             </>
-          }
-          tabs={
-            // Nhóm hạn: dải tab viên chung kèm số đếm (số đếm đọc từ dải thẻ nên không đổi theo tab).
-            <ChipTabs
-              label={t('filters.groupLabel')}
-              value={group}
-              onSelect={changeGroup}
-              gutter={layout.screenX}
-              items={DEBT_FILTER_VALUES.map((item) => {
-                const count = groupCount(summary.data, item);
-                return {
-                  value: item as string,
-                  label: item === DEBT_FILTER.ALL ? t('filters.all') : t(`filters.${item}`),
-                  ...(count === null ? {} : { count }),
-                };
-              })}
-            />
           }
           hasRows={items.length > 0}
           groups={groups}
@@ -362,9 +400,53 @@ export function DebtListScreen() {
         Thu tiền mở đúng tấm trượt của FIN-05 — cùng `PaymentsService`, cùng luật "cọc không cộng
         vào đã trả". Gắn/tháo theo cờ mở vì số điền sẵn chỉ đọc lúc dựng.
       */}
+      {/*
+        Tấm thao tác ⋮ của thẻ - một hàng hai nút như tấm thao tác thẻ bảo dưỡng (26/11/2026):
+        "Xem đơn" viền bên trái, "Thu tiền" vàng chính bên phải; mỗi nút gác bằng quyền riêng.
+      */}
+      <BottomSheet
+        open={menuDebt !== null}
+        onClose={() => setMenuDebt(null)}
+        title={menuDebt ? tApp('card.more', { code: menuDebt.code }) : ''}
+        chrome="v2"
+        headerDivider
+      >
+        <XStack gap={MENU_GAP}>
+          {canViewBooking ? (
+            <YStack f={1} flexBasis={0} minWidth={0}>
+              <Button
+                label={tActions('view')}
+                variant="secondary"
+                onPress={() => {
+                  const debt = menuDebt;
+                  setMenuDebt(null);
+                  if (debt) openBooking(debt);
+                }}
+              />
+            </YStack>
+          ) : null}
+          {canRecord ? (
+            <YStack f={1} flexBasis={0} minWidth={0}>
+              <Button
+                label={tActions('collect')}
+                variant="gradient"
+                onPress={() => {
+                  const debt = menuDebt;
+                  setMenuDebt(null);
+                  if (debt) setCollecting(debt);
+                }}
+              />
+            </YStack>
+          ) : null}
+        </XStack>
+      </BottomSheet>
+
       <DebtDetailSheet
         bookingId={detailId}
-        onClose={() => setDetailId(null)}
+        preview={detailPreview}
+        hidden={detailParked}
+        onClose={closeDetail}
+        onLeave={parkDetail}
         onCollect={setCollecting}
       />
 
@@ -374,6 +456,7 @@ export function DebtListScreen() {
           onClose={() => setCollecting(null)}
           bookingId={collecting.bookingId}
           debtAmount={collecting.debtAmount}
+          code={collecting.code}
         />
       ) : null}
     </>

@@ -43,7 +43,6 @@ import { Chip } from '@/components/ui/Chip';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { FormSection } from '@/components/ui/FormSection';
 import { MomentPickerSheet } from '@/components/ui/MomentPickerSheet';
-import { MoneyField } from '@/components/ui/MoneyField';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { RangeFieldBox } from '@/components/ui/RangeFieldBox';
 import { RemoteImage } from '@/components/ui/RemoteImage';
@@ -83,7 +82,9 @@ import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { VehiclePickerSheet } from './components/VehiclePickerSheet';
+import { StaffBookingCollateralCard } from './components/StaffBookingCollateralCard';
+import { StaffBookingPriceCard } from './components/StaffBookingPriceCard';
+import { StaffVehiclePicker, type PickedRange } from './components/StaffVehiclePicker';
 import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
 import { useCheckConflict, useCreateBooking } from './hooks/use-bookings';
@@ -93,6 +94,9 @@ import type { CreateBookingInput, VehicleListItem } from './api';
 import {
   PICKUP_METHOD,
   STAFF_BOOKING_NOTE_MAX,
+  STAFF_COLLATERAL_MODE,
+  collateralModeHasAssets,
+  collateralModeHasCash,
   staffBookingSchema,
   type StaffBookingValues,
 } from './staff-booking-schema';
@@ -260,6 +264,11 @@ function StaffBookingFlow({
   const [choosing, setChoosing] = useState(!prefill.vehicleId);
   /** Đếm lượt chọn xe — khoá của biểu mẫu chuyến, để chọn lại (kể cả CÙNG xe) cũng là form mới. */
   const [pickCount, setPickCount] = useState(0);
+  /**
+   * Khung giờ chọn ở bước chọn xe (web `StaffBookingDialog.pickedRange`) — thành giá trị mở đầu của
+   * bước Chuyến đi, và được giữ lại khi quay về "Chọn xe khác" để không phải chọn giờ lần nữa.
+   */
+  const [pickedRange, setPickedRange] = useState<PickedRange | null>(null);
 
   /*
    * Xe điền sẵn dựng từ CHÍNH tham số route, không chờ một request nào: `GET /vehicles/:id` đòi
@@ -290,24 +299,17 @@ function StaffBookingFlow({
   // Bước chọn xe — lối vào chưa biết xe (danh sách đơn, hồ sơ khách), hoặc "Chọn xe khác".
   if (choosing || (!vehicle && !needsVehicleLookup)) {
     return (
-      <>
-        <AppHeader title={t('pickVehicleTitle')} onBack={onBack} />
-        {/* Danh sách xe hiện NGAY trên màn như web (bỏ nút mở tấm, 16/11/2026). */}
-        <Screen edges={['left', 'right', 'bottom']}>
-        <VehiclePickerSheet
-          inline
-          open
-          onClose={onBack}
-          selectedId={vehicle?.id ?? null}
-          initialBranchId={hintedBranchId}
-          onSelect={(picked) => {
-            setVehicle({ id: picked.id, name: picked.name, imageUrl: picked.mainImageUrl ?? null });
-            setPickCount((n) => n + 1);
-            setChoosing(false);
-          }}
-        />
-        </Screen>
-      </>
+      <StaffVehiclePicker
+        defaultBranchId={hintedBranchId}
+        initialRange={pickedRange}
+        onCancel={onBack}
+        onContinue={(picked, range) => {
+          setPickedRange(range);
+          setVehicle({ id: picked.id, name: picked.name, imageUrl: picked.mainImageUrl ?? null });
+          setPickCount((n) => n + 1);
+          setChoosing(false);
+        }}
+      />
     );
   }
 
@@ -327,7 +329,16 @@ function StaffBookingFlow({
     <StaffBookingTrip
       key={`${vehicle.id}:${pickCount}`}
       vehicle={vehicle}
-      prefill={prefill}
+      /* Ô lịch cố định giờ của nó; lối vào chưa biết xe lấy giờ chọn ở bước chọn xe (web). */
+      prefill={
+        prefill.vehicleId
+          ? prefill
+          : {
+              ...prefill,
+              pickupAt: pickedRange?.pickupAt ?? prefill.pickupAt,
+              returnAt: pickedRange?.returnAt ?? prefill.returnAt,
+            }
+      }
       onBack={onBack}
       /* "Chọn xe khác" chỉ có ở lối vào chưa biết xe — ô lịch đã cố định xe (web `onChangeVehicle`). */
       {...(prefill.vehicleId ? {} : { onChangeVehicle: () => setChoosing(true) })}
@@ -367,7 +378,9 @@ function StaffBookingTrip({
    */
   const [packageMonths, setPackageMonths] = useState<LongTermPackageMonths | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ id: string; code: string } | null>(null);
+  const [created, setCreated] = useState<{ id: string; code: string; totalAmount: string } | null>(
+    null,
+  );
   /** Chặn bấm đúp "Tạo đơn" trước khi `isPending` kịp bật. */
   const submitLock = useRef(false);
 
@@ -406,6 +419,12 @@ function StaffBookingTrip({
       note: '',
       manualBaseAmount: null,
       depositAmount: null,
+      negotiated: false,
+      manualDiscount: null,
+      manualDeliveryFee: null,
+      extraCharges: [],
+      collateralMode: STAFF_COLLATERAL_MODE.CASH,
+      collaterals: [],
     },
   });
 
@@ -461,11 +480,37 @@ function StaffBookingTrip({
    */
   useEffect(() => {
     if (!quote) return;
-    if (formState.dirtyFields.depositAmount) return;
     // TODO(ADR 0007): tiền phải đi dạng CHUỖI — `MoneyField`/schema dùng chung đang nhận `number`, nên
     // còn `Number()` ở đây (web cũng vậy). Người dùng chốt 27/10: ghi nợ kỹ thuật, sửa khi đổi MoneyField.
-    setValue('depositAmount', Number(quote.depositAmount ?? 0));
-  }, [quote, formState.dirtyFields.depositAmount, setValue]);
+    if (!formState.dirtyFields.depositAmount) {
+      setValue('depositAmount', Number(quote.depositAmount ?? 0));
+    }
+    // Chế độ bảo đảm mở theo chính sách xe: có cọc tiền ⇒ "Tiền", không ⇒ "Không cọc" — trừ khi
+    // nhân viên đã tự chọn (ADR 0109: mức cọc thay đổi theo từng khách).
+    if (!formState.dirtyFields.collateralMode) {
+      setValue(
+        'collateralMode',
+        Number(quote.depositAmount ?? 0) > 0 ? STAFF_COLLATERAL_MODE.CASH : STAFF_COLLATERAL_MODE.NONE,
+      );
+    }
+  }, [quote, formState.dirtyFields.depositAmount, formState.dirtyFields.collateralMode, setValue]);
+
+  /**
+   * Bật "Giá thoả thuận" (ADR 0109): giá hệ thống thành GỢI Ý — điền sẵn các ô còn trống từ báo giá
+   * để nhân viên chỉ sửa chỗ khác. Tắt thì đơn quay về đúng báo giá, các ô đã gõ vẫn giữ để bật lại.
+   * Native port of web `StaffBookingFlow.toggleNegotiated`.
+   */
+  function toggleNegotiated(on: boolean) {
+    setValue('negotiated', on, { shouldDirty: true });
+    if (!on || !quote) return;
+    if (getValues('manualBaseAmount') == null) {
+      setValue('manualBaseAmount', Number(rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount));
+    }
+    if (getValues('manualDiscount') == null) {
+      const discountRow = rowAmount(quote, PRICE_ROW.DISCOUNT);
+      setValue('manualDiscount', discountRow ? Number(discountRow.replace('-', '')) : 0);
+    }
+  }
 
   /**
    * Lịch bận của xe — CÙNG phép tính với luồng của khách nhưng qua cửa NỘI BỘ của gian hàng
@@ -541,16 +586,35 @@ function StaffBookingTrip({
     if (submitLock.current || submitting) return;
     submitLock.current = true;
     setStepError(null);
-    const fields = ['customerName', 'customerPhone', 'note', 'depositAmount'] as const;
-    if (
-      !(await trigger([...fields, ...(quoteUnavailable ? (['manualBaseAmount'] as const) : [])]))
-    ) {
+    // Xe chưa có giá ⇒ giá thoả thuận là con đường DUY NHẤT (không tạo đơn 0đ âm thầm).
+    const negotiated = quoteUnavailable || getValues('negotiated');
+    const mode = getValues('collateralMode');
+    const fields = [
+      'customerName',
+      'customerPhone',
+      'note',
+      ...(collateralModeHasCash(mode) ? (['depositAmount'] as const) : []),
+      ...(collateralModeHasAssets(mode) ? (['collaterals'] as const) : []),
+      ...(negotiated
+        ? ([
+            'manualBaseAmount',
+            'manualDiscount',
+            ...(isDelivery ? (['manualDeliveryFee'] as const) : []),
+            'extraCharges',
+          ] as const)
+        : []),
+    ] as const;
+    if (!(await trigger([...fields]))) {
       submitLock.current = false;
       return;
     }
-    // Không có báo giá server thì tiền thuê nhập tay là BẮT BUỘC — không tạo đơn 0đ âm thầm.
-    if (quoteUnavailable && getValues('manualBaseAmount') == null) {
+    if (negotiated && getValues('manualBaseAmount') == null) {
       setStepError(t('validation.baseAmountRequired'));
+      submitLock.current = false;
+      return;
+    }
+    if (negotiated && (getValues('manualDiscount') ?? 0) > (getValues('manualBaseAmount') ?? 0)) {
+      setStepError(t('validation.discountExceedsBase'));
       submitLock.current = false;
       return;
     }
@@ -584,19 +648,39 @@ function StaffBookingTrip({
             ? { longTermPackageMonths: packageMonths }
             : {}
           : { returnAt: appWallClockToIso(v.returnAt!) }),
-        // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
-        baseAmount: quote
-          ? (rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount)
-          : String(v.manualBaseAmount ?? 0),
-        discountAmount: discountRow ? discountRow.replace('-', '') : '0',
-        // Giao tận nơi phí 0 lúc tạo — chủ xe chốt phí đã thoả thuận sau.
-        deliveryFee: '0',
-        depositAmount: String(v.depositAmount ?? 0),
+        ...(negotiated
+          ? {
+              // Giá thoả thuận (ADR 0109): mọi khoản do gian hàng nhập; server tính lại tổng.
+              baseAmount: String(v.manualBaseAmount ?? 0),
+              discountAmount: String(v.manualDiscount ?? 0),
+              deliveryFee: isDelivery ? String(v.manualDeliveryFee ?? 0) : '0',
+              extraCharges: v.extraCharges.map((c) => ({
+                label: c.label.trim(),
+                amount: String(c.amount ?? 0),
+              })),
+              negotiatedPrice: true,
+            }
+          : {
+              // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
+              baseAmount: quote ? (rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount) : '0',
+              discountAmount: discountRow ? discountRow.replace('-', '') : '0',
+              // Giao tận nơi phí 0 lúc tạo — chủ xe chốt phí đã thoả thuận sau.
+              deliveryFee: '0',
+            }),
+        depositAmount: collateralModeHasCash(mode) ? String(v.depositAmount ?? 0) : '0',
+        ...(collateralModeHasAssets(mode) && v.collaterals.length > 0
+          ? {
+              collaterals: v.collaterals.map((c) => ({
+                collateralType: c.collateralType,
+                description: c.description.trim() || null,
+              })),
+            }
+          : {}),
         ...(note ? { note } : {}),
       } satisfies CreateBookingInput,
       {
         onSuccess: (booking) => {
-          setCreated({ id: booking.id, code: booking.code });
+          setCreated({ id: booking.id, code: booking.code, totalAmount: booking.totalAmount });
           setStep(STEP.DONE);
         },
         onError: (e) => {
@@ -673,7 +757,7 @@ function StaffBookingTrip({
         vehicleName={vehicleName}
         vehicleImageUrl={vehicleThumbUrl}
         trip={tripSummary}
-        totalAmount={quote?.totalAmount ?? null}
+        totalAmount={created.totalAmount}
         onClose={onBack}
         onOpenBooking={() => router.replace(ROUTES.manage.bookingDetail(created.id))}
       />
@@ -774,65 +858,19 @@ function StaffBookingTrip({
               </YStack>
             </Card>
 
-            {/* Bảng tiền là MỘT thẻ tự có tiêu đề (`PriceBreakdown`) — không bọc thêm thẻ thứ hai. */}
-            {quoteQuery.isLoading ? (
-              <Card>
-                <Skeleton height={140} />
-              </Card>
-            ) : quote ? (
-              <PriceBreakdown
-                rows={quote.rows}
-                totalAmount={quote.totalAmount}
-                totalLabel={quote.estimateNote ? t('trip.barEstimate') : t('trip.barTotal')}
-                title={t('review.costs.title')}
-                footer={
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {/* Web `<strong>` — đậm, KẾ THỪA màu chú thích (không tô màu riêng ở màn này). */}
-                    {quote.longTerm?.durationDiscountPercent ? (
-                      <Text fow={fontWeight.semibold}>
-                        {tFlow('price.savings', {
-                          amount: fmt.money(quote.longTerm.durationDiscountAmount),
-                          months: quote.longTerm.packageMonths,
-                        })}{' '}
-                      </Text>
-                    ) : null}
-                    {quote.estimateNote ? `${quote.estimateNote}. ` : ''}
-                    {t('review.costs.systemNote')}
-                  </Text>
-                }
-              />
-            ) : quoteUnavailable ? (
-              <Card>
-                <YStack gap={space.md}>
-                  <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} accessibilityRole="header">
-                    {t('review.costs.title')}
-                  </Text>
-                  {/* Web `<Alert type="warning" showIcon>` → `Callout` (viền + nền cùng tông). */}
-                  <Callout tone="warning" title={t('review.costs.noPrice')} />
-                  {/* Web `NumberField money` — ô tiền dùng chung (viền `border-input`, bo `radius-control`). */}
-                  <MoneyField
-                    control={control}
-                    name="manualBaseAmount"
-                    label={t('review.costs.baseAmount')}
-                    required
-                  />
-                </YStack>
-              </Card>
-            ) : null}
-
             {/*
-              Cọc gian hàng thu trực tiếp — điền sẵn từ chính sách thuê của xe, sửa theo thoả thuận.
-              Thẻ riêng (`.card`), không nằm trong bảng tiền thuê: nó không thuộc tổng, khách nhận lại
-              lúc trả xe. Chú thích dưới ô là `help` của web.
+              Tiền thuê (giá hệ thống hoặc "Giá thoả thuận") + Cọc & thế chấp theo đơn (ADR 0109) —
+              web `StaffBookingPriceCard` / `StaffBookingCollateralCard`.
             */}
-            <Card>
-              <MoneyField
-                control={control}
-                name="depositAmount"
-                label={t('review.costs.deposit')}
-                hint={t('review.costs.depositHint')}
-              />
-            </Card>
+            <StaffBookingPriceCard
+              control={control}
+              quote={quote}
+              quoteLoading={quoteQuery.isLoading}
+              quoteUnavailable={quoteUnavailable}
+              isDelivery={isDelivery}
+              onToggleNegotiated={toggleNegotiated}
+            />
+            <StaffBookingCollateralCard control={control} setValue={setValue} />
 
             {/* `.card.submitCard` — lỗi · nút gradient full · gợi ý body-sm `text-tertiary` căn giữa. */}
             <Card>

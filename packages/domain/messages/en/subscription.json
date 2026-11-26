@@ -335,8 +335,8 @@
     }
   },
   "shopPlan": {
-    "title": "Service plan",
-    "hint": "Your shop's service plan and vehicle usage.",
+    "title": "Plan & limits",
+    "hint": "Manage your shop's service plan and limits",
     "change": "Upgrade / Change plan",
     "buy": "Buy a plan",
     "upgradeNow": "Upgrade now",

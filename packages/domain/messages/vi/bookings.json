@@ -522,6 +522,19 @@
     "depositNoticeBody": "Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến - nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ.",
     "descriptionLabel": "Ghi chú (tuỳ chọn)",
     "recordDepositSuccess": "Đã ghi nhận thu cọc",
+    "partnerApp": {
+      "title": "Thu tiền đơn hàng #{code}",
+      "debtLine": "{label} {amount}",
+      "fillFull": "Thu đủ {amount}",
+      "fillHalf": "Thu một nửa {amount}",
+      "referenceLabel": "Mã giao dịch",
+      "referencePlaceholder": "VD: FT212001...",
+      "descriptionLabel": "Ghi chú",
+      "descriptionPlaceholder": "Nhập ghi chú",
+      "remainingAfter": "Còn nợ sau khi thu: <b>{amount}</b>",
+      "cancel": "Hủy",
+      "submitAmount": "Ghi nhận thu {amount}"
+    },
     "validation": {
       "amountRequired": "Nhập số tiền",
       "amountPositive": "Số tiền phải lớn hơn 0",

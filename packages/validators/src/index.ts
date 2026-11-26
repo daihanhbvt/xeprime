@@ -733,7 +733,8 @@ export type MaintenanceProfileFormValues = yup.InferType<typeof maintenanceProfi
  */
 export const odometerCorrectionFormSchema = yup.object({
   odometerKm: odometerKmSchema.required('odometerRequired'),
-  reasonCode: yup.string().oneOf(ODOMETER_CORRECTION_REASON_VALUES).required('reasonCodeRequired'),
+  // Ô trống là '' nên oneOf chạy TRƯỚC required - phải mang mã riêng, không thì câu tiếng Anh thô của yup lọt ra giao diện.
+  reasonCode: yup.string().oneOf(ODOMETER_CORRECTION_REASON_VALUES, 'reasonCodeRequired').required('reasonCodeRequired'),
   reason: yup.string().trim().required('reasonRequired').min(3, 'reasonMin').max(1000, 'reasonMax'),
 });
 

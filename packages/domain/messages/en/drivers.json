@@ -759,7 +759,8 @@
     "trips": {
       "total": "Total recorded · {month}",
       "statement": "Statement",
-      "rangeDays": "{range} · {days, plural, one {# day} other {# days}}"
+      "rangeDays": "{range} · {days, plural, one {# day} other {# days}}",
+      "customer": "Customer: <b>{name}</b>"
     },
     "invite": {
       "title": "Add a new driver",

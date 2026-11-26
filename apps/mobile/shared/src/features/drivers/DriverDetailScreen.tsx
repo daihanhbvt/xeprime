@@ -8,7 +8,9 @@ import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
   BOOKING_STATUS_META,
+  DRIVER_ASSIGNMENT_OUTCOME,
   DRIVER_ASSIGNMENT_OUTCOME_META,
+  DRIVER_LICENCE_STATE,
   DRIVER_ASSIGNMENT_STATUS_META,
   DRIVER_LINK_END_PARTY,
   DRIVER_LINK_OPEN_STATUSES,
@@ -20,7 +22,14 @@ import {
   type DriverAssignmentOutcome,
   type DriverAssignmentStatus,
 } from '@xeprime/types';
-import { LIST_SEPARATOR, dayjs, driverWageLine, nowInAppTz } from '@xeprime/domain';
+import {
+  LIST_SEPARATOR,
+  dayjs,
+  driverWageLine,
+  holderNameDiffers,
+  nowInAppTz,
+} from '@xeprime/domain';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
@@ -52,14 +61,31 @@ import { fetchAllDriverAssignments, wageStatementCsv } from './wage-statement';
 import { DriverLicenceDetail } from './components/DriverLicenceStateBadge';
 import { EditDriverSheet } from './components/DriverFormSheet';
 import { DriverStatusLine } from './components/DriverStatusLine';
+import { DriverTripsToolbar } from './components/DriverTripParts';
 import {
   useDriverAssignments,
   useDriverOverview,
   useDriverWageSettings,
   useEndDriver,
   useResumeDriver,
+  useSetDriverLicenceChecked,
   useSuspendDriver,
 } from './hooks/use-drivers';
+
+const TRIP_SEARCH_DEBOUNCE_MS = 400;
+/**
+ * Kết cục lọc được ở bảng chuyến — đúng 5 kết cục của lượt đã KHÉP (web `DriverTripsTab.TRIP_OUTCOMES`);
+ * open/declined/expired không bao giờ có trong bảng chuyến theo tháng.
+ */
+const TRIP_OUTCOMES: readonly DriverAssignmentOutcome[] = [
+  DRIVER_ASSIGNMENT_OUTCOME.COMPLETED,
+  DRIVER_ASSIGNMENT_OUTCOME.CANCELLED,
+  DRIVER_ASSIGNMENT_OUTCOME.NO_SHOW,
+  DRIVER_ASSIGNMENT_OUTCOME.DROPPED,
+  DRIVER_ASSIGNMENT_OUTCOME.UNASSIGNED,
+];
+/** Giá trị "Tất cả trạng thái" của ô lọc chuyến. */
+const ALL_STATUSES = 'all';
 
 /** Tab của chi tiết tài xế — cùng giá trị với web `DRIVER_DETAIL_TAB`. */
 export const DRIVER_DETAIL_TAB = {
@@ -304,6 +330,7 @@ export function DriverDetailScreen() {
               overview={data}
               onMonthChange={setMonth}
               canEdit={canEdit}
+              canManage={canManage}
               onEditNote={() => setEditing(driver)}
             />
           ) : (
@@ -480,11 +507,13 @@ function DriverOverviewSection({
   overview,
   onMonthChange,
   canEdit,
+  canManage,
   onEditNote,
 }: {
   overview: DriverOverview;
   onMonthChange: (month: string) => void;
   canEdit: boolean;
+  canManage: boolean;
   onEditNote: () => void;
 }) {
   const colors = useColors();
@@ -739,6 +768,10 @@ function DriverOverviewSection({
                   <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
                     {fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt)}
                   </Text>
+                  {/* Khách của chuyến (web `PersonCell`). */}
+                  <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                    {[trip.customerName, trip.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
+                  </Text>
                   <XStack gap={space.sm} flexWrap="wrap" pt={space.xs}>
                     {bookingMeta ? (
                       <Pill
@@ -819,7 +852,16 @@ function DriverOverviewSection({
         <Text col={colors.text} fos={typeScale.body.fontSize} fow={fontWeight.medium}>
           {tProfile('sectionLicence')}
         </Text>
-        <DriverLicenceDetail licence={driver.licence} invitedName={driver.name} />
+        <DriverLicenceDetail
+          licence={driver.licence}
+          invitedName={driver.name}
+          checked={Boolean(driver.licenceCheck)}
+        />
+        {/* Liên kết đã đóng thì server từ chối đối chiếu — web `LicenceCard canManage={canManage && open}`. */}
+        <LicenceCheckControl
+          driver={driver}
+          canManage={canManage && DRIVER_LINK_OPEN_STATUSES.includes(driver.linkStatus)}
+        />
       </Block>
     </>
   );
@@ -845,10 +887,29 @@ function DriverTripsSection({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
-  // Trang thuộc về MỘT tháng: đổi tháng là về trang 1 (như web).
-  const [paging, setPaging] = useState({ month, page: 1 });
-  const page = paging.month === month ? paging.page : 1;
-  const query = useDriverAssignments(driver.id, month, page);
+  // Tìm + lọc kết cục ở SERVER (web `DriverTripsToolbar`, 25/11/2026).
+  const [search, setSearch] = useState('');
+  const q = useDebouncedValue(search, TRIP_SEARCH_DEBOUNCE_MS).trim() || undefined;
+  const [status, setStatus] = useState<string>(ALL_STATUSES);
+  const statusFilter = status === ALL_STATUSES ? undefined : status;
+  // Trang thuộc về MỘT bộ (tháng, tìm, kết cục): đổi bất kỳ là về trang 1 (như web).
+  const pagingKey = `${month}|${q ?? ''}|${statusFilter ?? ''}`;
+  const [paging, setPaging] = useState({ key: pagingKey, page: 1 });
+  const page = paging.key === pagingKey ? paging.page : 1;
+  const query = useDriverAssignments(driver.id, { month, q, status: statusFilter, page });
+  const tPage = useTranslations('Drivers.detailPage.trips');
+  const tTripsApp = useTranslations('Drivers.app.trips');
+  const statusOptions = useMemo(
+    () => [
+      { value: ALL_STATUSES, label: tPage('allStatuses') },
+      ...TRIP_OUTCOMES.map((value) => ({
+        value,
+        label: domainLabel('driverAssignmentOutcome', value),
+      })),
+    ],
+    [domainLabel, tPage],
+  );
+  const filtered = Boolean(q || statusFilter);
   const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page);
   const meta = query.data?.meta;
   const tActions = useTranslations('Common.actions');
@@ -925,12 +986,30 @@ function DriverTripsSection({
         </YStack>
       </XStack>
 
+      {/* Figma "Tab List" `24512:121256`: ô tìm + "Trạng thái" cùng hàng. */}
+      <DriverTripsToolbar
+        search={search}
+        onSearch={setSearch}
+        status={status}
+        allValue={ALL_STATUSES}
+        options={statusOptions}
+        onStatus={setStatus}
+      />
+
       {query.isPending ? (
         <SkeletonText lines={4} />
       ) : query.isError && !query.data ? (
         <ScreenError error={query.error} title={t('loadError')} onRetry={() => void query.refetch()} />
       ) : items.length === 0 ? (
-        <ScreenMessage icon="car-outline" title={t('empty')} description={t('emptyHint')} />
+        filtered ? (
+          <ScreenMessage
+            icon="search-outline"
+            title={tPage('emptyFiltered')}
+            description={tPage('emptyFilteredHint')}
+          />
+        ) : (
+          <ScreenMessage icon="car-outline" title={t('empty')} description={t('emptyHint')} />
+        )
       ) : (
         <YStack gap={space.md}>
           {items.map((row) => {
@@ -968,7 +1047,18 @@ function DriverTripsSection({
                     />
                   </XStack>
                   <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold} numberOfLines={2}>
-                    {[row.vehicleName, row.vehiclePlate].filter(Boolean).join(' · ')}
+                    {[row.vehicleName, row.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR)}
+                  </Text>
+                  {/* Figma `24512:121371`: "Khách: <tên>" 12, tên medium. */}
+                  <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
+                    {tTripsApp.rich('customer', {
+                      name: [row.customerName, row.customerPhone].filter(Boolean).join(LIST_SEPARATOR),
+                      b: (chunks) => (
+                        <Text col={colors.textMuted} fos={typeScale.label.fontSize} fow={fontWeight.medium}>
+                          {chunks}
+                        </Text>
+                      ),
+                    })}
                   </Text>
                   <XStack ai="center" jc="space-between" gap={space.sm} p={space.sm} br={radius.control} bg={colors.background}>
                     <Text f={1} col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
@@ -988,7 +1078,7 @@ function DriverTripsSection({
               variant="outline"
               size="compact"
               loading={query.isFetching}
-              onPress={() => setPaging({ month, page: page + 1 })}
+              onPress={() => setPaging({ key: pagingKey, page: page + 1 })}
             />
           ) : null}
           {meta ? (
@@ -999,5 +1089,69 @@ function DriverTripsSection({
         </YStack>
       )}
     </>
+  );
+}
+
+/**
+ * "Đối chiếu" bằng lái khi tên trên bằng lệch tên đã đặt — native port of web `LicenceCard`
+ * (25/11/2026): chưa đối chiếu ⇒ nút "Đánh dấu đã đối chiếu"; đã đối chiếu ⇒ ai, lúc nào + lối
+ * "Bỏ đánh dấu" khi bấm nhầm. Tài xế nộp bằng mới thì server tự gỡ đánh dấu.
+ */
+function LicenceCheckControl({ driver, canManage }: { driver: Driver; canManage: boolean }) {
+  const colors = useColors();
+  const t = useTranslations('Drivers');
+  const tCheck = useTranslations('Drivers.licenceCheck');
+  const fmt = useAppFormat();
+  const toast = useAppToast();
+  const errorMessage = useErrorMessage();
+  const setChecked = useSetDriverLicenceChecked();
+  const licence = driver.licence;
+  const verified = licence.state === DRIVER_LICENCE_STATE.VERIFIED;
+  const nameDiffers = verified && holderNameDiffers(licence.fullName, driver.name);
+  const check = driver.licenceCheck ?? null;
+  const mismatch = nameDiffers && !check;
+  const toggle = (checked: boolean) =>
+    setChecked.mutate(
+      { id: driver.id, checked },
+      {
+        onSuccess: () =>
+          toast.showSuccess(checked ? t('toast.licenceChecked') : t('toast.licenceUnchecked')),
+        onError: (err) => toast.showError(errorMessage(err)),
+      },
+    );
+
+  if (mismatch && canManage) {
+    return (
+      <XStack>
+        <Button
+          label={tCheck('mark')}
+          variant="secondary"
+          size="sm"
+          block={false}
+          loading={setChecked.isPending}
+          onPress={() => toggle(true)}
+        />
+      </XStack>
+    );
+  }
+  if (!(nameDiffers && check)) return null;
+  return (
+    <XStack ai="center" jc="space-between" gap={space.sm} flexWrap="wrap">
+      <Text f={1} col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+        {check.checkedByName
+          ? tCheck('checkedBy', { name: check.checkedByName, time: fmt.dateTime(check.checkedAt) })
+          : tCheck('checkedAt', { time: fmt.dateTime(check.checkedAt) })}
+      </Text>
+      {canManage ? (
+        <Button
+          label={tCheck('unmark')}
+          variant="ghost"
+          size="sm"
+          block={false}
+          loading={setChecked.isPending}
+          onPress={() => toggle(false)}
+        />
+      ) : null}
+    </XStack>
   );
 }

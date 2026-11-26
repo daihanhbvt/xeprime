@@ -100,6 +100,7 @@ export function ManageListShell({
   actions,
   branchFilter,
   summary,
+  searchBelowSummary = false,
   tabs,
   searchValue,
   searchLabel,
@@ -154,6 +155,11 @@ export function ManageListShell({
    * nhiêu việc". Web dựng đúng thứ tự này (`ManagePageHeader extra` rồi mới tới `Tabs`).
    */
   summary?: ReactNode;
+  /**
+   * Ô tìm + nút Lọc nằm DƯỚI khối `summary` (thẻ thống kê) thay vì trên - Figma sổ Thu-Chi / Công nợ
+   * (`24512:125313`): tab · kỳ · thống kê · tìm kiếm · danh sách. Chỉ ở biến thể `page`.
+   */
+  searchBelowSummary?: boolean;
   /**
    * Dải tab NGANG kèm số đếm, đặt giữa tiêu đề và ô tìm kiếm.
    *
@@ -382,6 +388,7 @@ export function ManageListShell({
                   {subtitle}
                 </Text>
               ) : null}
+              {searchBelowSummary ? summary : null}
               {/* Figma "Tab List" `24175:57178`: ô tìm co giãn · nút "Lọc", cách 12. */}
               <ListSearchBar
                 value={searchValue}
@@ -392,7 +399,7 @@ export function ManageListShell({
                 {...(groups.length > 0 ? { onFilterPress: openFilters } : {})}
                 gutter={gutter}
               />
-              {summary}
+              {searchBelowSummary ? null : summary}
               {tabs}
             </YStack>
           ) : (

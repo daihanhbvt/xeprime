@@ -21,6 +21,42 @@ export type DriverAssignmentRow = Schemas['DriverAssignmentRowDto'];
 export type DriverOverview = Schemas['DriverOverviewDto'];
 /** Dải số đếm đầu màn Tài xế — đã áp bộ lọc chung. */
 export type DriverSummary = Schemas['DriverSummaryDto'];
+/** Một dòng của danh sách GỘP (liên kết + nội bộ) — `kind` quyết thẻ nào dựng (25/11/2026). */
+export type DriverRosterItem = Schemas['DriverRosterItemDto'];
+/** Dải số đếm của danh sách gộp. */
+export type DriverRosterSummary = Schemas['DriverRosterSummaryDto'];
+/** Tra tài khoản khách đã xác minh theo SĐT trước khi mời. */
+export type DriverAccountLookup = Schemas['DriverAccountLookupDto'];
+/** Chuyến đang gán của một tài xế (liên kết hoặc nội bộ). */
+export type DriverCurrentTrip = Schemas['DriverCurrentTripDto'];
+/** Danh bạ tài xế NỘI BỘ (ADR 0108). */
+export type InternalDriver = Schemas['InternalDriverDto'];
+export type CreateInternalDriverInput = Schemas['CreateInternalDriverDto'];
+export type UpdateInternalDriverInput = Schemas['UpdateInternalDriverDto'];
+export type AssignableInternalDriver = Schemas['AssignableInternalDriverDto'];
+export type InternalDriverOverview = Schemas['InternalDriverOverviewDto'];
+export type InternalDriverTripRow = Schemas['InternalDriverTripRowDto'];
+
+/**
+ * Bảng chuyến của trang chi tiết tài xế — gương web `DriverTripFilters`. `status`: liên kết = kết
+ * cục lượt gán (`DRIVER_ASSIGNMENT_OUTCOME`), nội bộ = trạng thái đơn.
+ */
+export interface DriverTripFilters {
+  month?: string | undefined;
+  q?: string | undefined;
+  status?: string | undefined;
+  page?: number;
+  limit?: number;
+}
+
+export function tripFiltersToParams(filters: DriverTripFilters): QueryParams {
+  return {
+    month: filters.month ?? null,
+    q: filters.q?.trim() || null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? DRIVER_ASSIGNMENTS_LIMIT,
+  };
+}
 
 /** Cùng con số với web (`DRIVER_ASSIGNMENTS_LIMIT`). */
 export const DRIVER_ASSIGNMENTS_LIMIT = 10;
@@ -87,6 +123,41 @@ const one = (id: string) => `${base}/${encodeURIComponent(id)}`;
  * transaction lúc gán.
  */
 export const driversApi = {
+  /**
+   * Danh sách GỘP tài xế liên kết + tài xế nội bộ (web `fetchDriverRoster`, 25/11/2026) — lọc, sắp,
+   * phân trang ở server. `list` (chỉ liên kết) còn lại cho chỗ khác dùng.
+   */
+  roster(filters: DriverFilters): Promise<Paged<DriverRosterItem>> {
+    return getApiClient().fetchPage<DriverRosterItem>(
+      `${base}/roster`,
+      driverFiltersToParams(filters),
+      DRIVERS_DEFAULT_LIMIT,
+    );
+  },
+
+  /** Dải số đếm đầu màn — mỗi ô bằng tổng danh sách khi bấm vào nó. */
+  rosterSummary(filters: DriverFilters): Promise<DriverRosterSummary> {
+    return getApiClient().get<DriverRosterSummary>(
+      `${base}/roster/summary`,
+      driverSharedFilterParams(filters),
+    );
+  },
+
+  /** Tra tài khoản khách đã xác minh theo SĐT — hộp mời hiện tên + ảnh trước khi gửi. */
+  accountLookup(phone: string): Promise<DriverAccountLookup> {
+    return getApiClient().get<DriverAccountLookup>(`${base}/account-lookup`, { phone });
+  },
+
+  /**
+   * "Đã đối chiếu" bằng lái hiện tại của tài xế (tên trên bằng lệch tên đã đặt) — tài xế nộp bằng
+   * mới thì nhãn "Cần đối chiếu" tự hiện lại. `checked = false` gỡ đánh dấu.
+   */
+  setLicenceChecked(id: string, checked: boolean): Promise<Driver> {
+    return checked
+      ? getApiClient().post<Driver>(`${one(id)}/licence-check`)
+      : getApiClient().delete<Driver>(`${one(id)}/licence-check`);
+  },
+
   /** Dải số đếm đầu màn — mỗi ô bằng tổng danh sách khi bấm vào nó. */
   summary(filters: DriverFilters): Promise<DriverSummary> {
     return getApiClient().get<DriverSummary>(`${base}/summary`, driverSharedFilterParams(filters));
@@ -140,20 +211,67 @@ export const driversApi = {
   },
 
   /** Các chuyến một tài xế đã nhận, kết thúc trong tháng — phân trang server-side. */
-  assignments(
-    id: string,
-    params: { month?: string; page: number; limit?: number },
-  ): Promise<Paged<DriverAssignmentRow>> {
-    const limit = params.limit ?? DRIVER_ASSIGNMENTS_LIMIT;
+  /** Các chuyến một tài xế LIÊN KẾT đã nhận, kết thúc trong tháng — tìm + lọc kết cục ở server. */
+  assignments(id: string, filters: DriverTripFilters): Promise<Paged<DriverAssignmentRow>> {
+    const params = tripFiltersToParams(filters);
     return getApiClient().fetchPage<DriverAssignmentRow>(
       `${one(id)}/assignments`,
-      { month: params.month ?? null, page: params.page, limit },
-      limit,
+      { ...params, outcome: filters.status ?? null },
+      Number(params.limit),
     );
   },
 
   /** Chi tiết một tài xế trong tháng `YYYY-MM` (bỏ trống = tháng hiện tại, server quyết). */
   overview(id: string, month: string | undefined): Promise<DriverOverview> {
     return getApiClient().get<DriverOverview>(`${one(id)}/overview`, { month: month ?? null });
+  },
+};
+
+const internalBase = '/internal-drivers';
+const internalOne = (id: string) => `${internalBase}/${encodeURIComponent(id)}`;
+
+/**
+ * Danh bạ tài xế NỘI BỘ (ADR 0108) — native port of web `features/drivers/api.ts`. Xem
+ * `drivers.view`, thêm/sửa/lưu trữ `drivers.manage`. Danh sách nằm trong `driversApi.roster`.
+ */
+export const internalDriversApi = {
+  /** Trang chi tiết một tài xế nội bộ: hồ sơ + đơn đang gán. */
+  detail(id: string): Promise<InternalDriverOverview> {
+    return getApiClient().get<InternalDriverOverview>(internalOne(id));
+  },
+
+  /** Các đơn đã gán, trả xe trong tháng — tìm + lọc trạng thái đơn ở server. */
+  trips(id: string, filters: DriverTripFilters): Promise<Paged<InternalDriverTripRow>> {
+    const params = tripFiltersToParams(filters);
+    return getApiClient().fetchPage<InternalDriverTripRow>(
+      `${internalOne(id)}/trips`,
+      { ...params, status: filters.status ?? null },
+      Number(params.limit),
+    );
+  },
+
+  /** Bộ chọn gán đơn — người đang dùng, kèm cờ bận theo khung giờ (bỏ qua chính đơn đó). */
+  assignable(window: AssignableWindow): Promise<AssignableInternalDriver[]> {
+    return getApiClient().get<AssignableInternalDriver[]>(`${internalBase}/assignable`, {
+      pickupAt: window.pickupAt,
+      returnAt: window.returnAt,
+      excludeBookingId: window.excludeBookingId ?? null,
+    });
+  },
+
+  create(body: CreateInternalDriverInput): Promise<InternalDriver> {
+    return getApiClient().post<InternalDriver>(internalBase, body);
+  },
+
+  update(id: string, body: UpdateInternalDriverInput): Promise<InternalDriver> {
+    return getApiClient().patch<InternalDriver>(internalOne(id), body);
+  },
+
+  archive(id: string): Promise<InternalDriver> {
+    return getApiClient().post<InternalDriver>(`${internalOne(id)}/archive`);
+  },
+
+  restore(id: string): Promise<InternalDriver> {
+    return getApiClient().post<InternalDriver>(`${internalOne(id)}/restore`);
   },
 };

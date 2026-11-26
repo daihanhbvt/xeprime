@@ -41,6 +41,7 @@ export const PerformanceRow = memo(function PerformanceRow({
   amountTone?: string;
   note: string;
   noteTone: string;
+  /** Ô xám số phụ - rỗng thì không vẽ ô (tab Theo khách: mọi số đã nằm trên dòng chính). */
   facts: readonly PerformanceFact[];
   /** Bỏ trống khi người xem không có quyền mở hồ sơ - dòng không bắt chạm. */
   onPress?: () => void;
@@ -104,7 +105,8 @@ export const PerformanceRow = memo(function PerformanceRow({
           </Text>
         </YStack>
       </XStack>
-      <XStack gap={space.sm} p={BOX_PAD} br={BOX_RADIUS} bg={colors.surfaceMuted}>
+      {facts.length > 0 ? (
+      <XStack gap={space.sm} p={BOX_PAD} br={BOX_RADIUS} bg={colors.background}>
         {facts.map((fact) => (
           <YStack key={fact.label} f={1} minWidth={0}>
             <Text col={colors.textMuted} fos={typeScale.caption.fontSize} lh={typeScale.caption.lineHeight} numberOfLines={1}>
@@ -122,6 +124,7 @@ export const PerformanceRow = memo(function PerformanceRow({
           </YStack>
         ))}
       </XStack>
+      ) : null}
     </YStack>
   );
 

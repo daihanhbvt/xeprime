@@ -15,15 +15,14 @@ import { AntIcon } from '@/components/icons/AntIcon';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { DashedDivider } from '@/components/ui/DashedDivider';
-import { InfoCard, InfoRow, InfoRows } from '@/components/ui/InfoCard';
+import { InfoCard, InfoRow, InfoRows, type InfoCardLook } from '@/components/ui/InfoCard';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { RichText } from '@/components/ui/RichText';
 import { TextField } from '@/components/ui/TextField';
 import { useImageUpload } from '@/components/ui/use-image-upload';
 import { elevation } from '@/theme/elevation';
-import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, market, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, market, radius, space, typeScale } from '@/theme/tokens';
 import { uploadsApi, type MyShop } from '../api';
 
 const ADDRESS_FIELD_NAMES = {
@@ -50,41 +49,38 @@ const DISPLAY_GLOW_HEIGHT = 160;
 /** Nút gỡ ảnh: 22 trên ảnh bìa, 18 trên logo (`.remove`). */
 const REMOVE_COVER = 22;
 const REMOVE_LOGO = 18;
-/** Cột nút "Hủy" của cặp nút lưu ảnh - `grid-template-columns: 100px 1fr`. */
-const MEDIA_CANCEL_WIDTH = 100;
+/** Thẻ Figma `24231:113210`: đệm 16, các phần cách 12; nhãn ↔ giá trị cách 4. */
+const DISPLAY_PAD = 16;
+const DISPLAY_GAP = 12;
+const FACT_GAP = 4;
 
 /**
- * Thẻ "Thông tin hiển thị" — bản native của `ShopDisplayCard` web (design `23999:111472`, cột phải;
- * ở màn hẹp nó lên ĐẦU trang vì đó là thứ khách thấy).
+ * Thẻ "Thông tin hiển thị" — Figma Partner "Quản lý gian hàng" `24231:113210` (bản web:
+ * `ShopDisplayCard`, design `23999:111472`).
  *
- * Bố cục theo đúng `ShopDisplayCard.module.css`: viền vàng + vệt vàng góc trên, ảnh bìa 136 bo 12,
- * logo vuông 54 chồng lên mép dưới ảnh bìa kèm chú thích nghiêng, hai nút đổi ảnh chia đôi hàng,
- * vạch nét đứt, bốn dòng nhãn (14 đậm vừa, xám) trên giá trị (14 thường), nút viền "Chỉnh sửa
- * thông tin" rộng hết thẻ.
+ * Viền vàng + vệt vàng góc trên, tiêu đề 16/24 + mô tả 12/18, ảnh bìa 136 bo 12, logo vuông 54
+ * chồng lên mép dưới ảnh bìa kèm chú thích nghiêng, hai nút viền "Đổi logo" (Pen) · "Đổi ảnh bìa"
+ * (Image) chia đôi hàng, vạch nét đứt, bốn dòng nhãn (14 đậm vừa, xám) trên giá trị (14 thường),
+ * nút viền "Chỉnh sửa thông tin" (Edit 2) rộng hết thẻ.
  *
- * Ảnh bìa + logo đọc từ FORM (xem trước ngay khi đổi), cặp "Hủy · Lưu thay đổi" chỉ hiện khi có ảnh
- * chưa lưu — đúng luật S4/S5 của sổ redesign; gỡ ảnh bằng nút ✕ nhỏ trên ảnh. Bốn dòng tên · SĐT ·
- * email · giới thiệu đọc từ bản ĐÃ LƯU; sửa chúng qua tấm "Chỉnh sửa thông tin".
+ * Ảnh bìa + logo đọc từ FORM (xem trước ngay khi đổi); lưu/huỷ ảnh nằm ở footer cố định của MÀN
+ * (người dùng chốt 26/11/2026 theo Figma "Footer cố định"), chỉ hiện khi có ảnh chưa lưu. Gỡ ảnh
+ * bằng nút ✕ nhỏ trên ảnh. Bốn dòng tên · SĐT · email · giới thiệu đọc từ bản ĐÃ LƯU; sửa chúng qua
+ * tấm "Chỉnh sửa thông tin".
  */
 export function ShopDisplayCard({
   shop,
   control,
   canEdit,
-  mediaDirty,
   saving,
   onEdit,
-  onMediaCancel,
-  onMediaSave,
   onLogoPickerReady,
 }: {
   shop: MyShop;
   control: Control<ShopProfileWithContactValues>;
   canEdit: boolean;
-  mediaDirty: boolean;
   saving: boolean;
   onEdit: () => void;
-  onMediaCancel: () => void;
-  onMediaSave: () => void;
   /**
    * Trao cho trang hàm MỞ bộ chọn logo - dải chào "Tải logo" gọi nó, đúng như web bấm hộ nút
    * `SHOP_LOGO_TRIGGER_ID`.
@@ -120,32 +116,33 @@ export function ShopDisplayCard({
   const profile = shop.profile;
 
   return (
-    <YStack gap={20}>
+    <>
       <YStack
-        gap={space.md}
-        p={layout.cardPad}
+        gap={DISPLAY_GAP}
+        p={DISPLAY_PAD}
         br={radius.card}
         bw={1}
         bc={colors.primaryGlow}
         bg={colors.surface}
         ov="hidden"
+        style={elevation.card}
       >
         <LinearGradient
           colors={[colors.primarySubtle, colors.surface]}
           style={[StyleSheet.absoluteFill, styles.glow]}
           pointerEvents="none"
         />
-        <YStack gap={2}>
+        <YStack>
           <Text
             col={colors.text}
-            fos={fontSize.h3}
-            lineHeight={28}
+            fos={typeScale.title.fontSize}
+            lh={typeScale.title.lineHeight}
             fow={fontWeight.semibold}
             accessibilityRole="header"
           >
             {t('title')}
           </Text>
-          <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20}>
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
             {t('hint')}
           </Text>
         </YStack>
@@ -186,7 +183,7 @@ export function ShopDisplayCard({
               ov="hidden"
               ai="center"
               jc="center"
-              style={elevation.xs}
+              style={elevation.sm}
             >
               {logoUrl ? (
                 <Image
@@ -211,19 +208,25 @@ export function ShopDisplayCard({
                 />
               ) : null}
             </YStack>
-            <Text f={1} col={colors.placeholder} fos={fontSize.bodySm} lineHeight={18} fontStyle="italic">
+            <Text
+              f={1}
+              col={colors.placeholder}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fontStyle="italic"
+            >
               {t('mediaHint')}
             </Text>
           </XStack>
         </YStack>
 
         {canEdit ? (
-          <XStack gap={12}>
+          <XStack gap={DISPLAY_GAP}>
             <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('changeLogo')}
-                icon="storefront-outline"
-                variant="secondary"
+                lineIcon="pen"
+                variant="neutral"
                 shape="square"
                 loading={logoUpload.busy}
                 disabled={saving}
@@ -233,8 +236,8 @@ export function ShopDisplayCard({
             <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('changeCover')}
-                icon="image-outline"
-                variant="secondary"
+                lineIcon="image"
+                variant="neutral"
                 shape="square"
                 loading={coverUpload.busy}
                 disabled={saving}
@@ -246,71 +249,45 @@ export function ShopDisplayCard({
 
         <DashedDivider color={colors.border} />
 
-        <YStack gap={space.md}>
-          <Fact label={t('displayName')} value={shop.name} empty={empty} />
-          <Fact
-            label={t('phone')}
-            value={shop.phone ? toLocalVnPhone(shop.phone) : null}
-            empty={empty}
-          />
-          <Fact label={t('email')} value={shop.email} empty={empty} />
-          <YStack gap={4}>
-            <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20} fow={fontWeight.semibold}>
-              {t('bio')}
+        <Fact label={t('displayName')} value={shop.name} empty={empty} />
+        <Fact
+          label={t('phone')}
+          value={shop.phone ? toLocalVnPhone(shop.phone) : null}
+          empty={empty}
+        />
+        <Fact label={t('email')} value={shop.email} empty={empty} />
+        <YStack gap={FACT_GAP}>
+          <Text
+            col={colors.placeholder}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.semibold}
+          >
+            {t('bio')}
+          </Text>
+          {profile.bioHtml || profile.bio ? (
+            <RichText
+              html={profile.bioHtml ?? null}
+              text={profile.bio ?? null}
+              color={colors.text}
+              fontSize={fontSize.body}
+              gap={space.xs}
+            />
+          ) : (
+            <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+              {empty}
             </Text>
-            {profile.bioHtml || profile.bio ? (
-              <RichText
-                html={profile.bioHtml ?? null}
-                text={profile.bio ?? null}
-                color={colors.text}
-                fontSize={fontSize.body}
-                gap={space.xs}
-              />
-            ) : (
-              <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20}>
-                {empty}
-              </Text>
-            )}
-          </YStack>
+          )}
         </YStack>
 
         {canEdit ? (
-          <Button
-            label={t('edit')}
-            icon="create-outline"
-            variant="secondary"
-            shape="square"
-            onPress={onEdit}
-          />
+          <Button label={t('edit')} lineIcon="edit" variant="neutral" shape="square" onPress={onEdit} />
         ) : null}
       </YStack>
 
-      {/* Chỉ hiện khi đổi ảnh mà chưa lưu - cột "Hủy" 100, "Lưu thay đổi" phần còn lại (`.actions`). */}
-      {canEdit && mediaDirty ? (
-        <XStack gap={12}>
-          <YStack w={MEDIA_CANCEL_WIDTH}>
-            <Button
-              label={tCommon('actions.cancel')}
-              variant="secondary"
-              shape="square"
-              disabled={saving}
-              onPress={onMediaCancel}
-            />
-          </YStack>
-          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-            <Button
-              label={tCommon('actions.saveChanges')}
-              shape="square"
-              loading={saving}
-              onPress={onMediaSave}
-            />
-          </YStack>
-        </XStack>
-      ) : null}
-
       {coverUpload.sheet}
       {logoUpload.sheet}
-    </YStack>
+    </>
   );
 }
 
@@ -350,15 +327,19 @@ const styles = StyleSheet.create({
   glow: { height: DISPLAY_GLOW_HEIGHT, bottom: undefined },
 });
 
-/** Một dòng nhãn trên giá trị - nhãn 14 đậm vừa xám, giá trị 14 thường (`.fact`). */
+/** Một dòng nhãn trên giá trị - nhãn 14/20 đậm vừa xám, giá trị 14/20 thường (`24231:113228`). */
 function Fact({ label, value, empty }: { label: string; value: string | null | undefined; empty: string }) {
   const colors = useColors();
   return (
-    <YStack gap={4}>
-      <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20} fow={fontWeight.semibold}>
+    <YStack gap={FACT_GAP}>
+      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
         {label}
       </Text>
-      <Text col={value ? colors.text : colors.placeholder} fos={fontSize.body} lineHeight={20}>
+      <Text
+        col={value ? colors.text : colors.placeholder}
+        fos={typeScale.body.fontSize}
+        lh={typeScale.body.lineHeight}
+      >
         {value || empty}
       </Text>
     </YStack>
@@ -372,11 +353,14 @@ function Fact({ label, value, empty }: { label: string; value: string | null | u
 export function ShopLegalCard({
   shop,
   kind = STOREFRONT_KIND.SHOP,
+  look = 'default',
   onEdit,
   onManageBranches,
 }: {
   shop: MyShop;
   kind?: StorefrontKind;
+  /** `figma` = thẻ Quản lý gian hàng (`24231:113399`): hàng cách 8, ghi chú 12/18 nghiêng ngay dưới. */
+  look?: InfoCardLook;
   onEdit?: () => void;
   /** Ghi chú "Theo thông tin chi nhánh mặc định · Quản lý" — chỉ gian hàng có Chi nhánh. */
   onManageBranches?: () => void;
@@ -386,9 +370,81 @@ export function ShopLegalCard({
   const tOwner = useTranslations('Account.ownerHub.sections');
   const tCommon = useTranslations('Common');
   const personal = kind === STOREFRONT_KIND.PERSONAL;
+  const figma = look === 'figma';
   const branch = shop.defaultBranch;
   const profile = shop.profile;
   const empty = tCommon('labels.notAvailable');
+
+  const rows = (
+    <InfoRows {...(figma ? { gap: LEGAL_FIGMA_GAP } : {})}>
+      <InfoRow
+        label={t('province')}
+        value={branch?.provinceName ?? profile.provinceName ?? null}
+        emptyLabel={empty}
+      />
+      <InfoRow
+        label={t('ward')}
+        value={branch?.wardName ?? profile.wardName ?? null}
+        emptyLabel={empty}
+      />
+      <InfoRow
+        label={t('address')}
+        value={guessAddressLine(branch?.address ?? profile.address) || null}
+        emptyLabel={empty}
+      />
+      {personal ? null : (
+        <InfoRow
+          label={t('businessLicenseNo')}
+          value={profile.businessLicenseNo ?? null}
+          emptyLabel={empty}
+        />
+      )}
+    </InfoRows>
+  );
+
+  if (figma) {
+    /*
+     * Figma `24231:113415`: một đoạn nghiêng 12/18 `text/gray/very-low`, chữ "Quản lý" gạch chân màu
+     * `text/brand/primary` nằm NGAY trong câu - đặt sát dưới các hàng (khe 8).
+     */
+    const note = personal ? null : (
+      <Text
+        col={colors.textPlaceholder}
+        fos={typeScale.label.fontSize}
+        lh={typeScale.label.lineHeight}
+        fontStyle="italic"
+      >
+        {`${t('defaultBranchNote')} `}
+        {onManageBranches ? (
+          <Text
+            col={colors.brandMoney}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            fontStyle="italic"
+            textDecorationLine="underline"
+            onPress={onManageBranches}
+            accessibilityRole="link"
+          >
+            {t('manageBranches')}
+          </Text>
+        ) : null}
+      </Text>
+    );
+    return (
+      <InfoCard
+        look="figma"
+        title={personal ? tOwner('address') : t('title')}
+        hint={personal ? tOwner('addressHint') : t('hint')}
+        editLabel={t('edit')}
+        {...(onEdit ? { onEdit } : {})}
+      >
+        <YStack gap={LEGAL_FIGMA_GAP}>
+          {rows}
+          {note}
+        </YStack>
+      </InfoCard>
+    );
+  }
 
   return (
     <InfoCard
@@ -409,33 +465,13 @@ export function ShopLegalCard({
         )
       }
     >
-      <InfoRows>
-        <InfoRow
-          label={t('province')}
-          value={branch?.provinceName ?? profile.provinceName ?? null}
-          emptyLabel={empty}
-        />
-        <InfoRow
-          label={t('ward')}
-          value={branch?.wardName ?? profile.wardName ?? null}
-          emptyLabel={empty}
-        />
-        <InfoRow
-          label={t('address')}
-          value={guessAddressLine(branch?.address ?? profile.address) || null}
-          emptyLabel={empty}
-        />
-        {personal ? null : (
-          <InfoRow
-            label={t('businessLicenseNo')}
-            value={profile.businessLicenseNo ?? null}
-            emptyLabel={empty}
-          />
-        )}
-      </InfoRows>
+      {rows}
     </InfoCard>
   );
 }
+
+/** Hàng địa chỉ cách 8 ở thẻ Figma (`24231:113402`). */
+const LEGAL_FIGMA_GAP = 8;
 
 /** Chân chung của hai tấm sửa: "Hủy · Cập nhật" — đúng `okText`/`cancelText` của hộp web. */
 function SheetFooter({

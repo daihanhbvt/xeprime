@@ -106,18 +106,28 @@ afterEach(() => jest.restoreAllMocks());
  * mục. Ẩn nút ở đây chỉ là chỉ dẫn; backend mới là lớp chặn.
  */
 describe('CategoryManagerSheet', () => {
-  it('liệt kê danh mục kèm nhãn Thu/Chi và NGUỒN của từng danh mục', async () => {
-    const { findByText } = await renderSheet([PERMISSION.FINANCE_VIEW, PERMISSION.RECEIPT_CREATE]);
+  it('liệt kê danh mục kèm viên Phiếu thu/Phiếu chi và đánh dấu danh mục hệ thống', async () => {
+    const { findByText, findAllByText } = await renderSheet([
+      PERMISSION.FINANCE_VIEW,
+      PERMISSION.RECEIPT_CREATE,
+    ]);
 
     expect(await findByText('Thanh toán đơn')).toBeTruthy();
     expect(await findByText('Rửa xe')).toBeTruthy();
-    /*
-      CẢ HAI nguồn đều có nhãn. Chỉ gắn nhãn cho danh mục hệ thống thì hàng không nhãn đọc ra là
-      "chưa tải xong" chứ không phải "của gian hàng tự thêm" — mà đó mới là điều nói cho người
-      dùng biết hàng nào xoá được.
-    */
+    expect((await findAllByText(/^Phiếu (thu|chi)$/)).length).toBeGreaterThan(0);
+    /* Danh mục hệ thống mang chữ "Hệ thống" cạnh tên (design 24512:128393 bỏ viên "Tự tạo"). */
     expect(await findByText('Hệ thống')).toBeTruthy();
-    expect(await findByText('Tự tạo')).toBeTruthy();
+  });
+
+  it('chip lọc Tất cả · Thu · Chi đếm và lọc danh sách đã tải', async () => {
+    const { findByText, queryByText } = await renderSheet([
+      PERMISSION.FINANCE_VIEW,
+      PERMISSION.RECEIPT_CREATE,
+    ]);
+
+    expect(await findByText('Rửa xe')).toBeTruthy();
+    await fireEvent.press(await findByText(/^Thu \(\d+\)$/));
+    await waitFor(() => expect(queryByText('Rửa xe')).toBeNull());
   });
 
   it('chỉ danh mục KHÔNG phải hệ thống mới có nút xoá', async () => {
@@ -144,14 +154,15 @@ describe('CategoryManagerSheet', () => {
   });
 
   it('thêm danh mục: gửi tên đã trim và dọn ô nhập', async () => {
-    const { findByPlaceholderText, findByText, createSpy } = await renderSheet([
+    const { findByPlaceholderText, findByText, findByLabelText, createSpy } = await renderSheet([
       PERMISSION.FINANCE_VIEW,
       PERMISSION.RECEIPT_CREATE,
     ]);
 
+    await fireEvent.press(await findByText('Thêm danh mục'));
     const input = await findByPlaceholderText('Tên danh mục mới');
     await fireEvent.changeText(input, '  Gửi bãi  ');
-    await fireEvent.press(await findByText('Thêm'));
+    await fireEvent.press(await findByLabelText('Thêm'));
 
     await waitFor(() =>
       expect(createSpy).toHaveBeenCalledWith({ type: 'expense', name: 'Gửi bãi' }),
@@ -164,7 +175,7 @@ describe('CategoryManagerSheet', () => {
     ]);
 
     expect(await findByText('Rửa xe')).toBeTruthy();
-    expect(queryByText('Thêm')).toBeNull();
+    expect(queryByText('Thêm danh mục')).toBeNull();
     expect(queryByLabelText('Xoá danh mục')).toBeNull();
   });
 
@@ -178,7 +189,7 @@ describe('CategoryManagerSheet', () => {
     expect(
       await findByText('Tính năng này đang ở chế độ chỉ xem. Liên hệ XePrime để tiếp tục thao tác.'),
     ).toBeTruthy();
-    expect(queryByText('Thêm')).toBeNull();
+    expect(queryByText('Thêm danh mục')).toBeNull();
   });
 
   it('tải hỏng: báo LỖI kèm lối thử lại, không giả thành danh sách rỗng', async () => {

@@ -68,7 +68,7 @@ export function SideCard({ children, label }: { children: ReactNode; label?: str
 }
 
 /** Tiêu đề thẻ cột phải - CÙNG cỡ/độ đậm với tiêu đề `SectionCard` ("Lợi nhuận chuyến"…, 20/11/2026). */
-function SideTitle({ children }: { children: string }) {
+export function SideTitle({ children }: { children: string }) {
   const colors = useColors();
   return (
     <Text
@@ -121,8 +121,11 @@ export function VehicleSideCard({
   booking,
   onOpenVehicle,
   onOpenSchedule,
+  title,
 }: {
   booking: BookingDetail;
+  /** Tiêu đề thẻ - chỉ tấm chi tiết công nợ có ("Xe & Giao nhận", Figma `24512:133583`). */
+  title?: string | undefined;
   /** Vắng khi không có quyền xem xe - tên là chữ thường. */
   onOpenVehicle?: (() => void) | undefined;
   /** Link "Lịch xe" (Figma) - vắng khi không có quyền xem xe. */
@@ -169,6 +172,7 @@ export function VehicleSideCard({
 
   return (
     <SideCard>
+      {title ? <SideTitle>{title}</SideTitle> : null}
       <XStack ai="center" gap={GAP_12}>
         <VehicleThumb uri={booking.vehicleImageUrl ?? null} accessibilityLabel={booking.vehicleName} />
         <YStack f={1} minWidth={0} gap={space.xs} ai="flex-start">
@@ -387,8 +391,8 @@ export function PaymentSideCard({
         )}
       </XStack>
       {/*
-        Figma "Thanh toán" `24512:130949` (người dùng chốt 20/11/2026): các dòng cách 8, KHÔNG còn dòng
-        "Tổng tiền chuyến"; đọc thẳng một phép trừ xuống "Còn lại (phải thu)" dưới vạch kẻ. Nhãn
+        Figma "Thanh toán" `24512:130949` (người dùng chốt 20/11/2026): các dòng cách 8 (dòng
+        "Tổng tiền chuyến" bỏ ngày 20/11 đã bổ sung lại 26/11/2026); đọc thẳng một phép trừ xuống "Còn lại (phải thu)" dưới vạch kẻ. Nhãn
         "Trả trước qua XePrime" giữ đúng nghĩa (là phần `D`, không phải cả tiền giữ chỗ).
       */}
       <YStack gap={space.sm}>
@@ -414,6 +418,13 @@ export function PaymentSideCard({
         {isZeroMoney(booking.surchargeTotal) ? null : (
           <MoneyRow label={t('surcharge')} value={`+${fmt.money(booking.surchargeTotal)}`} />
         )}
+        {/*
+          Web `PaymentSideCard`: "Tổng tiền chuyến" đậm, đứng trước phần trừ (trả trước · đã thu).
+          Người dùng bổ sung lại 26/11/2026 - thiếu nó thì "Đã trả x / y" của tấm Công nợ không có
+          con số y để đối chiếu.
+        */}
+        <MoneyRow label={t('amountDue')} value={fmt.money(booking.amountDue)} strong />
+
         {prepaid ? (
           <MoneyRow
             label={

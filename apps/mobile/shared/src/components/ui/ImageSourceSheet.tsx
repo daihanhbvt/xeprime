@@ -5,6 +5,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { typeScale } from '@/theme/tokens';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
+import type { LineIconName } from '@/components/icons/LineIcon';
 
 /** Figma `24486:66049`: hai nút cách 12. */
 const GAP_12 = 12;
@@ -27,6 +28,8 @@ export function ImageSourceSheet({
   hint,
   onPick,
   onRemove,
+  extraAction,
+  libraryPrimary = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,30 +37,79 @@ export function ImageSourceSheet({
   hint?: string | undefined;
   onPick: (source: ImageSource) => void;
   onRemove?: (() => void) | undefined;
+  /** Nguồn thứ ba cùng kiểu nút (vd "Chọn tệp PDF" của đính kèm phiếu thu/chi) - trọn bề ngang dưới hai nút ảnh. */
+  extraAction?: { label: string; lineIcon: LineIconName; onPress: () => void } | undefined;
+  /**
+   * "Chọn từ thư viện" là nút vàng chính ở DƯỚI CÙNG, trọn hàng; Chụp ảnh + nút phụ chung một hàng
+   * phía trên (popup "Thêm tệp" của phiếu thu/chi, chốt 26/11/2026).
+   */
+  libraryPrimary?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Common.image');
   return (
     <BottomSheet open={open} onClose={onClose} title={title} chrome="v2" headerDivider>
       <YStack gap={GAP_12}>
-        <XStack gap={GAP_12} flexWrap="wrap">
-          <YStack f={1} minWidth={BUTTON_MIN}>
-            <Button
-              label={t('takePhoto')}
-              lineIcon="camera-1"
-              variant="neutral"
-              onPress={() => onPick(IMAGE_SOURCE.CAMERA)}
-            />
-          </YStack>
-          <YStack f={1} minWidth={BUTTON_MIN}>
+        {libraryPrimary ? (
+          <>
+            {/* Chụp ảnh + nút phụ CÙNG một hàng, "Chọn từ thư viện" vàng trọn hàng bên dưới (chốt 26/11/2026). */}
+            <XStack gap={GAP_12}>
+              <YStack f={1} flexBasis={0} minWidth={0}>
+                <Button
+                  label={t('takePhoto')}
+                  lineIcon="camera-1"
+                  variant="neutral"
+                  onPress={() => onPick(IMAGE_SOURCE.CAMERA)}
+                />
+              </YStack>
+              {extraAction ? (
+                <YStack f={1} flexBasis={0} minWidth={0}>
+                  <Button
+                    label={extraAction.label}
+                    lineIcon={extraAction.lineIcon}
+                    variant="neutral"
+                    onPress={extraAction.onPress}
+                  />
+                </YStack>
+              ) : null}
+            </XStack>
             <Button
               label={t('chooseFromLibrary')}
               lineIcon="image"
-              variant="neutral"
+              variant="gradient"
               onPress={() => onPick(IMAGE_SOURCE.LIBRARY)}
             />
-          </YStack>
-        </XStack>
+          </>
+        ) : (
+          <>
+          <XStack gap={GAP_12} flexWrap="wrap">
+            <YStack f={1} minWidth={BUTTON_MIN}>
+              <Button
+                label={t('takePhoto')}
+                lineIcon="camera-1"
+                variant="neutral"
+                onPress={() => onPick(IMAGE_SOURCE.CAMERA)}
+              />
+            </YStack>
+            <YStack f={1} minWidth={BUTTON_MIN}>
+              <Button
+                label={t('chooseFromLibrary')}
+                lineIcon="image"
+                variant="neutral"
+                onPress={() => onPick(IMAGE_SOURCE.LIBRARY)}
+              />
+            </YStack>
+          </XStack>
+          {extraAction ? (
+            <Button
+              label={extraAction.label}
+              lineIcon={extraAction.lineIcon}
+              variant="neutral"
+              onPress={extraAction.onPress}
+            />
+          ) : null}
+          </>
+        )}
         {hint ? (
           <Text
             col={colors.textPlaceholder}

@@ -39,10 +39,12 @@ export function DriverLicenceStateBadge({ state }: { state: DriverLicenceState }
 export function DriverLicenceDetail({
   licence,
   invitedName,
+  checked = false,
 }: {
   licence: DriverLicenceSummary;
-  /** Tên bên thuê nhập khi mời — lệch với tên trên bằng thì cảnh báo. */
   invitedName?: string;
+  /** Bên thuê đã "Đối chiếu" bằng hiện tại — tắt cảnh báo lệch tên (web 25/11/2026). */
+  checked?: boolean;
 }) {
   const colors = useColors();
   const domainLabel = useDomainLabel();
@@ -80,7 +82,7 @@ export function DriverLicenceDetail({
             .join(LIST_SEPARATOR)}
         </Text>
       ) : null}
-      {invitedName && holderNameDiffers(licence.fullName, invitedName) ? (
+      {invitedName && !checked && holderNameDiffers(licence.fullName, invitedName) ? (
         <Text col={colors.warning} fos={fontSize.label}>
           {t('licence.nameMismatch')}
         </Text>

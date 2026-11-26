@@ -49,6 +49,8 @@ interface TextFieldProps<T extends FieldValues> {
    * đọc dòng trên trước, mà dòng cần đọc là dòng lỗi.
    */
   hint?: string;
+  /** Ép chú thích lên nhãn dạng ⓘ dù ngắn (mặc định chỉ chú thích dài mới lên nhãn). */
+  hintInLabel?: boolean;
   /**
    * Hiện dấu `*` sau nhãn. THUẦN hiển thị — ràng buộc thật nằm ở schema yup của form và ở
    * DTO backend; đánh dấu ở đây mà quên ở schema thì ô vẫn gửi rỗng được.
@@ -118,6 +120,7 @@ export function TextField<T extends FieldValues>({
   icon,
   lineIcon,
   hint,
+  hintInLabel = false,
   required = false,
   publishRequired = false,
   secureTextEntry,
@@ -169,6 +172,8 @@ export function TextField<T extends FieldValues>({
       fontFamily: FONT_FAMILY.body,
       minHeight: multiline ? rows * LINE_HEIGHT : v2 ? FIELD_V2.height - 2 : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
+      // Android tự đệm ~4dp hai bên TextInput: chữ gõ lệch khỏi chữ ô chọn/ngày cùng form.
+      paddingHorizontal: 0,
       ...(multiline && scrollable ? { maxHeight: rows * LINE_HEIGHT + space.sm * 2 } : {}),
     }),
     [colors, multiline, rows, scrollable, v2],
@@ -178,7 +183,7 @@ export function TextField<T extends FieldValues>({
   return (
     <YStack gap={v2 ? FIELD_V2.labelGap : space.xs}>
       {hideLabel ? null : (
-        <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint)} />
+        <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint, hintInLabel)} />
       )}
 
       {/*
@@ -271,7 +276,7 @@ export function TextField<T extends FieldValues>({
 
       {afterControl}
 
-      <FieldMessage error={error} hint={belowHint(hint)} />
+      <FieldMessage error={error} hint={belowHint(hint, hintInLabel)} />
 
       {/*
         Có `maxLength` là có bộ đếm, ngay từ ký tự đầu — đúng `showCount` của `<TextArea>` bên

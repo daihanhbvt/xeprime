@@ -45,7 +45,7 @@ export function OwnerPayoutTable({
    * `v2` = "Nhóm thông tin" của tấm duyệt (Figma `24145:96837`): dòng `SummaryRow` cách 12, không
    * vạch đứt, dòng CUỐI là tổng 16/24 xanh. Cùng các dòng, cùng số - chỉ khác hình.
    */
-  variant?: 'default' | 'v2';
+  variant?: 'default' | 'v2' | 'ledger';
   /** Chỉ dòng CUỐI (tổng) - thân khối khi thu gọn (Figma `24145:96975`). */
   summaryOnly?: boolean;
 }) {
@@ -75,9 +75,9 @@ export function OwnerPayoutTable({
   const taxLabel = t('tax');
 
   // v2: số trừ / chữ mờ CÙNG cỡ 14 với các số khác của bảng (người dùng 20/11/2026).
-  const valueSize = variant === 'v2' ? typeScale.body.fontSize : fontSize.bodySm;
+  const valueSize = variant !== 'default' ? typeScale.body.fontSize : fontSize.bodySm;
   const muted = (text: string) => (
-    <Text col={colors.placeholder} fos={variant === 'v2' ? typeScale.body.fontSize : fontSize.label}>
+    <Text col={colors.placeholder} fos={variant !== 'default' ? typeScale.body.fontSize : fontSize.label}>
       {text}
     </Text>
   );
@@ -185,6 +185,58 @@ export function OwnerPayoutTable({
   }
 
   const shown = summaryOnly ? rows.slice(-1) : rows;
+
+  if (variant === 'ledger') {
+    /*
+      Figma "Transaction Detail" (Quản lý ví `24612:145387`…): nối tiếp các dòng tiền của thẻ chuyến -
+      đệm dọc 8, kẻ đáy `stroke/gray-50`, chữ 14/20; dòng tổng medium `text/gray/medium`; dòng cuối
+      (số cộng ví) nhãn medium `text/gray/high`, số semibold `brand/primary-2`, không kẻ đáy.
+    */
+    return (
+      <YStack accessibilityLabel={label}>
+        {shown.map((row, index) => {
+          const final = index === shown.length - 1;
+          const total = row.strong || row.highlight;
+          return (
+            <XStack
+              key={row.key}
+              ai="center"
+              jc="space-between"
+              gap={space.sm}
+              py={space.sm}
+              {...(final ? {} : { borderBottomWidth: 1, borderColor: colors.background })}
+            >
+              <XStack f={1} minWidth={0} ai="center" gap={space.xs}>
+                <Text
+                  flexShrink={1}
+                  col={final ? colors.text : total ? colors.textMuted : colors.placeholder}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={final || total ? fontWeight.medium : fontWeight.regular}
+                >
+                  {row.label}
+                </Text>
+                {row.hint}
+              </XStack>
+              {typeof row.value === 'string' ? (
+                <Text
+                  col={final ? colors.brandLink : colors.text}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={final ? fontWeight.semibold : fontWeight.medium}
+                  ta="right"
+                >
+                  {row.value}
+                </Text>
+              ) : (
+                row.value
+              )}
+            </XStack>
+          );
+        })}
+      </YStack>
+    );
+  }
 
   if (variant === 'v2') {
     return (

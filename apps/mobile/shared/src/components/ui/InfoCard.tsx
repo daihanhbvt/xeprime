@@ -3,9 +3,12 @@ import type { ReactNode } from 'react';
 import { Pressable, type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { AntIcon } from '@/components/icons/AntIcon';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
 import { useColors, useDarkAccentBorder } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { IconSquareButton } from './IconSquareButton';
 import { InfoHint } from './InfoHint';
 
 /** Nút bút chì 40×40 bo 12 của web `.edit` (`InfoCard.module.css`) - nút viền thường của AntD. */
@@ -15,6 +18,18 @@ const TITLE_LINE_HEIGHT = 28;
 /** Mô tả dài hơn mức này thì gọn vào dấu ⓘ. */
 const HINT_INLINE_MAX = 60;
 const BODY_LINE_HEIGHT = 20;
+/** Thẻ Figma Partner "Quản lý gian hàng" (`24231:113310`): đệm 16, các phần cách 16, đầu thẻ cách nút 12. */
+const FIGMA_PAD = 16;
+const FIGMA_GAP = 16;
+const FIGMA_HEAD_GAP = 12;
+
+/**
+ * `default` = khuôn `InfoCard` web (tiêu đề 18/28, mô tả 14/20, bút chì AntD).
+ * `figma` = khuôn thẻ của Figma Partner "Quản lý gian hàng" (`24231:113440` "Vehicle Specifications
+ * Header"): tiêu đề 16/24 đậm vừa, mô tả 12/18 xám luôn hiện tại chỗ, nút góc 40 bo 12 với icon nét
+ * Figma (Edit 2), bóng quầng đều bốn phía.
+ */
+export type InfoCardLook = 'default' | 'figma';
 
 /**
  * Khung THẺ có tiêu đề + dòng phụ + bút chì — bản native của `components/layout/InfoCard` web
@@ -31,6 +46,7 @@ export function InfoCard({
   extra,
   footer,
   onLayout,
+  look = 'default',
   children,
 }: {
   title: string;
@@ -42,10 +58,67 @@ export function InfoCard({
   footer?: ReactNode;
   /** Đo vị trí thẻ — trang dùng để cuộn tới `?section=`. */
   onLayout?: (event: LayoutChangeEvent) => void;
+  look?: InfoCardLook;
   children?: ReactNode;
 }) {
   const colors = useColors();
   const accent = useDarkAccentBorder();
+  if (look === 'figma') {
+    return (
+      <YStack
+        onLayout={onLayout}
+        gap={FIGMA_GAP}
+        p={FIGMA_PAD}
+        br={radius.card}
+        bw={1}
+        bc={accent.borderColor ?? colors.border}
+        bg={colors.surface}
+        style={elevation.card}
+      >
+        <XStack ai="flex-start" jc="space-between" gap={FIGMA_HEAD_GAP}>
+          <YStack f={1} minWidth={0}>
+            <Text
+              col={colors.text}
+              fos={typeScale.title.fontSize}
+              lh={typeScale.title.lineHeight}
+              fow={fontWeight.semibold}
+              accessibilityRole="header"
+            >
+              {title}
+            </Text>
+            {typeof hint === 'string' ? (
+              <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                {hint}
+              </Text>
+            ) : (
+              hint
+            )}
+          </YStack>
+          {extra}
+          {onEdit ? (
+            <IconSquareButton label={editLabel ?? title} onPress={onEdit} size="card">
+              <LineIcon name="edit" size={iconSize.lg} color={colors.textMuted} />
+            </IconSquareButton>
+          ) : null}
+        </XStack>
+        {children}
+        {footer ? (
+          typeof footer === 'string' ? (
+            <Text
+              col={colors.textPlaceholder}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fontStyle="italic"
+            >
+              {footer}
+            </Text>
+          ) : (
+            footer
+          )
+        ) : null}
+      </YStack>
+    );
+  }
   return (
     <YStack
       onLayout={onLayout}
@@ -120,9 +193,9 @@ export function InfoCard({
   );
 }
 
-/** Danh sách hàng nhãn ↔ giá trị (khe 12 như `.rows` web). */
-export function InfoRows({ children }: { children: ReactNode }) {
-  return <YStack gap={12}>{children}</YStack>;
+/** Danh sách hàng nhãn ↔ giá trị (khe 12 như `.rows` web; thẻ Figma Partner khe 8). */
+export function InfoRows({ children, gap = 12 }: { children: ReactNode; gap?: number }) {
+  return <YStack gap={gap}>{children}</YStack>;
 }
 
 /** Một hàng: nhãn xám trái, giá trị đậm vừa căn phải — rỗng thì hiện `emptyLabel` nhạt. */

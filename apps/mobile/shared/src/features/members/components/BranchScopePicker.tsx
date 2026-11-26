@@ -1,16 +1,18 @@
-import { YStack } from 'tamagui';
-import { FieldLabel, FieldMessage } from '@/components/ui/Field';
-import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
-import { space } from '@/theme/tokens';
-import { toggleBranchSelection, type BranchScopeOption } from '../branch-scope';
+import { MultiSelectControl } from '@/components/ui/MultiSelectControl';
+import {
+  BRANCH_SCOPE_ALL,
+  toggleBranchSelection,
+  type BranchScopeOption,
+} from '../branch-scope';
 
 /**
- * Danh sách TICK chi nhánh phụ trách — bản native của `<Select mode="multiple">` bên web.
+ * Ô chọn chi nhánh phụ trách — bản native của `<Select mode="multiple">` bên web
+ * (`MemberBranchScopeSelect`): các chi nhánh đã chọn là thẻ có nút ×, chạm ô mở tấm chọn nhiều.
  *
- * Native không có ô chọn nhiều nên mỗi chi nhánh là một dòng bật/tắt; bất biến "không bao giờ
- * rỗng" vẫn giữ nguyên qua `toggleBranchSelection` (cùng `normalizeBranchSelection` của web).
- * Mục bị khoá ("Tất cả" với người bị giới hạn) không dựng: tấm này chỉ mở với thành viên nằm gọn
- * trong phạm vi của người thao tác, nên không có thành viên `all` nào cần thấy nó.
+ * Luật của ô nằm ở đây, không ở `MultiSelectControl`: "Tất cả chi nhánh" loại trừ chi nhánh cụ
+ * thể và quay lại khi gỡ chi nhánh cuối, ô không bao giờ rỗng (`toggleBranchSelection`, cùng
+ * `normalizeBranchSelection` của web). Mục bị khoá ("Tất cả" với người bị giới hạn) không dựng
+ * trong tấm chọn.
  */
 export function BranchScopePicker({
   label,
@@ -32,21 +34,15 @@ export function BranchScopePicker({
   onChange: (next: string[]) => void;
 }) {
   return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
-      <MenuOptionList>
-        {options
-          .filter((option) => !option.disabled)
-          .map((option) => (
-            <MenuOption
-              key={option.value}
-              label={option.label}
-              selected={value.includes(option.value)}
-              onPress={() => onChange(toggleBranchSelection(value, option.value, allowAll))}
-            />
-          ))}
-      </MenuOptionList>
-      <FieldMessage error={error} hint={hint} />
-    </YStack>
+    <MultiSelectControl
+      label={label}
+      required={required}
+      value={value}
+      options={options}
+      nonRemovable={[BRANCH_SCOPE_ALL]}
+      onToggle={(next) => onChange(toggleBranchSelection(value, next, allowAll))}
+      {...(hint === undefined ? {} : { hint })}
+      {...(error === undefined ? {} : { error })}
+    />
   );
 }

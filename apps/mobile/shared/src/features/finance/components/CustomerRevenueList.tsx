@@ -61,15 +61,10 @@ export function CustomerRevenueList({
               tVehicles('tripsCount', { trips: row.trips }),
             ]}
             amount={fmt.money(row.revenue)}
-            note={row.sharePercent == null ? tLabels('emptyValue') : t('share', { value: row.sharePercent })}
+            note={row.sharePercent == null ? tLabels('emptyValue') : t('shareOfPeriod', { value: row.sharePercent })}
             noteTone={colors.infoStrong}
-            facts={[
-              { label: t('columns.trips'), value: fmt.count(row.trips) },
-              {
-                label: t('columns.share'),
-                value: row.sharePercent == null ? tLabels('emptyValue') : t('share', { value: row.sharePercent }),
-              },
-            ]}
+            // Tỷ trọng đã ở góc phải, chuyến ở dòng phụ - không lặp lại trong ô xám (người dùng 26/11/2026).
+            facts={[]}
             {...(canOpenCustomer && row.tenantCustomerId
               ? { onPress: () => navigateOnce(ROUTES.manage.customerDetail(row.tenantCustomerId as string)) }
               : {})}

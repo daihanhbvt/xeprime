@@ -41,8 +41,6 @@ export function useCalendarData(
   resources: ReturnType<typeof useCalendarResources>['data'];
   eventsByResource: ReadonlyMap<string, CalendarEvent[]>;
   priceMarkers: ReadonlyMap<string, PriceMarker>;
-  availableByDay: ReadonlyMap<string, number>;
-  totalVehicles: number | null;
   hasAnyEvent: boolean;
   isLoading: boolean;
   isFetching: boolean;
@@ -74,19 +72,19 @@ export function useCalendarData(
 
   const resources = useCalendarResources(resourceQuery, enabled);
 
+  /*
+   * Lưới vẽ cả yêu cầu CHỜ DUYỆT (nhóm "Cần xử lý" — web 25/11/2026). Chúng không chiếm lịch
+   * (`occupying = false`); server chỉ trả khi người xem có quyền xem yêu cầu.
+   */
+  const eventQuery = useMemo(() => ({ ...query, includePendingRequests: true }), [query]);
   const events = useQuery({
-    queryKey: queryKeys.calendar.events(query),
-    queryFn: () => calendarApi.events(query),
+    queryKey: queryKeys.calendar.events(eventQuery),
+    queryFn: () => calendarApi.events(eventQuery),
     placeholderData: keepPreviousData,
     enabled,
   });
 
-  const availability = useQuery({
-    queryKey: queryKeys.calendar.availability(query),
-    queryFn: () => calendarApi.availability(query),
-    placeholderData: keepPreviousData,
-    enabled,
-  });
+  // Hàng "Xe còn trống" đã gỡ khỏi lưới (web 25/11/2026, người dùng chốt gỡ cả ở app).
 
   const dailyPrices = useQuery({
     queryKey: queryKeys.calendar.dailyPrices(query),
@@ -117,18 +115,11 @@ export function useCalendarData(
     return map;
   }, [dailyPrices.data]);
 
-  const availableByDay = useMemo(
-    () => new Map((availability.data?.days ?? []).map((d) => [d.date, d.availableCount])),
-    [availability.data],
-  );
-
   return {
     range,
     resources: resources.data,
     eventsByResource,
     priceMarkers,
-    availableByDay,
-    totalVehicles: availability.data?.totalVehicles ?? null,
     hasAnyEvent: (events.data?.length ?? 0) > 0,
     /*
      * Tải LẦN ĐẦU (chưa có gì để vẽ) — refetch nền không tính.
@@ -143,7 +134,6 @@ export function useCalendarData(
     refetch: () => {
       void resources.refetch();
       void events.refetch();
-      void availability.refetch();
       void dailyPrices.refetch();
     },
   };

@@ -1,4 +1,5 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState, type MutableRefObject } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -6,6 +7,7 @@ import {
   bankDisplayName,
   isNegativeMoney,
   isZeroMoney,
+  LIST_SEPARATOR,
   nowInAppTz,
 } from '@xeprime/domain';
 import {
@@ -17,7 +19,7 @@ import {
   type WithdrawalStatus,
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { AlertDialog } from '@/components/ui/AlertDialog';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -26,7 +28,8 @@ import {
   MonthPeriodField,
   periodLabel,
 } from '@/components/ui/MonthPeriodField';
-import { Pagination } from '@/components/ui/Pagination';
+import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
+import { useLoadNextPage } from '@/hooks/use-load-next-page';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -35,7 +38,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import {
   WALLET_ACTIVITY_PAGE_SIZE,
   WALLET_SCOPE,
@@ -56,15 +60,34 @@ import { useCancelWithdrawal, useWalletActivity } from '../hooks/use-wallet';
 export function WalletActivityPanel({
   filters,
   onFiltersChange,
+  loadMoreRef,
 }: {
   filters: WalletStatementFilters;
   onFiltersChange: (patch: Partial<WalletStatementFilters>) => void;
+  /** Màn chứa gọi `current()` khi cuộn gần đáy (`Screen onNearEnd`) - cuộn vô hạn. */
+  loadMoreRef: MutableRefObject<(() => void) | null>;
 }) {
   const colors = useColors();
   const t = useTranslations('Wallet');
   const tCommon = useTranslations('Common');
   const query = useWalletActivity(filters, true);
   const data = query.data;
+  /* Cuộn vô hạn (mobile-feature §5): gộp các trang đã tải, trang 1 thay toàn bộ. */
+  const rows = useAccumulatedPages(data?.items, data?.page);
+  const { hasNext, loadNext } = useLoadNextPage({
+    page: data?.page,
+    limit: data?.limit ?? WALLET_ACTIVITY_PAGE_SIZE,
+    total: data?.total,
+    fetching: query.isFetching,
+    onPage: (page) => onFiltersChange({ page }),
+  });
+  useEffect(() => {
+    loadMoreRef.current = loadNext;
+    return () => {
+      if (loadMoreRef.current === loadNext) loadMoreRef.current = null;
+    };
+  }, [loadMoreRef, loadNext]);
+  const loadingMore = query.isFetching && filters.page > 1;
 
   /** Tháng sau chưa xảy ra — trần là tháng HIỆN TẠI theo giờ VN, như bảng tổng hợp. */
   const maxPeriod = useMemo(() => nowInAppTz().format(MONTH_PERIOD_FORMAT), []);
@@ -105,23 +128,19 @@ export function WalletActivityPanel({
             </YStack>
           </Card>
         ) : (
-          <YStack opacity={query.isFetching ? 0.6 : 1}>
-            <Text pb={space.xs} fos={fontSize.label} col={colors.textMuted}>
-              {t('activity.totalLabel', { count: data.total })}
-            </Text>
-            <YStack gap={space.sm}>
-              {data.items.map((row, index) => (
-                <ActivityRow key={row.id} row={row} last={index === data.items.length - 1} />
+          <YStack gap={toPx(XP_TOKENS['space-12'])} opacity={query.isFetching && !loadingMore ? 0.6 : 1}>
+            <YStack gap={toPx(XP_TOKENS['space-12'])}>
+              {rows.map((row) => (
+                <ActivityRow key={row.id} row={row} />
               ))}
             </YStack>
-            {data.total > (data.limit ?? WALLET_ACTIVITY_PAGE_SIZE) ? (
-              <Pagination
-                page={data.page}
-                limit={data.limit ?? WALLET_ACTIVITY_PAGE_SIZE}
-                total={data.total}
-                onChange={(page) => onFiltersChange({ page })}
-              />
-            ) : null}
+            {loadingMore ? <MiniRowsSkeleton rows={2} /> : null}
+            {/* Dòng tổng giữa, cuối danh sách khi đã tải hết - cùng khuôn "N chuyến" của tab Tổng hợp. */}
+            {hasNext ? null : (
+              <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+                {t('activity.totalLabel', { count: data.total })}
+              </Text>
+            )}
           </YStack>
         )
       ) : null}
@@ -153,7 +172,7 @@ function isVoidWithdrawal(row: WalletActivity): boolean {
   );
 }
 
-function ActivityRowImpl({ row, last }: { row: WalletActivity; last: boolean }) {
+function ActivityRowImpl({ row }: { row: WalletActivity }) {
   const colors = useColors();
   const t = useTranslations('Wallet');
   const tCommon = useTranslations('Common');
@@ -198,20 +217,23 @@ function ActivityRowImpl({ row, last }: { row: WalletActivity; last: boolean }) 
     : `${negative ? '-' : '+'}${fmt.money(absoluteMoney(row.amount) ?? '0')}`;
 
   /*
-   * Figma "Transaction" `24612:145588`: hàng 1 mã (14 semibold) + viên trạng thái; hàng 2 loại
-   * giao dịch (14 medium) + giờ (12 `text/gray/low`) bên trái, số tiền (14 medium, màu chữ thường,
-   * có dấu) + "SD: …" bên phải. Kẻ đáy `stroke/gray-low200`, đệm đáy 8, khe 8. Các dòng phụ (ngân
-   * hàng, lý do, hạn chuyển) và nút huỷ lệnh rút giữ ở dưới (người dùng chốt 25/11/2026).
+   * Một giao dịch = ba hàng gọn, cùng khuôn thẻ chuyến của tab Tổng hợp:
+   *  1. mã (14 semibold) + viên trạng thái NGAY SAU mã; bên phải là link "Huỷ yêu cầu" (đỏ, nhỏ) khi
+   *     lệnh rút còn huỷ được - không còn nút viền to đứng riêng một hàng.
+   *  2. loại giao dịch (14 medium) · số tiền có dấu (14 medium) bên phải.
+   *  3. giờ + ngân hàng nhận (12 `text/gray/low`) · "SD: …" bên phải.
+   * Dòng lý do / hạn chuyển (nếu có) đứng cuối. Kẻ đáy `stroke/gray-low200`, khe 4.
    */
+  const meta = w
+    ? `${fmt.dateTime(row.occurredAt)}${LIST_SEPARATOR}${bankDisplayName(w.bankCode)} ${w.accountNumberMasked}`
+    : fmt.dateTime(row.occurredAt);
   return (
-    <YStack
-      gap={space.sm}
-      pb={space.sm}
-      {...(last ? {} : { borderBottomWidth: 1, borderColor: colors.border })}
-    >
+    /* Thẻ trắng viền bo 12, đệm 16 - CÙNG khung thẻ chuyến của tab Tổng hợp giao dịch. */
+    <YStack bg={colors.surface} bw={1} bc={colors.border} br={radius.control} p={space.md} gap={space.xs}>
       <XStack ai="center" jc="space-between" gap={space.sm}>
         <Text
           f={1}
+          minWidth={0}
           col={colors.text}
           fos={typeScale.body.fontSize}
           lh={typeScale.body.lineHeight}
@@ -226,78 +248,87 @@ function ActivityRowImpl({ row, last }: { row: WalletActivity; last: boolean }) 
         >
           {row.code ?? ''}
         </Text>
-        <Pill label={statusLabel} tone={pillToneOfStatusColor(statusColor)} />
+        <Pill size="sm" label={statusLabel} tone={pillToneOfStatusColor(statusColor)} />
+      </XStack>
+
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <Text
+          f={1}
+          minWidth={0}
+          col={colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.medium}
+          numberOfLines={2}
+        >
+          {kind}
+        </Text>
+        <Text
+          col={colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.medium}
+          opacity={muted ? 0.5 : 1}
+        >
+          {amountText}
+        </Text>
       </XStack>
 
       <XStack ai="flex-start" jc="space-between" gap={space.sm}>
-        <YStack f={1} minWidth={0} gap={2}>
-          <Text
-            col={colors.text}
-            fos={typeScale.body.fontSize}
-            lh={typeScale.body.lineHeight}
-            fow={fontWeight.medium}
-            numberOfLines={2}
+        <Text
+          f={1}
+          minWidth={0}
+          col={colors.placeholder}
+          fos={typeScale.label.fontSize}
+          lh={typeScale.label.lineHeight}
+        >
+          {meta}
+        </Text>
+        {/* Chip trạng thái đã sang phải hàng mã - link huỷ lệnh rút đứng cuối hàng giờ. */}
+        {row.cancellable ? (
+          <Pressable
+            onPress={() => setConfirming(true)}
+            disabled={cancel.isPending}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('requests.cancel')}
           >
-            {kind}
-          </Text>
-          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-            {fmt.dateTime(row.occurredAt)}
-          </Text>
-          {w ? (
             <Text
-              col={colors.placeholder}
+              col={colors.danger}
               fos={typeScale.label.fontSize}
               lh={typeScale.label.lineHeight}
-              numberOfLines={1}
+              fow={fontWeight.semibold}
+              opacity={cancel.isPending ? 0.5 : 1}
             >
-              {`${bankDisplayName(w.bankCode)} · ${w.accountNumberMasked}`}
+              {t('requests.cancel')}
             </Text>
-          ) : null}
-        </YStack>
-        <YStack ai="flex-end" gap={2}>
-          <Text
-            col={colors.text}
-            fos={typeScale.body.fontSize}
-            lh={typeScale.body.lineHeight}
-            fow={fontWeight.medium}
-            opacity={muted ? 0.5 : 1}
-          >
-            {amountText}
+          </Pressable>
+        ) : null}
+        {row.balanceAfter == null ? null : (
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            {t('activity.balanceAfter', { amount: fmt.money(row.balanceAfter) })}
           </Text>
-          {row.balanceAfter == null ? null : (
-            <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-              {t('activity.balanceAfter', { amount: fmt.money(row.balanceAfter) })}
-            </Text>
-          )}
-        </YStack>
+        )}
       </XStack>
 
       {detail ? (
-        <Text col={muted ? colors.danger : colors.textMuted} fos={fontSize.label}>
+        <Text
+          col={muted ? colors.danger : colors.textMuted}
+          fos={typeScale.label.fontSize}
+          lh={typeScale.label.lineHeight}
+        >
           {detail}
         </Text>
       ) : null}
 
-      {row.cancellable ? (
-        <XStack jc="flex-end">
-          <Button
-            label={t('requests.cancel')}
-            variant="secondary"
-            size="sm"
-            block={false}
-            loading={cancel.isPending}
-            onPress={() => setConfirming(true)}
-          />
-        </XStack>
-      ) : null}
-
-      <AlertDialog
+      <ConfirmSheet
         open={confirming}
         title={t('requests.cancelConfirm')}
-        message={t('requests.cancelHint')}
+        subtitle={row.code ?? undefined}
+        message={t('requests.cancelAsk')}
         confirmLabel={t('requests.cancel')}
         loading={cancel.isPending}
-        onCancel={() => setConfirming(false)}
+        onClose={() => setConfirming(false)}
         onConfirm={() =>
           cancel.mutate(row.id, {
             onSuccess: () => {

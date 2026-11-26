@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
+import { Pressable } from 'react-native';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
@@ -10,16 +11,29 @@ import { Button } from '@/components/ui/Button';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
+import { FieldAppearanceProvider } from '@/components/ui/Field';
+import { SideCard } from '@/features/bookings/components/BookingDetailSide';
+import { BookingCustomerIdentity } from '@/features/bookings/components/BookingCustomerIdentity';
+import { useBooking } from '@/features/bookings/hooks/use-bookings';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useRecordPayment } from '../hooks/use-settlement';
 import type { RecordPaymentInput } from '../api';
 
 const NOTE_MAX = 500;
+/** Figma "Thu tiền đơn" `24512:134019`: khối cách 16, ô nhập cách 12, nút gợi ý cách 16 / bo 16. */
+const BLOCK_GAP = 16;
+const FIELD_GAP = 12;
+const CHIP_GAP = 16;
+const CHIP_RADIUS = 16;
+const FOOTER_GAP = 12;
+const HALF = 2;
 /** Web `payments/schema.ts` + API `@MaxLength(255)` cho mã tra soát. */
 const REFERENCE_MAX = 255;
 
@@ -87,7 +101,10 @@ export function RecordPaymentSheet({
   kind = PAYMENT_KIND.RENTAL,
   debtAmount,
   counterDue = false,
+  code,
 }: {
+  /** Mã đơn nơi mở đã có - tiêu đề hiện ngay "Thu tiền đơn hàng #mã" trong lúc chờ API. */
+  code?: string;
   open: boolean;
   onClose: () => void;
   bookingId: string;
@@ -102,6 +119,11 @@ export function RecordPaymentSheet({
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.payments');
+  /* Chữ của app theo Figma `24512:133829` (người dùng chốt 26/11/2026) - web giữ chữ của nó. */
+  const tApp = useTranslations('Bookings.payments.partnerApp');
+  /* Thẻ khách đọc chi tiết đơn (thường đã có trong cache của nơi mở tấm). */
+  const bookingQuery = useBooking(bookingId);
+  const booking = bookingQuery.data;
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
@@ -126,7 +148,7 @@ export function RecordPaymentSheet({
    */
   const suggested = Number(debtAmount ?? 0);
 
-  const { control, handleSubmit } = useForm<PaymentFormValues>({
+  const { control, handleSubmit, setValue } = useForm<PaymentFormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
       amount: Number.isFinite(suggested) && suggested > 0 ? suggested : null,
@@ -135,6 +157,15 @@ export function RecordPaymentSheet({
       description: '',
     },
   });
+
+  /* Số đang gõ - cho nhãn nút "Ghi nhận thu x" và câu "Còn nợ sau khi thu". */
+  const typed = useWatch({ control, name: 'amount' });
+  const typedAmount = typeof typed === 'number' && Number.isFinite(typed) && typed > 0 ? typed : null;
+  /* Gợi ý nhanh + số còn lại chỉ có nghĩa với TIỀN THUÊ có trần (cọc không trừ công nợ). */
+  const due = !isDeposit && Number.isFinite(suggested) && suggested > 0 ? suggested : null;
+  const half = due === null ? null : Math.floor(due / HALF);
+  const remaining = due === null ? null : Math.max(0, due - (typedAmount ?? 0));
+  const fill = (value: number) => setValue('amount', value, { shouldValidate: true, shouldDirty: true });
 
   const submit = handleSubmit((values) =>
     record.mutate(
@@ -155,73 +186,195 @@ export function RecordPaymentSheet({
     ),
   );
 
+  const lead = isDeposit ? t('depositLead') : counterDue ? t('counterLead') : t('debtLead');
+
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={isDeposit ? t('recordDepositTitle') : t('recordTitle')}
+      title={
+        isDeposit
+          ? t('recordDepositTitle')
+          : booking?.code ?? code
+            ? tApp('title', { code: (booking?.code ?? code) as string })
+            : t('recordTitle')
+      }
+      subtitle={fmt.date(new Date().toISOString())}
+      chrome="v2"
+      headerDivider
       footer={
-        <Button
-          label={t('recordOk')}
-          loading={record.isPending}
-          onPress={() => void submit()}
-        />
+        // Figma "Footer cố định": "Hủy" viền co vừa chữ · nút vàng mang số đang thu.
+        <XStack gap={FOOTER_GAP}>
+          <YStack flexShrink={0}>
+            <Button label={tApp('cancel')} variant="neutral" block={false} onPress={onClose} />
+          </YStack>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+            <Button
+              label={
+                typedAmount === null
+                  ? t('recordOk')
+                  : tApp('submitAmount', { amount: fmt.money(String(typedAmount)) })
+              }
+              variant="gradient"
+              loading={record.isPending}
+              onPress={() => void submit()}
+            />
+          </YStack>
+        </XStack>
       }
     >
-      {debtAmount ? (
-        <XStack
-          ai="center"
-          jc="space-between"
-          gap={space.sm}
-          p={space.md}
-          br={radius.md}
-          bg={colors.primaryLight}
-        >
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {isDeposit ? t('depositLead') : counterDue ? t('counterLead') : t('debtLead')}:
-          </Text>
-          <Text col={colors.price} fos={fontSize.body} fow={fontWeight.bold}>
-            {fmt.money(debtAmount)}
-          </Text>
-        </XStack>
-      ) : null}
+      <FieldAppearanceProvider value="v2">
+        <YStack gap={BLOCK_GAP}>
+          {/* Figma "Customer Details" `24512:134146`: khách · xe · biển số · còn nợ. */}
+          {booking || debtAmount ? (
+            <SideCard>
+              {booking ? <BookingCustomerIdentity booking={booking} /> : null}
+              {booking ? (
+                <Text fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                  <Text
+                    col={colors.text}
+                    fos={typeScale.body.fontSize}
+                    lh={typeScale.body.lineHeight}
+                    fontFamily={FONT_FAMILY.medium}
+                  >
+                    {booking.vehicleName}
+                  </Text>
+                  {booking.vehiclePlate ? (
+                    <Text
+                      col={colors.textMuted}
+                      fos={typeScale.body.fontSize}
+                      lh={typeScale.body.lineHeight}
+                      fontFamily={FONT_FAMILY.body}
+                    >
+                      {`${LIST_SEPARATOR}${booking.vehiclePlate}`}
+                    </Text>
+                  ) : null}
+                </Text>
+              ) : null}
+              {debtAmount ? (
+                <Text
+                  col={colors.text}
+                  fos={typeScale.title.fontSize}
+                  lh={typeScale.title.lineHeight}
+                  fontFamily={FONT_FAMILY.semibold}
+                >
+                  {tApp('debtLine', { label: lead, amount: fmt.money(debtAmount) })}
+                </Text>
+              ) : null}
+            </SideCard>
+          ) : null}
 
-      {isDeposit ? (
-        /*
-          Nói TRƯỚC khi ghi, không phải sau: chủ xe nhìn công nợ không đổi sau khi thu 5 triệu
-          sẽ tưởng hệ thống nuốt mất tiền.
-        */
-        <YStack bg={colors.infoSurface} p={space.md} br={radius.md} gap={2}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {t('depositNoticeTitle')}
-          </Text>
-          <Text col={colors.text} fos={fontSize.label}>
-            {t('depositNoticeBody')}
+          {isDeposit ? (
+            /*
+              Nói TRƯỚC khi ghi, không phải sau: chủ xe nhìn công nợ không đổi sau khi thu 5 triệu
+              sẽ tưởng hệ thống nuốt mất tiền.
+            */
+            <YStack bg={colors.infoSurface} p={space.md} br={radius.md} gap={2}>
+              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                {t('depositNoticeTitle')}
+              </Text>
+              <Text col={colors.text} fos={fontSize.label}>
+                {t('depositNoticeBody')}
+              </Text>
+            </YStack>
+          ) : null}
+
+          <YStack gap={FIELD_GAP}>
+            <YStack gap={space.sm}>
+              <MoneyField control={control} name="amount" label={t('amountLabel')} required />
+              {due !== null && half !== null ? (
+                // Gợi ý nhanh chỉ ĐIỀN ô; trần thu vẫn do schema chặn như cũ.
+                <XStack gap={CHIP_GAP} flexWrap="wrap" rowGap={space.sm}>
+                  <FillChip
+                    label={tApp('fillFull', { amount: fmt.money(String(due)) })}
+                    onPress={() => fill(due)}
+                  />
+                  {half > 0 ? (
+                    <FillChip
+                      label={tApp('fillHalf', { amount: fmt.money(String(half)) })}
+                      onPress={() => fill(half)}
+                    />
+                  ) : null}
+                </XStack>
+              ) : null}
+            </YStack>
+
+            {/* Hình thức giữ ô chọn như web (người dùng chốt 26/11/2026) - đủ 5 giá trị. */}
+            <SelectField
+              control={control}
+              name="method"
+              label={t('methodLabel')}
+              options={PAYMENT_METHOD_VALUES.map((value) => ({
+                value,
+                label: domainLabel('paymentMethod', value),
+              }))}
+              required
+            />
+
+            <TextField
+              control={control}
+              name="referenceCode"
+              label={tApp('referenceLabel')}
+              placeholder={tApp('referencePlaceholder')}
+            />
+
+            <TextField
+              multiline
+              scrollable
+              rows={3}
+              control={control}
+              name="description"
+              label={tApp('descriptionLabel')}
+              placeholder={tApp('descriptionPlaceholder')}
+            />
+
+            {remaining !== null ? (
+              <Text
+                col={colors.textPlaceholder}
+                fos={typeScale.body.fontSize}
+                lh={typeScale.body.lineHeight}
+                fontStyle="italic"
+              >
+                {tApp.rich('remainingAfter', {
+                  amount: fmt.money(String(remaining)),
+                  b: (chunks) => (
+                    <Text
+                      col={colors.textPlaceholder}
+                      fos={typeScale.body.fontSize}
+                      lh={typeScale.body.lineHeight}
+                      fontStyle="italic"
+                      fontFamily={FONT_FAMILY.medium}
+                    >
+                      {chunks}
+                    </Text>
+                  ),
+                })}
+              </Text>
+            ) : null}
+          </YStack>
+        </YStack>
+      </FieldAppearanceProvider>
+    </BottomSheet>
+  );
+}
+
+/** Figma "_Badge" gợi ý: nền `bg/gray-100`, bo 16, đệm 8/2, chữ 14/20 đậm vừa `text/gray/medium`. */
+function FillChip({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={space.xs}>
+      {({ pressed }) => (
+        <YStack px={space.sm} py={2} br={CHIP_RADIUS} bg={colors.surfaceMuted} opacity={pressed ? 0.6 : 1}>
+          <Text
+            col={colors.textMuted}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fontFamily={FONT_FAMILY.medium}
+          >
+            {label}
           </Text>
         </YStack>
-      ) : null}
-
-      <MoneyField control={control} name="amount" label={t('amountLabel')} required />
-
-      <SelectField
-        control={control}
-        name="method"
-        label={t('methodLabel')}
-        options={PAYMENT_METHOD_VALUES.map((value) => ({
-          value,
-          label: domainLabel('paymentMethod', value),
-        }))}
-        required
-      />
-
-      <TextField
-        control={control}
-        name="referenceCode"
-        label={t('referenceLabel')}
-        placeholder={t('referencePlaceholder')}
-      />
-
-      <TextField multiline scrollable rows={3} control={control} name="description" label={t('descriptionLabel')} />
-    </BottomSheet>
+      )}
+    </Pressable>
   );
 }

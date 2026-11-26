@@ -11,6 +11,7 @@ import {
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { FitOneLineText } from '@/components/ui/FitOneLineText';
 import { Callout } from '@/components/ui/Callout';
 import { TextField } from '@/components/ui/TextField';
 import { OtpCodeInput, OTP_LENGTH } from '@/features/phone-verification/components/OtpCodeInput';
@@ -56,6 +57,7 @@ interface Props {
 const STEP_BAR = 4;
 /** Figma `24231:109459` "Profile Settings": khối "được bảo mật" đệm 12, các dòng cách 8. */
 const SECURE_PAD = 12;
+const NO_SHRINK = { flexShrink: 0 } as const;
 
 /**
  * Đổi, thêm hoặc xác minh email / số điện thoại — MỘT tấm cho cả hai kênh. Bản native của web
@@ -304,37 +306,55 @@ export function ContactVerifySheet({
             ) : null}
 
             <XStack ai="center" jc="space-between" gap={space.sm}>
-              <Text
-                f={1}
-                minWidth={0}
-                col={colors.textMuted}
-                fos={typeScale.body.fontSize}
-                lh={typeScale.body.lineHeight}
-              >
-                {`${t('noCode')} `}
-                {flow.cooldown > 0 ? (
-                  t.rich('resendAfter', { time: formatOtpCooldown(flow.cooldown), strong })
-                ) : (
-                  <Text
-                    col={colors.textMuted}
-                    fos={typeScale.body.fontSize}
-                    lh={typeScale.body.lineHeight}
-                    fontFamily={FONT_FAMILY.medium}
-                    fow={fontWeight.medium}
-                    textDecorationLine="underline"
-                    accessibilityRole="button"
-                    onPress={flow.sending ? undefined : () => flow.send(flow.sentTo)}
-                  >
-                    {t('resend')}
-                  </Text>
-                )}
-              </Text>
+              {/* Figma `24231:109924` là MỘT dòng (whitespace-nowrap): thiếu chỗ thì co chữ, không xuống hàng. */}
+              <YStack f={1} minWidth={0}>
+                <FitOneLineText
+                  col={colors.textMuted}
+                  fontSize={typeScale.body.fontSize}
+                  lineHeight={typeScale.body.lineHeight}
+                >
+                  {(size) => (
+                    <>
+                      {`${t('noCode')} `}
+                      {flow.cooldown > 0 ? (
+                        t.rich('resendAfter', {
+                          time: formatOtpCooldown(flow.cooldown),
+                          strong: (chunks) => (
+                            <Text
+                              col={colors.text}
+                              fos={size}
+                              fontFamily={FONT_FAMILY.semibold}
+                              fow={fontWeight.semibold}
+                            >
+                              {chunks}
+                            </Text>
+                          ),
+                        })
+                      ) : (
+                        <Text
+                          col={colors.textMuted}
+                          fos={size}
+                          fontFamily={FONT_FAMILY.medium}
+                          fow={fontWeight.medium}
+                          textDecorationLine="underline"
+                          accessibilityRole="button"
+                          onPress={flow.sending ? undefined : () => flow.send(flow.sentTo)}
+                        >
+                          {t('resend')}
+                        </Text>
+                      )}
+                    </>
+                  )}
+                </FitOneLineText>
+              </YStack>
               <Pressable
                 onPress={flow.editIdentifier}
                 accessibilityRole="button"
                 hitSlop={space.sm}
+                style={NO_SHRINK}
               >
                 <Text
+                  numberOfLines={1}
                   col={colors.brandLink}
                   fos={typeScale.title.fontSize}
                   lh={typeScale.title.lineHeight}

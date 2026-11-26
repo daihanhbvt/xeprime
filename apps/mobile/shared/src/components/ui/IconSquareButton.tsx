@@ -6,11 +6,21 @@ import { themed, useColors } from '@/theme/ThemeProvider';
 import { gradients, radius, sizing } from '@/theme/tokens';
 import { CountBadge } from './CountBadge';
 
-export type IconSquareTone = 'outline' | 'brand' | 'zalo';
-export type IconSquareSize = 'md' | 'lg';
+export type IconSquareTone = 'outline' | 'brand' | 'zalo' | 'muted' | 'dangerSoft';
+export type IconSquareSize = 'sm' | 'md' | 'card' | 'lg';
 
-/** Figma "Button" icon-only v2: ô 36 (đệm 8 · icon 20), bo 12; `lg` 44 cho chỗ cần ô chạm lớn. */
-const BOX: Readonly<Record<IconSquareSize, number>> = { md: 36, lg: 44 };
+/**
+ * Figma "Button" icon-only v2: ô 36 (đệm 8 · icon 20), bo 12; `lg` 44 cho chỗ cần ô chạm lớn;
+ * `sm` 32 bo 8 (icon 16) - nút sửa/xoá trên dòng (Danh mục thu/chi `24512:129056`); `card` 40
+ * (đệm 10 · icon 20) - nút góc đầu thẻ của Quản lý gian hàng (`24231:113348`).
+ */
+const BOX: Readonly<Record<IconSquareSize, number>> = { sm: 32, md: 36, card: 40, lg: 44 };
+const RADIUS: Readonly<Record<IconSquareSize, number>> = {
+  sm: radius.thumb,
+  md: radius.control,
+  card: radius.control,
+  lg: radius.control,
+};
 
 const useSkin = themed<Record<IconSquareTone, { bg: string; border: string }>>((colors) => ({
   /** Nền trắng, viền `stroke/gray-low300` (nút "Đơn đã kết thúc", Nhắn tin, Gọi). */
@@ -19,6 +29,13 @@ const useSkin = themed<Record<IconSquareTone, { bg: string; border: string }>>((
   brand: { bg: colors.primary, border: colors.primaryHover },
   /** Nút Zalo: nền `information-low`, viền `information-300`. */
   zalo: { bg: colors.infoLow, border: colors.infoBorder },
+  /**
+   * Nút sửa trên dòng: nền `bg/gray-50`. Figma không vẽ viền; viền `stroke/gray-low200` theo luật
+   * "nút có nền luôn có viền" của app.
+   */
+  muted: { bg: colors.background, border: colors.border },
+  /** Nút xoá trên dòng: nền `status/error-low`, viền `status/error-300` (cùng luật trên). */
+  dangerSoft: { bg: colors.dangerSurface, border: colors.dangerBorder },
 }));
 
 /**
@@ -70,7 +87,7 @@ export const IconSquareButton = memo(function IconSquareButton({
         h={box}
         ai="center"
         jc="center"
-        br={radius.control}
+        br={RADIUS[size]}
         bw={1}
         bc={skin.border}
         bg={skin.bg}

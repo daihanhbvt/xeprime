@@ -356,6 +356,8 @@ export const XP_TOKENS = {
   // Nút chính v2 ("Tìm kiếm", "Trở thành chủ xe", "Đăng ký ngay"…) - ADR 0062 Q1 đã có điểm màu.
   'gradient-primary': 'linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%)',
   'gradient-special': 'linear-gradient(90deg, #e9c336 0%, #f0d073 48.077%, #f9ce31 100%)',
+  // Viên vai "Chủ gian hàng" (Figma Partner `24231:113146`) - cùng dải ở hai giao diện.
+  'gradient-role-dark': 'linear-gradient(106deg, #171209 1.46%, #242426 53.1%, #000000 100%)',
   // Chữ nhấn gradient: hero ("Trong tầm tay bạn!"), vàng đậm (VF3+, "ĐỐI TÁC ĐỘC QUYỀN"),
   // vàng nhạt (badge "% off", "20%"), tên điểm đến.
   'gradient-text-hero': 'linear-gradient(90deg, #eeb924 0%, #ba8b26 100%)',

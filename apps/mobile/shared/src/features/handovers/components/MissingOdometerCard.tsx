@@ -111,8 +111,8 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
         </YStack>
 
         {canResolve ? (
-          <YStack gap={12}>
-            <YStack h={1} bg={colors.border} />
+          /* Chân thẻ: vạch mảnh, nút trải hết bề ngang như thẻ bảo dưỡng. */
+          <YStack pt={12} borderTopWidth={1} borderTopColor={colors.borderSubtle}>
             <Button label={t('fix')} variant="gradient" size="compact" onPress={() => onFix(item)} />
           </YStack>
         ) : (

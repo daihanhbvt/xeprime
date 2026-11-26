@@ -4,11 +4,19 @@ import { Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { IS_PARTNER_APP } from '@/lib/app-kind';
 import { Button } from './Button';
+import { ConfirmSheet } from './ConfirmSheet';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { layout, modalColumn } from '@/theme/layout';
 import { useAppStyles } from '@/theme/styles';
 import { useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+
+/** Dấu ✕ đóng hộp - cùng cỡ dấu ✕ của tấm v2 (`BottomSheet` `V2_CLOSE`). */
+const CLOSE_ICON = 24;
+/** Tổng độ dài hai nhãn không quá ngưỡng này thì hai nút nằm MỘT hàng. */
+const ROW_LABEL_LENGTH = 30;
 
 /**
  * Hộp XÁC NHẬN của app — thay cho `Alert.alert` của hệ điều hành.
@@ -37,6 +45,7 @@ export function AlertDialog({
   destructive = false,
   loading = false,
   actionsRow = false,
+  dismissIcon = false,
   onConfirm,
   onCancel,
 }: {
@@ -58,6 +67,11 @@ export function AlertDialog({
   loading?: boolean;
   /** Hai nút CÙNG MỘT HÀNG (Huỷ trái · hành động phải) thay cho xếp dọc. */
   actionsRow?: boolean;
+  /**
+   * Chỉ MỘT nút hành động, đóng hộp bằng dấu ✕ ở góc tiêu đề (vd "Hủy lịch" bảo dưỡng - người dùng chốt
+   * 26/11/2026): bỏ nút "Huỷ" vốn đọc gần giống nút hành động.
+   */
+  dismissIcon?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -66,6 +80,43 @@ export function AlertDialog({
   const floatingBorder = useFloatingSurfaceBorder();
   const t = useTranslations('Common.actions');
   const insets = useSafeAreaInsets();
+
+  /*
+   * App Partner: hộp xác nhận là TẤM `ConfirmSheet` (người dùng 26/11/2026: popup có viền - "Huỷ" viền
+   * trái + nút chính phải, một hàng khi nhãn ngắn, xếp dọc khi dài). Một chỗ này đổi cho MỌI nơi gọi
+   * `AlertDialog`. Riêng kiểu một nút + ✕ (`dismissIcon`) giữ hộp cũ vì ConfirmSheet luôn có "Huỷ".
+   */
+  if (IS_PARTNER_APP && !dismissIcon) {
+    return (
+      <ConfirmSheet
+        open={open}
+        title={title}
+        confirmLabel={confirmLabel}
+        onConfirm={onConfirm}
+        onClose={onCancel}
+        tone={destructive ? 'danger' : 'primary'}
+        loading={loading}
+        {...(cancelLabel ? { cancelLabel } : {})}
+        {...(message || body
+          ? {
+              message: (
+                <YStack gap={space.xs}>
+                  {message ? (
+                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                      {message}
+                    </Text>
+                  ) : null}
+                  {body}
+                </YStack>
+              ),
+            }
+          : {})}
+      />
+    );
+  }
+
+  // App khách: hai nút một hàng khi nhãn ngắn; "Huỷ" luôn có viền (không còn nút ghost).
+  const rowLayout = actionsRow || (cancelLabel ?? t('cancel')).length + confirmLabel.length <= ROW_LABEL_LENGTH;
 
   return (
     <Modal
@@ -100,9 +151,22 @@ export function AlertDialog({
           accessibilityRole="alert"
         >
           <YStack gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-              {title}
-            </Text>
+            <XStack ai="flex-start" gap={space.sm}>
+              <Text f={1} col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+                {title}
+              </Text>
+              {dismissIcon ? (
+                <Pressable
+                  onPress={onCancel}
+                  disabled={loading}
+                  hitSlop={space.sm}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('close')}
+                >
+                  <LineIcon name="close" size={CLOSE_ICON} color={colors.placeholder} />
+                </Pressable>
+              ) : null}
+            </XStack>
             {message ? (
               <Text col={colors.textMuted} fos={fontSize.bodySm}>
                 {message}
@@ -111,7 +175,14 @@ export function AlertDialog({
             {body}
           </YStack>
 
-          {actionsRow ? (
+          {dismissIcon ? (
+            <Button
+              label={confirmLabel}
+              variant={destructive ? 'danger' : 'primary'}
+              loading={loading}
+              onPress={onConfirm}
+            />
+          ) : rowLayout ? (
             <XStack gap={space.sm}>
               <YStack f={1} flexBasis={0}>
                 <Button
@@ -138,10 +209,9 @@ export function AlertDialog({
                 loading={loading}
                 onPress={onConfirm}
               />
-              {/* Huỷ ở DƯỚI và không viền: nó là lối thoát, không phải một lựa chọn ngang hàng. */}
               <Button
                 label={cancelLabel ?? t('cancel')}
-                variant="ghost"
+                variant="secondary"
                 disabled={loading}
                 onPress={onCancel}
               />

@@ -58,6 +58,7 @@
     "cancel": "Huỷ yêu cầu",
     "cancelConfirm": "Huỷ yêu cầu rút này?",
     "cancelHint": "Tiền quay lại số dư rút được ngay.",
+    "cancelAsk": "Bạn có chắc chắn muốn huỷ yêu cầu rút tiền này không?",
     "reversed": "Chuyển không thành công: {reason}. Tiền đã về lại số dư - kiểm tra tài khoản nhận rồi tạo lệnh mới."
   },
   "admin": {
@@ -145,7 +146,7 @@
     "loadError": "Không tải được bảng tổng hợp.",
     "totalLabel": "{count, plural, other {# chuyến}}",
     "stats": {
-      "rating": "{count, plural, =0 {Chưa có đánh giá} other {Đánh giá sao (# lượt)}}",
+      "rating": "Đánh giá ({count} lượt)",
       "trips": "Chuyến thành công",
       "tripsValue": "{count, plural, other {# chuyến}}",
       "response": "Tỉ lệ phản hồi",

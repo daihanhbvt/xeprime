@@ -98,6 +98,16 @@ export function requiredVehicleImageTypes(vehicleType: string): readonly Vehicle
 }
 
 /**
+ * Các góc ảnh được TRƯNG ở thư viện ảnh của xe (web + app, 26/11/2026): ô tô 5 góc, xe máy 2 góc
+ * cộng mặt đồng hồ của dữ liệu cũ (nếu còn). Ảnh "Ảnh khác" và mọi ảnh không thuộc góc nào (vd. cà
+ * vẹt) KHÔNG vào thư viện.
+ */
+export function vehicleGallerySlotTypes(vehicleType: string): readonly VehicleImageType[] {
+  const required = requiredVehicleImageTypes(vehicleType);
+  return vehicleType === 'motorbike' ? [...required, VEHICLE_IMAGE_TYPE.DASHBOARD] : required;
+}
+
+/**
  * Số ảnh TỐI THIỂU của một loại xe — chỉ là số góc bắt buộc, không phải một con số thứ hai.
  *
  * Trước 07/10/2026 đây là hằng `VEHICLE_PUBLIC_MIN_IMAGES = 4` cho mọi loại xe, nên một chiếc xe

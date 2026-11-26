@@ -24,6 +24,9 @@ export const RECEIPT_PERIOD = {
 
 export type ReceiptPeriod = (typeof RECEIPT_PERIOD)[keyof typeof RECEIPT_PERIOD];
 
+/** Kỳ mặc định khi mở sổ Thu-Chi không kèm bộ lọc (chốt 26/11/2026) - web và app CÙNG một giá trị. */
+export const RECEIPT_DEFAULT_PERIOD: ReceiptPeriod = RECEIPT_PERIOD.THIS_MONTH;
+
 /** Thứ tự hiện trên thanh kỳ xem nhanh — gần nhất trước. */
 export const RECEIPT_PERIOD_VALUES = [
   RECEIPT_PERIOD.TODAY,

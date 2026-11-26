@@ -115,7 +115,7 @@ export function FinanceOverviewCards({
             <MiniTile
               label={t('cost')}
               value={fmt.money(data.cost)}
-              bg={colors.surfaceMuted}
+              bg={colors.background}
               onPress={openLedger({
                 type: RECEIPT_TYPE.EXPENSE,
                 sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,

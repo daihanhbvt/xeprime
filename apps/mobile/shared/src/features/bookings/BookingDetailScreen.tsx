@@ -6,7 +6,6 @@ import { ActionSheetButtons, type SheetAction } from '@/components/ui/ActionShee
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { CardTitle } from '@/components/ui/CardTitle';
-import { Ionicons } from '@/components/icons/Ionicons';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { Linking, Pressable, type ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -21,6 +20,8 @@ import {
   DRIVER_ASSIGNMENT_STATUS_META,
   DRIVER_INCIDENT_LEVEL,
   DRIVER_MISSING_ALERT_LEAD_MINUTES,
+  DRIVER_LICENCE_STATE,
+  DRIVER_ROSTER_KIND,
   DRIVER_SOURCE,
   isDriverMissingAlertDue,
   isDriverReassignable,
@@ -68,8 +69,10 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useNow } from '@/hooks/use-now';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
-import { AssignDriverSheet } from './components/AssignDriverSheet';
+import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
+import { AssignDriverSheet, type DriverCandidate } from './components/AssignDriverSheet';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
+import { Avatar } from '@/components/ui/Avatar';
 import { BookingDriverHistory } from './components/BookingDriverHistory';
 import { CustomerReturnReport } from './components/CustomerReturnReport';
 import {
@@ -77,6 +80,7 @@ import {
   PaymentSideCard,
   VehicleSideCard,
 } from './components/BookingDetailSide';
+import { CollateralSideCard } from './components/CollateralSideCard';
 import { HandoverPhotosCard } from './components/HandoverPhotosCard';
 import { OwnerPayoutTable } from './components/OwnerPayoutTable';
 import { SectionCard } from '@/components/ui/SectionCard';
@@ -269,6 +273,8 @@ function BookingDetailBody({
       : null,
   );
   const [assigningDriver, setAssigningDriver] = useState(false);
+  /** Tài xế NỘI BỘ vừa chọn — chờ xác nhận rồi gán thẳng (ADR 0108, không tiền công). */
+  const [pickedInternal, setPickedInternal] = useState<DriverCandidate | null>(null);
   const [editingFee, setEditingFee] = useState(false);
   const [editing, setEditing] = useState(false);
   const [detailTab, setDetailTab] = useState<'prep' | 'trip' | 'extra'>('prep');
@@ -287,7 +293,11 @@ function BookingDetailBody({
   const tWage = useTranslations('Drivers.wage');
   const [confirmingUnassign, setConfirmingUnassign] = useState(false);
   // Tài xế vừa chọn ở bộ chọn — chờ nhập tiền công trong tấm gán (ADR 0075).
-  const [pickedDriver, setPickedDriver] = useState<{ id: string; name: string } | null>(null);
+  const [pickedDriver, setPickedDriver] = useState<{
+    id: string;
+    name: string;
+    licenceState: string | null;
+  } | null>(null);
   const [editingWage, setEditingWage] = useState<BookingDriverHistoryItem | null>(null);
   // Lối "Huỷ chuyến do thiếu tài xế" (ADR 0074) mở tấm huỷ với nhóm lý do chọn sẵn.
   const [cancelPreset, setCancelPreset] = useState<CancellationReasonCategory | undefined>();
@@ -346,6 +356,8 @@ function BookingDetailBody({
   const canAssignDriver = canWriteDriver && permissions.has(PERMISSION.DRIVER_VIEW);
   const driver = booking.driver ?? null;
   const isExternalDriver = driver?.source === DRIVER_SOURCE.EXTERNAL;
+  // Tài xế nội bộ (ADR 0108): đã nhận ngay như tài xế ngoài hệ thống, nhưng chọn từ danh bạ.
+  const isInternalDriver = driver?.source === DRIVER_SOURCE.INTERNAL;
   const driverIncident = booking.driverIncident ?? null;
   const canCancelBooking = canUpdate && canTransitionBooking(status, BOOKING_STATUS.CANCELLED);
   // Thẻ sự cố đã nói việc cần làm — không chồng thêm cảnh báo "sắp tới giờ chưa có tài xế".
@@ -535,23 +547,41 @@ function BookingDetailBody({
                 ) : null}
                 {booking.driver ? (
                   <XStack ai="center" gap={space.sm} flexWrap="wrap">
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={iconSize.lg}
-                      color={colors.textMuted}
-                    />
+                    {/* Ảnh tài khoản (liên kết) / ảnh danh bạ (nội bộ) — web `BookingDriverSection`. */}
+                    <Avatar name={booking.driver.name} url={booking.driver.avatarUrl ?? null} size={36} />
                     <YStack f={1} gap={2} minWidth={0}>
                       <XStack ai="center" gap={space.xs} flexWrap="wrap">
                         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
                           {booking.driver.name}
                         </Text>
-                        {isExternalDriver ? (
+                        {isInternalDriver || isExternalDriver ? (
                           <StatusBadge
-                            label={tDriver('externalTag')}
+                            label={tDriver(isInternalDriver ? 'internalTag' : 'externalTag')}
                             color={STATUS_COLOR.NEUTRAL}
                             size="sm"
                           />
                         ) : (
+                          <>
+                          {/* Bằng lái của tài xế liên kết (web `SourceBadge`) — đối chiếu lúc giao xe. */}
+                          {booking.driver.licence ? (
+                            <StatusBadge
+                              size="sm"
+                              color={
+                                booking.driver.licence.state === DRIVER_LICENCE_STATE.VERIFIED
+                                  ? STATUS_COLOR.SUCCESS
+                                  : STATUS_COLOR.DANGER
+                              }
+                              label={
+                                booking.driver.licence.state === DRIVER_LICENCE_STATE.VERIFIED
+                                  ? booking.driver.licence.classes.length > 0
+                                    ? tDriver('card.licence', {
+                                        classes: booking.driver.licence.classes.join(', '),
+                                      })
+                                    : tDriver('card.licenceVerified')
+                                  : tDriver('card.licenceUnverified')
+                              }
+                            />
+                          ) : null}
                           <StatusBadge
                             label={domainLabel(
                               'driverAssignmentStatus',
@@ -563,6 +593,7 @@ function BookingDetailBody({
                             }
                             size="sm"
                           />
+                          </>
                         )}
                       </XStack>
                       {booking.driver.phone ? (
@@ -580,7 +611,7 @@ function BookingDetailBody({
                         </Pressable>
                       ) : null}
                       <Text col={colors.textMuted} fos={fontSize.label}>
-                        {isExternalDriver
+                        {isExternalDriver || isInternalDriver
                           ? tDriver('externalSetAt', {
                               time: fmt.dateTime(booking.driver.assignedAt),
                             })
@@ -603,7 +634,11 @@ function BookingDetailBody({
                           {tDriver('externalLegacy')}
                         </Text>
                       ) : null}
-                      {openAssignment ? (
+                      {isInternalDriver ? (
+                        <Text col={colors.textMuted} fos={fontSize.label}>
+                          {tDriver('card.internalNoWage')}
+                        </Text>
+                      ) : openAssignment ? (
                         <DriverWageInfo
                           wage={openAssignment.wage}
                           canEdit={canUpdate}
@@ -692,6 +727,9 @@ function BookingDetailBody({
                 : undefined
             }
           />
+
+          {/* Cọc tiền + tài sản thế chấp theo đơn (ADR 0109) — tự ẩn khi không có gì để giữ. */}
+          <CollateralSideCard booking={booking} />
 
           <PaymentSideCard
             booking={booking}
@@ -805,10 +843,46 @@ function BookingDetailBody({
         onClose={() => setAssigningDriver(false)}
         booking={booking}
         pending={assignDriver.isPending}
-        onSelect={(driverId, name) => {
-          // Gán ai cũng qua tấm gán KÈM tiền công (ADR 0075) — như hộp gán của web.
+        onSelect={(candidate) => {
           setAssigningDriver(false);
-          setPickedDriver({ id: driverId, name });
+          if (candidate.kind === DRIVER_ROSTER_KIND.INTERNAL) {
+            setPickedInternal(candidate);
+            return;
+          }
+          // Tài xế liên kết qua tấm gán KÈM tiền công (ADR 0075) — như hộp gán của web.
+          setPickedDriver({
+            id: candidate.id,
+            name: candidate.name,
+            licenceState: candidate.licenceState,
+          });
+        }}
+      />
+
+      {/* Tài xế nội bộ: gán thẳng, coi như đã nhận, không tiền công (web `ChangeDriverDialog`). */}
+      <ConfirmSheet
+        open={pickedInternal !== null}
+        title={booking.driver ? tDriver('picker.confirmChange') : tDriver('picker.confirmAssign')}
+        {...(pickedInternal
+          ? { subtitle: `${pickedInternal.name}${LIST_SEPARATOR}${pickedInternal.phone}` }
+          : {})}
+        message={tDriver('picker.internalNote')}
+        confirmLabel={booking.driver ? tDriver('picker.confirmChange') : tDriver('picker.confirmAssign')}
+        tone="primary"
+        loading={assignDriver.isPending}
+        onClose={() => setPickedInternal(null)}
+        onConfirm={() => {
+          const chosen = pickedInternal;
+          if (!chosen || assignDriver.isPending) return;
+          assignDriver.mutate(
+            { internalDriverId: chosen.id },
+            {
+              onSuccess: () => {
+                toast.showSuccess(tDriver('internalAssigned'));
+                setPickedInternal(null);
+              },
+              onError: (err) => toast.showError(errorMessage(err)),
+            },
+          );
         }}
       />
 
@@ -817,6 +891,7 @@ function BookingDetailBody({
         <AssignDriverWageSheet
           bookingId={booking.id}
           driver={pickedDriver}
+          pickupAt={booking.pickupAt}
           onClose={() => setPickedDriver(null)}
           onAssigned={() => setPickedDriver(null)}
         />

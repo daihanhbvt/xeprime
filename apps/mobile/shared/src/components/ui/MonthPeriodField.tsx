@@ -8,6 +8,7 @@ import { useTranslations } from 'use-intl';
 import { dayjs, nowInAppTz, type Dayjs } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
+import { SelectTrigger } from './SelectTrigger';
 import { BottomSheet } from './BottomSheet';
 import { MenuOption, MenuOptionList } from './MenuOption';
 import { IconButton } from './IconButton';
@@ -87,7 +88,7 @@ export function MonthPeriodField({
    * Partner-XePrime "Input - Select" `24228:102418` của trang Quản lý ví).
    * `chip` - viên nhỏ nền xám bo 8, chữ 12 + mũi tên 12 (Figma Chi tiết tài xế `24512:119081`); chữ là `display`.
    */
-  variant?: 'field' | 'stepper' | 'compact' | 'text' | 'chip';
+  variant?: 'field' | 'stepper' | 'compact' | 'text' | 'select' | 'chip';
   /**
    * Chữ hiển thị của biến thể `text` - chữ 14 mờ đứng cạnh tiêu đề khối ("Tháng 11" của Figma
    * Tổng quan doanh thu `24228:99210`); nơi gọi tự dựng câu vì cách gọi kỳ thuộc về khối đó.
@@ -157,6 +158,37 @@ export function MonthPeriodField({
             </Text>
           )}
         </Pressable>
+        <BottomSheet open={picking} onClose={() => setPicking(false)} title={label} chrome="v2" headerDivider>
+          <MenuOptionList>
+            {options.map((option) => (
+              <MenuOption
+                key={option.value}
+                label={option.label}
+                selected={option.value === value}
+                onPress={() => {
+                  onChange(option.value);
+                  setPicking(false);
+                }}
+              />
+            ))}
+          </MenuOptionList>
+        </BottomSheet>
+      </>
+    );
+  }
+
+  if (variant === 'select') {
+    // Ô chọn tháng như web (`DatePicker picker="month"` của thẻ thuế, ≤640 rộng hết khổ): chữ `display`
+    // + icon lịch "Calender 2", cùng ô "Input - Select" với các ô lọc khác của app (người dùng 26/11/2026).
+    const shown = display ?? value;
+    return (
+      <>
+        <SelectTrigger
+          label={shown}
+          icon="calendar"
+          accessibilityLabel={label + ': ' + shown}
+          onPress={() => setPicking(true)}
+        />
         <BottomSheet open={picking} onClose={() => setPicking(false)} title={label} chrome="v2" headerDivider>
           <MenuOptionList>
             {options.map((option) => (

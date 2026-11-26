@@ -1,38 +1,61 @@
 import { Ionicons } from '@/components/icons/Ionicons';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { STATUS_COLOR } from '@xeprime/types';
+import {
+  DRIVER_LICENCE_STATE,
+  DRIVER_ROSTER_KIND,
+  DRIVER_SOURCE,
+  PERMISSION,
+  STATUS_COLOR,
+  type DriverRosterKind,
+} from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
+import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
+import { Chip } from '@/components/ui/Chip';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { DriverLicenceStateBadge } from '@/features/drivers/components/DriverLicenceStateBadge';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { InternalDriverFormSheet } from '@/features/drivers/components/InternalDriverFormSheet';
+import { useAssignableInternalDrivers } from '@/features/drivers/hooks/use-internal-drivers';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useAssignableDrivers } from '../hooks/use-bookings';
-import type { AssignableDriver, BookingDetail } from '../api';
+import type { BookingDetail } from '../api';
 
-/** Dưới ngưỡng này thì cả danh sách vừa một màn — ô tìm chỉ tổ thêm một bước. */
-const SEARCH_THRESHOLD = 5;
+const ALL = 'all';
+const AVAILABILITY = { FREE: 'free', BUSY: 'busy' } as const;
+type Availability = (typeof AVAILABILITY)[keyof typeof AVAILABILITY] | typeof ALL;
+
+/** Một ứng viên của bộ chọn — tài xế liên kết hoặc tài xế nội bộ (web `ChangeDriverDialog.Candidate`). */
+export interface DriverCandidate {
+  kind: DriverRosterKind;
+  id: string;
+  name: string;
+  phone: string;
+  avatarUrl: string | null;
+  busy: boolean;
+  driverType: string | null;
+  licenceState: string | null;
+  licenceClasses: string[];
+  expiredCount: number;
+}
 
 /**
- * Gán tài xế cho một đơn `with_driver` (ADR 0063) — bản native của bộ chọn trong
- * `BookingDriverSection` của web.
+ * Bộ chọn tài xế của đơn — native port of web `ChangeDriverDialog` (25/11/2026): MỘT danh sách gộp
+ * tài xế LIÊN KẾT (ADR 0063) + NỘI BỘ (ADR 0108) cho khung giờ của đơn, tìm theo tên/SĐT, lọc trạng
+ * thái (rảnh / trùng chuyến) và loại. Người bận hoặc đang gán hiện mờ, không chọn được. Có quyền
+ * `drivers.manage` thì "Thêm tài xế nội bộ" ngay tại đây — người vừa thêm được chọn luôn.
  *
- * Cửa sổ hỏi là khoảng thuê của CHÍNH đơn này, và `excludeBookingId` trừ nó ra — nếu không,
- * tài xế đang gán cho đơn này tự báo là "bận".
- *
- * Server trả CẢ người BẬN trong khung giờ (ở bất kỳ bên thuê nào): hiện kèm nhãn "Bận", không bấm
- * được, không bao giờ nói bận ở đâu. Kèm trạng thái bằng lái của tài khoản tài xế. Backend vẫn
- * kiểm lại trong transaction lúc gán; gán xong là "chờ tài xế nhận".
- *
- * Tấm này CHỈ chọn người. "Bỏ gán" nằm ở hàng tài xế trên màn đơn, cùng chỗ với "Đổi".
- *
- * Lọc bằng ô tìm ngay TRONG danh sách đã tải (gương `showSearch` của web): `/drivers/assignable`
- * trả trọn danh sách nên không có trang nào để tải thêm.
+ * Chọn xong, màn gọi quyết bước kế: liên kết ⇒ tấm tiền công; nội bộ ⇒ xác nhận rồi gán thẳng.
+ * `linkedOnly` (hộp Sửa đơn) — chỉ tài xế liên kết, như `BookingFormDialog` của web.
  */
 export function AssignDriverSheet({
   open,
@@ -40,121 +63,253 @@ export function AssignDriverSheet({
   booking,
   pending = false,
   selectedId,
+  linkedOnly = false,
   onSelect,
 }: {
   open: boolean;
   onClose: () => void;
   booking: BookingDetail;
-  /** `assignDriver.isPending` — khoá cả danh sách trong lúc PATCH đang chạy, chống bấm đúp. */
   pending?: boolean;
-  /** Người đang được CHỌN (form sửa đơn giữ lựa chọn tạm) — mặc định là tài xế đang gán. */
   selectedId?: string | null;
-  /** Kèm TÊN người được chọn — tấm gán tiền công (ADR 0075) ghi tên trên tiêu đề. */
-  onSelect: (driverId: string, name: string) => void;
+  linkedOnly?: boolean;
+  onSelect: (candidate: DriverCandidate) => void;
 }) {
   const colors = useColors();
-  const t = useTranslations('Bookings.driver');
-  const tDrivers = useTranslations('Drivers.booking');
-  const errorMessage = useErrorMessage();
+  const t = useTranslations('Drivers.booking.picker');
+  const tBooking = useTranslations('Drivers.booking');
+  const tActions = useTranslations('Common.actions');
+  const fmt = useAppFormat();
+  const { has } = usePermissions();
+  const canAddInternal = !linkedOnly && has(PERMISSION.DRIVER_MANAGE);
   const [search, setSearch] = useState('');
+  const [availability, setAvailability] = useState<Availability>(ALL);
+  const [kind, setKind] = useState<DriverRosterKind | typeof ALL>(ALL);
+  const [creatingInternal, setCreatingInternal] = useState(false);
 
-  const query = useAssignableDrivers(
-    {
-      pickupAt: booking.pickupAt,
-      returnAt: booking.returnAt,
-      excludeBookingId: booking.id,
-    },
-    open,
+  const window = { pickupAt: booking.pickupAt, returnAt: booking.returnAt, excludeBookingId: booking.id };
+  const linkedQ = useAssignableDrivers(window, open);
+  const internalQ = useAssignableInternalDrivers(window, open && !linkedOnly);
+  const current = booking.driver ?? null;
+
+  const candidates = useMemo<DriverCandidate[]>(
+    () => [
+      ...(linkedQ.data ?? []).map((d) => ({
+        kind: DRIVER_ROSTER_KIND.LINKED,
+        id: d.id,
+        name: d.name,
+        phone: d.phone,
+        avatarUrl: d.avatarUrl ?? null,
+        busy: d.busy,
+        driverType: d.driverType,
+        licenceState: d.licenceState,
+        licenceClasses: d.licenceClasses ?? [],
+        expiredCount: d.expiredCount ?? 0,
+      })),
+      ...(linkedOnly ? [] : (internalQ.data ?? [])).map((d) => ({
+        kind: DRIVER_ROSTER_KIND.INTERNAL,
+        id: d.id,
+        name: d.name,
+        phone: d.phone,
+        avatarUrl: d.photoUrl ?? null,
+        busy: d.busy,
+        driverType: null,
+        licenceState: null,
+        licenceClasses: [],
+        expiredCount: 0,
+      })),
+    ],
+    [linkedQ.data, internalQ.data, linkedOnly],
   );
 
-  /* Khớp theo TÊN hoặc SỐ ĐIỆN THOẠI — người trực thường nhớ số trước khi nhớ tên đầy đủ. */
-  const drivers = useMemo(() => {
-    const all = query.data ?? [];
-    const needle = search.trim().toLocaleLowerCase();
-    if (!needle) return all;
-    return all.filter(
-      (driver) => driver.name.toLocaleLowerCase().includes(needle) || driver.phone.includes(needle),
-    );
-  }, [query.data, search]);
+  /* "Đang gán" = đúng người + đúng nguồn (id liên kết và id danh bạ không chung không gian). */
+  const isCurrent = (c: DriverCandidate) =>
+    selectedId !== undefined
+      ? c.kind === DRIVER_ROSTER_KIND.LINKED && selectedId === c.id
+      : current !== null &&
+        current.id === c.id &&
+        ((c.kind === DRIVER_ROSTER_KIND.LINKED && current.source === DRIVER_SOURCE.LINKED) ||
+          (c.kind === DRIVER_ROSTER_KIND.INTERNAL && current.source === DRIVER_SOURCE.INTERNAL));
 
-  const total = query.data?.length ?? 0;
+  const needle = search.trim().toLowerCase();
+  const digits = needle.replace(/\D/g, '');
+  const visible = candidates.filter(
+    (c) =>
+      (kind === ALL || c.kind === kind) &&
+      (availability === ALL || (availability === AVAILABILITY.BUSY) === c.busy) &&
+      (!needle ||
+        c.name.toLowerCase().includes(needle) ||
+        (digits.length >= 3 && c.phone.replace(/\D/g, '').includes(digits))),
+  );
+  const loading = linkedQ.isLoading || (!linkedOnly && internalQ.isLoading);
+  const loadError = linkedQ.isError || (!linkedOnly && internalQ.isError);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={t('sheetTitle')}>
-      {total > SEARCH_THRESHOLD ? (
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          label={t('searchLabel')}
-          placeholder={t('searchPlaceholder')}
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={current ? t('titleChange') : t('titleAssign')}
+      subtitle={t('subtitle', {
+        code: booking.code,
+        range: fmt.rentalRange(booking.pickupAt, booking.returnAt),
+      })}
+    >
+      <YStack gap={space.sm}>
+        <SearchInput value={search} onChange={setSearch} label={t('searchLabel')} placeholder={t('search')} />
+        <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={t('status')}>
+          {([ALL, AVAILABILITY.FREE, AVAILABILITY.BUSY] as const).map((value) => (
+            <Chip
+              key={value}
+              size="sm"
+              selected={availability === value}
+              label={
+                value === ALL ? t('statusAll') : value === AVAILABILITY.FREE ? t('statusFree') : t('statusBusy')
+              }
+              onPress={() => setAvailability(value)}
+            />
+          ))}
+        </XStack>
+        {linkedOnly ? null : (
+          <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={t('type')}>
+            {([ALL, DRIVER_ROSTER_KIND.LINKED, DRIVER_ROSTER_KIND.INTERNAL] as const).map((value) => (
+              <Chip
+                key={value}
+                size="sm"
+                selected={kind === value}
+                label={
+                  value === ALL
+                    ? t('typeAll')
+                    : value === DRIVER_ROSTER_KIND.LINKED
+                      ? t('typeLinked')
+                      : t('typeInternal')
+                }
+                onPress={() => setKind(value)}
+              />
+            ))}
+          </XStack>
+        )}
+
+        {loading ? (
+          <YStack gap={space.sm}>
+            <Skeleton height={56} />
+            <Skeleton height={56} />
+            <Skeleton height={56} />
+          </YStack>
+        ) : loadError ? (
+          <Callout tone="danger" title={t('loadError')}>
+            <XStack>
+              <Button
+                label={tActions('retry')}
+                variant="secondary"
+                size="sm"
+                block={false}
+                onPress={() => {
+                  void linkedQ.refetch();
+                  if (!linkedOnly) void internalQ.refetch();
+                }}
+              />
+            </XStack>
+          </Callout>
+        ) : visible.length === 0 ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {candidates.length === 0
+              ? linkedOnly
+                ? tBooking('pickerEmpty')
+                : t('emptyAll')
+              : t('empty')}
+          </Text>
+        ) : (
+          <YStack gap={space.sm} accessibilityLabel={t('listLabel')}>
+            {visible.map((c) => (
+              <CandidateRow
+                key={`${c.kind}:${c.id}`}
+                candidate={c}
+                current={isCurrent(c)}
+                disabled={pending}
+                onPress={onSelect}
+              />
+            ))}
+          </YStack>
+        )}
+
+        {canAddInternal ? (
+          <XStack>
+            <Button
+              label={tBooking('addInternal')}
+              icon="add"
+              variant="ghost"
+              size="sm"
+              block={false}
+              onPress={() => setCreatingInternal(true)}
+            />
+          </XStack>
+        ) : null}
+      </YStack>
+
+      {canAddInternal ? (
+        <InternalDriverFormSheet
+          open={creatingInternal}
+          driver={null}
+          onClose={() => setCreatingInternal(false)}
+          onSaved={(created) =>
+            // Web chọn luôn người vừa thêm — ở app, chuyển thẳng sang bước xác nhận gán.
+            onSelect({
+              kind: DRIVER_ROSTER_KIND.INTERNAL,
+              id: created.id,
+              name: created.name,
+              phone: created.phone,
+              avatarUrl: created.photoUrl ?? null,
+              busy: false,
+              driverType: null,
+              licenceState: null,
+              licenceClasses: [],
+              expiredCount: 0,
+            })
+          }
         />
       ) : null}
-
-      {query.isPending ? (
-        <YStack gap={space.sm}>
-          <Skeleton height={56} />
-          <Skeleton height={56} />
-          <Skeleton height={56} />
-        </YStack>
-      ) : query.isError ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {errorMessage(query.error)}
-        </Text>
-      ) : total === 0 ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {tDrivers('pickerEmpty')}
-        </Text>
-      ) : drivers.length === 0 ? (
-        /* Tìm hụt KHÁC chưa có tài xế nào — hai câu, không gộp. */
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('searchEmpty', { query: search.trim() })}
-        </Text>
-      ) : (
-        drivers.map((driver) => (
-          <DriverRow
-            key={driver.id}
-            driver={driver}
-            selected={(selectedId !== undefined ? selectedId : booking.driver?.id) === driver.id}
-            disabled={pending}
-            onPress={() => onSelect(driver.id, driver.name)}
-          />
-        ))
-      )}
     </BottomSheet>
   );
 }
 
-function DriverRow({
-  driver,
-  selected,
-  disabled = false,
+const CandidateRow = memo(function CandidateRow({
+  candidate,
+  current,
+  disabled,
   onPress,
 }: {
-  driver: AssignableDriver;
-  selected: boolean;
-  /** Có PATCH gán tài xế đang chạy — khoá cả hàng để một cú bấm đúp không bắn hai request. */
-  disabled?: boolean;
-  onPress: () => void;
+  candidate: DriverCandidate;
+  current: boolean;
+  disabled: boolean;
+  onPress: (candidate: DriverCandidate) => void;
 }) {
   const colors = useColors();
-  const tDrivers = useTranslations('Drivers.booking');
+  const t = useTranslations('Drivers.booking.picker');
+  const domainLabel = useDomainLabel();
+  const unavailable = candidate.busy || current || disabled;
+  const internal = candidate.kind === DRIVER_ROSTER_KIND.INTERNAL;
+  const classes = candidate.licenceClasses.join(', ');
 
-  /*
-   * Người BẬN vẫn HIỆN kèm nhãn, nhưng KHÔNG bấm được — đúng `disabled: d.busy` của web. Giấu đi
-   * thì người phân công tưởng tài xế đó không tồn tại; để bấm được thì ăn 409.
-   */
-  const unavailable = driver.busy || disabled;
+  const availabilityText = current
+    ? t('current')
+    : candidate.busy
+      ? t('busy')
+      : candidate.expiredCount > 0
+        ? t('freeExpired', { count: candidate.expiredCount })
+        : t('free');
+  const availabilityColor = current
+    ? STATUS_COLOR.INFO
+    : candidate.busy
+      ? STATUS_COLOR.DANGER
+      : candidate.expiredCount > 0
+        ? STATUS_COLOR.WARNING
+        : STATUS_COLOR.SUCCESS;
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => onPress(candidate)}
       disabled={unavailable}
       accessibilityRole="button"
-      accessibilityState={{ selected, disabled: unavailable }}
-      style={({ pressed }) => [
-        unavailable ? { opacity: 0.45 } : null,
-        pressed && !unavailable ? { opacity: 0.7 } : null,
-      ]}
+      accessibilityState={{ selected: current, disabled: unavailable }}
     >
       <XStack
         ai="center"
@@ -162,29 +317,54 @@ function DriverRow({
         p={space.md}
         br={radius.lg}
         bw={1}
-        bg={selected ? colors.surfaceSelected : colors.surface}
-        bc={selected ? colors.primary : colors.border}
+        bg={current ? colors.surfaceSelected : colors.surface}
+        bc={current ? colors.primary : colors.border}
         minHeight={sizing.touchTarget}
+        opacity={candidate.busy || disabled ? 0.45 : 1}
       >
-        <Ionicons name="person-circle-outline" size={iconSize.lg} color={colors.textMuted} />
-        <YStack f={1} gap={2}>
+        <Avatar name={candidate.name} url={candidate.avatarUrl} size={36} />
+        <YStack f={1} gap={2} minWidth={0}>
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
-            {driver.name}
+            {candidate.name}
           </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {driver.phone}
+          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+            {[
+              candidate.phone,
+              internal
+                ? t('internal')
+                : domainLabel('driverType', candidate.driverType ?? '', candidate.driverType ?? ''),
+            ].join(LIST_SEPARATOR)}
           </Text>
           <XStack gap={space.xs} flexWrap="wrap">
-            <DriverLicenceStateBadge state={driver.licenceState} />
-            {driver.busy ? (
-              <StatusBadge label={tDrivers('busy')} color={STATUS_COLOR.NEUTRAL} size="sm" />
-            ) : null}
+            {internal ? null : (
+              <StatusBadge
+                size="sm"
+                /* Web `LicenceBadge`: xác thực xanh, đang đọc xám, chưa xác minh đỏ. */
+                color={
+                  candidate.licenceState === DRIVER_LICENCE_STATE.VERIFIED
+                    ? STATUS_COLOR.SUCCESS
+                    : candidate.licenceState === DRIVER_LICENCE_STATE.PENDING
+                      ? STATUS_COLOR.NEUTRAL
+                      : STATUS_COLOR.DANGER
+                }
+                label={
+                  candidate.licenceState === DRIVER_LICENCE_STATE.VERIFIED
+                    ? classes
+                      ? t('licenceVerified', { classes })
+                      : t('licenceVerifiedNoClass')
+                    : candidate.licenceState === DRIVER_LICENCE_STATE.PENDING
+                      ? t('licencePending')
+                      : t('licenceNone')
+                }
+              />
+            )}
+            <StatusBadge size="sm" color={availabilityColor} label={availabilityText} />
           </XStack>
         </YStack>
-        {selected ? (
+        {current ? (
           <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.primaryActive} />
         ) : null}
       </XStack>
     </Pressable>
   );
-}
+});
