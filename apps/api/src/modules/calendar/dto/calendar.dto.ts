@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_SOURCE_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   OCCUPANCY_SOURCE_TYPE_VALUES,
   ROUTE_TYPE_VALUES,
@@ -226,6 +227,35 @@ export class CalendarEventDto {
       'giữ chỗ. null với yêu cầu chờ duyệt (chưa có giá chốt), khoá xe, bảo dưỡng',
   })
   amount!: string | null;
+
+  /*
+   * Ba trường dưới CHỈ có ở event của ĐƠN (ADR 0110). Optional trên contract để client cũ không
+   * phải khai thêm; server gửi `null` cho mọi event không phải đơn.
+   */
+  @ApiPropertyOptional({
+    enum: BOOKING_SOURCE_VALUES,
+    nullable: true,
+    description: 'Nguồn đơn (type=booking): `xeprime` = qua sàn, khác = chủ xe tự lập. MÃ',
+  })
+  bookingSource?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Nhãn nguồn tự nhập (`other_platform` / `other`) - chuỗi thô',
+  })
+  bookingSourceLabel?: string | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: 100,
+    description:
+      'Phần trăm ĐÃ THU của đơn (làm tròn xuống): 100 = thu đủ, 0 = chưa thu. Cùng phép công nợ với ' +
+      'trang đơn - đơn qua sàn tính cả phần tiền thuê khách đã trả trong tiền giữ chỗ',
+  })
+  paidPercent?: number | null;
 }
 
 /**

@@ -61,7 +61,9 @@
       "with_driver": "With driver",
       "long_term": "Long-term rental"
     },
-    "off": "Blocked/Maintenance"
+    "off": "Blocked/Maintenance",
+    "direct": "Own-channel booking",
+    "paidFull": "Paid in full"
   },
   "vehicleCard": {
     "trigger": "Vehicle details for {vehicle}",
@@ -91,7 +93,9 @@
     "contact": "Contact renter",
     "openBooking": "Booking details",
     "openRequest": "View request",
-    "openDetail": "View details"
+    "openDetail": "View details",
+    "source": "Booking source",
+    "payment": "Payment"
   },
   "cellActions": {
     "menuAriaLabel": "Choose an action for this calendar cell",
@@ -292,7 +296,11 @@
     "blocked": "Blocked",
     "customerHidden": "Renter",
     "remaining": "Left: <b>{duration}</b>",
-    "timeRange": "{from} → {to}"
+    "timeRange": "{from} → {to}",
+    "paidFull": "Paid in full",
+    "paidPartial": "{percent}% collected",
+    "unpaid": "Not collected",
+    "sourceAria": "source {source}"
   },
   "requestDialog": {
     "loading": "Rental request details"

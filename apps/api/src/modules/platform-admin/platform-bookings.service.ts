@@ -17,6 +17,7 @@ import type { PlatformContext } from '../../common/types/request-context';
 import { CERTIFICATE_DOWNLOADABLE_STATUSES } from '../insurance/insurance-certificate.service';
 import { marketplaceFeesOf } from './platform-booking-money';
 import { maskPhone } from '../../common/mask';
+import { bookingSourceWhere } from '../../common/booking-source';
 import {
   bookingMoney,
   emptyMoneySides,
@@ -53,6 +54,8 @@ const LIST_SELECT = {
   code: true,
   status: true,
   serviceType: true,
+  source: true,
+  sourceLabel: true,
   customerName: true,
   customerPhone: true,
   pickupAt: true,
@@ -160,6 +163,7 @@ export class PlatformBookingsService {
       ...(query.tenantId ? { tenantId: query.tenantId } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       ...(query.status ? { status: query.status } : {}),
+      ...bookingSourceWhere(query.source, undefined),
       // Tra theo SĐT là khớp CHÍNH XÁC: nhân viên hỗ trợ có sẵn số khách đọc cho, và khớp
       // chính xác thì không lộ được danh sách khách bằng cách dò tiền tố. `customer_phone` lưu
       // cũ có thể còn dạng thô — so mọi biến thể (common/phone).
@@ -522,6 +526,8 @@ export function toPlatformBookingItem(b: BookingRow, sides: BookingMoneySides): 
     code: b.code,
     status: b.status,
     serviceType: b.serviceType,
+    source: b.source,
+    sourceLabel: b.sourceLabel,
     customerName: b.customerName,
     customerPhoneMasked: maskPhone(b.customerPhone),
     pickupAt: (b.pickupAt as Date).toISOString(),

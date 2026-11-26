@@ -21,10 +21,12 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { DAY_PARAM_FORMAT, buildPeriodRange, dayjs, type PeriodKey } from '@/lib/datetime';
 import { BusinessPerformanceCard } from '@/features/finance/components/BusinessPerformanceCard';
 import { CategoryBreakdown } from '@/features/finance/components/CategoryBreakdown';
+import { SourceBreakdown } from '@/features/finance/components/SourceBreakdown';
 import { FinanceOverviewCards } from '@/features/finance/components/FinanceOverviewCards';
 import { FINANCE_OVERVIEW_PERIOD_VALUES } from '@/features/finance/constants';
 import {
   useFinanceByCategory,
+  useFinanceBySource,
   useFinanceSeries,
   useFinanceSummaryOverview,
 } from '@/features/finance/hooks/use-finance-overview';
@@ -63,6 +65,8 @@ function FinanceOverviewView() {
   const series = useFinanceSeries(filters);
   const income = useFinanceByCategory(filters, RECEIPT_TYPE.INCOME);
   const expense = useFinanceByCategory(filters, RECEIPT_TYPE.EXPENSE);
+  // Doanh thu theo nguồn đơn (ADR 0110): tổng · qua XePrime · tự khai thác theo từng kênh.
+  const sources = useFinanceBySource(filters);
 
   const periodOptions = useMemo(
     () => FINANCE_OVERVIEW_PERIOD_VALUES.map((value) => ({ value, label: t(`periods.${value}`) })),
@@ -220,6 +224,13 @@ function FinanceOverviewView() {
           error={expense.isError}
         />
       </div>
+
+      <SourceBreakdown
+        data={sources.data}
+        loading={sources.isFetching}
+        error={sources.isError}
+        onRetry={() => void sources.refetch()}
+      />
 
       <BusinessPerformanceCard
         filters={filters}

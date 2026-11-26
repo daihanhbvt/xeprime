@@ -302,6 +302,17 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/*
+ * Thẻ còn hai cột (ảnh 285 + khung lịch) nhưng hẹp: mỗi mốc chỉ còn ~90px chữ, "T5, 26/11  21h00"
+ * gãy làm đôi. Xếp nhận · trả theo chiều dọc - khung lịch vốn cao bằng cột ảnh nên vẫn đầy.
+ */
+@container (min-width: 601px) and (max-width: 780px) {
+  .review .times {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @container (max-width: 600px) {
   .review .body {
     grid-template-columns: minmax(0, 1fr);

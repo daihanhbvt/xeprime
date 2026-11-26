@@ -1017,28 +1017,28 @@
       },
       "title": "Chuẩn bị bàn giao",
       "progress": "{done}/{total} hoàn tất",
-      "confirm": "Xác nhận đơn & thông tin khách hàng",
-      "documents": "Bổ sung giấy tờ của khách",
-      "documentsPending": "Chưa có GPLX / CCCD để đối chiếu khi giao",
+      "confirm": "Xác nhận đơn & khách hàng",
+      "documents": "Giấy tờ của khách",
+      "documentsPending": "Chưa có GPLX / CCCD",
       "documentsDone": "Đã có giấy tờ đối chiếu",
-      "documentsAction": "Bổ sung thông tin",
+      "documentsAction": "Bổ sung",
       "rent": "Thu tiền thuê",
-      "rentPending": "Thu khách khi nhận xe: <b>{amount}</b>",
+      "rentPending": "Thu khi nhận xe: <b>{amount}</b>",
       "rentDone": "Đã thu đủ tiền thuê",
       "deposit": "Thu cọc tài sản",
       "depositPending": "Cọc theo đơn: <b>{amount}</b>",
       "depositDone": "Đã nhận cọc {amount}",
-      "collectAction": "Xác nhận đã thu",
+      "collectAction": "Xác nhận",
       "contract": "Hợp đồng thuê xe",
-      "contractNone": "Chưa tạo hợp đồng cho chuyến này",
-      "contractDraft": "Đã tạo hợp đồng, chờ ký khi giao xe",
+      "contractNone": "Chưa tạo hợp đồng",
+      "contractDraft": "Đã tạo, chờ ký khi giao xe",
       "contractSigned": "Hợp đồng đã ký",
       "contractCreate": "Tạo",
       "contractView": "Xem",
-      "photos": "Thông tin bàn giao",
-      "photosPending": "Bổ sung ảnh của phương tiện trước khi giao khách ({count}/{total})",
-      "photosDone": "Đã đủ ảnh trước khi giao xe",
-      "photosAction": "Tải ảnh lên",
+      "photos": "Ảnh bàn giao",
+      "photosPending": "Ảnh xe trước khi giao ({count}/{total})",
+      "photosDone": "Đã đủ ảnh trước khi giao",
+      "photosAction": "Tải ảnh",
       "driver": "Gán tài xế",
       "driverPending": "Chưa có tài xế nhận chuyến",
       "driverDone": "Đã gán tài xế cho chuyến đi",
@@ -1126,6 +1126,10 @@
         "heldCount": "Đang giữ {held}/{total}",
         "cash": "Tiền cọc",
         "noCash": "Không cọc tiền",
+        "cashNotReceived": "Chưa thu",
+        "cashReceived": "Đã nhận đủ",
+        "cashPartial": "Đã nhận {received}, còn thiếu {amount}",
+        "takeDeposit": "Xác nhận đã thu",
         "empty": "Chưa ghi tài sản thế chấp nào.",
         "returnedTag": "Đã trả",
         "returnedBy": "{name} trả lúc {time}",
@@ -1141,7 +1145,21 @@
         "descriptionPlaceholder": "Số giấy tờ (không bắt buộc)",
         "descriptionMotorbike": "Biển số, ví dụ 59A1-12345",
         "descriptionOther": "Món gì, ví dụ laptop Dell",
-        "descriptionRequired": "Mô tả món tài sản trước khi thêm"
+        "descriptionRequired": "Mô tả món tài sản trước khi thêm",
+        "edit": "Sửa tài sản",
+        "updated": "Đã cập nhật tài sản",
+        "editCash": "Sửa tiền cọc",
+        "cashDialog": {
+          "title": "Sửa tiền cọc",
+          "current": "Đang ghi trên đơn",
+          "none": "Không cọc tiền",
+          "field": "Tiền cọc",
+          "hint": "Để 0 nếu đơn không cọc tiền. Khoản đã thu vẫn giữ nguyên trong lịch sử thu tiền.",
+          "invalid": "Nhập số tiền hợp lệ",
+          "negative": "Tiền cọc không được âm",
+          "required": "Nhập tiền cọc (0 nếu không cọc)",
+          "saved": "Đã cập nhật tiền cọc"
+        }
       }
     },
     "stepAt": {
@@ -1169,7 +1187,8 @@
       "confirmBody": "Lời báo trả xe của khách sẽ bị huỷ và XePrime mở một hồ sơ tranh chấp để xác minh với cả hai bên. Tiền của chuyến được tạm giữ cho tới khi hồ sơ đóng.",
       "confirmOk": "Báo chưa trả xe",
       "rejected": "Đã báo khách chưa trả xe - XePrime sẽ liên hệ xác minh"
-    }
+    },
+    "breadcrumb": "Chi tiết đơn"
   },
   "documentsDialog": {
     "title": "Giấy tờ của {name}",
@@ -1319,5 +1338,29 @@
     },
     "note": "Ghi chú",
     "signHint": "(Ký, ghi rõ họ tên)"
+  },
+  "source": {
+    "label": "Nguồn đơn",
+    "placeholder": "Chọn nguồn đơn",
+    "nameLabel": "Tên nguồn",
+    "namePlaceholder": "Ví dụ: đối tác khách sạn",
+    "platformLabel": "Tên nền tảng",
+    "platformPlaceholder": "Nhập tên nền tảng",
+    "validation": {
+      "required": "Vui lòng chọn nguồn đơn",
+      "nameRequired": "Vui lòng nhập tên nguồn",
+      "nameMax": "Tên nguồn tối đa {max} ký tự"
+    },
+    "filter": {
+      "label": "Nguồn đơn",
+      "all": "Tất cả nguồn",
+      "direct": "Tự khai thác (ngoài XePrime)"
+    },
+    "edit": {
+      "action": "Đổi nguồn",
+      "title": "Đổi nguồn đơn {code}",
+      "save": "Lưu nguồn đơn",
+      "success": "Đã cập nhật nguồn đơn"
+    }
   }
 }

@@ -257,6 +257,22 @@ export const HANDOVER_PREP_ITEM = {
 export type HandoverPrepItem = (typeof HANDOVER_PREP_ITEM)[keyof typeof HANDOVER_PREP_ITEM];
 export const HANDOVER_PREP_ITEM_VALUES = Object.values(HANDOVER_PREP_ITEM) as HandoverPrepItem[];
 
+/**
+ * Việc ĐƯỢC đánh dấu tay lúc này. "Ảnh bàn giao" rút khỏi danh sách 26/11/2026 (người dùng chốt):
+ * ảnh là bằng chứng khi tranh chấp, nên chỉ xong khi biên bản có đủ ảnh - tích tay mà phần cảnh báo
+ * vẫn đếm góc trống là một ô thừa. `PHOTOS` còn trong `HANDOVER_PREP_ITEM` vì DB có dấu cũ; server
+ * bỏ qua các dấu đó khi trả về và từ chối dấu mới.
+ */
+export const HANDOVER_PREP_MANUAL_ITEM_VALUES: readonly HandoverPrepItem[] = [
+  HANDOVER_PREP_ITEM.DOCUMENTS,
+  HANDOVER_PREP_ITEM.CONTRACT,
+  HANDOVER_PREP_ITEM.DRIVER,
+];
+
+export function isHandoverPrepManualItem(item: string): item is HandoverPrepItem {
+  return (HANDOVER_PREP_MANUAL_ITEM_VALUES as readonly string[]).includes(item);
+}
+
 // ── Ảnh hiện trạng ───────────────────────────────────────────────────────────
 
 /**

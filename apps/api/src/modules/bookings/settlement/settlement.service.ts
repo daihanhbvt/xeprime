@@ -311,7 +311,10 @@ export class SettlementService {
    * SAU khi đã ghi các khoản phát sinh, với `extraSurcharge` = 0 — câu đọc thấy chính các dòng vừa ghi.
    */
   async collectableAmount(
-    db: Pick<Prisma.TransactionClient, 'booking' | 'bookingSurcharge' | 'receipt' | 'payment'>,
+    db: Pick<
+      Prisma.TransactionClient,
+      'booking' | 'bookingSurcharge' | 'receipt' | 'payment' | 'bookingHold'
+    >,
     tenantId: string,
     bookingId: string,
     extraSurcharge: Prisma.Decimal = ZERO,

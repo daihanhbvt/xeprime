@@ -1,0 +1,76 @@
+/* Ba con số đầu khối: tổng · qua XePrime · tự khai thác. Ba cột, điện thoại xếp dọc. */
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+  margin: 0;
+}
+
+.total {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.total dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.total dd {
+  margin: 0;
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--xp-line-height-h3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dòng "Tên · n chuyến  x%  số tiền" - cùng bố cục với dòng của CategoryBreakdown, không là liên kết. */
+.line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.bar {
+  width: var(--xp-bar-width);
+  height: 100%;
+  min-width: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* Sàn mang sắc thương hiệu, kênh tự khai thác mang sắc xanh của chiều thu. */
+.barMarketplace {
+  background: var(--xp-color-primary);
+}
+
+.barDirect {
+  background: var(--xp-color-info-strong);
+}
+
+.retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-medium);
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

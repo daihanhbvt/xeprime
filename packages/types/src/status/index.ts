@@ -22,6 +22,7 @@ export * from './vehicle-maintenance';
 export * from './vehicle-settings';
 export * from './booking';
 export * from './booking-collateral';
+export * from './booking-source';
 export * from './booking-request';
 export * from './booking-extension';
 export * from './booking-history';

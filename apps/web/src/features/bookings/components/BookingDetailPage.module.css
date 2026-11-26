@@ -28,3 +28,43 @@
     font-weight: 600;
   }
 }
+
+/*
+ * Nhãn chặng cạnh tiêu đề - Figma `23845:49959` "_Badge": viên bo tròn, KHÔNG chấm, chữ 14/20
+ * Medium. Viên nguồn đơn đứng ngay sau dùng cùng khuôn (`BookingSourceChip`).
+ */
+.stageChip.stageChip {
+  border-radius: var(--xp-border-radius-pill);
+}
+
+.stageChip.stageChip::before {
+  display: none;
+}
+
+/*
+ * Đầu trang - Figma `23845:49959`: nút quay lại tròn viền mảnh (đệm 4, icon 20), tiêu đề 20/30
+ * SemiBold, "Tạo lúc" 14/20 `Text/Gray/low`.
+ */
+.header :global(h1.ant-typography) {
+  font-size: var(--xp-font-size-lead) !important;
+  line-height: var(--xp-line-height-lead) !important;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.header > div:first-child > :global(.ant-btn) {
+  flex: none;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  color: var(--xp-color-text-secondary);
+}
+
+.header p {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-tertiary);
+}

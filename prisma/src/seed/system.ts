@@ -140,6 +140,11 @@ const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
     name: 'Thanh toán đơn',
     systemKey: SYSTEM_FINANCE_CATEGORY.BOOKING_PAYMENT,
   },
+  {
+    type: FINANCE_CATEGORY_TYPE.INCOME,
+    name: 'Tiền qua XePrime',
+    systemKey: SYSTEM_FINANCE_CATEGORY.XEPRIME_PAYOUT,
+  },
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí quá giờ', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí đền bù va quẹt', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí phạt nguội', requiresVehicle: true },
@@ -161,6 +166,11 @@ const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
     name: 'Sửa chữa sự cố',
     systemKey: SYSTEM_FINANCE_CATEGORY.REPAIR,
     requiresVehicle: true,
+  },
+  {
+    type: FINANCE_CATEGORY_TYPE.EXPENSE,
+    name: 'Thuế khấu trừ',
+    systemKey: SYSTEM_FINANCE_CATEGORY.TAX_WITHHELD,
   },
   { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Mua bảo hiểm', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Rửa xe', requiresVehicle: true },

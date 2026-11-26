@@ -454,7 +454,9 @@
         "deposit": "Deposit",
         "deposit_refund": "Deposit refund",
         "maintenance": "Servicing / oil change",
-        "repair": "Incident repair"
+        "repair": "Incident repair",
+        "xeprime_payout": "Via XePrime",
+        "tax_withheld": "Tax withheld"
       },
       "row": "{name} · {count, plural, one {# voucher} other {# vouchers}}"
     },
@@ -524,6 +526,19 @@
     "periodSheet": {
       "title": "Select period",
       "custom": "Custom date range"
+    },
+    "sources": {
+      "title": "Revenue by booking source",
+      "total": "Total revenue",
+      "marketplace": "Through XePrime",
+      "direct": "Own channels",
+      "row": "{name} · {count, plural, one {# trip} other {# trips}}",
+      "share": "{percent}%",
+      "unlinked": "Income not linked to a booking",
+      "error": "Could not load revenue by booking source",
+      "retry": "Try again",
+      "empty": "No data for this period",
+      "emptyHint": "Pick another period or record the payments of bookings in this period."
     }
   },
   "entity": {
@@ -606,5 +621,121 @@
       "ledger": "Income & expenses",
       "debts": "Receivables"
     }
+  },
+  "vehicle": {
+    "title": "Vehicle financial performance",
+    "subtitle": "Revenue by source, operating costs and profit of this vehicle by period",
+    "openLedger": "Open ledger",
+    "createReceipt": "New receipt/expense",
+    "sources": {
+      "label": "View by revenue source",
+      "viewing": "Viewing: <b>{name}</b>",
+      "all": "All sources",
+      "xeprime": "Via XePrime marketplace",
+      "direct": "External (self-sourced)",
+      "trips": "{count, plural, one {# trip} other {# trips}}",
+      "split": "Marketplace {marketplace, number}% · External {direct, number}%",
+      "xeprimeHint": "Bookings made through XePrime",
+      "directHint": "Repeat, walk-in, social media...",
+      "share": "{percent, number}%",
+      "error": "Could not load revenue by source"
+    },
+    "kpi": {
+      "revenue": {
+        "all": "Revenue",
+        "xeprime": "Marketplace revenue",
+        "direct": "External revenue"
+      },
+      "revenueHint": "{count, plural, one {# trip} other {# trips}} · Avg {avg}/trip",
+      "revenueHintNoTrips": "No pickups in this period",
+      "changeSuffix": "vs. same point last period",
+      "changeNone": "Nothing to compare yet",
+      "cost": "Operating costs",
+      "costHint": "{count, plural, =0 {No expenses yet} one {# expense} other {# expenses}}",
+      "costInfo": "Costs of the whole vehicle (maintenance, washing, repairs...), not split by revenue source.",
+      "costInfoLabel": "How costs are counted",
+      "profit": "Cash profit",
+      "profitInfo": "Whole-vehicle revenue minus whole-vehicle costs, from approved entries with deposits excluded. Depreciation, loan interest and owner rent are not deducted.",
+      "profitInfoLabel": "How profit is calculated",
+      "debt": "Receivables & deposits held",
+      "debtHint": "{count, plural, =0 {No bookings owing} one {# booking owing} other {# bookings owing}} · Deposits held {deposit}",
+      "debtInfo": "As of now, not limited to the selected period.",
+      "debtInfoLabel": "When receivables are counted",
+      "revenueInfo": "Money collected in the period, deposits excluded. Includes cash collected by you and the part customers prepaid via XePrime (marketplace bookings, recorded when the trip is settled). Trips are those with a pickup in the period, including running and upcoming ones, excluding cancelled bookings.",
+      "revenueInfoLabel": "How revenue is calculated"
+    },
+    "chart": {
+      "title": "Revenue by source & profit",
+      "description": "Stacked bars show revenue by booking source, red bars are costs, the green line is whole-vehicle profit.",
+      "marketplace": "Via XePrime",
+      "direct": "External",
+      "unlinked": "Other (no booking)",
+      "cost": "Costs",
+      "profit": "Profit",
+      "legend": "Chart legend"
+    },
+    "breakdown": {
+      "title": "Revenue by source in detail",
+      "subtitle": "Money collected in the period, by booking source",
+      "total": "Total: {amount}",
+      "tag": {
+        "marketplace": "Marketplace",
+        "direct": "Self-sourced",
+        "unlinked": "Standalone"
+      },
+      "trips": "{count, plural, one {# trip} other {# trips}}",
+      "booked": "Trip value {amount}",
+      "bookedInfo": "Trip value is the agreed rental of trips picked up in the period. Collected money may differ because payments can arrive before or after the period.",
+      "bookedInfoLabel": "What trip value means",
+      "share": "{percent, number}% of revenue",
+      "empty": "No revenue from this source in this period",
+      "emptyHint": "Pick another period, or choose \"All sources\".",
+      "error": "Could not load the source breakdown",
+      "unlinkedName": "Other income, no booking",
+      "unlinkedHint": "Income entered manually for this vehicle, not tied to a trip"
+    },
+    "costTitle": "Vehicle cost structure",
+    "capital": {
+      "title": "Vehicle funding obligations",
+      "configure": "Funding settings",
+      "add": "Add funding details",
+      "missing": "No funding details yet. Add them to see whether this vehicle covers its loan, rent or owner share.",
+      "error": "Could not load the funding details",
+      "profit": "Profit this period",
+      "needsDay": "Add the monthly payment day to count what is due in the period.",
+      "financed": {
+        "bank": "Bank",
+        "monthly": "Principal + interest per month",
+        "monthlyDay": "Principal + interest per month (day {day})",
+        "due": "Due so far in period ({count, plural, one {# payment} other {# payments}})",
+        "net": "Left after instalments"
+      },
+      "rented": {
+        "owner": "Leasing owner",
+        "monthly": "Monthly vehicle rent",
+        "monthlyDay": "Monthly vehicle rent (day {day})",
+        "due": "Due so far in period ({count, plural, one {# payment} other {# payments}})",
+        "net": "Left after vehicle rent"
+      },
+      "partnership": {
+        "owner": "Consigning owner",
+        "ownerNamed": "Consigning owner: {name}",
+        "ownerPercent": "{percent, number}% of revenue",
+        "ownerShare": "Owner share (estimate)",
+        "shopShare": "Shop keeps ({percent, number}%)",
+        "info": "Estimated on whole-vehicle revenue for the period. The contract splits rental after discounts, excluding deposits, delivery, overtime and damage fees, so the settled figure may be lower.",
+        "infoLabel": "How the share is estimated"
+      },
+      "owned": {
+        "purchaseDate": "Purchase date",
+        "purchasePrice": "Purchase price",
+        "roi": "Period profit / purchase price",
+        "roiValue": "{percent, number}%",
+        "noPrice": "Add the purchase price to see the return on capital.",
+        "noObligation": "No instalments or revenue share to pay"
+      },
+      "profitAll": "Profit to date"
+    },
+    "allTime": "All time"
   }
 }

@@ -60,7 +60,9 @@ export function prepRowStates(
     ...(can.contract
       ? [row('contract', prep.contractId !== null, HANDOVER_PREP_ITEM.CONTRACT)]
       : []),
-    row('photos', prep.pickupPhotoCount >= prep.pickupPhotoRequired, HANDOVER_PREP_ITEM.PHOTOS),
+    // Ảnh bàn giao KHÔNG đánh dấu tay (26/11/2026): chỉ xong khi biên bản đủ ảnh - cùng luật với
+    // phần cảnh báo góc ảnh trống lúc bấm giao xe.
+    row('photos', prep.pickupPhotoCount >= prep.pickupPhotoRequired),
     ...(prep.driverReady == null
       ? []
       : [row('driver', prep.driverReady === true, HANDOVER_PREP_ITEM.DRIVER)]),

@@ -8,6 +8,7 @@ import {
   useRegisterPageTitle,
   type PageParentCrumb,
 } from './page-title-context';
+import { cx } from '@/lib/cx';
 import styles from './ManagePageHeader.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -43,6 +44,13 @@ export interface ManagePageHeaderProps {
   onBack?: () => void;
   /** Mắt xích cha trên breadcrumb của header (trang con của một trang chi tiết). */
   parent?: PageParentCrumb | null;
+  /**
+   * Mắt xích cuối của breadcrumb khi `title` không phải chữ trơn (tiêu đề kèm chip trạng thái) -
+   * không có thì breadcrumb dừng ở trang cha.
+   */
+  breadcrumbTitle?: string;
+  /** Lớp gốc - trang tự chỉnh nhịp riêng theo design của nó (cỡ tiêu đề, nút quay lại). */
+  className?: string;
   extra?: ReactNode;
 }
 
@@ -53,13 +61,15 @@ export function ManagePageHeader({
   onBack,
   extra,
   parent = null,
+  breadcrumbTitle,
+  className,
 }: ManagePageHeaderProps) {
   const t = useTranslations('ManageCommon');
   // Mắt xích cuối của breadcrumb ở header site partner — xem `page-title-context.tsx`.
-  useRegisterPageTitle(typeof title === 'string' ? title : null);
+  useRegisterPageTitle(breadcrumbTitle ?? (typeof title === 'string' ? title : null));
   useRegisterPageParent(parent);
   return (
-    <div className={styles.header}>
+    <div className={cx(styles.header, className)}>
       <div className={styles.left}>
         {onBack ? (
           <Button

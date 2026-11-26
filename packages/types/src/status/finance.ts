@@ -39,6 +39,10 @@ export const SYSTEM_FINANCE_CATEGORY = {
   MAINTENANCE: 'maintenance',
   /** Chi sửa chữa sự cố (`RECEIPT_SOURCE.MAINTENANCE`, loại việc = sửa chữa). */
   REPAIR: 'repair',
+  /** Thu phần tiền thuê khách trả trước qua XePrime (`RECEIPT_SOURCE.XEPRIME_PAYOUT`). */
+  XEPRIME_PAYOUT: 'xeprime_payout',
+  /** Chi thuế XePrime khấu trừ, nộp thay chủ xe (`RECEIPT_SOURCE.TAX_WITHHELD`). */
+  TAX_WITHHELD: 'tax_withheld',
 } as const;
 
 export type SystemFinanceCategoryKey =
@@ -78,6 +82,17 @@ export const RECEIPT_SOURCE = {
   DEPOSIT_REFUND: 'deposit_refund',
   /** Chi phí bảo dưỡng — `source_ref_id` = `vehicle_maintenance_records.id`. */
   MAINTENANCE: 'maintenance',
+  /**
+   * Phần tiền thuê khách trả trước qua XePrime của một đơn QUA SÀN (`D` gộp, trước thuế) — ghi lúc
+   * khoản giữ chỗ được quyết toán cho chủ xe. `source_ref_id` = `booking_holds.id`. Tiền này vào
+   * Ví điểm, không qua tay chủ xe; không có phiếu thì doanh thu của đơn qua sàn hụt đúng phần đó.
+   */
+  XEPRIME_PAYOUT: 'xeprime_payout',
+  /**
+   * Thuế XePrime khấu trừ trên phần trên và nộp thay chủ xe (`T` — ADR 0068), cùng lượt quyết toán.
+   * `source_ref_id` = `booking_holds.id`. Phiếu thu `D` trừ phiếu chi này = số thật vào Ví điểm.
+   */
+  TAX_WITHHELD: 'tax_withheld',
 } as const;
 
 export type ReceiptSource = (typeof RECEIPT_SOURCE)[keyof typeof RECEIPT_SOURCE];
@@ -89,6 +104,8 @@ export const RECEIPT_SOURCE_META: Readonly<Record<ReceiptSource, StatusMeta>> = 
   [RECEIPT_SOURCE.DEPOSIT]: { label: 'Thu cọc', color: STATUS_COLOR.PROCESSING },
   [RECEIPT_SOURCE.DEPOSIT_REFUND]: { label: 'Hoàn cọc', color: STATUS_COLOR.WARNING },
   [RECEIPT_SOURCE.MAINTENANCE]: { label: 'Bảo dưỡng', color: STATUS_COLOR.SPECIAL },
+  [RECEIPT_SOURCE.XEPRIME_PAYOUT]: { label: 'Tiền qua XePrime', color: STATUS_COLOR.INFO },
+  [RECEIPT_SOURCE.TAX_WITHHELD]: { label: 'Thuế khấu trừ', color: STATUS_COLOR.WARNING },
 };
 
 /**

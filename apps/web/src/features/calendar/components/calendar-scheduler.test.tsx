@@ -278,8 +278,14 @@ describe('CalendarScheduler - lưới điều phối đội xe', () => {
     expect(screen.getByTestId('booking-form-dialog').textContent).toBe('');
   });
 
-  it('chủ xe tuyến HOA HỒNG không có nút "Tạo đơn thuê"', () => {
+  it('chủ xe tuyến HOA HỒNG cũng có nút "Tạo đơn thuê" (ADR 0110)', () => {
     me.billingMode = BILLING_MODE.COMMISSION;
+    renderScheduler();
+    expect(screen.getByRole('button', { name: /Tạo đơn thuê/ })).toBeTruthy();
+  });
+
+  it('thiếu quyền bookings.create thì không có nút "Tạo đơn thuê"', () => {
+    permissions.granted = new Set([PERMISSION.CALENDAR_VIEW]);
     renderScheduler();
     expect(screen.queryByRole('button', { name: /Tạo đơn thuê/ })).toBeNull();
   });
@@ -356,13 +362,13 @@ describe('CalendarScheduler - lưới điều phối đội xe', () => {
     expect(within(menu).queryByText('Đặt giá riêng')).toBeNull();
   });
 
-  it('chủ xe tuyến HOA HỒNG không lập đơn tay - ô chỉ mời Khóa xe/Đặt giá dù có bookings.create', () => {
+  it('chủ xe tuyến HOA HỒNG lập được đơn tay - ô mời đủ Đặt xe/Khóa xe/Đặt giá (ADR 0110)', () => {
     me.billingMode = BILLING_MODE.COMMISSION;
     renderScheduler();
     fireEvent.click(screen.getByLabelText(/Tạo lịch cho Toyota Vios 2023 ngày 12\/10/));
 
     const menu = screen.getByRole('menu');
-    expect(within(menu).queryByText('Đặt xe')).toBeNull();
+    expect(within(menu).getByText('Đặt xe')).toBeTruthy();
     expect(within(menu).getByText('Khóa xe')).toBeTruthy();
     expect(within(menu).getByText('Đặt giá riêng')).toBeTruthy();
   });

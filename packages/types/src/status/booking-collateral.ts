@@ -54,6 +54,8 @@ export const BOOKING_COLLATERAL_AUDIT_ACTION = {
   REMOVE: 'booking.collateral_remove',
   RETURN: 'booking.collateral_return',
   UNRETURN: 'booking.collateral_unreturn',
+  /** Sửa loại / mô tả của một món chưa trả (26/11/2026 - cọc linh động theo từng đơn). */
+  UPDATE: 'booking.collateral_update',
 } as const;
 
 /**

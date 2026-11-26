@@ -1,5 +1,6 @@
 'use client';
 
+import { CheckCircleFilled } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import { cx } from '@/lib/cx';
@@ -49,6 +50,17 @@ export function CalendarLegend() {
       <span className={styles.legendItem}>
         <i className={cx(styles.legendSwatch, styles.legendSwatchHoliday)} aria-hidden />
         {t('legend.holiday')}
+      </span>
+      {/* Hai dấu trên thẻ đơn (ADR 0110): nguồn đơn và thanh toán. */}
+      <span className={styles.legendItem}>
+        <i className={styles.sourceMark} aria-hidden>
+          {t('legend.direct').charAt(0)}
+        </i>
+        {t('legend.direct')}
+      </span>
+      <span className={styles.legendItem}>
+        <CheckCircleFilled className={styles.paidFull} aria-hidden />
+        {t('legend.paidFull')}
       </span>
     </div>
   );

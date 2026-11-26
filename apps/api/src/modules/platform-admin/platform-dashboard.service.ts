@@ -4,6 +4,7 @@ import {
   ACCOUNT_REALM,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
+  BOOKING_SOURCE,
   BOOKING_STATUS,
   LISTING_STATUS,
   PERMISSION,
@@ -30,6 +31,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Hai trạng thái đơn KHÔNG vào GMV — chuyến không diễn ra thì không có giá trị giao dịch. */
 const GMV_EXCLUDED_STATUSES: string[] = [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW];
+
+/**
+ * Đơn của SÀN (ADR 0110): mọi số đếm và GMV ở Tổng quan chỉ tính đơn khách đặt qua XePrime. Đơn chủ
+ * xe tự lập là ghi chép nội bộ của họ - tiền không qua sàn, không phải giao dịch của sàn.
+ */
+const MARKETPLACE_BOOKING = { deletedAt: null, source: BOOKING_SOURCE.XEPRIME } as const;
 
 /** Khoảng `[start, end)`. */
 interface Window {
@@ -63,9 +70,9 @@ export class PlatformDashboardService {
       }),
       this.prisma.publicListing.count({ where: { status: LISTING_STATUS.ACTIVE } }),
       this.prisma.publicListing.count(),
-      this.prisma.booking.count({ where: { deletedAt: null } }),
+      this.prisma.booking.count({ where: MARKETPLACE_BOOKING }),
       this.prisma.booking.count({
-        where: { deletedAt: null, createdAt: { gte: monthStart } },
+        where: { ...MARKETPLACE_BOOKING, createdAt: { gte: monthStart } },
       }),
       this.prisma.approvalTask.groupBy({
         by: ['targetType'],
@@ -185,7 +192,8 @@ export class PlatformDashboardService {
   ): Promise<PlatformDashboardActivityDto> {
     const [bookings, cancelled, gmv, series] = await Promise.all([
       this.periodCount(
-        (w) => this.prisma.booking.count({ where: { deletedAt: null, createdAt: inWindow(w) } }),
+        (w) =>
+          this.prisma.booking.count({ where: { ...MARKETPLACE_BOOKING, createdAt: inWindow(w) } }),
         current,
         previous,
       ),
@@ -193,7 +201,7 @@ export class PlatformDashboardService {
         (w) =>
           this.prisma.booking.count({
             where: {
-              deletedAt: null,
+              ...MARKETPLACE_BOOKING,
               createdAt: inWindow(w),
               status: { in: GMV_EXCLUDED_STATUSES },
             },
@@ -205,7 +213,7 @@ export class PlatformDashboardService {
         async (w) => {
           const agg = await this.prisma.booking.aggregate({
             where: {
-              deletedAt: null,
+              ...MARKETPLACE_BOOKING,
               createdAt: inWindow(w),
               status: { notIn: GMV_EXCLUDED_STATUSES },
             },
@@ -247,6 +255,7 @@ export class PlatformDashboardService {
                ), 0) AS gmv
           FROM bookings b
          WHERE b.deleted_at IS NULL
+           AND b.source = ${BOOKING_SOURCE.XEPRIME}
            AND b.created_at >= ${from}
          GROUP BY 1
       )

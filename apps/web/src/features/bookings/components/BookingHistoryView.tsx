@@ -7,6 +7,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
+  BOOKING_DIRECT_SOURCE_VALUES,
+  BOOKING_SOURCE,
+  BOOKING_SOURCE_FILTER_DIRECT,
+  BOOKING_SOURCE_FILTER_VALUES,
   BOOKING_HISTORY_KIND,
   BOOKING_HISTORY_OUTCOME,
   BOOKING_HISTORY_OUTCOME_VALUES,
@@ -18,6 +22,7 @@ import {
   type BookingHistoryOutcome,
   type BookingHistoryTab,
 } from '@xeprime/types';
+import { BookingSourceChip } from '@/components/data-display/BookingSourceChip';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { ServiceTypeChip } from '@/components/data-display/ServiceTypeChip';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
@@ -52,6 +57,7 @@ function useHistoryFilters() {
     q: sp.get('q') ?? undefined,
     serviceType: sp.get('serviceType') ?? undefined,
     branchId: sp.get('branchId') ?? undefined,
+    source: enumParam(sp, 'source', BOOKING_SOURCE_FILTER_VALUES),
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),
   }));
@@ -69,6 +75,7 @@ function useHistoryFilters() {
  */
 export function BookingHistoryView() {
   const t = useTranslations('Bookings.history');
+  const tSource = useTranslations('Bookings.source');
   const tCommon = useTranslations('Common');
   const tRequests = useTranslations('BookingRequests');
   const label = useDomainLabel();
@@ -120,6 +127,22 @@ export function BookingHistoryView() {
         ...SERVICE_TYPE_VALUES.map((value) => ({ value, label: label('serviceType', value) })),
       ],
     },
+    // Nguồn đơn (ADR 0110) - yêu cầu không thành đơn luôn thuộc nguồn XePrime.
+    {
+      kind: 'select',
+      key: 'source',
+      label: tSource('filter.label'),
+      allowClear: false,
+      options: [
+        { value: ALL_FILTER, label: tSource('filter.all') },
+        { value: BOOKING_SOURCE.XEPRIME, label: label('bookingSource', BOOKING_SOURCE.XEPRIME) },
+        { value: BOOKING_SOURCE_FILTER_DIRECT, label: tSource('filter.direct') },
+        ...BOOKING_DIRECT_SOURCE_VALUES.map((value) => ({
+          value,
+          label: label('bookingSource', value),
+        })),
+      ],
+    },
     ...(outcomeOptions.length > 1
       ? [
           {
@@ -146,6 +169,7 @@ export function BookingHistoryView() {
     if ('serviceType' in patch) {
       next.serviceType = patch.serviceType === ALL_FILTER ? undefined : patch.serviceType;
     }
+    if ('source' in patch) next.source = patch.source === ALL_FILTER ? undefined : patch.source;
     if ('outcome' in patch) {
       next.outcome =
         patch.outcome === ALL_FILTER ? undefined : (patch.outcome as BookingHistoryOutcome);
@@ -158,9 +182,17 @@ export function BookingHistoryView() {
     setFilters({ tab: value as BookingHistoryTab, outcome: undefined });
   }
 
-  const filtered = Boolean(filters.q || filters.branchId || filters.serviceType || filters.outcome);
+  const filtered = Boolean(
+    filters.q || filters.branchId || filters.serviceType || filters.source || filters.outcome,
+  );
   function clearFilters() {
-    setFilters({ q: undefined, branchId: undefined, serviceType: undefined, outcome: undefined });
+    setFilters({
+      q: undefined,
+      branchId: undefined,
+      serviceType: undefined,
+      source: undefined,
+      outcome: undefined,
+    });
   }
 
   function openRow(row: BookingHistoryItem) {
@@ -190,7 +222,12 @@ export function BookingHistoryView() {
       title: t('columns.service'),
       key: 'service',
       width: 150,
-      render: (_, row) => <ServiceTypeChip value={row.serviceType} />,
+      render: (_, row) => (
+        <span className={styles.serviceCell}>
+          <ServiceTypeChip value={row.serviceType} />
+          <BookingSourceChip source={row.source} sourceLabel={row.sourceLabel} size="sm" />
+        </span>
+      ),
     },
     {
       title: t('columns.customer'),
@@ -282,6 +319,7 @@ export function BookingHistoryView() {
             q: filters.q,
             branchId: filters.branchId ?? ALL_FILTER,
             serviceType: filters.serviceType ?? ALL_FILTER,
+            source: filters.source ?? ALL_FILTER,
             outcome: filters.outcome ?? ALL_FILTER,
           }}
           onChange={changeFilters}

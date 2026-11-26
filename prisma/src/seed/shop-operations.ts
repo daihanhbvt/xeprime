@@ -17,6 +17,7 @@ import {
   DRIVER_ASSIGNMENT_STATUS,
   driverRespondByFor,
   BOOKING_REQUEST_STATUS,
+  BOOKING_SOURCE,
   BOOKING_STATUS,
   bookingRequestRespondBy,
   CONTRACT_STATUS,
@@ -556,6 +557,16 @@ export async function buildBookings(
         ...fields,
       },
     });
+    /*
+     * Nguồn đơn (ADR 0110): rải đủ các nguồn ngoài sàn để nhãn, bộ lọc và báo cáo theo nguồn có dữ
+     * liệu thật để xem. KHÔNG nằm trong `fields`: một đơn về sau được yêu cầu trỏ vào
+     * (`buildBookingRequests`) là đơn QUA SÀN — trigger ở DB gắn `xeprime` cho nó, và ghi đè nguồn đó
+     * ở lượt seed kế tiếp sẽ bị `bookings_source_matches_request` từ chối. Chỉ đơn tự lập nhận nguồn.
+     */
+    await prisma.booking.updateMany({
+      where: { id: bookingId, bookingRequest: { is: null } },
+      data: pick(DEMO_DIRECT_SOURCES, n),
+    });
 
     if (OCCUPYING.includes(plan.status)) {
       await prisma.vehicleOccupancy.create({
@@ -576,6 +587,16 @@ export async function buildBookings(
 
   return results;
 }
+
+/** Nguồn của đơn tự lập trong bộ demo — tất định theo thứ tự đơn (ADR 0110). */
+const DEMO_DIRECT_SOURCES = [
+  { source: BOOKING_SOURCE.REPEAT_CUSTOMER, sourceLabel: null },
+  { source: BOOKING_SOURCE.WALK_IN, sourceLabel: null },
+  { source: BOOKING_SOURCE.REFERRAL, sourceLabel: null },
+  { source: BOOKING_SOURCE.SOCIAL, sourceLabel: null },
+  { source: BOOKING_SOURCE.OTHER_PLATFORM, sourceLabel: 'Nền tảng thuê xe khác' },
+  { source: BOOKING_SOURCE.OTHER, sourceLabel: 'Đối tác khách sạn' },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Hợp đồng

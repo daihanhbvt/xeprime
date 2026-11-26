@@ -16,6 +16,7 @@ import { buildRequiredPhoneSchema } from '@xeprime/validators';
 import type { Dayjs } from 'dayjs';
 import type { useTranslations } from 'next-intl';
 import * as yup from 'yup';
+import { bookingSourceShape, type BookingSourceMessages } from '@/features/bookings/source-schema';
 import { PICKUP_METHOD } from './schema';
 
 /** Xem `i18n/keys.ts`: phải khai với tên namespace CỤ THỂ, generic sẽ nổ `TS2590`. */
@@ -27,25 +28,6 @@ const ADDRESS_MAX = 500;
 const NOTE_MAX = 2000;
 
 /**
- * Cách gian hàng giữ bảo đảm của ĐƠN (ADR 0109) - chỉ là trạng thái của form: server suy chế độ từ dữ
- * liệu (cọc tiền > 0, có dòng tài sản), không có cột chế độ nào.
- */
-export const STAFF_COLLATERAL_MODE = {
-  CASH: 'cash',
-  ASSET: 'asset',
-  BOTH: 'both',
-  NONE: 'none',
-} as const;
-export type StaffCollateralMode =
-  (typeof STAFF_COLLATERAL_MODE)[keyof typeof STAFF_COLLATERAL_MODE];
-export const STAFF_COLLATERAL_MODE_VALUES = Object.values(STAFF_COLLATERAL_MODE);
-
-export const collateralModeHasCash = (mode: string): boolean =>
-  mode === STAFF_COLLATERAL_MODE.CASH || mode === STAFF_COLLATERAL_MODE.BOTH;
-export const collateralModeHasAssets = (mode: string): boolean =>
-  mode === STAFF_COLLATERAL_MODE.ASSET || mode === STAFF_COLLATERAL_MODE.BOTH;
-
-/**
  * Form của luồng ĐẶT HỘ (gian hàng lập đơn tay — `StaffBookingFlow`).
  *
  * Khác form yêu cầu thuê của khách ở chỗ người điền là NHÂN VIÊN: họ tên + SĐT là của khách vãng
@@ -55,8 +37,9 @@ export const collateralModeHasAssets = (mode: string): boolean =>
  * liên tỉnh bắt buộc điểm đến.
  *
  * Là HÀM nhận `t` — câu báo lỗi đổi theo ngôn ngữ người dùng (ADR 0012); nơi gọi bọc `useMemo`.
+ * `sourceMessages`: câu báo lỗi của hai ô NGUỒN ĐƠN (ADR 0110), dịch ở namespace `Bookings.source`.
  */
-export function staffBookingSchema(t: StaffTranslate) {
+export function staffBookingSchema(t: StaffTranslate, sourceMessages: BookingSourceMessages) {
   const address = (required: string) =>
     yup
       .string()
@@ -135,6 +118,8 @@ export function staffBookingSchema(t: StaffTranslate) {
       .trim()
       .max(NOTE_MAX, t('validation.noteMax', { max: NOTE_MAX }))
       .default(''),
+    /** Nguồn đơn (ADR 0110) — khách tới từ kênh nào; bắt buộc, không chọn sẵn để dữ liệu sạch. */
+    ...bookingSourceShape(sourceMessages),
     /**
      * Tiền thuê nhập tay — CHỈ khi server không báo giá được (xe chưa cấu hình giá ngày). Bắt buộc
      * hay không do component quyết lúc bấm tạo: schema không biết báo giá có về hay không.
@@ -173,10 +158,10 @@ export function staffBookingSchema(t: StaffTranslate) {
       )
       .max(BOOKING_EXTRA_CHARGE_MAX_LINES)
       .default([]),
-    collateralMode: yup
-      .string()
-      .oneOf(STAFF_COLLATERAL_MODE_VALUES)
-      .default(STAFF_COLLATERAL_MODE.CASH),
+    /**
+     * Tài sản thế chấp (ADR 0109). Không có ô chọn "hình thức bảo đảm": cọc tiền > 0 và/hoặc có dòng
+     * tài sản là đơn ghi đúng những khoản đó; cả hai trống nghĩa là không cọc.
+     */
     collaterals: yup
       .array(
         yup.object({

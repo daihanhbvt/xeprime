@@ -25,6 +25,7 @@ import type {
   ReceiptVehicleOption,
   ReceiptSummary,
   FinanceCategoryBreakdown,
+  FinanceSourceBreakdown,
   FinanceOverviewFilters,
   FinancePeriodFilters,
   FinanceScope,
@@ -195,6 +196,13 @@ export const fetchFinanceByCategory = (
     ...overviewRangeParams(filters, scope),
     type,
   });
+
+/** Doanh thu theo nguồn đơn trong kỳ (ADR 0110) - cùng phạm vi lọc với thẻ tổng. */
+export const fetchFinanceBySource = (
+  filters: FinancePeriodFilters,
+  scope?: FinanceScope,
+): Promise<FinanceSourceBreakdown> =>
+  apiGet<FinanceSourceBreakdown>('/finance/by-source', overviewRangeParams(filters, scope));
 
 export type VehicleProfitResult = Paged<VehicleProfit>;
 

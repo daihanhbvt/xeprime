@@ -40,6 +40,7 @@ const PER_ROUTE: Readonly<Record<string, Readonly<Record<string, PlanFeature>>>>
     summary: PLAN_FEATURE.FINANCE,
     series: PLAN_FEATURE.FINANCE,
     byCategory: PLAN_FEATURE.FINANCE,
+    bySource: PLAN_FEATURE.FINANCE,
     byVehicle: PLAN_FEATURE.FINANCE,
     byCustomer: PLAN_FEATURE.FINANCE,
   },
@@ -231,16 +232,16 @@ describe('phủ cổng chặn năng lực — bất biến chung', () => {
     expect(open).toEqual(['get', 'list', 'map', 'update']);
   });
 
-  it('đơn thuê: chỉ LẬP ĐƠN TAY mang cổng tuyến — vận hành đơn đã có mở cho cả hai tuyến', () => {
+  it('đơn thuê: KHÔNG route nào mang cổng tuyến — lập đơn tay mở cho mọi chủ xe (ADR 0110)', () => {
     /*
-     * Lập đơn tay không có phí sàn lẫn hoa hồng: mở cho tuyến hoa hồng là lối né `H` (26/10/2026).
-     * Nhưng xem, sửa, chuyển trạng thái, gán tài xế một đơn TỪ CHỢ là việc của bậc cơ bản — gác
-     * thêm một route ở đây là khoá chủ xe cá nhân khỏi chính chuyến của họ.
+     * ADR 0110 ghi đè quyết định 26/10/2026: chủ xe cả hai tuyến tự lập đơn ngoài sàn (mang nguồn,
+     * không phí, không thuế, không bảo hiểm). Xem, sửa, chuyển trạng thái, gán tài xế vốn đã mở cho
+     * bậc cơ bản. Gác lại một route ở đây là khoá chủ xe cá nhân khỏi lịch của chính họ.
      */
     const gated = routesOf('BookingsController')
       .filter((r) => r.trackOnly)
       .map((r) => r.handler);
-    expect(gated).toEqual(['create']);
+    expect(gated).toEqual([]);
   });
 
   it('escrow_hold chỉ gác đường GHI công tắc thu cọc — đường ĐỌC luôn mở (Phase 6)', () => {

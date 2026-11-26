@@ -29,6 +29,9 @@ import {
   PERMISSION,
   PLATFORM_ROLE,
   PLAN_STATUS,
+  RECEIPT_SOURCE,
+  RECEIPT_STATUS,
+  RECEIPT_TYPE,
   SUBSCRIPTION_STATUS,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS,
@@ -43,6 +46,7 @@ import {
   holdPaymentWindowMinutes,
 } from '@xeprime/types';
 import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
+import { BOOKING_MONEY_JOINS, SQL_DEBT, loadCounterDueAmount } from '../src/common/booking-money';
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import { ScheduledCreditService } from '../src/modules/wallet/scheduled-credit.service';
@@ -396,6 +400,8 @@ afterAll(async () => {
       tenantIds: [tenantId],
       userIds: [ownerId, customerId],
     });
+    // Phiếu tự động của lượt quyết toán gắn khách của gian hàng - xoá trước khách.
+    await prisma.receipt.deleteMany({ where: { tenantId } });
     await prisma.tenantCustomer.deleteMany({ where: { tenantId } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.plan.deleteMany({ where: { id: planId } });
@@ -1179,6 +1185,96 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
 
       // Bảo hiểm = 0 ở chính sách này ⇒ không có gì hoàn cho khách.
       expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(0);
+
+      // Phần của chủ xe lên sổ Thu-Chi trong CÙNG lượt chốt: một phiếu thu `xeprime_payout`, gắn
+      // đơn và xe; huỷ muộn không có thuế nên không có phiếu chi thuế.
+      const receipts = await prisma.receipt.findMany({
+        where: { tenantId, sourceRefId: holdId },
+        select: { type: true, source: true, amount: true, bookingId: true, status: true },
+      });
+      expect(receipts).toEqual([
+        {
+          type: RECEIPT_TYPE.INCOME,
+          source: RECEIPT_SOURCE.XEPRIME_PAYOUT,
+          amount: new Prisma.Decimal(60_000),
+          bookingId,
+          status: RECEIPT_STATUS.APPROVED,
+        },
+      ]);
+    },
+  );
+
+  /**
+   * Đơn qua sàn: phần `D` khách trả online là "đã thu" của đơn ngay khi tiền giữ chỗ về đủ — công
+   * nợ (bản TS lẫn bản SQL dùng cho /debts và thẻ tổng) không được đòi khách phần đó lần nữa. Lúc
+   * chuyến hoàn thành, phần chủ xe trước thuế thành phiếu thu, thuế khấu trừ thành phiếu chi.
+   */
+  maybe(
+    'đơn qua sàn: công nợ trừ D đã trả online; hoàn thành ⇒ phiếu thu D + phiếu chi thuế',
+    async () => {
+      const { holdId, bookingId } = await paidHold();
+      await prisma.bookingHold.update({
+        where: { id: holdId },
+        data: {
+          depositAmount: new Prisma.Decimal(60_000),
+          serviceFeeAmount: new Prisma.Decimal(40_000),
+        },
+      });
+      const booking = await prisma.booking.findUniqueOrThrow({
+        where: { id: bookingId },
+        select: { totalAmount: true, paidAmount: true },
+      });
+      const expectedDebt = Prisma.Decimal.max(
+        0,
+        booking.totalAmount.minus(booking.paidAmount).minus(60_000),
+      );
+
+      const due = await loadCounterDueAmount(prisma, tenantId, bookingId);
+      expect(due?.toFixed(0)).toBe(expectedDebt.toFixed(0));
+      const [row] = await prisma.$queryRaw<{ debt: string }[]>(Prisma.sql`
+      SELECT trim_scale(${SQL_DEBT})::text AS debt
+      FROM bookings b ${BOOKING_MONEY_JOINS}
+      WHERE b.id = ${bookingId}
+    `);
+      expect(new Prisma.Decimal(row!.debt).toFixed(0)).toBe(expectedDebt.toFixed(0));
+
+      await prisma.$transaction(async (tx) => {
+        await bookings.transitionWithinTx(
+          tx,
+          tenantId,
+          bookingId,
+          ownerId,
+          BOOKING_STATUS.RESERVED,
+          BOOKING_STATUS.ACTIVE,
+        );
+        await bookings.transitionWithinTx(
+          tx,
+          tenantId,
+          bookingId,
+          ownerId,
+          BOOKING_STATUS.ACTIVE,
+          BOOKING_STATUS.COMPLETED,
+        );
+      });
+
+      const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      const income = await prisma.receipt.findFirstOrThrow({
+        where: { tenantId, source: RECEIPT_SOURCE.XEPRIME_PAYOUT, sourceRefId: holdId },
+      });
+      // Phiếu thu = phần chủ xe TRƯỚC thuế; trừ phiếu chi thuế = đúng số vào Ví điểm.
+      expect(income.amount.toFixed(0)).toBe(
+        hold.settledOwnerAmount.plus(hold.settledTaxAmount).toFixed(0),
+      );
+      expect(income.bookingId).toBe(bookingId);
+      const tax = await prisma.receipt.findFirst({
+        where: { tenantId, source: RECEIPT_SOURCE.TAX_WITHHELD, sourceRefId: holdId },
+      });
+      if (hold.settledTaxAmount.gt(0)) {
+        expect(tax?.type).toBe(RECEIPT_TYPE.EXPENSE);
+        expect(tax?.amount.toFixed(0)).toBe(hold.settledTaxAmount.toFixed(0));
+      } else {
+        expect(tax).toBeNull();
+      }
     },
   );
 

@@ -35,6 +35,7 @@ export function VehicleSideCard() {
   const dl = useDomainLabel();
   const { has } = usePermissions();
   const { booking } = useBookingDetailActions();
+  // Nguồn đơn nằm ở đầu trang, cạnh nhãn chặng (`BookingSourceControl`) - không lặp lại ở thẻ này.
   const place = (BOOKING_HANDOVER_PLACE_VALUES as readonly string[]).includes(
     booking.handoverPlaceKind ?? '',
   )
@@ -152,7 +153,9 @@ export function CustomerSideCard() {
         {/* Cùng luật với nhãn "Khách quen" của sổ khách — không suy từ tên/SĐT tự khai. */}
         {booking.customerCompletedRentals != null &&
         booking.customerCompletedRentals >= TENANT_CUSTOMER_RETURNING_MIN_RENTALS ? (
-          <ToneDotBadge color={STATUS_COLOR.SUCCESS}>{t('returningCustomer')}</ToneDotBadge>
+          <ToneDotBadge compact color={STATUS_COLOR.SUCCESS}>
+            {t('returningCustomer')}
+          </ToneDotBadge>
         ) : null}
       </p>
       {booking.customerPhone ? (
@@ -185,7 +188,7 @@ export function CustomerSideCard() {
  * khác, thu vượt, trả trước online) chỉ hiện khi khác 0.
  *
  * Đọc như MỘT phép trừ (06/11/2026, phản hồi "các nguồn tiền khó hiểu"): Tổng tiền chuyến − phần
- * khách đã trả trước qua XePrime − đã thu tại quầy = **Còn phải thu của khách**, ô nổi bật cuối thẻ.
+ * khách đã trả trước qua XePrime − đã thu tại quầy = **Còn lại (phải thu)**, dòng cuối thẻ.
  * Dòng trả trước là `D` (tiền thuê CỦA CHỦ XE trong tiền giữ chỗ), không phải cả khoản giữ chỗ:
  * khoản đó còn gồm phí đặt xe và bảo hiểm — không thuộc tổng của gian hàng, trừ vào là các dòng
  * không còn cộng ra nhau. Số cuối là `counterDueAmount` — cùng phép với "Thu tiền thuê" của Chuẩn bị
@@ -319,24 +322,9 @@ export function PaymentSideCard() {
         Đơn huỷ / khách không đến: không còn gì để thu (ADR 0045 điều 1 — đơn đang chạy không huỷ
         được), nên ô "Còn phải thu" vắng hẳn; các dòng trên vẫn là bản ghi số tiền của đơn.
       */}
-      {moneyClosed ? null : (
-        <div
-          className={cx(
-            styles.moneyDue,
-            styles.moneyDesktopOnly,
-            settled && styles.moneyDueSettled,
-          )}
-          role="status"
-          aria-label={`${t('dueTitle')}: ${fmt.money(booking.counterDueAmount)}`}
-        >
-          <span className={styles.moneyDueLabel}>{t('dueTitle')}</span>
-          <strong className={styles.moneyDueAmount}>{fmt.money(booking.counterDueAmount)}</strong>
-          <span className={styles.moneyDueHint}>{dueHint}</span>
-        </div>
-      )}
       {/*
-        Khổ điện thoại (Figma Partner): cùng số `counterDueAmount`, dựng thành một dòng sau đường kẻ
-        thay cho ô nổi bật; câu "thu lúc nào" chuyển vào dấu "i" cạnh nhãn. Desktop giữ ô ở trên.
+        "Còn lại (phải thu)" - Figma `23777:48877`: một dòng sau đường kẻ ở mọi khổ màn hình, cùng số
+        `counterDueAmount`; câu "thu lúc nào" nằm ở dấu "i" cạnh nhãn.
       */}
       {moneyClosed ? null : (
         <div

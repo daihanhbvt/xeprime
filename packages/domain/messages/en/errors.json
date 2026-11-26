@@ -293,7 +293,8 @@
     "INTERNAL_DRIVER_PHOTO_INVALID": "This driver photo is not valid. Choose the photo again and save.",
     "BOOKING_DISCOUNT_EXCEEDS_BASE": "The discount cannot be larger than the rental amount.",
     "BOOKING_COLLATERAL_NOT_FOUND": "This collateral item was not found on the booking.",
-    "BOOKING_COLLATERAL_LOCKED": "Collateral cannot be added or removed: the booking is closed, already has 10 items, or this item was returned."
+    "BOOKING_COLLATERAL_LOCKED": "Collateral cannot be added or removed: the booking is closed, already has 10 items, or this item was returned.",
+    "BOOKING_SOURCE_LOCKED": "The source of a booking made through XePrime cannot be changed."
   },
   "codeWithWait": {
     "RATE_LIMITED": "You're going a little fast. Please try again in {wait}.",

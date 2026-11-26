@@ -14,6 +14,8 @@ export interface AdminBookingFilters {
   tenantId?: string;
   vehicleId?: string;
   status?: string;
+  /** Nguồn đơn (ADR 0110) - mã nguồn hoặc `direct` (mọi đơn chủ xe tự lập). */
+  source?: string;
   dateField?: string;
   dateFrom?: string;
   dateTo?: string;

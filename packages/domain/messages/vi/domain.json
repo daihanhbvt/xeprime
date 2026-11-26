@@ -481,7 +481,9 @@
     "payment": "Thu tiền đơn",
     "deposit": "Thu cọc",
     "deposit_refund": "Hoàn cọc",
-    "maintenance": "Bảo dưỡng"
+    "maintenance": "Bảo dưỡng",
+    "xeprime_payout": "Tiền qua XePrime",
+    "tax_withheld": "Thuế khấu trừ"
   },
   "receiptStatus": {
     "draft": "Nháp",
@@ -517,6 +519,15 @@
     "5": "5 chỗ",
     "7": "7 chỗ",
     "8plus": "7+ chỗ"
+  },
+  "bookingSource": {
+    "xeprime": "XePrime",
+    "walk_in": "Khách vãng lai",
+    "repeat_customer": "Khách quen",
+    "referral": "Người quen giới thiệu",
+    "social": "Mạng xã hội",
+    "other_platform": "Nền tảng khác",
+    "other": "Nguồn khác"
   },
   "serviceType": {
     "self_drive": "Tự lái",

@@ -20,15 +20,24 @@ export function ChangeBadge({
   value,
   unit = 'percent',
   positiveIsGood = true,
+  suffix,
+  noneLabel,
 }: {
   value: number | null;
   unit?: 'percent' | 'points';
   positiveIsGood?: boolean;
+  /**
+   * Thay chữ "so với cùng kỳ tháng trước" khi kỳ so sánh không phải tháng trước (vd tab Tài chính
+   * của hồ sơ xe so với "cùng kỳ trước" của kỳ đang chọn). `null` = không in hậu tố.
+   */
+  suffix?: string | null;
+  /** Thay chữ "chưa có số để so" mặc định. */
+  noneLabel?: string;
 }) {
   const t = useTranslations('Dashboard.change');
 
   if (value === null) {
-    return <span className={cx(styles.badge, styles.none)}>{t('none')}</span>;
+    return <span className={cx(styles.badge, styles.none)}>{noneLabel ?? t('none')}</span>;
   }
 
   const direction = value > 0 ? 'up' : value < 0 ? 'down' : 'flat';
@@ -53,7 +62,7 @@ export function ChangeBadge({
     >
       <Icon className={styles.icon} aria-hidden />
       <span className={styles.value}>{text}</span>
-      <span className={styles.suffix}>{t('suffix')}</span>
+      {suffix === null ? null : <span className={styles.suffix}>{suffix ?? t('suffix')}</span>}
     </span>
   );
 }

@@ -71,5 +71,202 @@
 }
 
 .totalRow b {
+  color: var(--xp-color-price);
   font-size: var(--xp-font-size-h4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tài sản thế chấp: tiêu đề + nút thêm trên một hàng, mỗi món một dòng gọn ───────────── */
+.assets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-12);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.assetsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+/* Liên kết hành động vàng `Text/Brand/primary 2` như các liên kết của chi tiết đơn - không xanh mặc định. */
+.assetsAdd.assetsAdd {
+  padding-inline: 0;
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.assetsAdd.assetsAdd:hover {
+  color: var(--xp-color-primary);
+}
+
+/* Thẻ khách thuê: các hàng ô cách đều một nhịp, không cộng dồn lề của Form.Item với lề của lưới. */
+.customerFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.customerFields > div {
+  margin-bottom: 0;
+}
+
+.customerFields :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.assetList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Một món: loại · mô tả · nút gỡ. Nhãn ô chỉ để trình đọc màn hình - tiêu đề khối đã nói đủ. */
+.assetRow {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-sm);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+}
+
+.assetRow :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.assetRow :global(.ant-form-item-label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (width <= 575px) {
+  .assetRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .assetRow > :nth-child(2) {
+    grid-column: 1;
+  }
+
+  .assetRemove {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+/*
+ * Màu tiền của hộp đặt hộ: vàng `Text/Brand/primary 2` như dòng tổng màn Xem lại của khách (Figma
+ * `19727:55409`), thay cho nâu `primary-strong` mặc định của `--xp-color-price`.
+ */
+.tone {
+  --xp-color-price: var(--xp-color-primary-hover);
+}
+
+:global([data-theme='dark']) .tone {
+  --xp-color-price: var(--xp-color-primary);
+}
+
+/* ── Hàng đáy dùng chung hai bước: tổng bên trái, nút bên phải ────────────────────────────── */
+.dockRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.dockTotal {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+}
+
+.dockLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.dockAmount {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-h3);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h3);
+  white-space: nowrap;
+}
+
+.dockActions {
+  display: flex;
+  flex: none;
+  gap: var(--xp-space-sm);
+  margin-left: auto;
+}
+
+.dockActions :global(.ant-btn) {
+  min-width: 120px;
+}
+
+/* ── Bước Xem lại: vùng cuộn ở trên, hàng đáy đứng yên ─────────────────────────────────────── */
+.reviewShell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.reviewShell .reviewScroll {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+  padding-bottom: var(--xp-space-md);
+}
+
+.reviewDock {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-elevated);
+}
+
+/* Mobile: ngăn kéo tự cuộn cả màn - hàng đáy dính mép dưới, nút rộng hết hàng. */
+@media (max-width: 640px) {
+  .reviewShell {
+    height: auto;
+  }
+
+  .reviewShell .reviewScroll {
+    flex: none;
+  }
+
+  .reviewDock {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding-bottom: var(--xp-space-sm);
+  }
+
+  .dockActions {
+    width: 100%;
+  }
+
+  .dockActions :global(.ant-btn) {
+    min-width: 0;
+    min-height: var(--xp-touch-target-min);
+    flex: 1 1 0;
+  }
 }

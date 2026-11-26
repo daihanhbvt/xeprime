@@ -9,6 +9,7 @@ import {
   transitionBooking,
   updateBooking,
   updateBookingDeliveryFee,
+  updateBookingSource,
   updateDriverWage,
 } from '../api';
 import type {
@@ -18,6 +19,7 @@ import type {
   SetHandoverPrepCheckInput,
   TransitionInput,
   UpdateBookingInput,
+  UpdateBookingSourceInput,
   UpdateDeliveryFeeInput,
   UpdateDriverWageInput,
 } from '../types';
@@ -49,6 +51,18 @@ export function useUpdateBooking(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateBookingInput) => updateBooking(id, body),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      invalidateAfterBookingChange(queryClient);
+    },
+  });
+}
+
+/** Đổi nguồn của một đơn tự lập (ADR 0110) - response là đơn đã cập nhật. */
+export function useUpdateBookingSource(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateBookingSourceInput) => updateBookingSource(id, body),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
       invalidateAfterBookingChange(queryClient);

@@ -308,17 +308,25 @@ describe('Ô "Tất cả" - bốn truy vấn nhỏ, đúng thứ tự một chuy
     });
   });
 
-  it('không có chuyến nào ⇒ mời tạo đơn; tuyến hoa hồng không có lối lập đơn tay', () => {
+  it('không có chuyến nào ⇒ mời tạo đơn; tuyến hoa hồng cũng lập được đơn tay (ADR 0110)', () => {
     renderPage();
     expect(screen.getByText('Gian hàng chưa có đơn thuê nào')).toBeTruthy();
     cleanup();
     me.billingMode = BILLING_MODE.COMMISSION;
     renderPage();
+    // Nút ở đầu trang và nút mời ở màn trống.
+    expect(screen.getAllByRole('button', { name: /Tạo đơn thuê/ }).length).toBeGreaterThan(0);
+  });
+
+  it('thiếu quyền bookings.create ⇒ không có lối lập đơn tay, ở cả hai tuyến', () => {
+    permissions.granted.delete(PERMISSION.BOOKING_CREATE);
+    renderPage();
     expect(screen.queryByRole('button', { name: /Tạo đơn thuê/ })).toBeNull();
   });
 
-  it('chủ xe tuyến hoa hồng, chưa có chuyến ⇒ câu của chuyến từ chợ + lối "Xem xe của tôi"', () => {
+  it('chủ xe tuyến hoa hồng không có quyền lập đơn, chưa có chuyến ⇒ câu của chuyến từ chợ + lối "Xem xe của tôi"', () => {
     me.billingMode = BILLING_MODE.COMMISSION;
+    permissions.granted.delete(PERMISSION.BOOKING_CREATE);
     renderPage();
     expect(screen.getByText('Chưa có chuyến thuê nào')).toBeTruthy();
     expect(screen.queryByText('Gian hàng chưa có đơn thuê nào')).toBeNull();

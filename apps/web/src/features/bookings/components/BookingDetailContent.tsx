@@ -1,5 +1,6 @@
 'use client';
 
+import { DollarCircleOutlined, FileTextOutlined, ProfileOutlined } from '@ant-design/icons';
 import { Button, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
@@ -17,7 +18,10 @@ import type { BookingDetail } from '../types';
 import { BookingExtensionsPanel } from './BookingExtensionsPanel';
 import { BookingInsuranceCertificatesPanel } from './BookingInsuranceCertificatesPanel';
 import { OwnerPayoutTable } from './OwnerPayoutTable';
-import { BookingDetailActionsProvider, useBookingDetailActions } from './detail/BookingDetailActions';
+import {
+  BookingDetailActionsProvider,
+  useBookingDetailActions,
+} from './detail/BookingDetailActions';
 import {
   BookingOutcomeBanner,
   BookingStepper,
@@ -126,7 +130,11 @@ function BookingDetailBody({
 
   return (
     <div className={styles.page}>
-      {renderHeader ? renderHeader(booking, actions) : <div className={styles.headerActions}>{actions}</div>}
+      {renderHeader ? (
+        renderHeader(booking, actions)
+      ) : (
+        <div className={styles.headerActions}>{actions}</div>
+      )}
       <div className={styles.layout}>
         <div className={styles.main}>
           <BookingStepper />
@@ -194,13 +202,32 @@ function HeaderActions() {
   return (
     <div className={styles.headerButtons}>
       {can.contract ? (
-        <Button loading={contractPending} onClick={openContract}>
+        <Button
+          className={styles.headerBtn}
+          icon={<FileTextOutlined aria-hidden />}
+          loading={contractPending}
+          onClick={openContract}
+        >
           {contractKnown ? t('viewContract') : t('createContract')}
         </Button>
       ) : null}
-      {can.history ? <Button onClick={openHistory}>{t('moneyHistory')}</Button> : null}
+      {can.history ? (
+        <Button
+          className={styles.headerBtn}
+          icon={<ProfileOutlined aria-hidden />}
+          onClick={openHistory}
+        >
+          {t('moneyHistory')}
+        </Button>
+      ) : null}
       {can.collect ? (
-        <Button type="primary" disabled={!hasDebt} onClick={openPay}>
+        <Button
+          type="primary"
+          className={styles.headerBtn}
+          icon={<DollarCircleOutlined aria-hidden />}
+          disabled={!hasDebt}
+          onClick={openPay}
+        >
           {hasDebt ? t('collect') : t('collected')}
         </Button>
       ) : null}

@@ -21,6 +21,7 @@ import {
   VN_PHONE_PATTERN,
   type BookingListPreset,
   HANDOVER_PREP_ITEM_VALUES,
+  HANDOVER_PREP_MANUAL_ITEM_VALUES,
   type HandoverPrepItem,
   BOOKING_COLLATERAL_DESCRIPTION_MAX,
   BOOKING_COLLATERAL_MAX_ITEMS,
@@ -28,6 +29,11 @@ import {
   BOOKING_EXTRA_CHARGE_LABEL_MAX,
   BOOKING_EXTRA_CHARGE_MAX_LINES,
   bookingCollateralNeedsDescription,
+  BOOKING_DIRECT_SOURCE_VALUES,
+  BOOKING_SOURCE_FILTER_VALUES,
+  BOOKING_SOURCE_LABEL_MAX,
+  BOOKING_SOURCE_VALUES,
+  bookingSourceTakesLabel,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -71,6 +77,16 @@ const MAX_LIMIT = 100;
 const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
 
 export { DEFAULT_LIMIT as BOOKING_DEFAULT_LIMIT, MAX_LIMIT as BOOKING_MAX_LIMIT };
+
+const trimText = ({ value }: { value: unknown }): unknown =>
+  typeof value === 'string' ? value.trim() : value;
+
+/** Nhãn nguồn: gọn khoảng trắng, chuỗi rỗng ⇒ null. */
+const trimToNull = ({ value }: { value: unknown }): unknown =>
+  typeof value === 'string' ? value.trim() || null : value;
+
+/** Nguồn nhận nhãn mà chưa có nhãn - câu báo lỗi chung của hai DTO. */
+const SOURCE_LABEL_REQUIRED = 'Nguồn này cần ghi tên nguồn (sourceLabel)';
 
 /**
  * Query danh sách đơn - luôn phân trang + filter + sort ở tầng DB (skill backend-endpoint).
@@ -118,6 +134,20 @@ export class BookingListQueryDto {
   /** Lọc theo chi nhánh của XE trong đơn - ô "Chi nhánh" trong thanh bộ lọc của danh sách đơn. */
   @BranchIdQuery()
   branchId?: string;
+
+  /** Lọc theo NGUỒN ĐƠN (ADR 0110). `direct` = mọi đơn ngoài sàn (mọi nguồn trừ `xeprime`). */
+  @ApiPropertyOptional({ enum: BOOKING_SOURCE_FILTER_VALUES })
+  @IsOptional()
+  @IsIn(BOOKING_SOURCE_FILTER_VALUES)
+  source?: string;
+
+  /** Lọc theo NHÃN tự nhập của nguồn (khớp đúng chuỗi) - vd một nền tảng cụ thể. */
+  @ApiPropertyOptional({ maxLength: BOOKING_SOURCE_LABEL_MAX })
+  @IsOptional()
+  @Transform(trimText)
+  @IsString()
+  @Length(1, BOOKING_SOURCE_LABEL_MAX)
+  sourceLabel?: string;
 
   @ApiPropertyOptional({ description: 'Trả xe từ (ISO) - lọc cho panel quá hạn/sắp trả' })
   @IsOptional()
@@ -174,6 +204,18 @@ export class BookingListItemDto {
   customerAccountPhone!: string | null;
   @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  /**
+   * NGUỒN ĐƠN (ADR 0110): `xeprime` = đơn qua sàn (server gắn); giá trị khác = đơn chủ xe tự lập,
+   * ngoài sàn. MÃ - nhãn do client dịch.
+   */
+  @ApiProperty({ enum: BOOKING_SOURCE_VALUES }) source!: string;
+  @ApiProperty({
+    required: true,
+    type: String,
+    nullable: true,
+    description: 'Nhãn tự nhập của nguồn `other_platform` / `other` - chuỗi thô, không dịch',
+  })
+  sourceLabel!: string | null;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
@@ -347,8 +389,9 @@ export class BookingHandoverManualCheckDto {
 
 /** Đánh dấu / bỏ đánh dấu tay một việc chuẩn bị bàn giao. Việc tiền không có trong danh sách. */
 export class SetHandoverPrepCheckDto {
-  @ApiProperty({ enum: HANDOVER_PREP_ITEM_VALUES })
-  @IsIn(HANDOVER_PREP_ITEM_VALUES)
+  /** "Ảnh bàn giao" không đánh dấu tay được (26/11/2026) - xong khi biên bản đủ ảnh. */
+  @ApiProperty({ enum: HANDOVER_PREP_MANUAL_ITEM_VALUES })
+  @IsIn(HANDOVER_PREP_MANUAL_ITEM_VALUES)
   item!: HandoverPrepItem;
 
   @ApiProperty({ description: 'true = đánh dấu đã xong · false = bỏ đánh dấu' })
@@ -388,9 +431,6 @@ export class BookingHandoverPrepDto {
   })
   manualChecks!: BookingHandoverManualCheckDto[];
 }
-
-const trimText = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
 
 /** Một dòng phụ phí của đơn gian hàng tự lập (ADR 0109) - vd "Ghế trẻ em". */
 export class BookingExtraChargeInputDto {
@@ -769,11 +809,64 @@ export class CreateBookingDto {
   @Type(() => BookingCollateralInputDto)
   collaterals?: BookingCollateralInputDto[];
 
+  /**
+   * NGUỒN ĐƠN (ADR 0110) - chủ xe chọn kênh khách tới. KHÔNG nhận `xeprime`: nguồn đó do server gắn
+   * cho đơn sinh ra từ yêu cầu đặt xe. Vắng (app chưa cập nhật) ⇒ `other`.
+   */
+  @ApiPropertyOptional({ enum: BOOKING_DIRECT_SOURCE_VALUES })
+  @IsOptional()
+  @IsIn(BOOKING_DIRECT_SOURCE_VALUES)
+  source?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: BOOKING_SOURCE_LABEL_MAX,
+    description:
+      'Tên nguồn tự nhập - bắt buộc khi `source` là `other_platform` / `other`; bị bỏ qua ở nguồn khác',
+  })
+  @Transform(trimToNull)
+  @ValidateIf(
+    (o: CreateBookingDto) =>
+      o.sourceLabel != null || (o.source != null && bookingSourceTakesLabel(o.source)),
+  )
+  @IsString({ message: SOURCE_LABEL_REQUIRED })
+  @IsNotEmpty({ message: SOURCE_LABEL_REQUIRED })
+  @MaxLength(BOOKING_SOURCE_LABEL_MAX)
+  sourceLabel?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   note?: string;
+}
+
+/** Đổi NGUỒN của một đơn tự lập (ADR 0110) - đơn qua sàn không đổi được (409 `BOOKING_SOURCE_LOCKED`). */
+export class UpdateBookingSourceDto {
+  @ApiProperty({ enum: BOOKING_DIRECT_SOURCE_VALUES })
+  @IsIn(BOOKING_DIRECT_SOURCE_VALUES)
+  source!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: BOOKING_SOURCE_LABEL_MAX,
+    description: 'Tên nguồn tự nhập - bắt buộc khi `source` là `other_platform` / `other`',
+  })
+  @Transform(trimToNull)
+  @ValidateIf(
+    (o: UpdateBookingSourceDto) => o.sourceLabel != null || bookingSourceTakesLabel(o.source),
+  )
+  @IsString({ message: SOURCE_LABEL_REQUIRED })
+  @IsNotEmpty({ message: SOURCE_LABEL_REQUIRED })
+  @MaxLength(BOOKING_SOURCE_LABEL_MAX)
+  sourceLabel?: string | null;
+}
+
+/** Nhãn nguồn gian hàng ĐÃ TỪNG gõ - nuôi ô gợi ý và bộ lọc, mới dùng nhất trước. */
+export class BookingSourceLabelsDto {
+  @ApiProperty({ type: [String] }) labels!: string[];
 }
 
 /**

@@ -293,7 +293,8 @@
     "INTERNAL_DRIVER_PHOTO_INVALID": "Ảnh tài xế không hợp lệ. Chọn lại ảnh rồi lưu.",
     "BOOKING_DISCOUNT_EXCEEDS_BASE": "Giảm giá không được lớn hơn tiền thuê.",
     "BOOKING_COLLATERAL_NOT_FOUND": "Không tìm thấy tài sản thế chấp này trên đơn.",
-    "BOOKING_COLLATERAL_LOCKED": "Không thêm hoặc gỡ được tài sản: đơn đã kết thúc, đã đủ 10 món, hoặc món này đã trả cho khách."
+    "BOOKING_COLLATERAL_LOCKED": "Không thêm hoặc gỡ được tài sản: đơn đã kết thúc, đã đủ 10 món, hoặc món này đã trả cho khách.",
+    "BOOKING_SOURCE_LOCKED": "Đơn đặt qua XePrime không đổi được nguồn."
   },
   "codeWithWait": {
     "RATE_LIMITED": "Bạn thao tác hơi nhanh. Vui lòng thử lại sau {wait}.",
