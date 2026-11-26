@@ -1,4 +1,5 @@
 import type { ConversationSummary } from '@/features/chat/api';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { CHAT_INBOX, CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, type ListRenderItemInfo } from 'react-native';
@@ -189,7 +190,7 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
             mỗi lần render nên chân danh sách bị dựng lại liên tục.
           */
           ListFooterComponent={
-            query.isFetchingNextPage ? ListRowSkeleton : query.hasNextPage ? null : ListEnd
+            query.isFetchingNextPage ? ListLoadingFooter : query.hasNextPage ? null : ListEnd
           }
           {...LIST_TUNING}
         />

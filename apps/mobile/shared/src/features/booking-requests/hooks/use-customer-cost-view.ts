@@ -9,7 +9,7 @@ import {
 import type { PriceBreakdownFeesInput } from '@/components/ui/PriceBreakdown';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { visibleFeeLines, visiblePriceRows } from '../customer-price-view';
+import { customerFeeLines, visiblePriceRows } from '../customer-price-view';
 import { useQuoteTotal } from './use-quote-total';
 import { useLocalizePriceRows } from './use-localized-price-rows';
 
@@ -66,7 +66,8 @@ export function useCustomerCostView({
     breakdown ? visiblePriceRows(breakdown.rows, [PRICE_ROW.SUBTOTAL]) : [],
     Boolean(breakdown?.longTerm),
   );
-  const feeLines = visibleFeeLines(fees?.lines ?? [], 'customer');
+  // Phí thu hộ bảo hiểm GỘP vào dòng IV, ⓘ tách hai số (ADR 0091 điều 3, web).
+  const feeLines = customerFeeLines(fees?.lines ?? []);
   const promoDiscount = fees?.promoDiscountAmount ?? '0';
   const hasPromo = !isZeroMoney(promoDiscount);
   const longTerm = breakdown?.longTerm ?? null;

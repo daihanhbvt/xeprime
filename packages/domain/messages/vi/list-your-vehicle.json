@@ -1,6 +1,20 @@
 {
   "landing": {
     "chooseCta": "Chọn mô hình & đăng ký",
+    "partnerApp": {
+      "subtitle": "Tối ưu doanh thu từ xe nhàn rỗi hoặc xây dựng thương hiệu kinh doanh chuyên nghiệp.<br></br>Chọn mô hình phù hợp nhất với quy mô của bạn!",
+      "personalFeatures": {
+        "noFee": "Miễn phí\nđăng ký",
+        "vehicleCap": "Tối đa\n{maxVehicles} xe",
+        "simple": "Quản lý lịch trình\ncơ bản"
+      },
+      "shopTitle": "Gian hàng chuyên nghiệp",
+      "shopTagline": "Công cụ quản trị toàn diện, tối đa lợi nhuận",
+      "shopBody": "Nền tảng quản lý đội xe chuyên sâu với <offer>0% phí hoa hồng</offer>, tích hợp báo cáo, phân quyền nhân viên và quản lý đa chi nhánh.",
+      "shopOfferBody": "Áp dụng mô hình trả phí thuê bao theo quy mô đội xe. Giữ trọn 100% doanh thu từ khách hàng.",
+      "personalOfferBodyRange": "Nền tảng chỉ thu phí hoa hồng từ {min}% đến {max}% trên tổng giá trị mỗi chuyến đi thành công.",
+      "personalOfferBody": "Nền tảng chỉ thu phí hoa hồng trên tổng giá trị mỗi chuyến đi thành công."
+    },
     "metaTitle": "Đăng xe cho thuê",
     "title": "Chọn mô hình hợp tác cùng XePrime",
     "back": "Quay lại",

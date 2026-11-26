@@ -174,6 +174,7 @@ export function CalendarToolbar({
         label: t('toolbar.sortAriaLabel'),
         value: filters.sort,
         resetValue: DEFAULT_SORT,
+        display: 'prefixed' as const,
         options: CALENDAR_SORT_VALUES.map((value) => ({
           value,
           label: t(`toolbar.sort.${value}`),
@@ -192,6 +193,7 @@ export function CalendarToolbar({
          * lại không được đếm. Một giá trị suy ra từ vị trí trong mảng là một giá trị chờ trôi.
          */
         resetValue: String(DEFAULT_DAYS),
+        display: 'prefixed' as const,
         options: CALENDAR_DAY_OPTIONS.map((value) => ({
           value: String(value),
           label: t('toolbar.dayRange', { count: value }),

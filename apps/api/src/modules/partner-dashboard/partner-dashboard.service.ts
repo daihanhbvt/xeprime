@@ -181,6 +181,8 @@ export class PartnerDashboardService {
       returnsToday,
       returnsOverdue,
       returnsDue,
+      nextPickup,
+      nextReturn,
     ] = await Promise.all([
       this.prisma.booking.count({ where: awaiting }),
       this.prisma.booking.count({ where: { ...awaiting, pickupAt: day } }),
@@ -190,6 +192,15 @@ export class PartnerDashboardService {
       this.prisma.booking.count({ where: { ...active, returnAt: day } }),
       this.prisma.booking.count({ where: { ...active, returnAt: { lt: now } } }),
       this.prisma.booking.count({ where: { ...active, returnAt: { lte: day.lte } } }),
+      // Mốc SẮP TỚI gần nhất (Figma "Giao gần nhất" · "Nhận lại sớm nhất") - cùng tập với ô đếm.
+      this.prisma.booking.aggregate({
+        where: { ...awaiting, pickupAt: { gte: now } },
+        _min: { pickupAt: true },
+      }),
+      this.prisma.booking.aggregate({
+        where: { ...active, returnAt: { gte: now } },
+        _min: { returnAt: true },
+      }),
     ]);
 
     return {
@@ -201,6 +212,8 @@ export class PartnerDashboardService {
       returnsToday,
       returnsOverdue,
       returnsDue,
+      nextPickupAt: nextPickup._min.pickupAt?.toISOString() ?? null,
+      nextReturnAt: nextReturn._min.returnAt?.toISOString() ?? null,
     };
   }
 

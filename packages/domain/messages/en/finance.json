@@ -415,7 +415,9 @@
       "businessInfoLabel": "About revenue and costs",
       "businessNote": "Deposits are excluded from both sides. This is cash profit from the ledger - before depreciation, loan interest or vehicle lease payments.",
       "cashInfoLabel": "About net cash flow",
-      "cashNote": "Cash in minus cash out across every approved voucher, deposits taken and refunded included - this is the money that actually changed hands this period."
+      "cashNote": "Cash in minus cash out across every approved voucher, deposits taken and refunded included - this is the money that actually changed hands this period.",
+      "profitMonth": "Profit for month {month}",
+      "netCashShort": "Net for period"
     },
     "chart": {
       "title": "Cash flow & profit over time",
@@ -435,7 +437,8 @@
       "yAxisUnit": "Unit: million VND",
       "legend": "Chart legend",
       "weekRange": "{from} - {to}",
-      "description": "Bars are revenue and costs, the line is profit. Deposits excluded."
+      "description": "Bars are revenue and costs, the line is profit. Deposits excluded.",
+      "titleShort": "Cash flow & Profit"
     },
     "categories": {
       "incomeTitle": "Revenue breakdown",
@@ -512,7 +515,15 @@
         "vehicles": "By vehicle",
         "customers": "By customer"
       },
-      "sortValue": "Sort: {label}"
+      "sortValue": "Sort: {label}",
+      "top": {
+        "vehicles": "Top {count} by profit",
+        "customers": "Top {count} by revenue"
+      }
+    },
+    "periodSheet": {
+      "title": "Select period",
+      "custom": "Custom date range"
     }
   },
   "entity": {
@@ -582,7 +593,8 @@
     },
     "ratePair": "VAT {vat, number}% + PIT {pit, number}%",
     "notSplit": "Legacy row - not split",
-    "monthValue": "{month}"
+    "monthValue": "{month}",
+    "periodShortYear": "Month {month}/{year}"
   },
   "history": {
     "page": {

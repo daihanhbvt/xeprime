@@ -42,7 +42,19 @@ export function useSaveShopPolicy(vehicleType: string) {
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.rentalPolicies.shop(vehicleType), data);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.rentalPolicies.insuranceImpact(vehicleType),
+      });
     },
+  });
+}
+
+/** Xe kế thừa mà thiếu dữ liệu bảo hiểm - cảnh báo đổi sang Bắt buộc (ADR 0091 điều 1, web). */
+export function useShopInsuranceImpact(vehicleType: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.rentalPolicies.insuranceImpact(vehicleType),
+    queryFn: () => shopPoliciesApi.insuranceImpact(vehicleType),
+    enabled,
   });
 }
 

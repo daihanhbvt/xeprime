@@ -24,6 +24,7 @@ export function useMonthKpiCards(
   links: DashboardLinks,
 ): KpiCard[] {
   const t = useTranslations('Dashboard.kpi');
+  const tApp = useTranslations('Dashboard.partnerApp');
   const tCommon = useTranslations('Common.labels');
   // Web: `month ? … : '-'`, `loading = isLoading && !month` - lỗi cũng chỉ là `-`, không thành 0.
   const fmt = useAppFormat();
@@ -71,7 +72,8 @@ export function useMonthKpiCards(
     {
       key: 'utilization',
       icon: PieChartOutlined,
-      label: t('utilization'),
+      // Figma "Tỷ lệ lấp đầy" - khoá riêng app.
+      label: tApp('utilization'),
       value: month
         ? month.utilizationPercent === null
           ? t('utilizationEmpty')

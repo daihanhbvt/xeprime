@@ -22,6 +22,7 @@ import { space } from '@/theme/tokens';
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -101,7 +102,6 @@ export function DebtListScreen() {
   // Hai tab của "Lịch sử giao dịch" dùng CHUNG tiêu đề + mô tả của web (ledger 09 §3.11).
   const tHistory = useTranslations('Finance.history.page');
   const tCommon = useTranslations('Common.labels');
-  const tActions = useTranslations('Common.actions');
   /* Câu thiếu quyền là CHUNG cho cả tuyến tiền — dùng lại đúng chuỗi của màn Tổng quan. */
   const tForbidden = useTranslations('Finance.overview.forbidden');
   const permissions = usePermissions();
@@ -193,6 +193,7 @@ export function DebtListScreen() {
         label: t('sort.label'),
         value: sort,
         resetValue: DEFAULT_DEBT_SORT,
+        display: 'prefixed' as const,
         options: DEBT_SORT_VALUES.map((value) => ({ value, label: t(`sort.${value}`) })),
       },
     ],
@@ -328,17 +329,7 @@ export function DebtListScreen() {
                     description={branchEmpty.hint}
                   />
                 ) : filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('table.noResults.title')}
-                    actionLabel={tActions('clear')}
-                    onAction={() => {
-                      setGroup(DEBT_FILTER.ALL);
-                      setStatus(FILTER_ALL);
-                      setSearch('');
-                      setPage(FIRST_PAGE);
-                    }}
-                  />
+                  <NoResults />
                 ) : (
                   <ScreenMessage icon="checkmark-circle-outline" title={t('table.empty.title')} />
                 ),

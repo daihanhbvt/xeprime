@@ -3,7 +3,6 @@ import { useTranslations } from 'use-intl';
 import { LEGAL_DOC } from '@xeprime/domain';
 import { Callout } from '@/components/ui/Callout';
 import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
-import { Pill } from '@/components/ui/Pill';
 import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
 import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -56,7 +55,7 @@ export function ApprovalPreviewSummary({
         <InfoGroupCard
           title={title}
           collapsible
-          headerRight={<Pill label={t('estimate')} tone="neutral" size="md" />}
+          // Figma tấm duyệt không có viên "Ước tính" (người dùng gỡ 20/11/2026).
           collapsedContent={
             <OwnerPayoutTable payout={preview.ownerPayout} label={title} variant="v2" summaryOnly />
           }
@@ -91,6 +90,7 @@ function ApprovalWindowNotes({
 }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.approvalPreview');
+  const tApp = useTranslations('BookingRequests.approvalPreview.partnerApp');
   const fmt = useAppFormat();
   const openDoc = useOpenLegalDoc();
 
@@ -108,23 +108,21 @@ function ApprovalWindowNotes({
         note(t('noHold'))
       ) : w ? (
         <>
-          {note(
-            `• ${t('paymentWindow', {
+          {/*
+            App: MỘT câu hạn thanh toán (giờ in đậm) + link "Chính sách hủy" như Figma `24145:97083`
+            (người dùng chốt 20/11/2026). Huỷ miễn phí / huỷ muộn đọc ở trang chính sách; web giữ 3 ý.
+          */}
+          <Text col={colors.textBody} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            {tApp.rich('paymentWindow', {
               duration: fmt.minutesDuration(w.paymentWindowMinutes),
               time: fmt.dateTime(w.expiresAt),
-            })}`,
-          )}
-          {note(
-            `• ${
-              w.freeCancelMinutes > 0
-                ? t('freeCancel', {
-                    duration: fmt.minutesDuration(w.freeCancelMinutes),
-                    time: fmt.dateTime(w.freeCancelUntil),
-                  })
-                : t('noFreeCancel')
-            }`,
-          )}
-          {note(`• ${t('lateCancel')}`)}
+              b: (chunks) => (
+                <Text col={colors.textBody} fow={fontWeight.semibold}>
+                  {chunks}
+                </Text>
+              ),
+            })}
+          </Text>
           {w.tooShort ? <Callout tone="warning" title={t('tooShort')} /> : null}
           <Text
             alignSelf="flex-start"

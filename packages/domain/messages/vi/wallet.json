@@ -186,7 +186,10 @@
       "ownerIncomeGeneric": "Thu nhập",
       "appSubscriptionFee": "Phí quản lý & vận hành nền tảng",
       "appOwnerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ - chủ xe, thuế khấu trừ và phí nền tảng - gồm cả phần khách trả trực tiếp, không gồm phí giao xe."
-    }
+    },
+    "unitPerDay": "/ngày",
+    "unitPerMonth": "/tháng",
+    "toggle": "Mở hoặc thu gọn chuyến {code}"
   },
   "pill": {
     "label": "Số dư",

@@ -125,6 +125,22 @@ export const vehicleDataApi = {
       ...(params.includeId ? { includeId: params.includeId } : {}),
     });
   },
+  /** Mọi xe chuẩn đã duyệt của một hãng + loại xe - ô "Mẫu xe" gộp của form đăng xe (ADR 0102). */
+  brandOptions(params: {
+    vehicleType: string;
+    brandKey: string;
+    includeId?: string | null;
+  }): Promise<VehicleDataOption[]> {
+    return getApiClient().get<VehicleDataOption[]>('/catalog/variants', {
+      vehicleType: params.vehicleType,
+      brandKey: params.brandKey,
+      ...(params.includeId ? { includeId: params.includeId } : {}),
+    });
+  },
+  /** Chủ xe gõ một dòng xe chưa có (ADR 0090): tạo ngay, chờ duyệt, gắn được cho xe này. */
+  createOwnerModel(body: { vehicleType: string; brandKey: string; label: string }): Promise<CatalogModel> {
+    return getApiClient().post<CatalogModel>('/vehicle-catalog/models', body);
+  },
   suggestion(params: {
     modelId: string;
     variantId?: string | null;

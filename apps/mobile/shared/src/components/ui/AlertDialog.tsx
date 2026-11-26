@@ -1,7 +1,8 @@
+import { dismissKeyboardFirst } from '@/lib/dismiss-keyboard-first';
 import type { ReactNode } from 'react';
 import { Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Button } from './Button';
 import { layout, modalColumn } from '@/theme/layout';
@@ -35,6 +36,7 @@ export function AlertDialog({
   cancelLabel,
   destructive = false,
   loading = false,
+  actionsRow = false,
   onConfirm,
   onCancel,
 }: {
@@ -54,6 +56,8 @@ export function AlertDialog({
   /** Hành động không lấy lại được — nút chính chuyển sang tông cảnh báo. */
   destructive?: boolean;
   loading?: boolean;
+  /** Hai nút CÙNG MỘT HÀNG (Huỷ trái · hành động phải) thay cho xếp dọc. */
+  actionsRow?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -76,7 +80,7 @@ export function AlertDialog({
           Lớp phủ là ANH EM của hộp, không phải cha: bọc hộp trong một `Pressable` phủ toàn màn
           thì mọi cú chạm vào chính hộp cũng đóng nó.
         */}
-        <Pressable style={appStyles.scrim} onPress={onCancel} accessibilityLabel={t('close')} />
+        <Pressable style={appStyles.scrim} onPress={dismissKeyboardFirst(onCancel)} accessibilityLabel={t('close')} />
 
         {/*
           `pb` cộng thêm safe-area ĐÁY: thanh điều hướng Android nằm ĐÈ lên cửa sổ modal, và
@@ -107,21 +111,42 @@ export function AlertDialog({
             {body}
           </YStack>
 
-          <YStack gap={space.xs}>
-            <Button
-              label={confirmLabel}
-              variant={destructive ? 'danger' : 'primary'}
-              loading={loading}
-              onPress={onConfirm}
-            />
-            {/* Huỷ ở DƯỚI và không viền: nó là lối thoát, không phải một lựa chọn ngang hàng. */}
-            <Button
-              label={cancelLabel ?? t('cancel')}
-              variant="ghost"
-              disabled={loading}
-              onPress={onCancel}
-            />
-          </YStack>
+          {actionsRow ? (
+            <XStack gap={space.sm}>
+              <YStack f={1} flexBasis={0}>
+                <Button
+                  label={cancelLabel ?? t('cancel')}
+                  variant="secondary"
+                  disabled={loading}
+                  onPress={onCancel}
+                />
+              </YStack>
+              <YStack f={1} flexBasis={0}>
+                <Button
+                  label={confirmLabel}
+                  variant={destructive ? 'danger' : 'primary'}
+                  loading={loading}
+                  onPress={onConfirm}
+                />
+              </YStack>
+            </XStack>
+          ) : (
+            <YStack gap={space.xs}>
+              <Button
+                label={confirmLabel}
+                variant={destructive ? 'danger' : 'primary'}
+                loading={loading}
+                onPress={onConfirm}
+              />
+              {/* Huỷ ở DƯỚI và không viền: nó là lối thoát, không phải một lựa chọn ngang hàng. */}
+              <Button
+                label={cancelLabel ?? t('cancel')}
+                variant="ghost"
+                disabled={loading}
+                onPress={onCancel}
+              />
+            </YStack>
+          )}
         </YStack>
       </YStack>
     </Modal>

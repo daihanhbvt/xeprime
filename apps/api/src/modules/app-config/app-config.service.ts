@@ -56,10 +56,10 @@ export class AppConfigService {
   async getPartner(db: Db = this.prisma): Promise<PartnerAppConfigDto> {
     const row = await db.platformAppConfig.findUnique({
       where: { key: APP_CONFIG_KEY.PARTNER },
-      select: { isPlanPromotionEnabled: true, version: true },
+      select: { isPlanPromotionEnabled: true, version: true, supportHotline: true },
     });
     // Dòng do migration nạp; thiếu (DB dựng tay) ⇒ mặc định TẮT, không bao giờ đoán bật.
-    return row ?? { isPlanPromotionEnabled: false, version: 1 };
+    return row ?? { isPlanPromotionEnabled: false, version: 1, supportHotline: null };
   }
 
   async getPartnerAdmin(): Promise<PartnerAppConfigAdminDto> {

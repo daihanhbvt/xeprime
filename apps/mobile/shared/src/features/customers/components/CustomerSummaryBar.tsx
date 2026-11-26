@@ -1,42 +1,34 @@
-import { useMemo } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { memo } from 'react';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { TENANT_CUSTOMER_RETURNING_MIN_RENTALS } from '@xeprime/types';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { radius, space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import { useCustomerSummary } from '../hooks/use-customers';
 
-/**
- * Chiều cao khung chờ — xấp xỉ chiều cao thật của thẻ hai hàng, để danh sách không nhảy khi dữ
- * liệu về: mỗi hàng là đệm dọc (8×2) + dòng số (~21) + khe (2) + nhãn MỘT dòng (~16), cộng kẻ
- * chia giữa hai hàng.
- */
-const SKELETON_HEIGHT = 112;
+/** Chiều cao khung chờ — xấp xỉ thẻ thật (hàng ba chỉ số + dải nợ) để danh sách không nhảy khi dữ liệu về. */
+const SKELETON_HEIGHT = 132;
+const DISC_PAD = 8;
+const ICON_SIZE = 20;
+/** Figma: đệm thẻ, khe giữa hàng chỉ số và dải nợ, đệm ngang dải nợ đều là 12 (thang `space` không có 12). */
+const PAD = 12;
 
 /**
- * Dải chỉ số đầu sổ khách — sáu con số của web (hai ô tiền cần `finance.view`), cùng phép đếm (backend `groupBy`), nói về CẢ sổ
- * chứ không phụ thuộc trang hay bộ lọc hiện tại.
+ * Dải chỉ số đầu sổ khách - Figma Partner-XePrime "Users List" `24486:59056` ("Vehicle Summary").
  *
- * Bảng số do `<StatGrid>` vẽ — cùng component với dải chỉ số của hồ sơ khách, nên hai màn không
- * trôi khỏi nhau. Khối này chỉ còn lo VỎ (lề sát mép màn, khung phẳng) và việc chọn ô nào.
+ * Một thẻ trắng: hàng ba chỉ số (khách · lần thuê · tổng doanh thu), mỗi chỉ số là hình tròn nền
+ * nhạt + con số đậm, nhãn xuống dưới; dưới cùng là dải nợ nền đỏ nhạt "tổng nợ · N khách còn nợ".
+ * Dải nợ chỉ để xem (người dùng 25/11/2026), không bấm được.
  *
- * Nhãn hiện ra là bản `*Short`, nhãn web đầy đủ đi vào `fullLabel`: ô rộng ~145dp nên "Cần lưu ý
- * / từ chối phục vụ" xuống hai dòng và làm lệch cả dải. Hai bản nằm cùng namespace `Customers`,
- * không phải một file message riêng cho native.
- *
- * Ô công nợ **biến mất hoàn toàn** khi thiếu `finance.view`: "không được xem" và "không có nợ" là
- * hai chuyện khác nhau, và một số 0 giả sẽ được đọc như sự thật. Backend trả `null` cho đúng lý
- * do đó — lúc đó hàng dưới chỉ còn một ô và nó chiếm trọn bề ngang.
- *
- * Hỏng thì tự ẩn — cùng cách `FleetSummaryBar` làm: dải chỉ số là phụ trợ, không được chặn danh
- * sách phía dưới, và cũng không được rơi về một hàng số 0 mà người dùng không có cách nào biết
- * là giả.
+ * Cùng phép đếm với web (backend `groupBy`), nói về CẢ sổ chứ không phụ thuộc trang hay bộ lọc.
+ * Hai ô tiền (doanh thu, nợ) **biến mất hoàn toàn** khi thiếu `finance.view`: "không được xem" và
+ * "không có nợ" là hai chuyện khác nhau, và một số 0 giả sẽ được đọc như sự thật. Hỏng thì tự ẩn:
+ * dải chỉ số là phụ trợ, không được chặn danh sách phía dưới.
  */
-export function CustomerSummaryBar({
+function CustomerSummaryBarImpl({
   enabled,
   canViewFinance,
 }: {
@@ -44,89 +36,126 @@ export function CustomerSummaryBar({
   canViewFinance: boolean;
 }) {
   const colors = useColors();
-  const t = useTranslations('Customers.summary');
+  const t = useTranslations('Customers.app.summary');
   const fmt = useAppFormat();
   const { data, isLoading, isError } = useCustomerSummary(enabled);
 
-  const cells = useMemo<StatCell[]>(() => {
-    if (!data) return [];
-
-    const showDebt = canViewFinance && data.totalDebt !== null;
-    const hasDebt = (data.debtCustomers ?? 0) > 0;
-
-    return [
-      // Thứ tự của web `CustomerSummaryCards`: khách · lượt thuê · doanh thu* · nợ* · khách quen · rủi ro.
-      {
-        key: 'active',
-        icon: 'people-outline',
-        label: t('totalCustomers'),
-        value: fmt.count(data.activeCustomers),
-        tone: colors.textMuted,
-      },
-      {
-        key: 'rentals',
-        icon: 'checkmark-circle-outline',
-        label: t('totalRentals'),
-        value: fmt.count(data.totalRentals),
-        tone: colors.info,
-      },
-      ...(canViewFinance && data.totalRevenue != null
-        ? [
-            {
-              key: 'revenue',
-              icon: 'wallet-outline' as const,
-              label: t('totalRevenue'),
-              value: fmt.money(data.totalRevenue),
-              tone: colors.success,
-            },
-          ]
-        : []),
-      ...(showDebt
-        ? [
-            {
-              key: 'debt',
-              icon: 'cash-outline' as const,
-              label: t('debtShort', { count: data.debtCustomers ?? 0 }),
-              fullLabel: t('debt', { count: data.debtCustomers ?? 0 }),
-              /*
-               * Số ĐẦY ĐỦ, không rút gọn: đây là tiền người ta phải đi đòi, và "12,5tr" thì
-               * không đối chiếu được với bất cứ con số nào ở hồ sơ khách hay sổ Thu-Chi.
-               * `adjustsFontSizeToFit` của `StatGrid` lo ca hiếm — khoản nợ mười chữ số.
-               */
-              value: fmt.money(data.totalDebt),
-              tone: hasDebt ? colors.danger : colors.textMuted,
-              ...(hasDebt ? { valueTone: colors.danger } : {}),
-            },
-          ]
-        : []),
-      // Bỏ ô Khách quen + Lưu ý/từ chối trên app (người dùng 16/11/2026) - nhóm đó đã có ở dải tab.
-    ];
-  }, [colors, data, canViewFinance, t, fmt]);
-
   if (!enabled || isError) return null;
-
-  if (isLoading) {
-    return (
-      <XStack px={layout.screenX} pb={space.sm}>
-        <Skeleton width="100%" height={SKELETON_HEIGHT} />
-      </XStack>
-    );
-  }
-
+  if (isLoading) return <Skeleton width="100%" height={SKELETON_HEIGHT} />;
   if (!data) return null;
 
+  const showRevenue = canViewFinance && data.totalRevenue != null;
+  const showDebt = canViewFinance && data.totalDebt != null;
+
+  return (
+    <Card padded={false}>
+      <YStack p={PAD} gap={PAD}>
+        <XStack>
+          <StatCell
+            icon="users-2"
+            iconColor={colors.textMuted}
+            disc={colors.surfaceMuted}
+            value={fmt.count(data.activeCustomers)}
+            label={t('customers')}
+          />
+          <StatCell
+            icon="tick-circle"
+            iconColor={colors.info}
+            disc={colors.infoLow}
+            value={fmt.count(data.totalRentals)}
+            label={t('rentals')}
+          />
+          {showRevenue ? (
+            <StatCell
+              icon="wallet"
+              iconColor={colors.success}
+              disc={colors.successSurface}
+              value={t('revenueCompact', { amount: fmt.moneyCompact(data.totalRevenue) })}
+              label={t('revenue')}
+            />
+          ) : null}
+        </XStack>
+
+        {showDebt ? (
+          <XStack
+            ai="center"
+            jc="space-between"
+            gap={space.sm}
+            px={PAD}
+            py={space.sm}
+            br={radius.control}
+            bg={colors.dangerSurface}
+          >
+            <Text
+              col={colors.danger}
+              fos={typeScale.title.fontSize}
+              lh={typeScale.title.lineHeight}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+              flexShrink={1}
+            >
+              {fmt.money(data.totalDebt)}
+            </Text>
+            <Text
+              col={colors.textMuted}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              numberOfLines={1}
+              flexShrink={0}
+            >
+              {t('debtCustomers', { count: data.debtCustomers ?? 0 })}
+            </Text>
+          </XStack>
+        ) : null}
+      </YStack>
+    </Card>
+  );
+}
+
+/** Một chỉ số: hình tròn nền nhạt + con số 16 đậm, nhãn 12 thường ngay dưới. */
+function StatCell({
+  icon,
+  iconColor,
+  disc,
+  value,
+  label,
+}: {
+  icon: LineIconName;
+  iconColor: string;
+  disc: string;
+  value: string;
+  label: string;
+}) {
+  const colors = useColors();
   return (
     <YStack
-      mx={layout.screenX}
-      mb={space.sm}
-      br={radius.md}
-      bw={1}
-      bc={colors.borderSubtle}
-      bg={colors.surface}
-      ov="hidden"
-      accessibilityLabel={t('ariaLabel')}
+      f={1}
+      flexBasis={0}
+      minWidth={0}
+      gap={space.sm}
+      accessible
+      accessibilityLabel={`${label}: ${value}`}
     >
-      <StatGrid cells={cells} />
+      <XStack ai="center" gap={6}>
+        <YStack p={DISC_PAD} br={radius.pill} bg={disc}>
+          <LineIcon name={icon} size={ICON_SIZE} color={iconColor} />
+        </YStack>
+        <Text
+          flexShrink={1}
+          col={colors.text}
+          fos={typeScale.title.fontSize}
+          lh={typeScale.title.lineHeight}
+          fow={fontWeight.semibold}
+          numberOfLines={1}
+        >
+          {value}
+        </Text>
+      </XStack>
+      <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
+        {label}
+      </Text>
     </YStack>
   );
 }
+
+export const CustomerSummaryBar = memo(CustomerSummaryBarImpl);

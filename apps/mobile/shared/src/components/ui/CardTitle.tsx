@@ -1,3 +1,4 @@
+import { IS_PARTNER_APP } from '@/lib/app-kind';
 import { Ionicons } from '@/components/icons/Ionicons';
 import type { ComponentProps, ReactNode } from 'react';
 import { Pressable } from 'react-native';
@@ -17,7 +18,7 @@ type IoniconName = ComponentProps<typeof Ionicons>['name'];
  */
 export function CardTitle({
   children,
-  icon,
+  icon: iconProp,
   hint,
   hintLabel,
 }: {
@@ -29,6 +30,8 @@ export function CardTitle({
   hintLabel?: string;
 }) {
   const colors = useColors();
+  // Feedback thiết kế 20/11/2026 (dòng 2 "All Page"): app Partner - tiêu đề khối chỉ chữ, không icon.
+  const icon = IS_PARTNER_APP ? undefined : iconProp;
   const text = (
     <Text
       flexShrink={1}

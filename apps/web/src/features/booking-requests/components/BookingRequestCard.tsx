@@ -838,7 +838,16 @@ function requestBoardMoney(
   tKanban: KanbanT,
 ): { total: RentalBoardMoney | null; money: RentalBoardMoney[]; hold: RentalBoardHold | null } {
   const pricing = request.pricing;
-  if (!pricing) return { total: null, money: [], hold: null };
+  /*
+   * Yêu cầu còn chờ duyệt LUÔN có viên "Chờ duyệt", kể cả khi chưa có khoản giữ chỗ nào (thuê dài
+   * hạn chưa chốt lịch/giá - ADR 0011 · 0044): cùng một trạng thái thì cùng một viên (người dùng
+   * chốt 20/11/2026, cả app). Chỉ là hiển thị - không bịa số tiền.
+   */
+  const awaitingApproval: RentalBoardHold | null =
+    request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
+      ? { label: tKanban('money.hold'), state: 'expected', stateLabel: tKanban('holdState.awaitingApproval') }
+      : null;
+  if (!pricing) return { total: null, money: [], hold: awaitingApproval };
   const rows = requestPaymentRows(request, t);
   const payAtPickup = rows.find((row) => row.key === 'payAtPickup');
   const holdRow = rows.find((row) => row.key === 'hold');
@@ -867,7 +876,7 @@ function requestBoardMoney(
               ? tKanban('holdState.awaitingApproval')
               : tKanban(`holdState.${holdRow.holdState}`),
         }
-      : null;
+      : awaitingApproval;
   return {
     total: {
       key: 'customer',

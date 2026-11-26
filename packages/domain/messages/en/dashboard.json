@@ -1,5 +1,21 @@
 {
   "title": "Dashboard",
+  "partnerApp": {
+    "greeting": {
+      "morning": "Good morning,",
+      "afternoon": "Good afternoon,",
+      "evening": "Good evening,"
+    },
+    "nextPickup": "Next handover {time}",
+    "nextReturn": "Next return {time}",
+    "awaitingPaymentNone": "No trips waiting",
+    "monthTitle": "Month {month} vs last month",
+    "report": "Report",
+    "vsPrevious": "vs last month ({value})",
+    "vsPreviousBare": "vs last month",
+    "utilization": "Utilization rate",
+    "acceptKeepLow": "Low rate - avoid cancelling accepted trips to raise it"
+  },
   "stats": {
     "available": "Vehicles ready",
     "renting": "Out on rent",

@@ -174,7 +174,7 @@ export function RequestReviewStep({
           name="note"
           label={t('reviewPage.renter.noteLabel')}
           placeholder={t('reviewPage.renter.notePlaceholder')}
-          multiline
+          multiline scrollable
           rows={3}
           maxLength={NOTE_MAX}
         />

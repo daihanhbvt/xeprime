@@ -6,6 +6,7 @@ import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { SectionCard } from '@/components/layout/SectionCard';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { SettlementCard } from '@/features/settlement/components/SettlementCard';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -144,9 +145,22 @@ function BookingDetailBody({
           </div>
           <HandoverPhotosCard />
           {booking.ownerPayout ? (
-            <SectionCard title={t('detailPage.profit.title')}>
-              <OwnerPayoutTable payout={booking.ownerPayout} label={t('detailPage.profit.title')} />
-              <p className={styles.moneyNote}>{t('money.ownerEconomics.note')}</p>
+            <SectionCard
+              title={t('detailPage.profit.title')}
+              className={styles.profitCard}
+              // "Số đã chốt lúc đặt…" thành dấu "i" cạnh tiêu đề - rê chuột mới hiện (người dùng 20/11/2026).
+              extra={
+                <InfoHint
+                  content={t('money.ownerEconomics.note')}
+                  label={t('detailPage.profit.title')}
+                />
+              }
+            >
+              <OwnerPayoutTable
+                payout={booking.ownerPayout}
+                label={t('detailPage.profit.title')}
+                phoneCard
+              />
             </SectionCard>
           ) : null}
           {/* Bảo hiểm chuyến (ADR 0064) và phụ lục gia hạn (ADR 0077) — tự ẩn khi không có. */}

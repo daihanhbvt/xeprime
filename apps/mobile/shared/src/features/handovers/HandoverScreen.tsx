@@ -485,7 +485,7 @@ function HandoverForm({
                       name="notes"
                       label={t('notes.label')}
                       placeholder={t('notes.placeholder')}
-                      multiline
+                      multiline scrollable
                       rows={3}
                       maxLength={NOTE_MAX}
                     />

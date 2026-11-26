@@ -64,6 +64,10 @@ import {
   type QuickVehicleValues,
 } from './quick-schema';
 import { useQuickVehicleRegistration } from './hooks/use-quick-vehicle';
+import {
+  useApplyRegistrationReading,
+  useComposedVehicleName,
+} from '@/features/vehicles/hooks/use-vehicle-data';
 import { QuickVehicleOwnerStep } from './components/QuickVehicleOwnerStep';
 import {
   QuickVehicleFeaturesStep,
@@ -294,12 +298,17 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
   const [regShowErrors, setRegShowErrors] = useState(false);
   const plateNumber = useWatch({ control, name: 'plateNumber' });
   const regCheck = checkRegistration(regCapture, plateNumber);
+  // Lượt đọc cà vẹt MỚI điền đè biển số + màu sơn (ADR 0102 điều 6) - ở form gốc, không ở bước.
+  useApplyRegistrationReading(regCapture.reading, setValue as never);
   const ensureShopBeforeUpload = useCallback(async () => {
     if (opensShop) await registration.ensureShop(ownerProfile);
   }, [opensShop, ownerProfile, registration]);
 
   const vehicleType = useWatch({ control, name: 'vehicleType' });
   /* Mức "Sẵn sàng gửi duyệt" — cùng luật cổng lưu, chỉ để chủ xe thấy còn thiếu gì. */
+  // Cờ ổn định cho `useMemo` - `errors` là object mới mỗi lượt render.
+  const regPhotoError = Boolean(regCheck.errors.photo);
+  const regFieldsOk = Object.keys(regCheck.errors).every((key) => key === 'photo');
   const watched = useWatch({ control });
   const readiness: CreateReadiness = useMemo(() => {
     const values = { ...QUICK_VEHICLE_DEFAULTS, ...watched } as QuickVehicleValues;
@@ -312,16 +321,20 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
       photos:
         requiredVehicleImageTypes(values.vehicleType).every((slot) =>
           media.some((item) => item.type === slot),
-        ) && regCheck.ok,
+        ) && !regPhotoError,
       // Không đòi `branchId`: người MỞ gian hàng chưa có chi nhánh tới lúc lưu (chi nhánh mặc định).
+      // Ảnh cà vẹt chỉ cần CÓ; tên chủ xe / số khung / số máy là ô nhập của mục thông tin (web 18/11).
       info:
-        Boolean(values.name?.trim()) &&
+        Boolean(values.vehicleCatalogModelId) &&
+        regFieldsOk &&
         missingEnergyFields(values).length === 0 &&
         !gaps.some((g) => REQUIREMENT_STEP[g] === 'info' && g !== PUBLISH_REQUIREMENT.PHOTOS),
       pricing: !gaps.some((g) => REQUIREMENT_STEP[g] === 'rental'),
       features: (values.features ?? []).length > 0 || Boolean(values.description?.trim()),
     };
-  }, [watched, regCheck.ok]);
+  }, [watched, regPhotoError, regFieldsOk]);
+  // Không hỏi tên (ADR 0102): tấm xác nhận hiện đúng tên server sẽ ghép.
+  const autoName = useComposedVehicleName(watched);
 
   const steps = useMemo(
     () =>
@@ -639,7 +652,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
 
           <CreateReadinessCard
             readiness={readiness}
-            requiredPhotos={requiredVehicleImageTypes(vehicleType).length + 1}
+            requiredPhotos={requiredVehicleImageTypes(vehicleType).length}
           />
 
           {step === 'info' ? (
@@ -656,7 +669,11 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
                   />
                 </YStack>
               </Card>
-              <QuickVehicleInfoStep control={control} setValue={setValue} />
+              <QuickVehicleInfoStep
+                control={control}
+                setValue={setValue}
+                registrationReading={regCapture.reading}
+              />
             </>
           ) : null}
           {step === 'rental' ? (
@@ -735,7 +752,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
       >
         {confirmOpen ? (
           <QuickConfirmBody
-            values={getValues()}
+            values={{ ...getValues(), name: autoName }}
             branchName={branchNameOf(getValues().branchId)}
             chassis={regCheck.input?.chassisNumber ?? null}
             engine={regCheck.input?.engineNumber ?? null}

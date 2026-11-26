@@ -19,8 +19,10 @@ export function useAccumulatedPages<T>(
   const cur = acc.current;
   if (items && page !== undefined && items !== cur.source) {
     if (page === cur.page && page > 1) {
-      // Làm mới đúng trang đang cuối (sau một thao tác) - giữ các trang đã gộp.
-      acc.current = { ...cur, source: items };
+      // Làm mới đúng trang đang cuối (sau một thao tác) - giữ các trang đã gộp nhưng CẬP NHẬT các dòng
+      // của trang đó theo dữ liệu mới (trước đây bỏ hẳn nên sửa tên xong vẫn hiện bản cũ).
+      const fresh = new Map(items.map((row) => [keyOf(row), row]));
+      acc.current = { ...cur, rows: cur.rows.map((row) => fresh.get(keyOf(row)) ?? row), source: items };
     } else if (page <= 1 || page < cur.page) {
       acc.current = { page, rows: items, source: items };
     } else {

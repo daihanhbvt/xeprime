@@ -137,6 +137,14 @@ export interface CompactMoneyParts {
 }
 
 /**
+ * MỘT kiểu rút gọn cho MỌI màn (người dùng chốt 25/11/2026): ba chữ số lẻ ở bậc triệu - `5.004.000` →
+ * `5,004tr`, `1.620.000` → `1,62tr` (số 0 đuôi bị cắt) - nên rút gọn KHÔNG làm mất tiền tới 1.000đ.
+ * `116.444.555` → `116,444tr`, `1.234.567.000` → `1,234tỷ`; bậc nghìn (`600k`) giữ luật bên dưới. Web và mobile cùng gọi hàm này, không bên nào
+ * tự chọn số chữ số lẻ.
+ */
+export const COMPACT_FRACTION_DIGITS = 3;
+
+/**
  * Rút gọn tiền cho chỗ HẸP (một dòng trên thẻ mobile): `12.750.000` → `12,7` + bậc `million`.
  *
  * Trả về PHẦN, không phải câu: hậu tố (`tr` / `M`) là chữ theo ngôn ngữ nên do message ghép.
@@ -162,7 +170,7 @@ export interface CompactMoneyParts {
 export function compactMoneyParts(
   value: MoneyString,
   separators: MoneySeparators,
-  fractionDigits: 1 | 2 = 1,
+  fractionDigits: 1 | 2 | 3 = COMPACT_FRACTION_DIGITS,
 ): CompactMoneyParts | null {
   const cents = toCents(value);
   const negative = cents < 0n;
@@ -177,18 +185,22 @@ export function compactMoneyParts(
     { scale: 100_000n, unit: 'thousand' },
   ] as const;
 
-  // `10n ** 1n` / `10n ** 2n` - bậc chia lấy phần lẻ, vẫn nguyên bigint nên không có bước nào
-  // đi qua `number` (ADR 0007).
-  const fractionScale = 10n ** BigInt(fractionDigits);
 
   for (const { scale, unit } of UNITS) {
     if (absolute >= scale) {
       const whole = absolute / scale;
-      const fraction = (absolute % scale) / (scale / fractionScale);
+      // Phần nguyên từ 100 trở lên (trăm triệu / trăm tỷ) chỉ giữ 1 chữ số lẻ: `281,2tr` vừa ô số liệu hẹp,
+      // còn `281,253tr` thì tràn và bị cắt thành `281,253...` (người dùng 25/11/2026). Vẫn CẮT, không làm tròn.
+      const digits = unit !== 'thousand' && whole >= 100n ? 1 : fractionDigits;
+      const scaleFraction = 10n ** BigInt(digits);
+      const fraction = (absolute % scale) / (scale / scaleFraction);
       // Đệm 0 ĐẦU rồi cắt 0 ĐUÔI: `1.050.000` ở 2 chữ số cho `05` (phải giữ số 0 đầu, nếu
       // không thành `1,5tr`), còn `1.300.000` cho `30` và phải rút thành `1,3tr`.
-      const padded = String(fraction).padStart(fractionDigits, '0').replace(/0+$/, '');
-      const decimals = whole >= 100n || padded === '' ? '' : `${separators.decimal}${padded}`;
+      const padded = String(fraction).padStart(digits, '0').replace(/0+$/, '');
+      // Bậc triệu/tỷ LUÔN giữ chữ số lẻ (`112,205tr`, người dùng 25/11/2026); chỉ bậc nghìn ≥ 100 mới bỏ
+      // (`123k` - phần lẻ khi đó là dưới 1.000đ, không phải một đơn vị người ta đọc).
+      const dropFraction = unit === 'thousand' && whole >= 100n;
+      const decimals = dropFraction || padded === '' ? '' : `${separators.decimal}${padded}`;
       return { value: `${sign}${whole}${decimals}`, unit };
     }
   }

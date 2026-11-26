@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
   LOGIN_IDENTIFIER_KIND,
@@ -13,15 +13,18 @@ import { APP_PROFILE } from '@/app-profile';
 import { useAuthSchemaLabels } from '../use-auth-schema-labels';
 import { useForm } from 'react-hook-form';
 import { Pressable, StyleSheet } from 'react-native';
-import { Text, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
+import { CheckMark } from '@/components/ui/CheckMark';
 import { FieldAppearanceProvider } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
 import { type CurrentUser } from '@/features/auth/api';
 import { useLogin } from '@/features/auth/hooks/use-auth';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { readRememberedLogin, rememberLogin } from '../remembered-login';
+import { LOGIN_SECTION_GAP } from './PartnerLoginHero';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
 
@@ -69,12 +72,31 @@ export function LoginForm({ onSuccess, onForgotPassword, belowSubmit }: LoginFor
     [labels, isPartnerApp],
   );
 
-  const { control, handleSubmit } = useForm<LoginFormValues>({
+  const { control, handleSubmit, getFieldState, setValue } = useForm<LoginFormValues>({
     mode: 'onChange',
     // Hai nhánh cùng hình `{ identifier, password }` — ép về một kiểu để RHF không thấy hợp hai schema.
     resolver: yupResolver(schema as yup.ObjectSchema<LoginFormValues>),
     defaultValues: { identifier: '', password: '' },
   });
+
+  /*
+   * "Ghi nhớ tài khoản" (app Partner, như site partner): kho trên máy đọc BẤT ĐỒNG BỘ, nên định
+   * danh nhớ được điền vào SAU lúc dựng form - và chỉ khi người dùng chưa kịp gõ gì vào ô.
+   */
+  const [remember, setRemember] = useState(false);
+  const rememberTouched = useRef(false);
+  useEffect(() => {
+    if (!isPartnerApp) return;
+    let alive = true;
+    void readRememberedLogin().then((stored) => {
+      if (!alive || !stored) return;
+      if (!getFieldState('identifier').isDirty) setValue('identifier', stored);
+      if (!rememberTouched.current) setRemember(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [isPartnerApp, getFieldState, setValue]);
 
   const onSubmit = handleSubmit((values) => {
     // SĐT: bỏ dấu cách/chấm/gạch chép từ danh bạ như web; tên đăng nhập: chữ thường, bỏ khoảng trắng.
@@ -85,7 +107,11 @@ export function LoginForm({ onSuccess, onForgotPassword, belowSubmit }: LoginFor
     login.mutate(
       { identifier, password: values.password },
       {
-        onSuccess,
+        onSuccess: (user) => {
+          // Chỉ nhớ định danh đã đăng nhập THÀNH CÔNG; bỏ tick thì quên (web `rememberPhone`).
+          if (isPartnerApp) rememberLogin(remember ? identifier : null);
+          onSuccess(user);
+        },
         onError: (error) => toast.showError(errorMessage(error)),
       },
     );
@@ -102,7 +128,6 @@ export function LoginForm({ onSuccess, onForgotPassword, belowSubmit }: LoginFor
         placeholder={t(
           isPartnerApp ? 'login.partnerIdentifierPlaceholder' : 'login.phonePlaceholder',
         )}
-        hint={isPartnerApp ? t('login.partnerIdentifierHint') : undefined}
         icon={isPartnerApp ? 'person-outline' : 'call-outline'}
         autoCapitalize="none"
         autoComplete={isPartnerApp ? 'username' : 'tel'}
@@ -158,16 +183,43 @@ export function LoginForm({ onSuccess, onForgotPassword, belowSubmit }: LoginFor
   */
   if (isPartnerApp) {
     /*
-      Figma Partner-XePrime "Login" (`24464:24587` · `24464:24593`): bộ ô `v2`, khe ô 16, "Quên mật
-      khẩu?" canh phải ngay dưới ô mật khẩu; cách 24 là nút gradient cao 44 và dòng mời đăng ký (khe 8).
-      "Ghi nhớ tài khoản" của bản vẽ KHÔNG có trên app (chưa có tính năng nhớ tài khoản ở native).
+      Figma Partner-XePrime "Login" (`24464:24587` · `24464:24593`): bộ ô `v2`, khe ô 16; hàng "Form
+      Action" (`24464:24590`) - ô tick 16 + "Ghi nhớ tài khoản" 14/20 bên trái, "Quên mật khẩu?" bên
+      phải; cách 24 là nút gradient cao 44 và dòng mời đăng ký (khe 8).
     */
     return (
       <FieldAppearanceProvider value="v2">
-        <YStack gap={space.xl}>
+        {/* Khe form → nút giảm nhẹ 24 → 20 (chốt 20/11/2026); khe giữa các ô giữ 16 như bản vẽ. */}
+        <YStack gap={LOGIN_SECTION_GAP}>
           <YStack gap={space.lg}>
             {fields}
-            {forgot}
+            <XStack ai="flex-start" jc="space-between" gap={space.md}>
+              <Pressable
+                onPress={() => {
+                  rememberTouched.current = true;
+                  setRemember((value) => !value);
+                }}
+                disabled={login.isPending}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: remember, disabled: login.isPending }}
+                hitSlop={space.sm}
+                style={styles.remember}
+              >
+                <XStack pt={REMEMBER_BOX_OFFSET}>
+                  <CheckMark checked={remember} size="sm" />
+                </XStack>
+                <Text
+                  flexShrink={1}
+                  col={colors.textMuted}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.medium}
+                >
+                  {t('market.login.remember')}
+                </Text>
+              </Pressable>
+              {forgot}
+            </XStack>
           </YStack>
           <YStack gap={space.sm}>
             <Button
@@ -206,7 +258,16 @@ export function LoginForm({ onSuccess, onForgotPassword, belowSubmit }: LoginFor
   `marginTop` ÂM để kéo dòng "Quên mật khẩu" sát ô mật khẩu: nó thuộc về ô đó, không phải một
   mục ngang hàng trong khoảng cách `space.md` của cột.
 */
+/** Ô tick 16 lùi xuống 2 để giữa dòng chữ 14/20 (Figma `24464:24591` pt 2). */
+const REMEMBER_BOX_OFFSET = 2;
+
 const styles = StyleSheet.create({
+  remember: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: space.sm,
+  },
   forgot: {
     alignSelf: 'flex-end',
     marginTop: -space.xs,

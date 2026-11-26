@@ -20,6 +20,7 @@ import {
   SURCHARGE_CATEGORY_LABEL,
   SURCHARGE_CATEGORY_VALUES,
   handoverPhotoSlotsFor,
+  isEarlyReturn,
   isSingleEntrySurchargeCategory,
   surchargeCategoryBlock,
   type HandoverCondition,
@@ -285,7 +286,21 @@ export function ReturnHandoverForm({
     scheduled.isValid() && scheduled.isBefore(openedAt) && !occurredAt.isSame(scheduled, 'minute')
       ? scheduled
       : null;
-  const timeliness = late ? t('late', { duration: fmt.roughDuration(lateMinutes) }) : t('onTime');
+  /*
+   * Trả SỚM (ADR 0105, web `ConfirmReturnDialog`): đo bằng lúc MỞ màn - mốc bấm xác nhận server dùng -
+   * không bằng giờ trả thực tế ở ô dưới (chủ xe được lùi ô đó). Cùng ngưỡng với "Tôi chưa trả xe".
+   */
+  const earlyMinutes =
+    scheduled.isValid() && isEarlyReturn(scheduled.toDate(), openedAt.toDate())
+      ? scheduled.diff(openedAt, 'minute')
+      : 0;
+  const earlyDuration = earlyMinutes > 0 ? fmt.roughDuration(earlyMinutes) : null;
+  const offSchedule = late || earlyDuration !== null;
+  const timeliness = late
+    ? t('late', { duration: fmt.roughDuration(lateMinutes) })
+    : earlyDuration
+      ? t('early', { duration: earlyDuration })
+      : t('onTime');
   const lateDetail =
     lateMinutes < 24 * 60 ? fmt.minutesDuration(lateMinutes) : fmt.roughDuration(lateMinutes);
 
@@ -445,15 +460,21 @@ export function ReturnHandoverForm({
                 py={2}
                 br={radius.pill}
                 bw={1}
-                bc={late ? colors.danger : colors.success}
-                bg={late ? colors.dangerSurface : colors.successSurface}
+                bc={offSchedule ? colors.danger : colors.success}
+                bg={offSchedule ? colors.dangerSurface : colors.successSurface}
               >
-                <Text col={late ? colors.danger : colors.success} fos={fontSize.label} fow={fontWeight.medium}>
+                <Text col={offSchedule ? colors.danger : colors.success} fos={fontSize.label} fow={fontWeight.medium}>
                   {timeliness}
                 </Text>
               </XStack>
             </XStack>
           </Card>
+
+          {earlyDuration ? (
+            <Callout tone="warning" title={t('earlyTitle', { duration: earlyDuration })}>
+              {t('earlyBody')}
+            </Callout>
+          ) : null}
 
           <Card>
             <YStack gap={space.md}>

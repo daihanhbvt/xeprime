@@ -6,7 +6,8 @@ import { useTranslations } from 'use-intl';
 import { useIsOnline } from '@/hooks/use-is-online';
 import { subscribeOffline } from '@/lib/network';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { layout } from '@/theme/layout';
 
 /** Hộp "Không có kết nối mạng" — đủ lâu để đọc hai dòng, rồi tự tắt. */
@@ -169,6 +170,7 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: layout.padX,
   },
   texts: { flex: 1, gap: 2 },
-  title: { fontSize: fontSize.body, fontWeight: fontWeight.semibold },
-  hint: { fontSize: fontSize.bodySm },
+  // `Text` gốc RN không ăn font Tamagui: khai đúng mặt chữ (Android chọn file theo `fontFamily`, không theo `fontWeight`).
+  title: { fontFamily: FONT_FAMILY.semibold, fontSize: fontSize.body },
+  hint: { fontFamily: FONT_FAMILY.body, fontSize: fontSize.bodySm },
 }));

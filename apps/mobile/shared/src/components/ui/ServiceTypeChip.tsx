@@ -2,54 +2,28 @@ import { Text, YStack } from 'tamagui';
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/domain';
 import { themed } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import { Pill, type PillTone } from './Pill';
-
-/** Tông viên dịch vụ của design v2 (Figma `Status/information` · `pink` · `purple`). */
-const SERVICE_PILL_TONE: Readonly<Record<string, PillTone>> = {
-  [SERVICE_TYPE.SELF_DRIVE]: 'info',
-  [SERVICE_TYPE.WITH_DRIVER]: 'pink',
-  [SERVICE_TYPE.LONG_TERM]: 'purple',
-};
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 
 type Skin = { bg: string; fg: string; border: string };
 
 const useServiceSkins = themed<{ selfDrive: Skin; withDriver: Skin; longTerm: Skin; other: Skin }>(
   (colors) => ({
     selfDrive: { bg: colors.infoSurface, fg: colors.infoStrong, border: colors.infoBorder },
-    withDriver: { bg: colors.warningSurface, fg: colors.warningStrong, border: colors.warningBorder },
-    longTerm: { bg: colors.pinkSurface, fg: colors.pink, border: colors.pinkBorder },
+    withDriver: { bg: colors.pinkSurface, fg: colors.pink, border: colors.pinkBorder },
+    longTerm: { bg: colors.purpleSurface, fg: colors.purple, border: colors.purpleBorder },
     other: { bg: colors.neutralSurface, fg: colors.textMuted, border: colors.border },
   }),
 );
 
 /**
  * Viên loại dịch vụ trên thẻ đơn / yêu cầu / lịch sử đơn — bản native của `ServiceTypeChip` web
- * (Figma Partner-XePrime 02/11/2026): "Tự lái" xanh dương, "Có tài xế" cam, "Thuê xe dài hạn"
- * hồng, viền cùng sắc. Nhãn đọc từ namespace `Domain` (mã là dữ liệu — ADR 0012).
+ * (Figma Partner-XePrime): "Tự lái" xanh dương, "Có tài xế" hồng, "Thuê xe dài hạn" tím, viền
+ * cùng sắc (người dùng chốt 20/11/2026, web + app cùng bộ màu). Nhãn đọc từ namespace `Domain`
+ * (mã là dữ liệu — ADR 0012).
  */
-export function ServiceTypeChip({
-  value,
-  variant = 'default',
-}: {
-  value: string;
-  /**
-   * `v2` — viên dịch vụ của thẻ đơn design v2 (Figma "Rental Request - MB" `_Badge`): bo 16, chữ
-   * 14/20, "Tự lái" xanh dương · "Xe có tài xế" hồng · "Thuê xe dài hạn" tím.
-   */
-  variant?: 'default' | 'v2';
-}) {
+export function ServiceTypeChip({ value }: { value: string }) {
   const domainLabel = useDomainLabel();
   const skins = useServiceSkins();
-  if (variant === 'v2') {
-    return (
-      <Pill
-        label={domainLabel('serviceType', value as ServiceType)}
-        tone={SERVICE_PILL_TONE[value] ?? 'neutral'}
-        size="lg"
-      />
-    );
-  }
   const skin =
     value === SERVICE_TYPE.SELF_DRIVE
       ? skins.selfDrive
@@ -68,7 +42,8 @@ export function ServiceTypeChip({
       bw={1}
       bc={skin.border}
     >
-      <Text col={skin.fg} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
+      {/* CÙNG cỡ viên trạng thái (`Pill` md: chữ 12/18, đệm 2/8) - hai viên đứng cạnh nhau phải đều (20/11/2026). */}
+      <Text col={skin.fg} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
         {domainLabel('serviceType', value as ServiceType)}
       </Text>
     </YStack>

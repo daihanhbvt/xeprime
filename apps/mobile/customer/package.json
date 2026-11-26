@@ -58,6 +58,7 @@
     "expo-file-system": "catalog:",
     "expo-haptics": "catalog:",
     "expo-apple-authentication": "catalog:",
+    "expo-blur": "catalog:",
     "expo-crypto": "catalog:",
     "expo-document-picker": "catalog:",
     "expo-font": "catalog:",

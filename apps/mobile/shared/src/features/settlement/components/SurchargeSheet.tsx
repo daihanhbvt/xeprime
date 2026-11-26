@@ -56,15 +56,16 @@ function buildSurchargeSchema(labels: { category: string; amount: string; reason
       .typeError(labels.amount)
       .moreThan(0, labels.amount)
       .required(labels.amount),
-    reason: yup.string().trim().required(labels.reason).max(REASON_MAX, labels.reason),
+    // Lý do KHÔNG bắt buộc (biên bản 19/11/2026, web `SurchargeDialog`) - bỏ trống gửi chuỗi rỗng.
+    reason: yup.string().trim().max(REASON_MAX, labels.reason).default(''),
   });
 }
 
 /**
  * Thêm / sửa một khoản phụ phí.
  *
- * `reason` là BẮT BUỘC vì đây là khoản TRỪ VÀO TIỀN CỦA KHÁCH, và khách đọc được nó ở màn chuyến
- * của mình. Một khoản trừ không lý do là thứ không được phép tồn tại.
+ * `reason` KHÔNG bắt buộc từ 20/11/2026 (biên bản họp 19/11, web `SurchargeDialog`): danh mục đã
+ * tự nói khoản đó là gì; có lý do thì khách đọc được ở màn chuyến.
  *
  * `SURCHARGE_CATEGORY` cố ý **không có** danh mục nhiên liệu: hao xăng đã có kênh riêng ở biên
  * bản bàn giao (mức xăng lúc giao và lúc nhận), và ghi nó thành một khoản tiền tự do ở đây là
@@ -125,7 +126,7 @@ export function SurchargeSheet({
       buildSurchargeSchema({
         category: t('categoryLabel'),
         amount: t('amountRequired'),
-        reason: t('reasonRequired'),
+        reason: t('reasonHint'),
       }),
     [t],
   );
@@ -204,7 +205,6 @@ export function SurchargeSheet({
       footer={
         <Button
           label={t('add')}
-          icon="add-circle-outline"
           loading={loading}
           onPress={() => void submit()}
         />
@@ -309,7 +309,6 @@ export function SurchargeSheet({
         multiline
         rows={3}
         maxLength={REASON_MAX}
-        required
       />
     </BottomSheet>
   );

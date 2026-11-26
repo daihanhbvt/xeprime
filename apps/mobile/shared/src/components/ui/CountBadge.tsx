@@ -13,7 +13,11 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 const SIZES = {
   md: { box: 20, font: fontSize.label },
   sm: { box: 16, font: 10 },
+  /** Chấm số trên nút vuông 42 của đầu Tổng quan (Figma Overview MB `24175:52351`): cao 12, chữ 8, đệm 2. */
+  xs: { box: 12, font: 8 },
 } as const;
+/** Đệm ngang của viên `xs` (Figma 2) - hai cỡ kia giữ `space.xs`. */
+const XS_PAD_X = 2;
 
 /** Quá ngưỡng thì con số thành "99+" — viên huy hiệu không được nở dài ra ngoài thanh trên. */
 const MAX = 99;
@@ -81,7 +85,7 @@ export function CountBadge({
     <YStack
       minWidth={dim.box}
       h={dim.box}
-      px={space.xs}
+      px={size === 'xs' ? XS_PAD_X : space.xs}
       br={radius.pill}
       bg={skin.bg}
       ai="center"

@@ -5,11 +5,27 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
-import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, useFieldAppearance } from './Field';
+import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, useFieldAppearance, inLabelHint, belowHint } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+
+/**
+ * Ô `v2` vẽ icon bằng bộ nét Figma (`LineIcon`), không bằng Ionicons: "Profile 1" · "Lock 3" ·
+ * "Show" · "Message 36" · "Calling 1" của Figma Partner-XePrime ("Login" `24464:24574`, "Signup -
+ * Personal" `24464:24953`). Tên chưa có bản Figma thì giữ Ionicons.
+ */
+const V2_LINE_ICON: Partial<Record<IconName, LineIconName>> = {
+  'person-outline': 'profile',
+  'lock-closed-outline': 'lock',
+  'mail-outline': 'mail',
+  'call-outline': 'calling',
+  // Tấm tài khoản nhận tiền (Figma `24228:102978` Scan 5 · `24228:102979` Text).
+  'scan-outline': 'scan-5',
+  'text-outline': 'text-type',
+};
 
 /** Chiều cao một dòng của ô nhiều dòng — cùng nhịp dòng 1.5 mà Tamagui dùng cho chữ trong ô. */
 const LINE_HEIGHT = Math.round(fieldFontSize.value * 1.5);
@@ -19,6 +35,8 @@ interface TextFieldProps<T extends FieldValues> {
   name: Path<T>;
   label: string;
   icon?: IconName;
+  /** Ô `v2`: icon nét Figma đè lên bản suy từ `icon` (vd 'lock-1' của trang Tài khoản và bảo mật). */
+  lineIcon?: LineIconName;
   placeholder?: string;
   /**
    * Dòng chú thích dưới ô — luật nhập, định dạng mong đợi, hệ quả của việc điền.
@@ -48,6 +66,8 @@ interface TextFieldProps<T extends FieldValues> {
   multiline?: boolean;
   /** Số dòng hiện lúc chưa gõ. Chỉ có tác dụng cùng `multiline`. */
   rows?: number;
+  /** Cao ĐÚNG `rows` dòng, nội dung dài hơn thì cuộn trong ô (ô ghi chú: 3 dòng). Cần `multiline`. */
+  scrollable?: boolean;
   /**
    * Trần ký tự. Hiện luôn bộ đếm ở góc phải chú thích khi vượt quá 60% — nói trước còn hơn để
    * người dùng gõ xong mới phát hiện bị cắt.
@@ -96,12 +116,14 @@ export function TextField<T extends FieldValues>({
   name,
   label,
   icon,
+  lineIcon,
   hint,
   required = false,
   publishRequired = false,
   secureTextEntry,
   multiline = false,
   rows = 4,
+  scrollable = false,
   maxLength,
   hideLabel = false,
   onChangeText: onChangeTextExtra,
@@ -143,19 +165,20 @@ export function TextField<T extends FieldValues>({
     () => ({
       flex: 1,
       color: colors.text,
-      fontSize: v2 ? FIELD_V2.fontSize : fieldFontSize.value,
+      fontSize: v2 ? FIELD_V2.valueFontSize : fieldFontSize.value,
       fontFamily: FONT_FAMILY.body,
       minHeight: multiline ? rows * LINE_HEIGHT : v2 ? FIELD_V2.height - 2 : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
+      ...(multiline && scrollable ? { maxHeight: rows * LINE_HEIGHT + space.sm * 2 } : {}),
     }),
-    [colors, multiline, rows, v2],
+    [colors, multiline, rows, scrollable, v2],
   );
   const error = fieldState.error?.message;
 
   return (
     <YStack gap={v2 ? FIELD_V2.labelGap : space.xs}>
       {hideLabel ? null : (
-        <FieldLabel label={label} required={required} publishRequired={publishRequired} />
+        <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint)} />
       )}
 
       {/*
@@ -173,7 +196,11 @@ export function TextField<T extends FieldValues>({
         align={multiline ? 'flex-start' : 'center'}
         onPress={() => inputRef.current?.focus()}
       >
-        {icon ? (
+        {v2 && lineIcon ? (
+          <LineIcon name={lineIcon} size={FIELD_V2.icon} color={colors.placeholder} />
+        ) : icon && v2 && V2_LINE_ICON[icon] ? (
+          <LineIcon name={V2_LINE_ICON[icon]} size={FIELD_V2.icon} color={colors.placeholder} />
+        ) : icon ? (
           <Ionicons
             name={icon}
             size={v2 ? FIELD_V2.icon : iconSize.sm}
@@ -206,6 +233,7 @@ export function TextField<T extends FieldValues>({
           }}
           secureTextEntry={secureTextEntry && !revealed}
           multiline={multiline}
+          {...(multiline && scrollable ? { scrollEnabled: true } : {})}
           {...(maxLength === undefined ? {} : { maxLength })}
           textAlignVertical={multiline ? 'top' : 'center'}
           placeholderTextColor={v2 ? colors.textPlaceholder : colors.placeholder}
@@ -223,11 +251,19 @@ export function TextField<T extends FieldValues>({
             accessibilityState={{ selected: revealed }}
             hitSlop={space.sm}
           >
-            <Ionicons
-              name={revealed ? 'eye-off-outline' : 'eye-outline'}
-              size={v2 ? FIELD_V2.icon : iconSize.sm}
-              color={v2 ? colors.placeholder : colors.textMuted}
-            />
+            {v2 ? (
+              <LineIcon
+                name={revealed ? 'eye-hide' : 'eye'}
+                size={FIELD_V2.icon}
+                color={colors.placeholder}
+              />
+            ) : (
+              <Ionicons
+                name={revealed ? 'eye-off-outline' : 'eye-outline'}
+                size={iconSize.sm}
+                color={colors.textMuted}
+              />
+            )}
           </Pressable>
         ) : null}
         {suffix}
@@ -235,7 +271,7 @@ export function TextField<T extends FieldValues>({
 
       {afterControl}
 
-      <FieldMessage error={error} hint={hint} />
+      <FieldMessage error={error} hint={belowHint(hint)} />
 
       {/*
         Có `maxLength` là có bộ đếm, ngay từ ký tự đầu — đúng `showCount` của `<TextArea>` bên

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { ScrollReveal, ScrollRevealProvider, useAppScrollRevealList } from '@/components/motion/ScrollReveal';
@@ -143,7 +144,7 @@ export function DrivingTripsList({
               tintColor={colors.accentText}
             />
           }
-          ListFooterComponent={isFetchingNextPage ? TripCardSkeleton : null}
+          ListFooterComponent={isFetchingNextPage ? ListLoadingFooter : null}
           {...LIST_TUNING}
         />
         </ScrollRevealProvider>

@@ -3,12 +3,11 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { dayjs } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
-import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
-import { FieldBox } from '@/components/ui/FieldBox';
+import { DateRangeField } from '@/components/ui/DateRangeField';
+import { FIELD_V2, FieldAppearanceProvider } from '@/components/ui/Field';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -40,11 +39,16 @@ export interface FilterSelectGroup {
   readonly resetValue: string;
   /**
    * Chữ trên ô chọn của tấm dạng LƯỚI (`layout="grid"`, Figma "_Filter Modal" `24158:105500`):
-   * - `label` (mặc định): chưa lọc ⇒ tên chiều ("Loại xe"), đã lọc ⇒ nhãn lựa chọn.
+   * - `all` (mặc định, người dùng chốt 20/11/2026): chưa lọc ⇒ "Tất cả + tên chiều" ("Tất cả loại
+   *   xe") - cả trên ô lẫn trong danh sách chọn; đã lọc ⇒ nhãn lựa chọn. Chiều mà "không lọc" KHÔNG
+   *   có nghĩa "tất cả" (sắp xếp, ngăn mặc định) phải khai `prefixed`/`option`.
+   * - `label`: chưa lọc ⇒ tên chiều ("Loại xe"), đã lọc ⇒ nhãn lựa chọn.
    * - `option`: luôn nhãn lựa chọn - lựa chọn "không lọc" tự nói đủ ("Tất cả chi nhánh").
    * - `prefixed`: "Tên chiều: lựa chọn" với tên mờ ("Sắp xếp: Mới nhất") - chiều luôn có giá trị.
    */
-  readonly display?: 'label' | 'option' | 'prefixed';
+  readonly display?: 'all' | 'label' | 'option' | 'prefixed';
+  /** Tấm lưới: hiện NHÃN chiều phía trên ô ("Trạng thái" / ô: "Tất cả"), cùng kiểu nhãn của mọi ô nhập. */
+  readonly labelAbove?: boolean;
 }
 
 /**
@@ -62,6 +66,10 @@ export interface FilterDateRangeGroup {
   /** `YYYY-MM-DD`; chuỗi rỗng = chưa đặt đầu này. */
   readonly from: string;
   readonly to: string;
+  /** Tấm lưới: hiện nhãn chiều phía trên ô, cùng kiểu với ô chọn. */
+  readonly labelAbove?: boolean;
+  /** Chọn "Từ ngày" xong tự chuyển sang "Đến ngày" (mặc định tắt). */
+  readonly autoAdvance?: boolean;
 }
 
 export type FilterGroup = FilterSelectGroup | FilterDateRangeGroup;
@@ -99,13 +107,6 @@ export function activeFilterCount(groups: readonly FilterGroup[]): number {
 const draftFrom = (groups: readonly FilterGroup[]): Draft =>
   Object.fromEntries(groups.flatMap(groupEntries));
 
-/**
- * Sàn của lịch chọn trong bộ lọc.
- *
- * `DatePickerSheet` mặc định sàn là NGÀY MAI vì nó sinh ra cho lịch đặt xe. Bộ lọc thì ngược hẳn:
- * thứ người ta lọc thường đã xảy ra rồi. Lấy mốc 01/1980 như màn hồ sơ nguồn xe.
- */
-const FILTER_DATE_FLOOR = dayjs('1980-01-01');
 
 /**
  * Tấm trượt lọc dùng chung cho mọi màn danh sách của khu quản lý — thay cho dải chip nằm thẳng
@@ -129,7 +130,8 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
   searchPlaceholder = '',
   onSearchChange,
   onClose,
-  layout = 'chips',
+  // Mặc định LƯỚI ô chọn (dropdown) cho mọi màn - người dùng chốt 20/11/2026.
+  layout = 'grid',
 }: {
   /**
    * `chips` - mỗi chiều một nhóm chip + dải tóm tắt (mặc định, các màn cũ).
@@ -262,10 +264,10 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
         footer={
           <XStack gap={GRID_GAP}>
             <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-              <Button label={t('clearAll')} icon="refresh-outline" variant="neutral" onPress={reset} />
+              <Button label={t('clearAll')} variant="neutral" onPress={reset} />
             </YStack>
             <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-              <Button label={t('save')} icon="funnel-outline" variant="gradient" onPress={apply} />
+              <Button label={t('save')} variant="gradient" onPress={apply} />
             </YStack>
           </XStack>
         }
@@ -299,6 +301,7 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
             <DateRangeGroup
               key={group.fromKey}
               group={group}
+              showHeading={false}
               from={draft[group.fromKey] ?? group.from}
               to={draft[group.toKey] ?? group.to}
               onSelect={select}
@@ -354,13 +357,12 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
               <Button
                 label={tActions('reset')}
                 variant="secondary"
-                icon="refresh-outline"
                 disabled={activeCount === 0}
                 onPress={reset}
               />
             </YStack>
             <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-              <Button label={tActions('apply')} icon="funnel-outline" onPress={apply} />
+              <Button label={tActions('apply')} onPress={apply} />
             </YStack>
           </XStack>
         </YStack>
@@ -417,7 +419,7 @@ function pairsOf<T>(items: readonly T[]): (readonly [T] | readonly [T, T])[] {
   return rows;
 }
 /** Figma "_Select input base": cao tối thiểu 40, đệm 14/8, bo 12, icon mũi tên 20. */
-const SELECT_MIN_HEIGHT = 40;
+const SELECT_MIN_HEIGHT = FIELD_V2.height;
 const SELECT_PAD_X = 14;
 const SELECT_PAD_Y = 8;
 const SELECT_ICON = 20;
@@ -426,6 +428,16 @@ const SELECT_ICON = 20;
  * Một ô chọn của tấm dạng lưới: bấm mở tấm lựa chọn (cùng `MenuOption` với `SelectControl`), chọn
  * xong ghi vào BẢN NHÁP của tấm lọc - chưa áp tới khi bấm "Lưu bộ lọc".
  */
+/** Nhãn phía trên ô (14 vừa, màu chữ chính, cách ô 6) - cùng kiểu FieldLabel của các ô nhập. */
+function GridLabel({ text }: { text: string }) {
+  const colors = useColors();
+  return (
+    <Text col={colors.text} fos={FIELD_V2.fontSize} lh={FIELD_V2.labelLineHeight} fow={fontWeight.medium} pb={FIELD_V2.labelGap}>
+      {text}
+    </Text>
+  );
+}
+
 const GridSelect = memo(function GridSelect({
   group,
   value,
@@ -436,16 +448,23 @@ const GridSelect = memo(function GridSelect({
   onSelect: (groupKey: string, value: string) => void;
 }) {
   const colors = useColors();
+  const t = useTranslations('Common.filters');
   const [open, setOpen] = useState(false);
   const current = group.options.find((option) => option.value === value);
-  const display = group.display ?? 'label';
+  const display = group.display ?? 'all';
   const showLabel = display === 'label' && (value === group.resetValue || !current);
+  // "Tất cả + tên chiều" cho lựa chọn "không lọc" - mọi ô cùng một cách nói như "Tất cả chi nhánh".
+  const optionLabel = (option: FilterOption): string =>
+    display === 'all' && option.value === group.resetValue
+      ? t('allOf', { label: group.label.toLocaleLowerCase('vi-VN') })
+      : option.label;
   return (
     <>
+      {group.labelAbove ? <GridLabel text={group.label} /> : null}
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={current ? `${group.label}: ${current.label}` : group.label}
+        accessibilityLabel={current ? `${group.label}: ${optionLabel(current)}` : group.label}
       >
         {({ pressed }) => (
           <XStack
@@ -472,7 +491,7 @@ const GridSelect = memo(function GridSelect({
               {display === 'prefixed' ? (
                 <Text col={colors.placeholder}>{`${group.label}: `}</Text>
               ) : null}
-              {showLabel ? group.label : (current?.label ?? group.label)}
+              {showLabel ? group.label : current ? optionLabel(current) : group.label}
             </Text>
             <LineIcon name="chevron-down" size={SELECT_ICON} color={colors.placeholder} />
           </XStack>
@@ -483,7 +502,7 @@ const GridSelect = memo(function GridSelect({
           {group.options.map((option) => (
             <MenuOption
               key={option.value}
-              label={option.label}
+              label={optionLabel(option)}
               selected={option.value === value}
               onPress={() => {
                 onSelect(group.key, option.value);
@@ -550,56 +569,48 @@ const DateRangeGroup = memo(function DateRangeGroup({
   from,
   to,
   onSelect,
+  showHeading = true,
 }: {
   group: FilterDateRangeGroup;
   from: string;
   to: string;
   onSelect: (groupKey: string, value: string) => void;
+  /** Tấm lưới v2 (Figma) không có tiêu đề nhóm - ô đã tự nói "Từ ngày → Đến ngày". */
+  showHeading?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Common.labels');
-  const fmt = useAppFormat();
-  const [picking, setPicking] = useState<'from' | 'to' | null>(null);
-  const editingTo = picking === 'to';
+  const tRange = useTranslations('Common.components.dateRange');
+  const tActions = useTranslations('Common.actions');
 
   return (
-    <YStack gap={space.sm}>
-      <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-        {group.label}
-      </Text>
+    <YStack gap={showHeading ? space.sm : 0}>
+      {showHeading ? (
+        <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          {group.label}
+        </Text>
+      ) : group.labelAbove ? (
+        <GridLabel text={group.label} />
+      ) : null}
 
-      <XStack gap={space.sm}>
-        <YStack f={1}>
-          <FieldBox
-            label={t('from')}
-            value={from ? fmt.dateKey(from) : ''}
-            placeholder={t('selectDate')}
-            icon="calendar-outline"
-            onPress={() => setPicking('from')}
-          />
-        </YStack>
-        <YStack f={1}>
-          <FieldBox
-            label={t('to')}
-            value={to ? fmt.dateKey(to) : ''}
-            placeholder={t('selectDate')}
-            icon="calendar-outline"
-            onPress={() => setPicking('to')}
-          />
-        </YStack>
-      </XStack>
-
-      <DatePickerSheet
-        open={picking !== null}
-        onClose={() => setPicking(null)}
-        value={editingTo ? to : from}
-        title={editingTo ? t('to') : t('from')}
-        minDate={editingTo && from ? dayjs(from) : FILTER_DATE_FLOOR}
-        onChange={(next) => {
-          onSelect(editingTo ? group.toKey : group.fromKey, next);
-          setPicking(null);
-        }}
-      />
+      {/* Ô khoảng ngày DÙNG CHUNG (`DateRangeField`) - hai ô ngày cạnh nhau vỡ ở bề ngang điện thoại. */}
+      <FieldAppearanceProvider value="v2">
+        <DateRangeField
+          allowFuture
+          autoAdvance={group.autoAdvance ?? false}
+          value={{ from: from || undefined, to: to || undefined }}
+          onChange={(next) => {
+            onSelect(group.fromKey, next.from ?? '');
+            onSelect(group.toKey, next.to ?? '');
+          }}
+          labels={{
+            field: group.label,
+            from: tRange('fromDate'),
+            to: tRange('toDate'),
+            clear: tActions('clear'),
+          }}
+        />
+      </FieldAppearanceProvider>
     </YStack>
   );
 });

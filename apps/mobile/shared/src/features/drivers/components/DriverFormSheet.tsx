@@ -53,20 +53,13 @@ function FormActions({
   onClose: () => void;
   onSubmit: () => void;
 }) {
-  const tActions = useTranslations('Common.actions');
+  const tApp = useTranslations('Drivers.app.invite');
+  // Figma "Thêm tài xế mới" `24512:117959`: "Hủy" viền vừa chữ bên trái, nút chính vàng trải phần còn lại.
   return (
-    <XStack gap={space.sm}>
-      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-        <Button label={tActions('close')} variant="outline" disabled={saving} onPress={onClose} />
-      </YStack>
-      <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-        <Button
-          label={submitLabel}
-          variant="gradient"
-          icon="checkmark-outline"
-          loading={saving}
-          onPress={onSubmit}
-        />
+    <XStack gap={12}>
+      <Button label={tApp('cancel')} variant="outline" block={false} disabled={saving} onPress={onClose} />
+      <YStack f={1}>
+        <Button label={submitLabel} variant="gradient" loading={saving} onPress={onSubmit} />
       </YStack>
     </XStack>
   );
@@ -88,11 +81,15 @@ export function InviteDriverSheet({
   prefill?: InviteDriverValues | null;
 }) {
   const t = useTranslations('Drivers.form');
+  const tApp = useTranslations('Drivers.app.invite');
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={prefill ? t('titleReinvite') : t('titleInvite')}
+      chrome="v2"
+      headerDivider
+      title={prefill ? t('titleReinvite') : tApp('title')}
+      subtitle={tApp('subtitle')}
     >
       {/* Mount theo `open`: mỗi lần mở là một form mới, lỗi của lần mời trước không ở lại. */}
       {open ? <InviteForm onDone={onClose} defaults={prefill ?? EMPTY_INVITE} /> : null}
@@ -165,14 +162,14 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
         name="note"
         label={t('form.note')}
         placeholder={t('form.notePlaceholder')}
-        multiline
+        multiline scrollable
         rows={3}
       />
       {/* Khối "Lưu ý" cuối form như web `InviteDriverModal` (tiêu đề + mô tả). */}
       <Callout title={t('form.hintTitle')}>{t('form.inviteHint')}</Callout>
       <FormActions
         saving={invite.isPending}
-        submitLabel={t('actions.sendInvite')}
+        submitLabel={t('app.invite.submit')}
         onClose={onDone}
         onSubmit={() => void submit()}
       />
@@ -190,7 +187,7 @@ export function EditDriverSheet({
 }) {
   const t = useTranslations('Drivers.form');
   return (
-    <BottomSheet open={driver !== null} onClose={onClose} title={t('titleEdit')}>
+    <BottomSheet open={driver !== null} onClose={onClose} chrome="v2" headerDivider title={t('titleEdit')}>
       {driver ? <EditForm key={driver.id} driver={driver} onDone={onClose} /> : null}
     </BottomSheet>
   );
@@ -251,7 +248,7 @@ function EditForm({ driver, onDone }: { driver: Driver; onDone: () => void }) {
         required
         options={typeOptions}
       />
-      <TextField control={control} name="note" label={t('form.note')} multiline rows={3} />
+      <TextField control={control} name="note" label={t('form.note')} multiline scrollable rows={3} />
       <FormActions
         saving={update.isPending}
         submitLabel={tActions('save')}

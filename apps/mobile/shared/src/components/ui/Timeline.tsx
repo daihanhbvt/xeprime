@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, radius, typeScale } from '@/theme/tokens';
@@ -11,6 +11,8 @@ export interface TimelineItem {
   readonly dot: TimelineDot;
   /** Dòng chính 14/20 semibold - mốc + hình thức ("T6, 20/11  17:00 · Giao xe tận nơi"). */
   readonly title: string;
+  /** Phần đứng SAU dòng chính (vd. dấu "i" giải thích phí giao xe). */
+  readonly titleExtra?: ReactNode;
   /** Các dòng chi tiết 14/20 `text/gray/medium` - địa chỉ. */
   readonly lines?: readonly string[];
   /** Dòng chú thích 12/18 `text/gray/very-low` - thời lượng thuê. */
@@ -52,6 +54,7 @@ export const Timeline = memo(function Timeline({ items }: { items: readonly Time
               >
                 {item.title}
               </Text>
+              {item.titleExtra}
             </XStack>
             {hasDetail ? (
               <XStack gap={ROW_GAP}>

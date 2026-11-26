@@ -11,7 +11,15 @@ type Schemas = components['schemas'];
 /** Khoảng % hoa hồng chủ xe tuyến hoa hồng của chính sách phí hiện hành (ADR 0064 điều 3). */
 export type PartnerOffer = Schemas['PartnerOfferDto'];
 
+/** Trần đặt xe của nền tảng (ADR 0091 điều 4) - web `fetchBookingLimits`. */
+export type BookingLimitsInfo = Schemas['BookingLimitsDto'];
+
 export const feePoliciesApi = {
+  /** Công khai: số ngày đặt trước tối đa + độ dài tự lái tối đa. */
+  bookingLimits(): Promise<BookingLimitsInfo> {
+    return getApiClient().get<BookingLimitsInfo>('/public/fee-policies/booking-limits');
+  },
+
   /** Không cần đăng nhập — trang "Đăng xe cho thuê" là lời mời công khai. */
   partnerOffer(): Promise<PartnerOffer> {
     return getApiClient().get<PartnerOffer>('/public/fee-policies/partner-offer');

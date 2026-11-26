@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -10,36 +11,36 @@ import {
 } from '@xeprime/domain';
 import {
   ACCOUNT_TRACK,
-  STATUS_COLOR,
   WALLET_STATEMENT_UNIT,
   resolveAccountTrack,
 } from '@xeprime/types';
-import { SectionHeader } from '@/components/ui/CardTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
-import { CardAccent } from '@/components/ui/CardAccent';
-import type { IconName } from '@/components/ui/Chip';
-import { Divider } from '@/components/ui/DataRow';
 import { DeductedAmount } from '@/components/ui/DeductedAmount';
-import { IconDisc } from '@/components/ui/IconDisc';
 import { Pagination } from '@/components/ui/Pagination';
-import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
+import {
+  MONTH_PERIOD_FORMAT,
+  MonthPeriodField,
+  periodLabel,
+} from '@/components/ui/MonthPeriodField';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { OwnerPayoutTable } from '@/features/bookings/components/OwnerPayoutTable';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { ServiceTypeChip } from '@/components/ui/ServiceTypeChip';
 import {
   WALLET_STATEMENT_PAGE_SIZE,
   type WalletStatementFilters,
   type WalletStatementTrip,
 } from '@/api/wallet/api';
 import { useWalletStatement } from '../hooks/use-wallet';
-import { layout } from '@/theme/layout';
 
 /**
  * BẢNG TỔNG HỢP GIAO DỊCH — một tháng làm ăn của gian hàng, đọc từ `/shop/wallet/statement`.
@@ -72,8 +73,8 @@ export function WalletStatementPanel({
 }) {
   const colors = useColors();
   const t = useTranslations('Wallet.statement');
+  const tWallet = useTranslations('Wallet');
   const tCommon = useTranslations('Common');
-  const fmt = useAppFormat();
 
   /*
    * Luôn hiện và luôn tải — đúng web (25/09/2026). Bản trước thu gọn khối này mặc định và chỉ tải
@@ -82,7 +83,6 @@ export function WalletStatementPanel({
   const query = useWalletStatement(filters, true);
   const data = query.data;
   const items = data?.items ?? [];
-  const stats = data?.stats;
   const totals = data?.totals;
   /*
    * Hoa hồng `H` do CHỦ XE chịu (ADR 0064 điều 3) — dòng chỉ hiện khi KỲ có hoa hồng (số của cả kỳ,
@@ -97,9 +97,11 @@ export function WalletStatementPanel({
 
   return (
     <YStack gap={space.sm}>
-      <SectionHeader icon="document-text-outline">{t('title')}</SectionHeader>
-
+      {/* Ô tháng trải ngang "Tháng 10/2026" ngay dưới hàng tab (Figma `24612:145586`). */}
       <MonthPeriodField
+        variant="compact"
+        block
+        display={tWallet('month.value', { month: periodLabel(filters.period) })}
         label={t('period')}
         value={filters.period}
         maxPeriod={maxPeriod}
@@ -128,42 +130,6 @@ export function WalletStatementPanel({
       */}
       {query.isFetching ? <MiniRowsSkeleton rows={4} /> : null}
 
-      {stats ? (
-        <Card padded={false}>
-          <XStack ai="stretch" py={space.sm}>
-            <MetricCell
-              icon="star-outline"
-              tone={colors.warning}
-              surface={colors.warningSurface}
-              value={
-                stats.ratingAvg == null ? tCommon('labels.emptyValue') : fmt.rating(stats.ratingAvg)
-              }
-              label={t('stats.rating', { count: stats.ratingCount ?? 0 })}
-            />
-            <MetricDivider />
-            <MetricCell
-              icon="checkmark-circle-outline"
-              tone={colors.success}
-              surface={colors.successSurface}
-              value={t('stats.tripsValue', { count: stats.completedTripCount })}
-              label={t('stats.trips')}
-            />
-            <MetricDivider />
-            <MetricCell
-              icon="chatbubbles-outline"
-              tone={colors.info}
-              surface={colors.infoSurface}
-              value={
-                stats.responseRatePercent == null
-                  ? tCommon('labels.emptyValue')
-                  : t('stats.responseValue', { percent: stats.responseRatePercent })
-              }
-              label={t('stats.response')}
-            />
-          </XStack>
-        </Card>
-      ) : null}
-
       {!query.isFetching && items.length === 0 ? (
         <Card>
           <YStack gap={space.xs}>
@@ -177,10 +143,12 @@ export function WalletStatementPanel({
         </Card>
       ) : null}
 
-      {query.isFetching ? null : items.map((trip) => (
+      {query.isFetching ? null : items.map((trip, index) => (
             <TripCard
               key={trip.bookingId}
               trip={trip}
+              defaultOpen={index === 0}
+              last={index === items.length - 1}
               showCommission={showCommission}
               showDelivery={showDelivery}
             />
@@ -234,8 +202,23 @@ export function WalletMonthSummary({ filters }: { filters: WalletStatementFilter
   const [year, month] = filters.period.split('-');
 
   return (
-    <YStack gap={space.sm}>
-      <SectionHeader icon="document-text-outline">{tWallet('month.title', { month: `${month}/${year}` })}</SectionHeader>
+    /* Figma "Nhóm thông tin" `24228:102213`: thẻ trắng viền, bo 16, đệm 16, khe 12. */
+    <YStack
+      bg={colors.surface}
+      bw={1}
+      bc={colors.border}
+      br={radius.card}
+      p={space.md}
+      gap={toPx(XP_TOKENS['space-12'])}
+    >
+      <Text
+        col={colors.text}
+        fos={typeScale.title.fontSize}
+        lh={typeScale.title.lineHeight}
+        fow={fontWeight.semibold}
+      >
+        {tWallet('month.title', { month: `${month}/${year}` })}
+      </Text>
       {query.isPending && !query.data ? <MiniRowsSkeleton rows={4} /> : null}
       {query.isError && !query.data ? (
         <Callout tone="danger" title={t('loadError')}>
@@ -249,87 +232,156 @@ export function WalletMonthSummary({ filters }: { filters: WalletStatementFilter
         </Callout>
       ) : null}
       {totals && stats ? (
-        <Card padded={false}>
-          <YStack p={space.md} gap={space.sm}>
-            <SummaryRow
+        <>
+          <YStack>
+            <LineRow
               label={t('stats.trips')}
-              value={
-                <Text col={colors.text} fos={fontSize.bodySm}>
-                  {t('stats.tripsValue', { count: stats.completedTripCount })}
-                </Text>
-              }
+              value={t('stats.tripsValue', { count: stats.completedTripCount })}
             />
-            <SummaryRow
+            <LineRow
               label={tWallet('month.balanceChange')}
-              value={<SignedAmount value={totals.balanceChangeTotal} strong />}
+              value={<SignedAmount value={totals.balanceChangeTotal} compact />}
             />
             {/*
               Phần khách trả TAY: chỉ hiện khi thật sự có. Ở gian hàng tắt thu cọc qua sàn thì
-              `D = 0` và toàn bộ tiền thuê đi thẳng cho chủ xe — dòng này khi đó là cả doanh thu, và
-              giấu nó đi sẽ khiến "thu nhập" trông như từ trên trời rơi xuống.
+              `D = 0` và toàn bộ tiền thuê đi thẳng cho chủ xe - giấu nó đi sẽ khiến "thu nhập"
+              trông như từ trên trời rơi xuống. Lời giải thích nằm ở ⓘ.
             */}
             {isZeroMoney(totals.payAtPickupTotal) ? null : (
-              <SummaryRow
+              <LineRow
                 label={t('totals.payAtPickup')}
-                hint={t('totals.payAtPickupHint')}
-                value={
-                  <Text col={colors.text} fos={fontSize.bodySm}>
-                    {fmt.money(totals.payAtPickupTotal)}
-                  </Text>
-                }
+                info={t('totals.payAtPickupHint')}
+                value={fmt.money(totals.payAtPickupTotal)}
               />
             )}
-            {/*
-              Phí giao xe đứng RIÊNG (ADR 0068 điều 5): khách trả tận tay, chủ xe hưởng trọn, không
-              chịu phí dịch vụ hay thuế. Chỉ hiện khi kỳ có chuyến giao tận nơi — như web.
-            */}
+            {/* Phí giao xe đứng RIÊNG (ADR 0068 điều 5) - chỉ khi kỳ có chuyến giao tận nơi. */}
             {isZeroMoney(totals.deliveryTotal) ? null : (
-              <SummaryRow
+              <LineRow
                 label={t('totals.delivery')}
-                hint={t('totals.deliveryHint')}
-                value={
-                  <Text col={colors.text} fos={fontSize.bodySm}>
-                    {fmt.money(totals.deliveryTotal)}
-                  </Text>
-                }
+                info={t('totals.deliveryHint')}
+                value={fmt.money(totals.deliveryTotal)}
               />
             )}
             {isZeroMoney(totals.subscriptionFeeTotal) ? null : (
-              <SummaryRow
+              <LineRow
                 label={t('totals.appSubscriptionFee')}
-                value={
-                  <Text col={colors.danger} fos={fontSize.bodySm}>
-                    {`−${fmt.money(totals.subscriptionFeeTotal)}`}
-                  </Text>
-                }
+                value={`−${fmt.money(totals.subscriptionFeeTotal)}`}
+                tone="danger"
               />
             )}
             {showCommission ? (
-              <SummaryRow
+              <LineRow
                 label={t('totals.commission')}
-                value={<DeductedAmount emphasis value={totals.ownerCommissionTotal} />}
+                value={<DeductedAmount value={totals.ownerCommissionTotal} size={fontSize.label} />}
               />
             ) : null}
-            <SummaryRow
+            <LineRow
               label={t('totals.tax')}
-              value={<DeductedAmount emphasis value={totals.taxTotal} />}
+              value={<DeductedAmount value={totals.taxTotal} size={fontSize.label} />}
             />
-          </YStack>
-          <Divider />
-          <YStack px={layout.padX} py={space.sm} bg={colors.primaryLight}>
-            <SummaryRow
+            {/* Dòng chốt: nhãn 12 semibold `text/gray/medium`, số 14/20 semibold `brand/primary-2`. */}
+            <LineRow
               label={t(`totals.${incomeLabelKey}`)}
-              hint={t('totals.appOwnerIncomeHint')}
-              highlight
+              emphasis
+              last
               value={
-                <Text col={colors.accentText} fos={fontSize.h4} fow={fontWeight.semibold}>
+                <Text
+                  col={colors.brandLink}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.semibold}
+                >
                   {fmt.money(totals.ownerIncome)}
                 </Text>
               }
             />
           </YStack>
-        </Card>
+          {/* Chú thích nghiêng 12/18 `text/gray/very-low` cuối thẻ (Figma `24228:102228`). */}
+          <Text
+            col={colors.textPlaceholder}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            fontStyle="italic"
+          >
+            {t('totals.appOwnerIncomeHint')}
+          </Text>
+        </>
       ) : null}
+    </YStack>
+  );
+}
+
+/**
+ * Thẻ ba chỉ số của kỳ - đánh giá · chuyến thành công · tỉ lệ phản hồi (Figma "Vehicle Summary"
+ * `24228:102201`). Đọc cùng `GET /shop/wallet/statement` (cùng khoá cache với Tổng hợp tháng),
+ * đứng riêng dưới thẻ số dư như Figma thay vì nằm trong bảng.
+ */
+export function WalletStatsCard({ filters }: { filters: WalletStatementFilters }) {
+  const colors = useColors();
+  const t = useTranslations('Wallet.statement');
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+  const query = useWalletStatement(filters, true);
+  const stats = query.data?.stats;
+  if (!stats) return null;
+
+  return (
+    <XStack
+      bg={colors.surface}
+      bw={1}
+      bc={colors.border}
+      br={radius.card}
+      p={toPx(XP_TOKENS['space-12'])}
+      ai="flex-start"
+    >
+      <StatCell
+        leading={<LineIcon name="star" size={iconSize.lg} color={colors.warning} />}
+        value={
+          stats.ratingAvg == null ? tCommon('labels.emptyValue') : fmt.rating(stats.ratingAvg)
+        }
+        label={t('stats.rating', { count: stats.ratingCount ?? 0 })}
+      />
+      <StatCell
+        value={t('stats.tripsValue', { count: stats.completedTripCount })}
+        label={t('stats.trips')}
+      />
+      <StatCell
+        value={
+          stats.responseRatePercent == null
+            ? tCommon('labels.emptyValue')
+            : t('stats.responseValue', { percent: stats.responseRatePercent })
+        }
+        label={t('stats.response')}
+      />
+    </XStack>
+  );
+}
+
+function StatCell({ leading, value, label }: { leading?: ReactNode; value: string; label: string }) {
+  const colors = useColors();
+  return (
+    <YStack f={1} minWidth={0} ai="center" gap={2}>
+      <XStack ai="center" gap={space.xs}>
+        {leading}
+        <Text
+          col={colors.text}
+          fos={typeScale.title.fontSize}
+          lh={typeScale.title.lineHeight}
+          fow={fontWeight.semibold}
+          numberOfLines={1}
+        >
+          {value}
+        </Text>
+      </XStack>
+      <Text
+        col={colors.textMuted}
+        fos={typeScale.label.fontSize}
+        lh={typeScale.label.lineHeight}
+        ta="center"
+        numberOfLines={2}
+      >
+        {label}
+      </Text>
     </YStack>
   );
 }
@@ -344,214 +396,201 @@ function TripCard({
   trip,
   showCommission,
   showDelivery,
+  defaultOpen = false,
+  last = false,
 }: {
   trip: WalletStatementTrip;
   /** Kỳ có hoa hồng — cùng cờ với dòng tổng, để mọi thẻ của một kỳ cùng một hình. */
   showCommission: boolean;
   /** Kỳ có chuyến giao tận nơi — cùng cờ với cột "Phí giao xe" của web. */
   showDelivery: boolean;
+  /** Figma vẽ thẻ ĐẦU mở sẵn, các thẻ sau thu gọn. */
+  defaultOpen?: boolean;
+  /** Khối cuối danh sách - không kẻ đáy. */
+  last?: boolean;
 }) {
-  const [payoutOpen, setPayoutOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const colors = useColors();
   const t = useTranslations('Wallet.statement');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
-  const accent = isZeroMoney(trip.balanceChange)
-    ? STATUS_COLOR.NEUTRAL
-    : isNegativeMoney(trip.balanceChange)
-      ? STATUS_COLOR.DANGER
-      : STATUS_COLOR.SUCCESS;
 
+  /*
+   * Figma "Transaction" `24228:102230`. Đầu thẻ (mã + viên dịch vụ +
+   * mũi tên, rồi giờ nhận → trả + đơn giá) là vùng chạm mở/thu. Thu gọn chỉ còn dòng Doanh thu;
+   * mở ra đủ các dòng tiền của chuyến như bảng web, kèm bảng cộng ví (ADR 0068 điều 5).
+   */
   return (
-    <Card padded={false}>
-      <XStack>
-        {/* Cùng ngôn ngữ với thẻ phiếu Thu–Chi: xanh = tiền vào, đỏ = tiền ra, xám = không đổi. */}
-        <CardAccent color={accent} />
-
-        <YStack f={1} minWidth={0} p={space.md} gap={space.sm}>
-          <XStack ai="flex-start" gap={space.sm}>
-            <YStack f={1} minWidth={0} gap={space.xs}>
-              <Text col={colors.accentText} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+    /*
+      Nằm TRONG thẻ hai tab (Figma `24612:145584`): mỗi chuyến là một khối kẻ đáy `stroke/gray-low200`,
+      đệm đáy 8, khe 8 - không còn là thẻ viền riêng.
+    */
+    <YStack
+      gap={space.sm}
+      pb={space.sm}
+      {...(last ? {} : { borderBottomWidth: 1, borderColor: colors.border })}
+    >
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={t('toggle', { code: trip.code })}
+      >
+        <YStack gap={space.sm}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            {/* Mã chuyến KHÔNG bị cắt: thứ chủ xe dùng để đối chiếu chứng từ. */}
+            <XStack f={1} minWidth={0} ai="center" gap={space.sm} flexWrap="wrap">
+              <Text
+                col={colors.text}
+                fos={typeScale.body.fontSize}
+                lh={typeScale.body.lineHeight}
+                fow={fontWeight.semibold}
+              >
                 {trip.code}
               </Text>
-              <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                {`${fmt.shortDateTime(trip.pickupAt)} → ${fmt.shortDateTime(trip.returnAt)}`}
-              </Text>
-              <Pill
-                label={domainLabel('serviceType', trip.serviceType, trip.serviceType)}
-                tone={pillToneOfStatusColor(STATUS_COLOR.ACCENT)}
-              />
-            </YStack>
-
-            <YStack ai="flex-end" gap={2}>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {t('columns.balanceChange')}
-              </Text>
-              <SignedAmount value={trip.balanceChange} prominent />
-            </YStack>
+              <ServiceTypeChip value={trip.serviceType} />
+            </XStack>
+            <LineIcon
+              name={open ? 'chevron-up-md' : 'chevron-down-md'}
+              size={iconSize.lg}
+              color={colors.textMuted}
+            />
           </XStack>
-
-          <Divider />
-
-          <YStack gap={space.xs}>
-            <Row
-              label={t('columns.unitAmount')}
-              value={
-                trip.unitAmount == null ? (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {tCommon('labels.emptyValue')}
-                  </Text>
-                ) : (
-                  <Text col={colors.text} fos={fontSize.bodySm}>
-                    {trip.unitKind === WALLET_STATEMENT_UNIT.MONTH
-                      ? fmt.pricePerMonth(trip.unitAmount)
-                      : fmt.pricePerDay(trip.unitAmount)}
-                  </Text>
-                )
-              }
-            />
-            <Row
-              label={t('columns.revenue')}
-              value={
-                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {fmt.money(trip.revenueAmount)}
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text
+              flexShrink={1}
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+            >
+              {`${fmt.shortDateTime(trip.pickupAt)}  →  ${fmt.shortDateTime(trip.returnAt)}`}
+            </Text>
+            {trip.unitAmount == null ? (
+              <Text col={colors.textPlaceholder} fos={typeScale.body.fontSize}>
+                {tCommon('labels.emptyValue')}
+              </Text>
+            ) : (
+              <Text
+                col={colors.text}
+                fos={typeScale.body.fontSize}
+                lh={typeScale.body.lineHeight}
+                fow={fontWeight.medium}
+                fontFamily={FONT_FAMILY.medium}
+              >
+                {fmt.money(trip.unitAmount)}
+                <Text
+                  col={colors.textPlaceholder}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.regular}
+                  fontFamily={FONT_FAMILY.body}
+                >
+                  {trip.unitKind === WALLET_STATEMENT_UNIT.MONTH ? t('unitPerMonth') : t('unitPerDay')}
                 </Text>
-              }
-            />
+              </Text>
+            )}
+          </XStack>
+        </YStack>
+      </Pressable>
+
+      <YStack>
+        <LineRow label={t('columns.revenue')} value={fmt.money(trip.revenueAmount)} last={!open} />
+        {open ? (
+          <>
             {showCommission ? (
-              <Row
+              <LineRow
                 label={t('columns.commission')}
-                value={<DeductedAmount emphasis value={trip.ownerCommissionAmount} />}
+                value={<DeductedAmount value={trip.ownerCommissionAmount} size={fontSize.label} />}
               />
             ) : null}
             {/* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */}
-            <Row
+            <LineRow
               label={t('columns.tax')}
-              value={<DeductedAmount emphasis value={trip.taxAmount} />}
+              value={<DeductedAmount value={trip.taxAmount} size={fontSize.label} />}
             />
             {showDelivery ? (
-              <Row
+              <LineRow
                 label={t('columns.delivery')}
                 value={
-                  isZeroMoney(trip.deliveryAmount) ? (
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {tCommon('labels.emptyValue')}
-                    </Text>
-                  ) : (
-                    <Text col={colors.text} fos={fontSize.bodySm}>
-                      {fmt.money(trip.deliveryAmount)}
-                    </Text>
-                  )
+                  isZeroMoney(trip.deliveryAmount)
+                    ? tCommon('labels.emptyValue')
+                    : fmt.money(trip.deliveryAmount)
                 }
               />
             ) : null}
-          </YStack>
-
-          {/*
-            Bảng cộng ví của CHUYẾN (ADR 0068 điều 5) — hàng mở rộng của bảng web; ở đây là một
-            nút mở/gập ngay trong thẻ. Đơn cũ không có bảng phí thì không có nút.
-          */}
-          {trip.ownerPayout ? (
-            <>
-              <Button
-                label={t('payout.expand')}
-                variant="ghost"
-                size="sm"
-                block={false}
-                icon={payoutOpen ? 'chevron-up' : 'chevron-down'}
-                onPress={() => setPayoutOpen((v) => !v)}
-              />
-              {payoutOpen ? (
-                <OwnerPayoutTable
-                  payout={trip.ownerPayout}
-                  label={t('payout.label', { code: trip.code })}
-                />
-              ) : null}
-            </>
-          ) : null}
-        </YStack>
-      </XStack>
-    </Card>
-  );
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  const colors = useColors();
-  return (
-    <XStack ai="center" jc="space-between" gap={space.sm}>
-      <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-        {label}
-      </Text>
-      {value}
-    </XStack>
-  );
-}
-
-function SummaryRow({
-  label,
-  hint,
-  value,
-  highlight,
-}: {
-  label: string;
-  hint?: string;
-  value: React.ReactNode;
-  highlight?: boolean;
-}) {
-  const colors = useColors();
-  return (
-    <XStack ai="flex-start" jc="space-between" gap={space.sm}>
-      <YStack f={1} gap={2}>
-        <Text
-          col={colors.text}
-          fos={fontSize.bodySm}
-          fow={highlight ? fontWeight.semibold : fontWeight.regular}
-        >
-          {label}
-        </Text>
-        {hint ? (
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {hint}
-          </Text>
+            <LineRow
+              label={t('columns.balanceChange')}
+              last={!trip.ownerPayout}
+              value={<SignedAmount value={trip.balanceChange} compact />}
+            />
+          </>
         ) : null}
       </YStack>
-      {value}
-    </XStack>
-  );
-}
 
-function MetricCell({
-  icon,
-  tone,
-  surface,
-  value,
-  label,
-}: {
-  icon: IconName;
-  tone: string;
-  surface: string;
-  value: string;
-  label: string;
-}) {
-  const colors = useColors();
-  return (
-    <YStack f={1} minWidth={0} ai="center" gap={space.xs} px={space.xs}>
-      <IconDisc icon={icon} tone={tone} surface={surface} size={32} />
-      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} ta="center">
-        {value}
-      </Text>
-      <Text col={colors.textMuted} fos={fontSize.label} ta="center" numberOfLines={2}>
-        {label}
-      </Text>
+      {/* Bảng cộng ví của CHUYẾN (ADR 0068 điều 5). Đơn cũ không có bảng phí thì không có. */}
+      {open && trip.ownerPayout ? (
+        <OwnerPayoutTable payout={trip.ownerPayout} label={t('payout.label', { code: trip.code })} />
+      ) : null}
     </YStack>
   );
 }
 
-/** Kẻ dọc giữ ba chỉ số thành một dải, thay vì ba mẩu chữ rời trên nền trắng. */
-function MetricDivider() {
+/**
+ * Một dòng nhãn - giá trị của Figma ("Summary Item" / "Transaction Detail"): đệm dọc 8, kẻ đáy
+ * 1px `stroke/gray-50`, nhãn 12/18 `text/gray/low`, giá trị 12/18 medium. `emphasis` = dòng chốt
+ * (nhãn semibold `text/gray/medium`); `last` = bỏ kẻ đáy.
+ */
+function LineRow({
+  label,
+  value,
+  info,
+  tone,
+  emphasis = false,
+  last = false,
+}: {
+  label: string;
+  value: ReactNode;
+  /** Lời giải thích - mở bằng ⓘ cạnh nhãn, không chiếm thêm dòng. */
+  info?: string;
+  tone?: 'danger';
+  emphasis?: boolean;
+  last?: boolean;
+}) {
   const colors = useColors();
-  return <YStack w={1} bg={colors.borderSubtle} alignSelf="stretch" />;
+  return (
+    <XStack
+      ai="center"
+      jc="space-between"
+      gap={space.sm}
+      py={space.sm}
+      {...(last ? {} : { borderBottomWidth: 1, borderColor: colors.background })}
+    >
+      <XStack f={1} minWidth={0} ai="center" gap={space.xs}>
+        <Text
+          flexShrink={1}
+          col={emphasis ? colors.textMuted : colors.placeholder}
+          fos={typeScale.label.fontSize}
+          lh={typeScale.label.lineHeight}
+          fow={emphasis ? fontWeight.semibold : fontWeight.regular}
+        >
+          {label}
+        </Text>
+        {info ? <InfoHint label={label} content={info} size={fontSize.label} /> : null}
+      </XStack>
+      {typeof value === 'string' ? (
+        <Text
+          col={tone === 'danger' ? colors.danger : colors.text}
+          fos={typeScale.label.fontSize}
+          lh={typeScale.label.lineHeight}
+          fow={fontWeight.medium}
+        >
+          {value}
+        </Text>
+      ) : (
+        value
+      )}
+    </XStack>
+  );
 }
 
 /**
@@ -564,15 +603,19 @@ export function SignedAmount({
   value,
   prominent = false,
   strong = false,
+  compact = false,
 }: {
   value: string;
   prominent?: boolean;
   strong?: boolean;
+  /** Cỡ dòng Figma 12/18 medium - giá trị trong "Summary Item" / "Transaction Detail". */
+  compact?: boolean;
 }) {
   const colors = useColors();
   const fmt = useAppFormat();
-  const size = prominent ? fontSize.h4 : fontSize.bodySm;
-  const weight = prominent || strong ? fontWeight.bold : fontWeight.regular;
+  const size = prominent ? fontSize.h4 : compact ? fontSize.label : fontSize.bodySm;
+  const weight =
+    prominent || strong ? fontWeight.bold : compact ? fontWeight.medium : fontWeight.regular;
 
   if (isZeroMoney(value)) {
     return (

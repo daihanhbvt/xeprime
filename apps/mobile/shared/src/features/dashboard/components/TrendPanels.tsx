@@ -1,7 +1,6 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Pressable } from 'react-native';
-import { BarChart, type barDataItem } from 'react-native-gifted-charts';
+import { HorizontalScroller } from '@/components/ui/HorizontalScroller';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DASHBOARD_TREND_MONTHS } from '@xeprime/types';
@@ -13,8 +12,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { chartValue } from '@/features/finance/components/revenue-trend-layout';
 import type { FinanceSeries } from '@/features/finance/api';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useChartColors, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, typeScale } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight, radius, typeScale } from '@/theme/tokens';
 import { DASHBOARD_REVENUE_DAYS, type PartnerTrendPoint } from '../api';
 
 type TrendTab = 'revenue' | 'trips';
@@ -51,7 +50,8 @@ export function TrendCard({
   const hasTrips = trips !== null;
   const tabs = useMemo<SegmentedTabItem<TrendTab>[]>(() => {
     const list: SegmentedTabItem<TrendTab>[] = [];
-    if (hasRevenue) list.push({ key: 'revenue', label: t('revenueTab', { days: DASHBOARD_REVENUE_DAYS }) });
+    // Feedback 20/11/2026: "Thu chi 30 ngày" vừa chữ, "Đơn & chuyến 6 tháng" lấy phần còn lại - không cắt "…".
+    if (hasRevenue) list.push({ key: 'revenue', label: t('revenueTab', { days: DASHBOARD_REVENUE_DAYS }), hug: true });
     if (hasTrips) list.push({ key: 'trips', label: t('tripsTab', { months: DASHBOARD_TREND_MONTHS }) });
     return list;
   }, [hasRevenue, hasTrips, t]);
@@ -65,7 +65,7 @@ export function TrendCard({
   return (
     <InfoGroupCard accessibilityLabel={activeLabel}>
       {tabs.length > 1 ? (
-        <SegmentedTabs items={tabs} value={active} onChange={setPicked} variant="neutral" />
+        <SegmentedTabs items={tabs} value={active} onChange={setPicked} variant="neutral" fit />
       ) : (
         <Text
           col={colors.text}
@@ -173,9 +173,6 @@ function RevenueTab({ series }: { series: UseQueryResult<FinanceSeries> }) {
           <MoneyTile label={t('profit')} value={fmt.money(totals.profit)} bg={colors.successSurface} fg={colors.success} />
         </XStack>
         <RevenueBars groups={groups} />
-        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-          {t('revenueDescription')}
-        </Text>
       </YStack>
     </TabState>
   );
@@ -311,12 +308,24 @@ const BAR_PAD_X = 8;
 const BAR_LABEL_GAP = 4;
 const AXIS_PAD_TOP = 6;
 
-/** Tab đơn & chuyến - biểu đồ cột đôi theo tháng của web `CountTrendChart`, giữ nguyên. */
+/**
+ * Tab đơn & chuyến - như web `TripsCard` (người dùng chốt 20/11/2026): chú giải kèm TỔNG sáu tháng
+ * ở trên, rồi biểu đồ cột ĐÔI theo tháng vẽ tay như `RevenueBars` - số trên đầu cột, tháng dưới
+ * chân, cuộn ngang khi số quá dài. App không có dòng mô tả dưới tiêu đề, không chạm-để-xem.
+ */
 function TripsTab({ trend, loading, isError, onRetry }: TripsTrendState) {
   const t = useTranslations('Dashboard.charts');
   const colors = useColors();
+  const fmt = useAppFormat();
   const empty =
     trend !== undefined && trend.every((p) => p.newBookings === 0 && p.completedTrips === 0);
+  const totals = useMemo(
+    () => ({
+      newBookings: (trend ?? []).reduce((sum, p) => sum + p.newBookings, 0),
+      completedTrips: (trend ?? []).reduce((sum, p) => sum + p.completedTrips, 0),
+    }),
+    [trend],
+  );
 
   return (
     <TabState
@@ -325,10 +334,18 @@ function TripsTab({ trend, loading, isError, onRetry }: TripsTrendState) {
       empty={empty ? { title: t('tripsEmpty', { months: DASHBOARD_TREND_MONTHS }) } : null}
     >
       <YStack gap={TAB_GAP}>
-        {trend ? <CountTrendChart trend={trend} /> : null}
-        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-          {t('tripsDescription')}
-        </Text>
+        {/* Chú giải kèm TỔNG mỗi chuỗi, đứng TRÊN biểu đồ - như web `TripsCard` (Figma `24138:80517`). */}
+        <XStack flexWrap="wrap" columnGap={LEGEND_GAP_X} rowGap={LEGEND_GAP_Y}>
+          <Legend
+            color={colors.brandShape}
+            label={t('legendTotal', { label: t('newBookings'), count: fmt.count(totals.newBookings) })}
+          />
+          <Legend
+            color={colors.success}
+            label={t('legendTotal', { label: t('completedTrips'), count: fmt.count(totals.completedTrips) })}
+          />
+        </XStack>
+        {trend ? <TripBars trend={trend} /> : null}
       </YStack>
     </TabState>
   );
@@ -337,152 +354,125 @@ function TripsTab({ trend, loading, isError, onRetry }: TripsTrendState) {
 /** Neo GIỮA tháng, giữa ngày (UTC) để `period` YYYY-MM không lệch tháng ở bất kỳ múi giờ nào. */
 const monthAnchor = (period: string) => new Date(`${period}-15T12:00:00Z`);
 
-/** Web `CountTrendChart`: tổng `height 240` (vùng vẽ 200 + trục + chú thích), `maxBarSize 28`, `barGap 2`, `YAxis width 36`, `CHART_BAR_RADIUS 4`. */
-const PLOT_HEIGHT = 200;
-const MAX_BAR = 28;
-const BAR_GAP = 2;
-const Y_AXIS_WIDTH = 36;
-const BAR_RADIUS = 4;
-const SECTIONS = 4;
-const LEGEND_DOT = 8;
-const PLOT_MARGIN_RIGHT = 8;
-const LABEL_END_PAD = 16;
-
-function CountTrendChart({ trend }: { trend: readonly PartnerTrendPoint[] }) {
+/**
+ * Cột đôi theo tháng - cùng khung với `RevenueBars` (vùng cột kẻ đáy, đệm ngang 8, bo đỉnh, nhãn
+ * 12/18 dưới chân); mỗi tháng hai cột sát nhau: Đơn mới (`shape/primary`) · Chuyến hoàn thành (xanh).
+ * Số trên đầu cột 10/14 cho vừa cột hẹp (sáu tháng × hai cột).
+ */
+const TripBars = memo(function TripBars({ trend }: { trend: readonly PartnerTrendPoint[] }) {
   const colors = useColors();
-  const chart = useChartColors();
-  const t = useTranslations('Dashboard.charts');
-  const tChart = useTranslations('Finance.overview.chart');
   const fmt = useAppFormat();
-  const [width, setWidth] = useState(0);
-  // Mốc đang xem - bản native của tooltip Recharts (web rê chuột; app CHẠM để xem, chạm lại để đóng).
-  const [selected, setSelected] = useState<string | null>(null);
-  const active = trend.find((p) => p.period === selected) ?? null;
-
   const max = Math.max(1, ...trend.flatMap((p) => [p.newBookings, p.completedTrips]));
-  const step = Math.max(1, Math.ceil(max / SECTIONS));
-  // Web `margin.right = 8`: chừa mép phải để nhãn tháng cuối không bị cắt.
-  const plotWidth = Math.max(0, width - Y_AXIS_WIDTH - PLOT_MARGIN_RIGHT);
-  // Nhóm cột chia đều phần còn lại sau đệm cuối - đệm đó chứa nửa nhãn tháng cuối.
-  const groupWidth = trend.length > 0 ? (plotWidth - LABEL_END_PAD) / trend.length : 0;
-  const barWidth = Math.max(4, Math.min(MAX_BAR, (groupWidth * 0.6 - BAR_GAP) / 2));
-  const groupGap = Math.max(0, groupWidth - barWidth * 2 - BAR_GAP);
-
-  const bars: barDataItem[] = trend.flatMap((point) => [
-    {
-      value: point.newBookings,
-      frontColor: chart.series1,
-      spacing: BAR_GAP,
-      /*
-       * Web vẽ `monthYear` dài rồi để Recharts BỎ BỚT nhãn khi chật (`minTickGap`). Thư viện native
-       * không bỏ được - nhãn bị cắt "Thá…" - nên giữ đủ sáu mốc ở dạng ngắn `MM/YYYY`, mỗi nhãn
-       * rộng bằng CẢ nhóm cột và căn giữa nhóm.
-       */
-      label: fmt.monthYearShort(monthAnchor(point.period)),
-      labelWidth: groupWidth,
-      labelTextStyle: {
-        color: chart.axis,
-        fontSize: fontSize.label,
-        textAlign: 'center',
-        marginLeft: -(groupWidth - (barWidth * 2 + BAR_GAP)) / 2,
-      },
-    },
-    { value: point.completedTrips, frontColor: chart.series2, spacing: groupGap },
-  ]);
-
+  const height = (value: number) => Math.round((Math.max(0, value) / max) * TRIP_BAR_MAX);
+  /*
+   * Bề rộng tối thiểu của một tháng tính theo số DÀI nhất sẽ in trên cột: số nhỏ thì sáu tháng chia
+   * đều bề ngang, không cuộn; số lớn (vd. "12.040") thì mỗi tháng giữ đủ chỗ và cả biểu đồ CUỘN NGANG
+   * thay vì để số chồng lên nhau / bị cắt.
+   */
+  const longest = Math.max(...trend.flatMap((p) => [fmt.count(p.newBookings).length, fmt.count(p.completedTrips).length]));
+  const groupMin = 2 * Math.max(TRIP_BAR_MIN, longest * CAPTION_CHAR_WIDTH) + TRIP_PAIR_GAP;
   return (
-    <YStack gap={8} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {width > 0 ? (
-        <YStack>
-        <BarChart
-          data={bars}
-          width={plotWidth}
-          height={PLOT_HEIGHT}
-          barWidth={barWidth}
-          initialSpacing={groupGap / 2}
-          endSpacing={LABEL_END_PAD}
-          disableScroll
-          isAnimated={false}
-          animationDuration={0}
-          barBorderTopLeftRadius={BAR_RADIUS}
-          barBorderTopRightRadius={BAR_RADIUS}
-          maxValue={step * SECTIONS}
-          stepValue={step}
-          noOfSections={SECTIONS}
-          yAxisLabelWidth={Y_AXIS_WIDTH}
-          yAxisThickness={0}
-          xAxisThickness={0}
-          yAxisTextStyle={{ color: chart.axis, fontSize: fontSize.label }}
-          rulesType="dashed"
-          dashWidth={3}
-          dashGap={3}
-          rulesColor={chart.grid}
-        />
-        {/* Lớp CHẠM: mỗi tháng một dải phủ trọn chiều cao vùng vẽ, đặt đúng nhóm cột của tháng. */}
-        <YStack pos="absolute" top={0} height={PLOT_HEIGHT} left={Y_AXIS_WIDTH} width={plotWidth}>
-          {trend.map((point, index) => (
-            <Pressable
+    <HorizontalScroller contentContainerStyle={SCROLL_FILL} hintTop={TRIP_BAR_AREA / 2 - 16}>
+      <YStack f={1}>
+        <XStack
+          ai="flex-end"
+          gap={TRIP_GROUP_GAP}
+          px={BAR_PAD_X}
+          h={TRIP_BAR_AREA}
+          borderBottomWidth={1}
+          borderBottomColor={colors.surfaceMuted}
+        >
+          {trend.map((point) => (
+            <XStack
               key={point.period}
-              onPress={() => setSelected((cur) => (cur === point.period ? null : point.period))}
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: groupGap / 2 + index * groupWidth - groupGap / 2,
-                width: groupWidth,
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={fmt.monthYear(monthAnchor(point.period))}
-              accessibilityState={{ selected: point.period === selected }}
-            />
+              f={1}
+              minWidth={groupMin}
+              ai="flex-end"
+              gap={TRIP_PAIR_GAP}
+              accessible
+              accessibilityLabel={`${fmt.monthYear(monthAnchor(point.period))}: ${fmt.count(point.newBookings)} · ${fmt.count(point.completedTrips)}`}
+            >
+              <TripBar value={point.newBookings} height={height(point.newBookings)} color={colors.brandShape} />
+              <TripBar value={point.completedTrips} height={height(point.completedTrips)} color={colors.success} />
+            </XStack>
           ))}
-        </YStack>
-        </YStack>
-      ) : null}
-      <XStack jc="center" gap={16}>
-        <Legend color={chart.series1} label={t('newBookings')} />
-        <Legend color={chart.series2} label={t('completedTrips')} />
-      </XStack>
-      {active ? (
-        <YStack bg={colors.surface} br={radius.md} bw={1} bc={colors.border} p={8} pt={12} gap={4}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {fmt.monthYear(monthAnchor(active.period))}
-          </Text>
-          <TooltipRow color={chart.series1} label={t('newBookings')} value={fmt.count(active.newBookings)} />
-          <TooltipRow color={chart.series2} label={t('completedTrips')} value={fmt.count(active.completedTrips)} />
-        </YStack>
-      ) : (
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {tChart('tapHint')}
-        </Text>
-      )}
+        </XStack>
+        <XStack gap={TRIP_GROUP_GAP} px={BAR_PAD_X} pt={AXIS_PAD_TOP}>
+          {trend.map((point) => (
+            <Text
+              key={point.period}
+              f={1}
+              minWidth={groupMin}
+              col={colors.placeholder}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              ta="center"
+              numberOfLines={1}
+            >
+              {fmt.monthYearShort(monthAnchor(point.period))}
+            </Text>
+          ))}
+        </XStack>
+      </YStack>
+    </HorizontalScroller>
+  );
+});
+
+function TripBar({ value, height, color }: { value: number; height: number; color: string }) {
+  const colors = useColors();
+  const fmt = useAppFormat();
+  return (
+    <YStack f={1} minWidth={0} ai="center" gap={BAR_LABEL_GAP}>
+      <Text
+        col={colors.textMuted}
+        fos={typeScale.caption.fontSize}
+        lh={typeScale.caption.lineHeight}
+        fow={fontWeight.medium}
+        ta="center"
+        numberOfLines={1}
+        // Tháng không có đơn/chuyến thì KHÔNG ghi "0" (feedback 20/11/2026) - giữ chỗ dòng để các
+        // cột còn lại không lệch hàng.
+        opacity={value > 0 ? 1 : 0}
+        accessibilityElementsHidden={value <= 0}
+      >
+        {fmt.count(value)}
+      </Text>
+      <YStack
+        w="100%"
+        h={height}
+        bg={color}
+        borderTopLeftRadius={TRIP_BAR_RADIUS}
+        borderTopRightRadius={TRIP_BAR_RADIUS}
+      />
     </YStack>
   );
 }
 
+/** Vùng cột = nhãn số 14 + khoảng 4 + cột ≤145 + kẻ đáy; tháng cách 8, hai cột trong tháng cách 2. */
+const TRIP_BAR_AREA = 164;
+const TRIP_BAR_MAX = 145;
+const TRIP_GROUP_GAP = 8;
+const TRIP_PAIR_GAP = 2;
+const TRIP_BAR_RADIUS = 6;
+/** Cột hẹp nhất (số 1-2 chữ số) và bề rộng ước lượng một ký tự của số 10px - đủ dư cho dấu chấm nghìn. */
+const TRIP_BAR_MIN = 14;
+const CAPTION_CHAR_WIDTH = 6.5;
+/** Nội dung ngắn hơn khung thì giãn đủ bề ngang (không cuộn); dài hơn thì cuộn. */
+const SCROLL_FILL = { flexGrow: 1 } as const;
+/** Web `.legend`: `gap 8px 32px`; ô màu vuông 10, bo 2; chữ 14/20 màu phụ. */
+const LEGEND_GAP_X = 32;
+const LEGEND_GAP_Y = 8;
+const LEGEND_DOT = 10;
+const LEGEND_DOT_RADIUS = 2;
+
+/** Ô màu + nhãn - chú giải cột (web `TripsCard` `.legendItem`). */
 function Legend({ color, label }: { color: string; label: string }) {
   const colors = useColors();
   return (
     <XStack ai="center" gap={6}>
-      <YStack w={LEGEND_DOT} h={LEGEND_DOT} br={radius.pill} bg={color} />
-      <Text col={colors.textMuted} fos={fontSize.label}>
+      <YStack w={LEGEND_DOT} h={LEGEND_DOT} br={LEGEND_DOT_RADIUS} bg={color} />
+      <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
         {label}
-      </Text>
-    </XStack>
-  );
-}
-
-/** Một dòng của thẻ chi tiết - chấm màu nối với cột, chữ giữ màu mực, số căn phải (như `ChartTooltip` web). */
-function TooltipRow({ color, label, value }: { color: string; label: string; value: string }) {
-  const colors = useColors();
-  return (
-    <XStack ai="center" gap={4}>
-      <YStack w={LEGEND_DOT} h={LEGEND_DOT} br={radius.pill} bg={color} />
-      <Text f={1} col={colors.textMuted} fos={fontSize.label}>
-        {label}
-      </Text>
-      <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-        {value}
       </Text>
     </XStack>
   );

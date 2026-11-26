@@ -70,9 +70,8 @@ export function HandoverPhotosCard({ booking, closed }: { booking: BookingDetail
                   },
                 })}
           />
-          <PhotoHint>
-            {closed ? t('readOnly') : tab === HANDOVER_TYPE.PICKUP ? t('hintBefore') : t('hintAfter')}
-          </PhotoHint>
+          {/* Figma không có câu hướng dẫn dưới lưới ảnh (gỡ 20/11/2026); đơn đã khép vẫn báo chỉ-xem. */}
+          {closed ? <PhotoHint>{t('readOnly')}</PhotoHint> : null}
         </>
       )}
       </YStack>

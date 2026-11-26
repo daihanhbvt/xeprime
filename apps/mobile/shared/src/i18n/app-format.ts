@@ -51,6 +51,8 @@ export interface AppFormat {
    * xác tuyệt đối ở mọi mức. Mặc định `1` dành cho TRỤC BIỂU ĐỒ và ô thống kê, nơi người đọc cần
    * độ lớn chứ không cần con số chính xác.
    */
+  // `opts.price` còn để các nơi gọi cũ biên dịch được - KHÔNG còn tác dụng: mọi nơi dùng chung MỘT kiểu
+  // rút gọn (`COMPACT_FRACTION_DIGITS` ở `@xeprime/domain`).
   moneyCompact: (value: MoneyString | null | undefined, opts?: { price?: boolean }) => string;
   /** Tính bằng nghìn: `1.350 K` (vi) · `1,350 K` (en) — như web. Dưới 1.000đ rơi về `money`. */
   moneyThousands: (value: MoneyString | null | undefined) => string;
@@ -306,9 +308,9 @@ export function createAppFormat(
 
   return {
     money,
-    moneyCompact: (value, opts) => {
+    moneyCompact: (value) => {
       if (value === null || value === undefined || value === '') return empty;
-      const parts = compactMoneyParts(value, separators, opts?.price === true ? 2 : 1);
+      const parts = compactMoneyParts(value, separators);
       if (!parts) return money(wholeUnits(value));
       return t(`units.compact.${parts.unit}` as never, { value: parts.value } as never);
     },

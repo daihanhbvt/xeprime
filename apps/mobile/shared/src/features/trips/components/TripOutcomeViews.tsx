@@ -43,6 +43,7 @@ import { TripHandoverEvidence } from './TripHandoverEvidence';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripHandoverWord } from './TripHandoverWord';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
+import { TripNotReturnedReport } from './TripNotReturnedReport';
 import { TripReviewCard } from './TripReviewCard';
 import {
   CardLead,
@@ -562,6 +563,8 @@ export function TripClosedView({ trip }: OutcomeViewProps) {
       </Reveal>
 
       {/* priority */}
+      {/* Chủ xe xác nhận trả xe SỚM mà khách vẫn giữ xe (ADR 0105) - việc gấp hơn đánh giá. */}
+      <TripNotReturnedReport trip={trip} />
       {completed ? <TripReviewCard trip={trip} /> : null}
       <TripNotReceivedReport trip={trip} />
       {/* Có đơn ⇒ khoản giữ chỗ/hoàn đã GỘP vào hoá đơn bên dưới; thẻ riêng chỉ cho chuyến chưa có đơn. */}

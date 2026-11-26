@@ -5,7 +5,7 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Ba vai của `status` trên `<Progress>` bên web: đang chạy · xong · vượt ngưỡng. */
 type Tone = 'active' | 'success' | 'exception';
-type Size = 'sm' | 'md';
+type Size = 'xs' | 'sm' | 'md';
 
 /**
  * `md` là thanh ĐỌC SỐ — nó đứng cạnh nhãn "đã đi 4.100 / 5.000 km" ở màn hồ sơ và là một số liệu.
@@ -13,7 +13,8 @@ type Size = 'sm' | 'md';
  * `sm` là thanh LƯỚT QUA: trong một thẻ danh sách nó chỉ trả lời "gần hết chu kỳ chưa", và ở bề
  * dày 8pt nó thành mảng màu nặng thứ ba trên thẻ, tranh chỗ với nhãn trạng thái.
  */
-const TRACK_HEIGHT: Readonly<Record<Size, number>> = { sm: 4, md: 8 };
+/** `xs` (6) - thanh chu kỳ trong ô xám thẻ bảo dưỡng (Figma 24512:121720). */
+const TRACK_HEIGHT: Readonly<Record<Size, number>> = { xs: 6, sm: 4, md: 8 };
 
 const useTone = themed<Readonly<Record<Tone, string>>>((colors) => ({
   active: colors.primary,

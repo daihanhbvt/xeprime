@@ -9,7 +9,7 @@ import {
 } from '@xeprime/types';
 import { buildPeriodRange, isNegativeMoney, isZeroMoney } from '@xeprime/domain';
 import { SectionHeader } from '@/components/ui/CardTitle';
-import { ChipTabs } from '@/components/ui/ChipTabs';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { Card } from '@/components/ui/Card';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { SkeletonText } from '@/components/ui/Skeleton';
@@ -197,12 +197,12 @@ export function FinanceEntityPanel({
       </Text>
 
       {/* Ba tab của web, giữ nguyên hình thái "một cú bấm là đổi". */}
-      <ChipTabs
-        label={t('every.label')}
-        items={granularityOptions.map((option) => ({ value: option.value, label: option.label }))}
+      {/* Khuôn tab phân đoạn chung của app (cùng Tổng quan / chi tiết đơn). */}
+      <SegmentedTabs
+        items={granularityOptions.map((option) => ({ key: option.value, label: option.label }))}
         value={granularity}
-        onSelect={setGranularity}
-        gutter={0}
+        onChange={setGranularity}
+        variant="neutral"
       />
 
       {series.isError && !series.data ? (

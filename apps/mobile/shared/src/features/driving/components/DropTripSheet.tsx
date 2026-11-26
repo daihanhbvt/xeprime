@@ -13,7 +13,7 @@ import {
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
+import { SheetConfirmFooter } from '@/components/ui/SheetConfirmFooter';
 import { Callout } from '@/components/ui/Callout';
 import { RadioField } from '@/components/ui/RadioField';
 import { TextField } from '@/components/ui/TextField';
@@ -44,6 +44,7 @@ export function DropTripSheet({
   onDropped?: () => void;
 }) {
   const t = useTranslations('Driving.drop');
+  const tCommon = useTranslations('Common.actions');
   const tToast = useTranslations('Driving.toast');
   const toast = useAppToast();
   const domainLabel = useDomainLabel();
@@ -91,11 +92,12 @@ export function DropTripSheet({
       onClose={onClose}
       title={t('title', { code: trip.code })}
       footer={
-        <Button
-          label={t('confirm')}
-          variant="danger"
+        <SheetConfirmFooter
+          backLabel={tCommon('back')}
+          onBack={onClose}
+          confirmLabel={t('confirm')}
+          onConfirm={() => void submit()}
           loading={drop.isPending}
-          onPress={() => void submit()}
         />
       }
     >
@@ -134,7 +136,7 @@ export function DropTripSheet({
         name="reason"
         label={t('note')}
         placeholder={t('notePlaceholder')}
-        multiline
+        multiline scrollable
         rows={3}
         maxLength={DRIVER_DROP_NOTE_LENGTH.MAX}
         required={category === DRIVER_DROP_REASON.OTHER}

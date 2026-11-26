@@ -226,7 +226,6 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
             {hasOverrides ? (
               <Button
                 label={t('dailyPrice.restore')}
-                icon="refresh-outline"
                 variant="danger"
                 onPress={() => setConfirmingRestore(true)}
                 loading={remove.isPending}
@@ -296,7 +295,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
             <MoneyField control={control} name="hourlyPrice" label={t('dailyPrice.hourly')} />
           ) : null}
 
-          <TextField
+          <TextField multiline scrollable rows={3}
             control={control}
             name="note"
             label={t('dailyPrice.note')}

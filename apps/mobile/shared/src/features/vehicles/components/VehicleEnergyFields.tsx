@@ -19,6 +19,7 @@ import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/domain';
 import { space } from '@/theme/tokens';
 import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
+import { useCatalogSpecLock, useSpecFieldLock, type SpecLock } from '../hooks/use-vehicle-data';
 
 /**
  * Lựa chọn truyền động HỢP LỆ của chiếc xe đang khai — bản native của `useTransmissionOptions`.
@@ -102,10 +103,29 @@ export function VehicleEnergyFields({
         )
       : transmissionOptions;
 
-  let fuelHint: string | undefined = lockedNotice;
-  if (!fuelHint && spec.model && fuelLocked) {
-    fuelHint = tSpecs('specFromModel', { model: spec.model.label });
-  } else if (!fuelHint && spec.model && fuelChoices) {
+  // Khoá theo xe chuẩn đang chọn (hoặc theo dòng một cấu hình); bút trong ô mở lại (ADR 0102).
+  const tCatalog = useTranslations('Vehicles.form.catalog');
+  const fuelLock = useCatalogSpecLock(control, vehicleType, 'fuelType', { modelLocked: fuelLocked });
+  const gearLock = useCatalogSpecLock(control, vehicleType, 'transmission', { modelLocked: gearLocked });
+  const consumptionLock = useCatalogSpecLock(control, vehicleType, 'fuelConsumptionCombined');
+  const rangeLock = useCatalogSpecLock(control, vehicleType, 'electricRangeKm');
+  const batteryLock = useCatalogSpecLock(control, vehicleType, 'batteryCapacityKwh');
+  const engineLock = useCatalogSpecLock(control, vehicleType, 'engineDisplacementCc');
+  /** Câu dưới ô đang khoá: theo dữ liệu mẫu xe, hay theo dòng xe một cấu hình. */
+  const lockHelp = (lock: SpecLock): string | undefined =>
+    lock.fromData
+      ? tCatalog('specLocked')
+      : lock.locked && spec.model
+        ? tSpecs('specFromModel', { model: spec.model.label })
+        : undefined;
+  // Ô bị khoá vì lý do KHÁC (`disabled`: xe đã lên chợ) không khoá theo mẫu - bút không hứa một lần sửa.
+  const toFieldLock = useSpecFieldLock();
+  const fieldLock = (lock: SpecLock, label: string) => toFieldLock(lock, label, !disabled);
+  const helpFor = (lock: SpecLock, help?: string) =>
+    (lock.locked && !disabled ? lockHelp(lock) : undefined) ?? help;
+
+  let fuelHint: string | undefined = lockedNotice ?? lockHelp(fuelLock);
+  if (!fuelHint && spec.model && fuelChoices) {
     fuelHint = tSpecs('specChoiceFromModel', {
       model: spec.model.label,
       values: fuelChoices.map((v) => domainLabel('fuelType', v)).join(', '),
@@ -117,9 +137,7 @@ export function VehicleEnergyFields({
     lockedNotice ??
     (fixedTransmission
       ? t('transmissionElectricHelp')
-      : gearLocked && spec.model
-        ? tSpecs('specFromModel', { model: spec.model.label })
-        : undefined);
+      : helpFor(gearLock));
 
   /* Nhiên liệu hợp lệ phụ thuộc LOẠI XE (xe máy không có dầu) và MẪU XE (nhiều bản ⇒ chỉ các bản đó). */
   const fuelOptions = useMemo(() => {
@@ -191,9 +209,10 @@ export function VehicleEnergyFields({
                 ? tSpecs('fuelPlaceholderCar')
                 : tSpecs('fuelPlaceholderMotorbike')
             }
-            disabled={disabled || fuelLocked}
+            disabled={disabled}
             required={fuelTypeRequired}
             {...(fuelHint ? { hint: fuelHint } : {})}
+            lock={fieldLock(fuelLock, tSpecs('fuelType'))}
           />
         </YStack>
         {policy.transmission !== 'hidden' ? (
@@ -205,9 +224,11 @@ export function VehicleEnergyFields({
                   options={gearOptions}
                   placeholder={t('transmissionPlaceholder')}
                   required={policy.transmission === 'required'}
-                  disabled={disabled || Boolean(fixedTransmission) || gearLocked}
-                  allowClear={!fixedTransmission && !gearLocked}
+                  disabled={disabled || Boolean(fixedTransmission)}
+                  allowClear={!fixedTransmission}
                   {...(transmissionHint ? { hint: transmissionHint } : {})}
+                  // Xe điện đã khoá hộp số theo luật riêng (`disabled`) - không thêm bút mở khoá.
+                  lock={toFieldLock(gearLock, t('transmission'), !disabled && !fixedTransmission)}
                 />
           </YStack>
         ) : null}
@@ -219,10 +240,11 @@ export function VehicleEnergyFields({
           name="fuelConsumptionCombined"
           label={t('consumption')}
           placeholder={t('consumptionPlaceholder')}
-          hint={t('consumptionHelp')}
+          hint={helpFor(consumptionLock, t('consumptionHelp'))}
           required={policy.fuelConsumption === 'required'}
           min={0}
           editable={!disabled}
+          lock={fieldLock(consumptionLock, t('consumption'))}
         />
       ) : null}
 
@@ -232,7 +254,8 @@ export function VehicleEnergyFields({
           name="electricRangeKm"
           label={t('electricRange')}
           placeholder={t('electricRangePlaceholder')}
-          hint={t('electricRangeHelp')}
+          hint={helpFor(rangeLock, t('electricRangeHelp'))}
+          lock={fieldLock(rangeLock, t('electricRange'))}
           required={policy.electricRangeKm === 'required'}
           integer
           min={VEHICLE_ENERGY_LIMITS.electricRangeKm.min}
@@ -247,7 +270,8 @@ export function VehicleEnergyFields({
           name="batteryCapacityKwh"
           label={t('batteryCapacity')}
           placeholder={t('batteryCapacityPlaceholder')}
-          hint={t('batteryCapacityHelp')}
+          hint={helpFor(batteryLock, t('batteryCapacityHelp'))}
+          lock={fieldLock(batteryLock, t('batteryCapacity'))}
           min={VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.min}
           max={VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.max}
           editable={!disabled}
@@ -278,6 +302,8 @@ export function VehicleEnergyFields({
           integer
           min={1}
           editable={!disabled}
+          {...(helpFor(engineLock) ? { hint: helpFor(engineLock) } : {})}
+          lock={fieldLock(engineLock, t('engineDisplacementCc'))}
         />
       ) : null}
     </YStack>

@@ -1,6 +1,6 @@
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { YStack } from 'tamagui';
-import { FieldLabel, FieldMessage } from './Field';
+import { FieldLabel, FieldMessage, inLabelHint, belowHint } from './Field';
 import { RadioOption } from './RadioOption';
 import type { IconName } from './Chip';
 import { space } from '@/theme/tokens';
@@ -45,7 +45,7 @@ export function RadioField<T extends FieldValues>({
 
   return (
     <YStack gap={space.xs}>
-      {label ? <FieldLabel label={label} required={required} /> : null}
+      {label ? <FieldLabel label={label} required={required} hint={inLabelHint(hint)} /> : null}
 
       {options.map((option) => (
         <RadioOption
@@ -59,7 +59,7 @@ export function RadioField<T extends FieldValues>({
         />
       ))}
 
-      <FieldMessage error={fieldState.error?.message} hint={hint} />
+      <FieldMessage error={fieldState.error?.message} hint={belowHint(hint)} />
     </YStack>
   );
 }

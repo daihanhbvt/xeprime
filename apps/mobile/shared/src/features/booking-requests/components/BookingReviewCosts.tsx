@@ -12,6 +12,8 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { useFeeLineSublabel, type PriceBreakdownFeesInput } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { InsuranceFeeHint } from '@/components/ui/InsuranceFeeHint';
+import type { IncludedInsuranceServiceFee } from '@xeprime/domain';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
@@ -118,6 +120,8 @@ export function BookingReviewCosts({
       tone?: 'discount';
       /** Ghi chú giải thích — dấu "i" cạnh nhãn thay cho đoạn chữ hiện sẵn. */
       hint?: { content: string; label: string } | null;
+      /** Dòng IV đã gộp phí thu hộ - ⓘ tách hai số (ADR 0091 điều 3). */
+      includedServiceFee?: IncludedInsuranceServiceFee | null;
     } = {},
   ) => (
     <XStack key={key} ai="flex-start" jc="space-between" gap={space.sm}>
@@ -127,6 +131,7 @@ export function BookingReviewCosts({
             {label}
           </Text>
           {opts.hint ? <InfoHint content={opts.hint.content} label={opts.hint.label} /> : null}
+          {opts.includedServiceFee ? <InsuranceFeeHint fee={opts.includedServiceFee} /> : null}
         </XStack>
         {opts.sub ? (
           <Text col={colors.placeholder} fos={fontSize.label}>
@@ -172,6 +177,7 @@ export function BookingReviewCosts({
               {feeLines.map((line) =>
                 row(line.key, dl('feeLine', line.key), fmt.money(line.amount), {
                   sub: feeLineSublabel(line) || null,
+                  includedServiceFee: line.includedServiceFee ?? null,
                 }),
               )}
               {/* Ô áp mã (khi có) tự hiện mã + số giảm — dòng chỉ-đọc chỉ khi không có ô. */}

@@ -8,12 +8,11 @@ import { customerFormSchema, type CustomerFormValues } from '@xeprime/validators
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { DataRow } from '@/components/ui/DataRow';
+import { FieldAppearanceProvider } from '@/components/ui/Field';
 import { AddressFields } from '@/components/form/AddressFields';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
-import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { space } from '@/theme/tokens';
@@ -21,17 +20,13 @@ import { duplicateCustomerId, type TenantCustomerDetail } from '../api';
 import { useCreateCustomer, useUpdateCustomer } from '../hooks/use-customers';
 import { getErrorMessage } from '@/lib/get-error-message';
 
-const EMPTY: CustomerFormValues = {
-  fullName: '',
-  phone: '',
-  email: '',
-  provinceCode: '',
-  wardCode: '',
-  addressLine: '',
-};
+/** Giá trị của form: chỉ hồ sơ. Mức rủi ro + lý do nằm ở tấm "Phân loại" (`CustomerRiskSheet`). */
+type FormValues = CustomerFormValues;
 
-function toValues(customer: TenantCustomerDetail | null): CustomerFormValues {
-  if (!customer) return EMPTY;
+function toValues(customer: TenantCustomerDetail | null): FormValues {
+  if (!customer) {
+    return { fullName: '', phone: '', email: '', provinceCode: '', wardCode: '', addressLine: '' };
+  }
   return {
     fullName: customer.fullName,
     phone: customer.phone,
@@ -57,10 +52,14 @@ const ADDRESS_FIELD_NAMES = {
 } as const;
 
 /**
- * Hồ sơ khách — MỘT tấm trượt cho cả thêm lẫn sửa (bản native của `CustomerFormModal`).
+ * Hồ sơ khách — MỘT tấm trượt cho cả thêm lẫn sửa (bản native của `CustomerFormModal`), theo Figma
+ * Partner-XePrime "Chỉnh sửa khách hàng" `24486:105661`.
  *
- * Thân form chỉ render khi `open` và remount theo `key`: mỗi lần mở là state sạch (giá trị nhập
- * dở và lỗi trùng SĐT của lần trước không sống sót) mà KHÔNG cần effect nào đồng bộ lại.
+ * Mỗi lần mở là state sạch (giá trị nhập dở và lỗi trùng SĐT của lần trước không sống sót) mà KHÔNG
+ * cần effect nào đồng bộ lại: `session` tăng đúng lúc `open` chuyển false → true và làm `key` của
+ * thân form đổi, nên form được dựng lại; lúc đóng `key` giữ nguyên để tấm còn chạy hết hiệu ứng.
+ *
+ * Mức rủi ro + lý do KHÔNG nằm ở form này - đổi ở tấm "Phân loại" (`CustomerRiskSheet`).
  */
 export function CustomerFormSheet({
   open,
@@ -74,19 +73,21 @@ export function CustomerFormSheet({
   onClose: () => void;
   onOpenExisting?: ((customerId: string) => void) | undefined;
 }) {
-  const t = useTranslations('Customers.form');
+  const [session, setSession] = useState(0);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setSession((n) => n + 1);
+  }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={customer ? t('editTitle') : t('addTitle')}>
-      {open ? (
-        <CustomerForm
-          key={customer?.id ?? 'new'}
-          customer={customer}
-          onDone={onClose}
-          onOpenExisting={onOpenExisting}
-        />
-      ) : null}
-    </BottomSheet>
+    <CustomerFormBody
+      key={`${customer?.id ?? 'new'}-${session}`}
+      open={open}
+      customer={customer}
+      onClose={onClose}
+      onOpenExisting={onOpenExisting}
+    />
   );
 }
 
@@ -96,20 +97,20 @@ export function CustomerFormSheet({
  * dẫn tới ngõ cụt. Hệ thống KHÔNG tự gộp hai hồ sơ — gộp khách là quyết định của người dùng, có
  * chủ đích, không phải hệ quả phụ của một lần gõ nhầm số.
  */
-function CustomerForm({
+function CustomerFormBody({
+  open,
   customer,
-  onDone,
+  onClose,
   onOpenExisting,
 }: {
+  open: boolean;
   customer: TenantCustomerDetail | null;
-  onDone: () => void;
+  onClose: () => void;
   onOpenExisting?: ((customerId: string) => void) | undefined;
 }) {
   const t = useTranslations('Customers.form');
-  const tCustomers = useTranslations('Customers.detail');
-  const tCommon = useTranslations('Common.actions');
+  const tApp = useTranslations('Customers.app.detail.form');
   const toast = useAppToast();
-  const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
 
   const create = useCreateCustomer();
@@ -120,16 +121,17 @@ function CustomerForm({
     null,
   );
 
-  const resolver = useValidationResolver<CustomerFormValues>(
+  const resolver = useValidationResolver<FormValues>(
     customerFormSchema,
     'Customers.validation',
   );
-  const { control, handleSubmit } = useForm<CustomerFormValues>({
+  const { control, handleSubmit } = useForm<FormValues>({
     resolver,
     defaultValues: toValues(customer),
   });
 
-  const submit = handleSubmit((values) => {
+
+  const submit = handleSubmit(async (values) => {
     setDuplicate(null);
     const body = {
       fullName: values.fullName.trim(),
@@ -140,102 +142,113 @@ function CustomerForm({
       ...(values.wardCode ? { wardCode: values.wardCode } : {}),
       addressLine: values.addressLine.trim() || undefined,
     };
-    const done = {
-      onSuccess: () => {
-        toast.showSuccess(customer ? t('updated') : t('created'));
-        onDone();
-      },
-      onError: (err: unknown) => {
-        if (getErrorCode(err) === API_ERROR_CODE.CUSTOMER_PHONE_DUPLICATE) {
-          setDuplicate({ message: getErrorMessage(err), customerId: duplicateCustomerId(err) });
-          return;
-        }
-        toast.showError(errorMessage(err));
-      },
-    };
-    if (customer) update.mutate({ id: customer.id, body }, done);
-    else create.mutate(body, done);
+
+    try {
+      if (customer) await update.mutateAsync({ id: customer.id, body });
+      else await create.mutateAsync(body);
+    } catch (err) {
+      if (getErrorCode(err) === API_ERROR_CODE.CUSTOMER_PHONE_DUPLICATE) {
+        setDuplicate({ message: getErrorMessage(err), customerId: duplicateCustomerId(err) });
+        return;
+      }
+      toast.showError(errorMessage(err));
+      return;
+    }
+
+    toast.showSuccess(customer ? t('updated') : t('created'));
+    onClose();
   });
 
   return (
-    <YStack gap={space.md}>
-      <TextField
-        control={control}
-        name="fullName"
-        label={t('fullName')}
-        placeholder={t('fullNamePlaceholder')}
-        required
-      />
-      <TextField
-        control={control}
-        name="phone"
-        label={t('phone')}
-        placeholder={t('phonePlaceholder')}
-        keyboardType="phone-pad"
-        autoComplete="tel"
-        required
-        hint={t('phoneHelp')}
-      />
-      <TextField
-        control={control}
-        name="email"
-        label={t('email')}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-      />
-      {/*
-        Địa chỉ khách KHÔNG bắt buộc: sổ khách hay được điền nhanh lúc lập đơn và địa chỉ ở đó
-        chủ yếu để liên hệ — bắt chọn hai cấp hành chính cho một ô phụ là cản trở việc chính.
-      */}
-      <AddressFields control={control} names={ADDRESS_FIELD_NAMES} title={t('address')} />
-
-      {customer ? (
-        <DataRow
-          label={tCustomers('source')}
-          value={domainLabel('tenantCustomerSource', customer.source)}
-        />
-      ) : null}
-
-      {duplicate ? (
-        <YStack gap={space.sm}>
-          <Callout tone="warning" title={duplicate.message}>
-            {t('duplicateHint')}
-          </Callout>
-          {duplicate.customerId && onOpenExisting ? (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={customer ? tApp('title') : t('addTitle')}
+      footer={
+        <XStack gap={space.sm}>
+          {/* Lối thoát bên TRÁI, hành động chính bên PHẢI; "Huỷ" co vừa chữ, nút chính lấy phần còn lại. */}
+          <YStack flexShrink={0}>
+            <Button label={tApp('cancel')} variant="neutral" disabled={saving} onPress={onClose} />
+          </YStack>
+          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
-              label={t('duplicateOpen')}
-              variant="secondary"
-              onPress={() => {
-                onOpenExisting(duplicate.customerId as string);
-                onDone();
-              }}
+              label={customer ? tApp('submit') : t('submitAdd')}
+              variant="gradient"
+              loading={saving}
+              onPress={() => void submit()}
             />
-          ) : null}
-        </YStack>
-      ) : null}
+          </YStack>
+        </XStack>
+      }
+    >
+      {/* Ô nhập CHUNG (v2: cao 44, chữ 14/16) cho mọi ô trong form - cùng bộ với màn lọc/đăng nhập. */}
+      <FieldAppearanceProvider value="v2">
+      <YStack gap={space.md}>
+        <TextField
+          control={control}
+          name="fullName"
+          label={tApp('name')}
+          placeholder={tApp('namePlaceholder')}
+          required
+        />
 
-      <XStack gap={space.sm}>
+        {/* Nguồn khách KHÔNG hiện trong form (người dùng 25/11/2026) - đã có ở thẻ đầu trang chi tiết. */}
+        <TextField
+          control={control}
+          name="phone"
+          label={tApp('phone')}
+          placeholder={t('phonePlaceholder')}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          required
+          hint={t('phoneHelp')}
+        />
+
+        <TextField
+          control={control}
+          name="email"
+          label={tApp('email')}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+        />
+
         {/*
-          Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
-          bước tiếp theo chứ không phải một lựa chọn thay thế.
-        
-          "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
-          nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
+          Địa chỉ khách KHÔNG bắt buộc: sổ khách hay được điền nhanh lúc lập đơn và địa chỉ ở đó
+          chủ yếu để liên hệ — bắt chọn hai cấp hành chính cho một ô phụ là cản trở việc chính.
         */}
-        <YStack flexShrink={0}>
-          <Button label={tCommon('close')} variant="ghost" disabled={saving} onPress={onDone} />
-        </YStack>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-          <Button
-            label={customer ? t('submitEdit') : t('submitAdd')}
-            icon="checkmark-outline"
-            loading={saving}
-            onPress={() => void submit()}
-          />
-        </YStack>
-      </XStack>
-    </YStack>
+        <AddressFields
+          control={control}
+          names={ADDRESS_FIELD_NAMES}
+          labels={{
+            province: tApp('province'),
+            ward: tApp('ward'),
+            wardPlaceholder: tApp('wardPlaceholder'),
+            addressLine: tApp('addressLine'),
+            addressLinePlaceholder: tApp('addressLinePlaceholder'),
+          }}
+        />
+
+        {duplicate ? (
+          <YStack gap={space.sm}>
+            <Callout tone="warning" title={duplicate.message}>
+              {t('duplicateHint')}
+            </Callout>
+            {duplicate.customerId && onOpenExisting ? (
+              <Button
+                label={t('duplicateOpen')}
+                variant="secondary"
+                onPress={() => {
+                  onOpenExisting(duplicate.customerId as string);
+                  onClose();
+                }}
+              />
+            ) : null}
+          </YStack>
+        ) : null}
+      </YStack>
+      </FieldAppearanceProvider>
+    </BottomSheet>
   );
 }
 

@@ -46,6 +46,7 @@ export function BookingInsuranceCertificatesPanel({
     <InsuranceCoverageList
       coverage={data}
       className={styles.panel}
+      phoneCards
       pdfHref={(certificateId) => bookingCertificatePdfHref(bookingId, certificateId)}
     />
   );

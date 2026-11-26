@@ -204,14 +204,21 @@ function VehicleCardImpl({
   /*
    * Giá theo `activeService`:
    *   - dài hạn → giá tháng; chưa niêm yết → "Liên hệ báo giá" (KHÔNG lấy giá tự lái trưng thay);
-   *   - có tài xế → giá/ngày đã gồm tài xế; chưa niêm yết → "Liên hệ báo giá";
+   *   - có tài xế → giá/ngày đã gồm tài xế; chưa niêm yết → giá thuê xe (tự lái) kèm "chưa gồm tài
+   *     xế" - đúng con số máy báo giá dùng (20/11/2026, web `VehicleCard`);
    *   - tự lái → giá ngày sau khuyến mãi.
    */
   const monthlyPrice =
     activeService === SERVICE_TYPE.LONG_TERM && listing.monthlyPrice ? listing.monthlyPrice : null;
-  const driverPrice =
-    activeService === SERVICE_TYPE.WITH_DRIVER && listing.withDriverDailyPrice
+  const withDriverContext = activeService === SERVICE_TYPE.WITH_DRIVER;
+  const driverPrice = withDriverContext
+    ? (listing.withDriverDailyPrice ?? listing.weekdayPrice ?? null)
+    : null;
+  const driverPriceNote =
+    withDriverContext && driverPrice
       ? listing.withDriverDailyPrice
+        ? t('withDriverIncluded')
+        : t('withDriverExcluded')
       : null;
   const selfDrive = activeService === SERVICE_TYPE.SELF_DRIVE;
   const displayPrice = selfDrive
@@ -358,6 +365,11 @@ function VehicleCardImpl({
                   <Text col={colors.placeholder} fos={fontSize.bodySm}>
                     {priceUnit}
                   </Text>
+                  {driverPriceNote ? (
+                    <Text col={colors.textMuted} fos={fontSize.label}>
+                      {driverPriceNote}
+                    </Text>
+                  ) : null}
                 </XStack>
               ) : (
                 <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
@@ -530,6 +542,11 @@ function VehicleCardImpl({
                   <Text col={colors.placeholder} fos={fontSize.body} lh={22}>
                     {priceUnit}
                   </Text>
+                  {driverPriceNote ? (
+                    <Text col={colors.textMuted} fos={fontSize.label}>
+                      {driverPriceNote}
+                    </Text>
+                  ) : null}
                 </>
               ) : (
                 <Text col={colors.primary} fos={fontSize.bodyLg} fow={fontWeight.semibold}>

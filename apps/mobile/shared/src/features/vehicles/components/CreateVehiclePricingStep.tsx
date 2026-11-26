@@ -47,12 +47,18 @@ export function CreateVehiclePricingStep({
   isCar,
   setValue,
   autoAccept,
+  shopPolicy = true,
 }: {
   control: Control<VehicleFormValues>;
   isCar: boolean;
   setValue: UseFormSetValue<VehicleFormValues>;
   /** "Tự động đồng ý nhận chuyến" - thiết lập của dịch vụ tự lái, ghi SAU khi tạo xe. */
   autoAccept: { value: boolean; onChange: (next: boolean) => void };
+  /**
+   * Khối chính sách GIAN HÀNG + ghi chú "theo chính sách gian hàng" - tắt ở tuyến hoa hồng: họ không
+   * có trang đó, chính sách đặt trên từng xe ở màn sửa xe (web `shopPolicy`, ADR 0085 điều 3).
+   */
+  shopPolicy?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.form.pricingStep');
@@ -61,7 +67,7 @@ export function CreateVehiclePricingStep({
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
 
   // Chính sách kế thừa theo ĐÚNG loại xe đang tạo — ô tô/xe máy hai bộ riêng.
-  const policy = useShopPolicy(vehicleType);
+  const policy = useShopPolicy(vehicleType, shopPolicy);
   const values = policy.data?.policy ?? null;
   const openShopPolicies = () => navigateOnce(ROUTES.manage.shopPolicies());
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
@@ -84,6 +90,7 @@ export function CreateVehiclePricingStep({
       body: (
         <YStack gap={space.sm}>
           <LongTermPriceFields control={control} setValue={setValue} />
+          {shopPolicy ? (
           <Callout tone="info">
             <Text col={colors.info} fos={fontSize.bodySm}>
               {t('longTermInherit')}{' '}
@@ -92,6 +99,7 @@ export function CreateVehiclePricingStep({
               </Text>
             </Text>
           </Callout>
+          ) : null}
         </YStack>
       ),
     },
@@ -107,7 +115,7 @@ export function CreateVehiclePricingStep({
           </Text>
         </YStack>
 
-        {policy.isPending ? (
+        {!shopPolicy ? null : policy.isPending ? (
           <SkeletonText lines={3} />
         ) : values ? (
           <PolicyPreview values={values} onOpenPolicies={openShopPolicies} />

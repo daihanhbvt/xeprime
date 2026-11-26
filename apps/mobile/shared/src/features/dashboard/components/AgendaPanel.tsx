@@ -7,7 +7,7 @@ import { DASHBOARD_AGENDA_DAYS, DASHBOARD_AGENDA_KIND } from '@xeprime/types';
 import { LIST_SEPARATOR, dayjs, toAppTz, type Dayjs } from '@xeprime/domain';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Pill } from '@/components/ui/Pill';
-import { UnderlineTabs, type UnderlineTabItem } from '@/components/ui/UnderlineTabs';
+import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -71,13 +71,14 @@ export function AgendaPanel({
     return result;
   }, [agenda, generatedAt]);
 
-  const tabs = useMemo<UnderlineTabItem<AgendaTab>[]>(
+  // Figma "_Tab MB" `24547:137212`: lọc CÙNG danh sách mốc ⇒ chip; "Tất cả" không kèm số.
+  const tabs = useMemo<ChipTabItem<AgendaTab>[]>(
     () => [
-      { key: 'all', label: t('tabs.all'), count: buckets.all.length },
-      { key: 'overdue', label: t('tabs.overdue'), count: buckets.overdue.length, urgent: buckets.overdue.length > 0 },
-      { key: 'today', label: t('tabs.today'), count: buckets.today.length },
+      { value: 'all', label: t('tabs.all') },
+      { value: 'overdue', label: t('tabs.overdue'), count: buckets.overdue.length },
+      { value: 'today', label: t('tabs.today'), count: buckets.today.length },
       {
-        key: 'upcoming',
+        value: 'upcoming',
         label: t('tabs.upcoming', { days: DASHBOARD_AGENDA_DAYS }),
         count: buckets.upcoming.length,
       },
@@ -89,7 +90,8 @@ export function AgendaPanel({
   const onMore = useCallback(() => navigateOnce(moreHref), [navigateOnce, moreHref]);
 
   const hasItems = buckets.all.length > 0;
-  const rows = buckets[tab];
+  // Feedback 20/11/2026: tối đa 5 dòng - xem hết qua "Xem tất cả trong Đơn thuê xe".
+  const rows = buckets[tab].slice(0, AGENDA_MAX_ROWS);
 
   return (
     <DashboardPanel
@@ -98,7 +100,7 @@ export function AgendaPanel({
       error={!agenda && isError}
       onRetry={onRetry}
       errorTitle={t('loadError')}
-      {...(hasItems ? { subheader: <UnderlineTabs items={tabs} value={tab} onChange={setTab} /> } : {})}
+      {...(hasItems ? { subheader: <ChipTabs label={t('title')} items={tabs} value={tab} onSelect={setTab} gutter={0} /> } : {})}
       {...(hasItems ? { footer: { label: t('moreAll'), onPress: onMore } } : {})}
     >
       {agenda ? (
@@ -140,6 +142,8 @@ export function AgendaPanel({
 }
 
 const EMPTY_MIN_HEIGHT = 96;
+/** Lịch giao nhận xe ở Tổng quan hiện tối đa chừng này dòng mỗi tab. */
+const AGENDA_MAX_ROWS = 5;
 
 /**
  * Một dòng lịch - Figma "Metric Details": cột trái rộng 64 (viên loại "Giao xe" xanh dương /

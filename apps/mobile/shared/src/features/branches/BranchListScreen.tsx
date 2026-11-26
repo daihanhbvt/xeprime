@@ -11,6 +11,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -58,7 +59,6 @@ const keyOf = (branch: Branch) => branch.id;
 export function BranchListScreen() {
   const colors = useColors();
   const t = useTranslations('Branches');
-  const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const permissions = usePermissions();
@@ -231,16 +231,7 @@ export function BranchListScreen() {
             ) : items.length === 0 ? (
               inStateScroll(
                 filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('table.noResults')}
-                    description={t('table.noResultsHint')}
-                    actionLabel={tActions('clear')}
-                    onAction={() => {
-                      setStatus(STATUS_ALL);
-                      setSearch('');
-                    }}
-                  />
+                  <NoResults />
                 ) : (
                   /*
                     KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),

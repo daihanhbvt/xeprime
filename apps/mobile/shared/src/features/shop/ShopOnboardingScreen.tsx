@@ -22,6 +22,8 @@ import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { PackageWaitingPanel } from './components/PackageWaitingPanel';
+import { ShopLogoRequiredCard } from './components/ShopLogoRequiredCard';
+import { useMyShop } from './hooks/use-shop';
 
 /** Số thứ tự của một bước trong chỉ dẫn hai chặng. */
 const STEP_INDEX = 24;
@@ -36,7 +38,6 @@ const styles = StyleSheet.create({ heroArt: { width: '100%', height: 132 } });
 const PACKAGE_GUIDE_STEPS = ['createShop', 'activate', 'logo', 'publish'] as const;
 /** Hai chặng của tuyến gói. Tới được màn này (bước 2) thì bước 1 luôn đã xong. */
 const STEPS = [1, 2] as const;
-const CURRENT_STEP = 2;
 
 /**
  * ONBOARDING (ADR 0040) — bản native của web `/manage/onboarding`.
@@ -73,6 +74,13 @@ export function ShopOnboardingScreen({
   const tenant = user?.tenant ?? null;
   const hasTenant = tenant != null;
   const packagePending = isPackageOnboarding(user);
+  /*
+   * Logo là một phần của bước 1 "Thông tin gian hàng" (ADR 0103, web `/onboarding`): gian hàng chưa có
+   * logo đứng lại ở bước 1. Đọc hồ sơ lỗi thì KHÔNG chặn (cổng gửi xe duyệt vẫn đòi logo ở server).
+   */
+  const shop = useMyShop(packagePending);
+  const needsLogo = packagePending && shop.data != null && !shop.data.profile?.logoUrl;
+  const currentStep = needsLogo ? 1 : 2;
   /** Gian hàng đã có gói hiệu lực — onboarding xong, không còn gì để làm ở đây. */
   const packageReady = hasTenant && !packagePending && tenantUsesManagePortal(tenant);
 
@@ -157,8 +165,8 @@ export function ShopOnboardingScreen({
             */}
             <XStack gap={space.sm} accessibilityLabel={t('steps.label')}>
               {STEPS.map((step) => {
-                const active = step === CURRENT_STEP;
-                const done = step < CURRENT_STEP;
+                const active = step === currentStep;
+                const done = step < currentStep;
                 return (
                   <XStack
                     key={step}
@@ -205,6 +213,7 @@ export function ShopOnboardingScreen({
               })}
             </XStack>
 
+            {needsLogo ? <ShopLogoRequiredCard /> : null}
             <PackageWaitingPanel />
           </YStack>
         </YStack>

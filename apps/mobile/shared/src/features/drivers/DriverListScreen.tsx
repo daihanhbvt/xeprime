@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
-import { dayjs, nowInAppTz } from '@xeprime/domain';
-import { useAppFormat } from '@/i18n/use-app-format';
+import { nowInAppTz } from '@xeprime/domain';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { XStack, YStack } from 'tamagui';
@@ -21,11 +20,12 @@ import {
 import type { InviteDriverValues } from '@xeprime/validators';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import type { ChipTabItem } from '@/components/ui/ChipTabs';
+import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -41,7 +41,7 @@ import { ROUTES } from '@/navigation/routes';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
-import { useCardGrid } from '@/theme/use-responsive';
+import { useCardGrid, useResponsive } from '@/theme/use-responsive';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { useColors } from '@/theme/ThemeProvider';
@@ -73,34 +73,34 @@ const FILTER_ALL = 'all';
  * "Trạng thái" (web `DriversPage`). Mỗi ô bằng tổng danh sách khi bấm vào nó.
  */
 const SUMMARY_CHIPS = [
-  { key: 'open', label: 'summary.all', linkStatus: FILTER_ALL, licenceCheck: false },
+  { key: 'open', label: 'chips.all', linkStatus: FILTER_ALL, licenceCheck: false },
   {
     key: 'active',
-    label: 'summary.active',
+    label: 'chips.active',
     linkStatus: DRIVER_LINK_STATUS.ACTIVE,
     licenceCheck: false,
   },
   {
     key: 'invited',
-    label: 'summary.invited',
+    label: 'chips.invited',
     linkStatus: DRIVER_LINK_STATUS.INVITED,
     licenceCheck: false,
   },
   {
     key: 'licenceCheck',
-    label: 'summary.licenceCheck',
+    label: 'chips.licenceCheck',
     linkStatus: FILTER_ALL,
     licenceCheck: true,
   },
   {
     key: 'suspended',
-    label: 'summary.suspended',
+    label: 'chips.suspended',
     linkStatus: DRIVER_LINK_STATUS.SUSPENDED,
     licenceCheck: false,
   },
   {
     key: 'closed',
-    label: 'summary.closed',
+    label: 'chips.closed',
     linkStatus: DRIVER_LINK_STATUS_FILTER_CLOSED,
     licenceCheck: false,
   },
@@ -122,6 +122,8 @@ export function DriverListScreen() {
   const colors = useColors();
   const t = useTranslations('Drivers');
   const tActions = useTranslations('Common.actions');
+  const tApp = useTranslations('Drivers.app');
+  const { gutter } = useResponsive();
   const toast = useAppToast();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -139,11 +141,8 @@ export function DriverListScreen() {
   const [sort, setSort] = useState<string>(DRIVER_LIST_SORT.NEWEST);
   const [page, setPage] = useState(FIRST_PAGE);
   // Tháng thống kê tiền công (ADR 0075) — `YYYY-MM` giờ VN, mặc định tháng hiện tại (như web).
-  const fmt = useAppFormat();
-  const thisMonth = nowInAppTz().format(MONTH_PERIOD_FORMAT);
-  const [month, setMonth] = useState<string>(thisMonth);
-  // "11/2026" - dạng số như web (`CARD_MONTH_FORMAT`), đọc như nhau ở hai ngôn ngữ.
-  const monthLabel = `${month.slice(5, 7)}/${month.slice(0, 4)}`;
+  // Thẻ không còn số tiền công tháng (Figma mới) - màn gửi tháng hiện tại sang chi tiết, nơi có bộ chọn tháng.
+  const month = nowInAppTz().format(MONTH_PERIOD_FORMAT);
   const navigateOnce = useNavigateOnce();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [reinviteFrom, setReinviteFrom] = useState<InviteDriverValues | null>(null);
@@ -165,7 +164,6 @@ export function DriverListScreen() {
       ...(linkStatus === FILTER_ALL ? {} : { linkStatus }),
       ...(licenceCheck ? { licenceCheck: DRIVER_LICENCE_CHECK_FILTER } : {}),
       sort,
-      ...(month === thisMonth ? {} : { month }),
       page,
     },
     canView,
@@ -178,10 +176,10 @@ export function DriverListScreen() {
     () =>
       SUMMARY_CHIPS.map((chip) => ({
         value: chip.key,
-        label: t(chip.label),
+        label: tApp(chip.label),
         count: summary.data?.[chip.key] ?? 0,
       })),
-    [summary.data, t],
+    [summary.data, tApp],
   );
   const summaryValue = licenceCheck
     ? 'licenceCheck'
@@ -210,15 +208,6 @@ export function DriverListScreen() {
   }, []);
 
   const changeFilter = useCallback((groupKey: string, value: string) => {
-    if (groupKey === 'summary') {
-      selectSummary(value);
-      return;
-    }
-    if (groupKey === 'month') {
-      setMonth(value);
-      setPage(FIRST_PAGE);
-      return;
-    }
     if (groupKey === 'linkStatus') {
       setLinkStatus(value);
       setLicenceCheck(false);
@@ -226,36 +215,16 @@ export function DriverListScreen() {
     else if (groupKey === 'sort') setSort(value);
     else setDriverType(value);
     setPage(FIRST_PAGE);
-  }, [selectSummary]);
-
-  // 12 tháng gần nhất (mới → cũ), nhãn "Tháng 11 năm 2026"; tháng sau chưa có chuyến nên không có.
-  const monthOptions = useMemo(
-    () =>
-      Array.from({ length: 12 }, (_, i) => {
-        const value = nowInAppTz().subtract(i, 'month').format(MONTH_PERIOD_FORMAT);
-        return { value, label: fmt.monthYear(dayjs(value, MONTH_PERIOD_FORMAT).toDate()) };
-      }),
-    [fmt],
-  );
+  }, []);
 
   const groups = useMemo<readonly FilterGroup[]>(
     () => [
-      {
-        // Dải thống kê (kèm số đếm) vào bộ lọc - bỏ khỏi đầu trang (người dùng 16/11/2026).
-        key: 'summary',
-        label: t('filters.summary'),
-        value: summaryValue,
-        resetValue: 'open',
-        options: summaryTabs.map((tab) => ({
-          value: tab.value,
-          label: tab.count == null ? tab.label : `${tab.label} (${tab.count})`,
-        })),
-      },
       {
         key: 'linkStatus',
         label: t('filters.status'),
         value: linkStatus,
         resetValue: FILTER_ALL,
+        display: 'option' as const,
         options: [
           { value: FILTER_ALL, label: t('filters.openLinks') },
           { value: DRIVER_LINK_STATUS_FILTER_ANY, label: t('filters.allStatuses') },
@@ -293,15 +262,6 @@ export function DriverListScreen() {
         })),
       },
       {
-        // Tháng thống kê (tiền công) vào bộ lọc - bỏ khỏi đầu trang (người dùng 16/11/2026).
-        key: 'month',
-        label: t('wage.month.label'),
-        value: month,
-        resetValue: thisMonth,
-        display: 'option' as const,
-        options: monthOptions,
-      },
-      {
         key: 'driverType',
         label: t('filters.type'),
         value: driverType,
@@ -315,7 +275,7 @@ export function DriverListScreen() {
         ],
       },
     ],
-    [domainLabel, driverType, linkStatus, month, monthOptions, operation, sort, summaryTabs, summaryValue, t, thisMonth],
+    [domainLabel, driverType, linkStatus, operation, sort, t],
   );
 
   const feedback = useCallback(
@@ -376,13 +336,12 @@ export function DriverListScreen() {
     ({ item }) => (
       <DriverCard
         driver={item}
-        monthLabel={monthLabel}
         canManage={canManage}
         pending={pendingId === item.id}
         onIntent={onIntent}
       />
     ),
-    [canManage, monthLabel, onIntent, pendingId],
+    [canManage, onIntent, pendingId],
   );
   // iPad: thẻ xếp lưới 2 cột trong cột nội dung; điện thoại giữ 1 cột.
   const grid = useCardGrid(renderItem, { listKey: 'drivers' });
@@ -427,7 +386,7 @@ export function DriverListScreen() {
     <>
       {/* Thanh trang v2 (khuôn Đơn thuê / Danh sách xe): tiêu đề + nút "+" Mời tài xế. */}
       <ManagePageHeader
-        title={t('page.title')}
+        title={t('page.heading')}
         actions={
           <>
             {/* Tiền công/ngày chung: nút biểu tượng cạnh "+" (người dùng 16/11/2026). */}
@@ -444,8 +403,18 @@ export function DriverListScreen() {
           subtitle={t('page.subtitle')}
           searchValue={search}
           searchLabel={t('filters.search')}
-          searchPlaceholder={t('filters.searchPlaceholder')}
+          searchPlaceholder={tApp('searchPlaceholder')}
           onSearchChange={changeSearch}
+          tabs={
+            /* Dải chip (Figma "Filter Tabs" `24486:56891`): lối tắt của CÙNG tham số "Trạng thái". */
+            <ChipTabs
+              label={t('filters.summary')}
+              items={summaryTabs}
+              value={summaryValue}
+              onSelect={selectSummary}
+              gutter={gutter}
+            />
+          }
           hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
@@ -486,20 +455,7 @@ export function DriverListScreen() {
                 filtered ? (
                   /* Xoá đủ năm bộ lọc như `clearFilters` của web (q · loại · vận hành · trạng
                      thái · cần đối chiếu); sắp xếp và tháng giữ nguyên. */
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('page.noResults')}
-                    description={t('page.noResultsHint')}
-                    actionLabel={tActions('clear')}
-                    onAction={() => {
-                      setLinkStatus(FILTER_ALL);
-                      setDriverType(FILTER_ALL);
-                      setOperation(FILTER_ALL);
-                      setLicenceCheck(false);
-                      setSearch('');
-                      setPage(FIRST_PAGE);
-                    }}
-                  />
+                  <NoResults />
                 ) : (
                   /* Nút "mời" đã ở hàng tiêu đề — không lặp lại ở đây. */
                   <ScreenMessage

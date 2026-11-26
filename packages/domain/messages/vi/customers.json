@@ -7,6 +7,117 @@
     "listTitle": "Danh sách khách hàng",
     "listSubtitle": "Quản lý hồ sơ, thông tin liên hệ và lịch sử các lượt đặt xe của khách hàng tại gian hàng của bạn"
   },
+  "app": {
+    "titleWithCount": "Khách hàng ({count})",
+    "searchPlaceholder": "Tìm tên, số điện thoại...",
+    "listTitle": "Danh sách ({count})",
+    "sortLine": "Sắp xếp: {sort}",
+    "sortLastRental": "Thuê gần nhất",
+    "chips": {
+      "all": "Tất cả",
+      "has_debt": "Còn nợ",
+      "returning": "Khách quen",
+      "watchlist": "Lưu ý"
+    },
+    "summary": {
+      "customers": "Khách hàng",
+      "rentals": "Lần thuê",
+      "revenue": "Tổng doanh thu",
+      "debtCustomers": "{count, plural, other {# khách còn nợ}}",
+      "revenueCompact": "{amount} ₫"
+    },
+    "card": {
+      "call": "Gọi {name}",
+      "completedWithDate": "{count} hoàn tất · {date}",
+      "completedOnly": "{count} hoàn tất",
+      "debt": "Nợ {amount}",
+      "noDebt": "Không nợ"
+    },
+    "detail": {
+      "title": "Chi tiết khách hàng",
+      "stats": {
+        "completed": "Hoàn tất",
+        "active": "Đang chạy",
+        "revenue": "Doanh thu",
+        "debt": "Còn nợ"
+      },
+      "notes": {
+        "viewAll": "Xem đầy đủ",
+        "add": "Thêm ghi chú"
+      },
+      "source": {
+        "manual": "Nhân viên thêm",
+        "booking": "Đơn tại quầy",
+        "marketplace": "Marketplace"
+      },
+      "overview": {
+        "debtBody": "Đơn {code} chưa thu đủ · Đã thu {paid}",
+        "debtBodyMore": "Đơn {code} và {count, plural, other {# đơn khác}} chưa thu đủ · Đã thu {paid}",
+        "total": "Tổng tiền",
+        "nextAwaiting": "Chuẩn bị bàn giao & thu tiền",
+        "collect": "Thu tiền",
+        "detail": "Chi tiết"
+      },
+      "tabs": {
+        "overview": "Tổng quan",
+        "history": "Lịch sử",
+        "finance": "Thu chi",
+        "documents": "Giấy tờ"
+      },
+      "history": {
+        "searchPlaceholder": "Tìm mã đơn, tên xe, biển số...",
+        "status": "Trạng thái",
+        "time": "Thời gian",
+        "unpaid": "Chưa thu tiền",
+        "partial": "Chưa thu đủ tiền",
+        "paid": "Đã thanh toán đủ"
+      },
+      "finance": {
+        "receivable": "Khoản phải thu · {count, plural, other {# đơn chưa thu}}",
+        "collected": "Thực thu trong kỳ",
+        "completed": "Chuyến hoàn tất",
+        "collect": "Thu tiền",
+        "chartTitle": "Doanh thu (k VND)",
+        "chartMoney": "Giá trị đơn",
+        "chartCount": "Số đơn",
+        "periodMonth": "Tháng {month}/{year}",
+        "periodQuarter": "Quý {quarter}/{year}",
+        "periodYear": "Năm {year}",
+        "periodRange": "{from} - {to}",
+        "receivablesTitle": "Khoản phải thu",
+        "ledger": "Sổ Thu/Chi",
+        "unpaid": "Chưa thu"
+      },
+      "docs": {
+        "verify": "Xác nhận đã đối chiếu",
+        "replace": "Thay giấy tờ",
+        "status": "Trạng thái",
+        "uploadImage": "Tải lên ảnh {type}",
+        "edit": "Sửa thông tin"
+      },
+      "form": {
+        "title": "Chỉnh sửa hồ sơ khách hàng",
+        "name": "Tên khách hàng",
+        "namePlaceholder": "Nhập tên khách hàng",
+        "source": "Nguồn khách hàng",
+        "phone": "Số điện thoại",
+        "email": "Email",
+        "province": "Tỉnh/Thành phố",
+        "ward": "Xã/Phường",
+        "wardPlaceholder": "Chọn xã/phường",
+        "addressLine": "Địa chỉ cụ thể",
+        "addressLinePlaceholder": "Số nhà, tên đường,...",
+        "riskLevel": "Mức độ rủi ro",
+        "reason": "Lý do",
+        "reasonPlaceholder": "Nhập lý do",
+        "cancel": "Huỷ",
+        "submit": "Cập nhật",
+        "riskFailed": "Đã lưu hồ sơ nhưng chưa đổi được mức độ rủi ro."
+      },
+      "actionsTitle": "Thao tác",
+      "actionClassify": "Phân loại"
+    }
+  },
   "permission": {
     "title": "Bạn chưa có quyền xem sổ khách",
     "description": "Liên hệ chủ gian hàng để được cấp quyền \"Khách hàng\"."

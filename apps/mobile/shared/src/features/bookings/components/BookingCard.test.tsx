@@ -129,22 +129,6 @@ describe('BookingCard - nhóm Chờ giao xe', () => {
     expect(view.queryByText('Xử lý giao xe')).toBeNull();
   });
 
-  it('quá giờ giao xe: câu tình trạng đỏ + nút "Khách không đến" khi qua ân hạn', async () => {
-    const onNoShow = jest.fn();
-    const view = await renderCard(
-      <BookingCard
-        booking={booking({ pickupAt: new Date(Date.now() - 6 * HOUR).toISOString() })}
-        onPress={noop}
-        onNoShow={onNoShow}
-        group={BOOKING_LIST_PRESET.AWAITING_PICKUP}
-      />,
-    );
-
-    expect(await view.findByText(/^Quá giờ giao xe/)).toBeTruthy();
-    await fireEvent.press(view.getByText('Khách không đến'));
-    expect(onNoShow).toHaveBeenCalledTimes(1);
-  });
-
   it('dịch MÃ hình thức nhận xe ở ô lịch', async () => {
     const view = await renderCard(
       <BookingCard

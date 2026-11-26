@@ -72,7 +72,7 @@ async function renderScreen() {
     withIntl(
       <ReduxProvider store={store}>
         <QueryClientProvider client={queryClient}>
-          <PartnerSignupScreen onSwitchToLogin={jest.fn()} />
+          <PartnerSignupScreen />
         </QueryClientProvider>
       </ReduxProvider>,
     ),

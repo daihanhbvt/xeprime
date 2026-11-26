@@ -19,7 +19,15 @@ export type ApplyOcrFieldsInput = Schemas['ApplyOcrFieldsDto'];
 
 const base = (vehicleId: string) => `/vehicles/${encodeURIComponent(vehicleId)}/documents`;
 
+/** Điều kiện bán bảo hiểm vật chất xe theo bậc của MỘT xe (ADR 0088) - web `fetchVehicleInsuranceStatus`. */
+export type VehicleInsuranceStatus = Schemas['VehicleInsuranceStatusDto'];
+
 export const vehicleDocumentsApi = {
+  insuranceStatus(vehicleId: string): Promise<VehicleInsuranceStatus> {
+    return getApiClient().get<VehicleInsuranceStatus>(
+      `/vehicles/${encodeURIComponent(vehicleId)}/insurance-eligibility`,
+    );
+  },
   list(vehicleId: string): Promise<VehicleDocumentSummary[]> {
     return getApiClient().get<VehicleDocumentSummary[]>(base(vehicleId));
   },

@@ -186,7 +186,10 @@
       "ownerIncomeGeneric": "Income",
       "appSubscriptionFee": "Platform management & operation fee",
       "appOwnerIncomeHint": "Rental revenue minus the owner service fee, tax withheld and platform fees - includes what customers paid you directly, excludes delivery fees."
-    }
+    },
+    "unitPerDay": "/day",
+    "unitPerMonth": "/month",
+    "toggle": "Expand or collapse trip {code}"
   },
   "pill": {
     "label": "Balance",

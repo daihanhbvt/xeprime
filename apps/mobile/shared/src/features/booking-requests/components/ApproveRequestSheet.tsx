@@ -14,7 +14,6 @@ import {
 } from '@xeprime/types';
 import {
   appWallClockToIso,
-  LIST_SEPARATOR,
   longTermReturnFromWallClock,
   nowInAppTz,
   startOfAppDay,
@@ -30,6 +29,7 @@ import { queryKeys } from '@/queries/query-keys';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { FieldBox } from '@/components/ui/FieldBox';
+import { MoneyControl } from '@/components/ui/MoneyControl';
 import { SummaryRow } from '@/components/ui/SummaryRow';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
@@ -45,7 +45,7 @@ import { ApprovalPaymentGroup, ApprovalTripCard } from './ApproveSheetParts';
 import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../api';
 import { ApprovalPreviewSummary, type ApprovalWindows } from './ApprovalPreviewSummary';
 import { VehicleStillOutAlert } from './VehicleStillOutAlert';
-import { DecisionFooter, richBold } from './DecisionSheetParts';
+import { DecisionFooter, useDecisionCodeLine } from './DecisionSheetParts';
 
 /** Giờ nhận mặc định khi điền sẵn từ một NGÀY nguyện vọng — cùng hằng với web. */
 const DEFAULT_PICKUP_HOUR = 9;
@@ -104,6 +104,7 @@ export function ApproveRequestSheet({
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+  const codeLine = useDecisionCodeLine(request);
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
   const paymentRows = requestPaymentRows(request, t);
@@ -129,6 +130,9 @@ export function ApproveRequestSheet({
   );
   const [packageMonths, setPackageMonths] = useState<number | null>(requestPackage);
   const [picking, setPicking] = useState(false);
+  /** Phí giao xe tận nơi chủ xe chốt lúc duyệt - bản native của web `ApprovalDeliveryFeeField`. */
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const deliveryBody = request.deliveryRequested ? deliveryFeeBody(deliveryFee) : {};
   const effectivePackage = (requestPackage ?? packageMonths) as LongTermPackageMonths | null;
 
   const returnAt = useMemo(
@@ -223,7 +227,7 @@ export function ApproveRequestSheet({
 
   function confirm() {
     if (!longTerm) {
-      onConfirm();
+      onConfirm(deliveryBody);
       return;
     }
     if (!pickupAt || !packageMonths) return;
@@ -237,6 +241,7 @@ export function ApproveRequestSheet({
               packageMonths as ApproveBookingRequestInput['longTermPackageMonths'],
           }
         : {}),
+      ...deliveryBody,
     });
   }
 
@@ -253,16 +258,8 @@ export function ApproveRequestSheet({
         dòng phụ ở đầu tấm (chỗ mã đơn - yêu cầu chưa có mã).
       */
       // Dòng phụ: mã đơn khi đã có, chưa có (chưa duyệt) thì "Gửi lúc … · khách" (người dùng 16/11/2026).
-      subtitle={[
-        request.bookingCode
-          ? t('card.bookingCode', { code: request.bookingCode })
-          : request.createdAt
-            ? t('card.sentAt', { value: fmt.dateTime(request.createdAt) })
-            : null,
-        request.customerName,
-      ]
-        .filter(Boolean)
-        .join(LIST_SEPARATOR)}
+      // App: chỉ "#mã" (hoặc "Gửi lúc …") như Figma - tên khách đã ở thẻ chuyến (20/11/2026).
+      {...(codeLine ? { subtitle: codeLine } : {})}
       footer={
         <DecisionFooter
           leading={
@@ -393,6 +390,17 @@ export function ApproveRequestSheet({
         </>
       ) : null}
 
+      {request.deliveryRequested ? (
+        <MoneyControl
+          label={t('approve.deliveryFeeLabel')}
+          value={deliveryFee}
+          onChange={(next) => setDeliveryFee(next != null && next > DELIVERY_FEE_MAX ? DELIVERY_FEE_MAX : next)}
+          placeholder={t('approve.deliveryFeePlaceholder')}
+          hint={t('approve.deliveryFeeHint')}
+          editable={!loading}
+        />
+      ) : null}
+
       {/*
         Xem trước lượt duyệt (ADR 0064): "Lợi nhuận chuyến" (hoa hồng/thuế, ví điểm nhận gì) và ô
         cửa sổ của khách NẾU duyệt NGAY. Dài hạn legacy chưa mang gói: chỉ hiện hai cửa sổ (tiền
@@ -405,22 +413,25 @@ export function ApproveRequestSheet({
             windows={longTermWindows}
             windowsPendingHint={t('approvalPreview.longTermPickPickup')}
             showMoney={requestPackage != null}
-            onLeave={onClose}
           />
         ) : (
           <ApprovalPreviewSummary
             preview={approvalPreview}
             heading={t('approve.profitHeading')}
-            onLeave={onClose}
           />
         )
       ) : null}
 
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {t('approve.effect')}
-      </Text>
+      {/* Câu "Duyệt sẽ giữ lịch xe…" gỡ khỏi app như Figma (20/11/2026); web giữ. */}
       <VehicleStillOutAlert stillOut={stillOut} />
-      {request.deliveryRequested ? <Callout tone="info" title={t('approve.deliveryNote')} /> : null}
     </BottomSheet>
   );
+}
+
+/** Trần ô phí giao xe - chặn gõ nhầm thêm vài số 0 (web `DELIVERY_FEE_MAX`). */
+const DELIVERY_FEE_MAX = 50_000_000;
+
+/** Trống/0 thì không gửi gì - server hiểu là miễn phí (web `deliveryFeeBody`). */
+function deliveryFeeBody(fee: number | null): Pick<ApproveBookingRequestInput, 'deliveryFee'> {
+  return fee != null && fee > 0 ? { deliveryFee: String(Math.round(fee)) } : {};
 }

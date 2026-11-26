@@ -86,12 +86,10 @@ export function VehicleBlockDetailSheet({
               <>
                 <Button
                   label={t('blockDetail.edit')}
-                  icon="create-outline"
                   onPress={() => onEdit(data)}
                 />
                 <Button
                   label={t('blockDetail.release')}
-                  icon="lock-open-outline"
                   variant="danger"
                   onPress={() => setConfirming(true)}
                   loading={remove.isPending}

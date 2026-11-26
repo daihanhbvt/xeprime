@@ -134,8 +134,26 @@
   white-space: nowrap;
 }
 
+/*
+ * Đơn & chuyến: hàng cột và hàng nhãn tháng chia CÙNG một lưới cột bằng nhau, nên nhãn luôn đứng
+ * đúng dưới cặp cột của nó. Trước đây nhãn "Tháng 10 năm 2026" `nowrap` rộng hơn `flex-basis 64px`
+ * nên không co được, cả hàng nhãn trôi sang phải và tràn khỏi thẻ (người dùng báo 20/11/2026).
+ * Nhãn dài thì xuống dòng trong cột của nó.
+ */
+.barsGrouped,
+.axisGrouped {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.barsGrouped .pair {
+  min-width: 0;
+}
+
 .axisGrouped .axisLabel {
-  flex-basis: 64px;
+  min-width: 0;
+  white-space: normal;
 }
 
 .legend {

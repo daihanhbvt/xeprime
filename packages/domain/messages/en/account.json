@@ -533,7 +533,10 @@
       "notShop": "Your name and photo belong to your personal account. The name, logo and phone number renters see are managed in <strong>Shop settings</strong>.",
       "personalStorefront": "This photo and name are exactly what renters see on your <strong>host page</strong>.",
       "shopSettingsLink": "View shop settings",
-      "ownerProfileLink": "View host profile"
+      "ownerProfileLink": "View host profile",
+      "avatarSheetTitle": "Upload profile photo",
+      "avatarSheetHint": "Upload a JPG, PNG or WEBP image.\nUp to {max}MB.",
+      "workspacePartner": "XePrime partner"
     }
   }
 }

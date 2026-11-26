@@ -1,5 +1,4 @@
-import { isZeroMoney } from '@xeprime/domain';
-import { FEE_BEARER } from '@xeprime/types';
+import { isZeroMoney, visibleFeeLines } from '@xeprime/domain';
 
 /**
  * Luật HIỂN THỊ của một bảng giá phía khách — bản native của `lib/customer-price-view` bên web
@@ -24,16 +23,13 @@ export function visiblePriceRows<T extends PriceRowLike>(
   return rows.filter((row) => !isZeroMoney(row.amount) && !skipKeys.includes(row.key));
 }
 
-/** Dòng phụ phí đáng vẽ — dòng CHỦ XE chịu (thuế khấu trừ, ADR 0032 điều 3) chỉ chủ xe thấy. */
-export function visibleFeeLines<T extends FeeLineLike>(
-  lines: readonly T[],
-  audience: 'customer' | 'owner',
-): T[] {
-  return lines.filter(
-    (line) =>
-      (audience === 'owner' || line.bearer !== FEE_BEARER.OWNER) && !isZeroMoney(line.amount),
-  );
-}
+// Chọn/gộp dòng phụ phí phía khách: MỘT nguồn ở `@xeprime/domain` cho web và app (ADR 0091 điều 3).
+export {
+  customerFeeLines,
+  visibleFeeLines,
+  type CustomerFeeLine,
+  type IncludedInsuranceServiceFee,
+} from '@xeprime/domain';
 
 /**
  * Con số CUỐI của một báo giá và tên của nó — `subtotal` (còn tạm tính) · `customerTotal` (có phụ

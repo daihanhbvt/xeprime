@@ -197,7 +197,6 @@ export function ReceiptDetailSheet({
                 <Button
                   label={t('cancelAction')}
                   variant="danger"
-                  icon="close-circle-outline"
                   loading={pending}
                   /*
                    * Huỷ phiếu là một phép GHI y như duyệt, nên nó khoá cùng lúc với duyệt khi gói

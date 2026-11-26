@@ -2,6 +2,7 @@ import type { Href } from 'expo-router';
 import { memo, useCallback, useMemo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { nowInAppTz, toAppTz } from '@xeprime/domain';
 import CheckCircleOutlined from '@ant-design/icons-svg/es/asn/CheckCircleOutlined';
 import ThunderboltOutlined from '@ant-design/icons-svg/es/asn/ThunderboltOutlined';
 import { AntIcon } from '@/components/icons/AntIcon';
@@ -99,6 +100,7 @@ export function TodayFocus({
   links: DashboardLinks;
 }) {
   const t = useTranslations('Dashboard.focus');
+  const tApp = useTranslations('Dashboard.partnerApp');
   const fmt = useAppFormat();
 
   const tiles = useMemo<TileModel[]>(() => {
@@ -110,6 +112,9 @@ export function TodayFocus({
     const showBookings = !overview || overview.today !== null;
     const requests = overview?.requests ?? null;
     const today = overview?.today ?? null;
+    // Mốc trong HÔM NAY chỉ hiện giờ; khác ngày giữ cả ngày để không đọc nhầm thành giờ hôm nay.
+    const when = (iso: string) =>
+      toAppTz(iso).isSame(nowInAppTz(), 'day') ? fmt.time(iso) : fmt.shortDateTime(iso);
     const list: TileModel[] = [];
 
     if (showRequests) {
@@ -125,7 +130,14 @@ export function TodayFocus({
             ? { badge: t('requests.urgentShort', { count: requests.pendingUrgent }) }
             : {}),
           lines: requests?.nextRespondBy
-            ? [{ key: 'next', text: t('requests.next', { time: fmt.shortDateTime(requests.nextRespondBy) }) }]
+            ? [
+                {
+                  key: 'next',
+                  // Figma "Hạn trả lời gần nhất 11:37": hạn trong HÔM NAY chỉ hiện giờ; khác ngày giữ
+                  // cả ngày để không đọc nhầm thành giờ của hôm nay.
+                  text: t('requests.next', { time: when(requests.nextRespondBy) }),
+                },
+              ]
             : [],
           emptyText: t('requests.none'),
         },
@@ -137,7 +149,8 @@ export function TodayFocus({
           count: countOf(requests?.awaitingPayment),
           href: links.awaitingPayment,
           lines: [{ key: 'hint', text: t('awaitingPayment.hint') }],
-          emptyText: t('awaitingPayment.none'),
+          // Nguyên văn Figma "Không có chuyến chờ" - khoá riêng app (người dùng chốt 20/11/2026).
+          emptyText: tApp('awaitingPaymentNone'),
         },
       );
     }
@@ -153,8 +166,10 @@ export function TodayFocus({
           ...(today && today.pickupsOverdue > 0
             ? { badge: t('pickups.overdueShort', { count: today.pickupsOverdue }) }
             : {}),
-          lines:
-            today && today.pickupsToday > 0
+          // Figma "Giao gần nhất 17:30": mốc giao SẮP TỚI gần nhất (lượt quá giờ ở viên đỏ).
+          lines: today?.nextPickupAt
+            ? [{ key: 'next', text: tApp('nextPickup', { time: when(today.nextPickupAt) }) }]
+            : today && today.pickupsToday > 0
               ? [{ key: 'today', text: t('pickups.today', { count: today.pickupsToday }) }]
               : [],
           emptyText: t('pickups.none'),
@@ -169,8 +184,10 @@ export function TodayFocus({
           ...(today && today.returnsOverdue > 0
             ? { badge: t('active.overdueShort', { count: today.returnsOverdue }) }
             : {}),
-          lines:
-            today && today.returnsToday > 0
+          // Figma "Nhận lại sớm nhất 18:00": mốc trả SẮP TỚI gần nhất.
+          lines: today?.nextReturnAt
+            ? [{ key: 'next', text: tApp('nextReturn', { time: when(today.nextReturnAt) }) }]
+            : today && today.returnsToday > 0
               ? [{ key: 'today', text: t('active.returnsToday', { count: today.returnsToday }) }]
               : [],
           emptyText: t('active.none'),
@@ -178,7 +195,7 @@ export function TodayFocus({
       );
     }
     return list;
-  }, [overview, isError, links, t, fmt]);
+  }, [overview, isError, links, t, tApp, fmt]);
 
   const keyOf = useCallback((tile: TileModel) => tile.key, []);
   const renderTile = useCallback((tile: TileModel) => <FocusTile tile={tile} />, []);

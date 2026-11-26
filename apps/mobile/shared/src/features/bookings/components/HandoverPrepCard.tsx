@@ -1,16 +1,15 @@
-import type { ComponentProps } from 'react';
 import { useState, type ReactNode } from 'react';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
-import { Pressable } from 'react-native';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { Linking, Pressable } from 'react-native';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { CheckMark } from '@/components/ui/CheckMark';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
+import { isNegativeMoney, isZeroMoney, subtractMoney, telHref } from '@xeprime/domain';
 import {
   HANDOVER_PREP_ITEM,
   handoverPhotoSlotsFor,
   PAYMENT_KIND,
-  PERMISSION,
   type HandoverPhotoSlot,
   type HandoverPrepItem,
 } from '@xeprime/types';
@@ -26,11 +25,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useSetHandoverPrepCheck } from '../hooks/use-booking-extensions';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useStartBookingRequestConversation } from '@/features/booking-requests/hooks/use-booking-requests';
-import { RentalContactButtons } from './rental-card/RentalCard';
 import type { BookingDetail, BookingHandoverPrep } from '../api';
 
 type PrepKey = 'confirm' | 'documents' | 'rent' | 'deposit' | 'contract' | 'photos' | 'driver';
@@ -119,26 +115,13 @@ export function HandoverPrepCard({
   const colors = useColors();
   const fmt = useAppFormat();
   const toast = useAppToast();
-  const permissions = usePermissions();
-  const tRequestActions = useTranslations('BookingRequests.actions');
-  const startConversation = useStartBookingRequestConversation();
+  const tApp = useTranslations('Bookings.detailPage.prep.partnerApp');
+  const tCall = useTranslations('BookingRequests.actions');
   /*
-   * Web `ContactButtons`: nhắn tin = hội thoại của yêu cầu gốc (cần `booking_requests.view` và đơn
-   * có yêu cầu gốc); gọi · Zalo khi có SĐT. Chưa được nhắn (ADR 0073) ⇒ nút mờ, chạm thì báo lý do.
+   * App: dòng xác nhận chỉ còn nút GỌI như Figma (người dùng chốt 20/11/2026); nhắn tin / Zalo vẫn có
+   * ở thẻ đơn ngoài danh sách. Không SĐT thì không nút.
    */
-  const requestId = booking.bookingRequestId;
-  const canMessage = permissions.has(PERMISSION.BOOKING_REQUEST_VIEW) && Boolean(requestId);
-  const message = () => {
-    if (!requestId) return;
-    if (!booking.canMessageOnPlatform) {
-      toast.showInfo(tRequestActions('messageUnavailable'));
-      return;
-    }
-    startConversation.mutate(requestId, {
-      onSuccess: (conversation) => navigateOnce(ROUTES.manage.chatThread(conversation.id, requestId)),
-      onError: (err) => toast.showError(errorMessage(err)),
-    });
-  };
+  const tel = telHref(booking.customerPhone);
   const errorMessage = useErrorMessage();
   const setCheck = useSetHandoverPrepCheck(booking.id);
   const navigateOnce = useNavigateOnce();
@@ -159,40 +142,37 @@ export function HandoverPrepCard({
   const actionOf = (key: PrepKey): ReactNode => {
     switch (key) {
       case 'confirm':
-        return (
-          <RentalContactButtons
-            name={booking.customerName}
-            phone={booking.customerPhone}
-            {...(canMessage ? { onMessage: message } : {})}
-            messageUnavailable={!booking.canMessageOnPlatform}
-            messageLoading={startConversation.isPending}
-            disabled={startConversation.isPending}
+        return tel ? (
+          <RowAction
+            label={tCall('callAria', { name: booking.customerName, phone: booking.customerPhone ?? '' })}
+            icon="calling"
+            onPress={() => void Linking.openURL(tel)}
           />
-        );
+        ) : null;
       case 'documents':
         return can.documents && booking.tenantCustomerId ? (
-          <RowAction label={t('documentsAction')} icon="create-outline" onPress={onDocuments} />
+          <RowAction label={t('documentsAction')} icon="edit" onPress={onDocuments} />
         ) : null;
       case 'rent':
         return isZeroMoney(prep.rentDueAmount) ? null : (
-          <RowAction label={t('collectAction')} icon="checkmark" onPress={() => setCollecting('rent')} />
+          <RowAction label={t('collectAction')} icon="tick" onPress={() => setCollecting('rent')} />
         );
       case 'deposit':
         return isZeroMoney(depositOutstanding(prep)) ? null : (
-          <RowAction label={t('collectAction')} icon="checkmark" onPress={() => setCollecting('deposit')} />
+          <RowAction label={t('collectAction')} icon="tick" onPress={() => setCollecting('deposit')} />
         );
       case 'contract':
         return (
           <RowAction
             label={prep.contractId ? t('contractView') : t('contractCreate')}
-            icon={prep.contractId ? 'eye-outline' : 'add'}
+            icon={prep.contractId ? 'eye' : 'plus'}
             loading={createContract.isPending}
             onPress={openContract}
           />
         );
       case 'photos':
         return can.managePhotos ? (
-          <RowAction label={t('photosAction')} icon="share-outline" onPress={onPhotos} />
+          <RowAction label={t('photosAction')} icon="upload" onPress={onPhotos} />
         ) : null;
       default:
         return null;
@@ -207,7 +187,8 @@ export function HandoverPrepCard({
     },
     documents: {
       title: t('documents'),
-      body: prep.documentsReady ? t('documentsDone') : t('documentsPending'),
+      // App: câu ngắn như Figma ("Chưa có GPLX / CCCD"); web giữ câu dài.
+      body: prep.documentsReady ? t('documentsDone') : tApp('documentsPending'),
     },
     rent: {
       title: t('rent'),
@@ -240,7 +221,7 @@ export function HandoverPrepCard({
       body:
         prep.pickupPhotoCount >= prep.pickupPhotoRequired
           ? t('photosDone')
-          : t('photosPending', { count: prep.pickupPhotoCount, total: prep.pickupPhotoRequired }),
+          : tApp('photosPending'),
     },
     driver: {
       title: t('driver'),
@@ -259,32 +240,22 @@ export function HandoverPrepCard({
   const content = (
       <YStack gap={embedded ? 0 : space.sm}>
         {embedded ? null : <SectionHeader icon="document-text-outline">{t('title')}</SectionHeader>}
-        <XStack ai="center" gap={space.sm}>
-          <YStack f={1}>
-            <ProgressBar percent={rows.length === 0 ? 0 : (done / rows.length) * 100} size="sm" />
-          </YStack>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('progress', { done, total: rows.length })}
-          </Text>
-        </XStack>
+        {/* Figma (tab "Chuẩn bị") không có dòng tiến độ - chỉ thẻ đứng riêng mới vẽ (người dùng 20/11/2026). */}
+        {embedded ? null : (
+          <XStack ai="center" gap={space.sm}>
+            <YStack f={1}>
+              <ProgressBar percent={rows.length === 0 ? 0 : (done / rows.length) * 100} size="sm" />
+            </YStack>
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {t('progress', { done, total: rows.length })}
+            </Text>
+          </XStack>
+        )}
         {rows.map((row, index) => {
           const { title, body } = bodies[row.key];
           const togglable = row.manualItem != null && (row.manual || !row.done) && can.markPrep;
-          const mark = (
-            <YStack
-              w={20}
-              h={20}
-              br={radius.pill}
-              ai="center"
-              jc="center"
-              bw={row.done ? 0 : 1}
-              bc={colors.borderInput}
-              // Figma "_Checkbox base": đã xong = tròn vàng thương hiệu, dấu tích trắng.
-              bg={row.done ? colors.primary : 'transparent'}
-            >
-              {row.done ? <Ionicons name="checkmark" size={13} color={colors.onPrimary} /> : null}
-            </YStack>
-          );
+          // Figma "_Checkbox base" (check circle): đã xong = tròn vàng, dấu tích trắng - `CheckMark` chung.
+          const mark = <CheckMark checked={row.done} shape="circle" />;
           return (
             <XStack
               key={row.key}
@@ -313,7 +284,7 @@ export function HandoverPrepCard({
                 <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={2}>
                   {title}
                 </Text>
-                <Text col={colors.textMuted} fos={fontSize.body}>
+                <Text col={colors.placeholder} fos={fontSize.body}>
                   {body}
                 </Text>
                 {row.manual ? (
@@ -340,7 +311,8 @@ export function HandoverPrepCard({
           bookingId={booking.id}
           {...(collecting === 'deposit'
             ? { kind: PAYMENT_KIND.DEPOSIT, debtAmount: depositOutstanding(prep) }
-            : { debtAmount: booking.debtAmount })}
+            : // Phần khách còn đưa TẬN TAY (web `openPay`): `D` trả trước qua XePrime không đòi lại ở quầy.
+              { debtAmount: booking.counterDueAmount, counterDue: true })}
         />
       ) : null;
   return embedded ? (
@@ -364,14 +336,15 @@ function RowAction({
   loading = false,
 }: {
   label: string;
-  icon: ComponentProps<typeof Ionicons>['name'];
+  /** Nét icon Figma (bộ `LineIcon`): gọi · bút · tick · con mắt · cộng · tải lên. */
+  icon: LineIconName;
   onPress: () => void;
   loading?: boolean;
 }) {
   const colors = useColors();
   return (
     <IconSquareButton label={label} size="md" disabled={loading} onPress={onPress}>
-      <Ionicons name={icon} size={16} color={colors.textMuted} />
+      <LineIcon name={icon} size={20} color={colors.textMuted} />
     </IconSquareButton>
   );
 }

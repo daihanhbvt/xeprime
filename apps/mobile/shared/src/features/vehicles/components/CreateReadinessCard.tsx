@@ -14,6 +14,8 @@ export interface CreateReadiness {
   info: boolean;
   pricing: boolean;
   features: boolean;
+  /** Hồ sơ gian hàng đủ điều kiện đăng xe (tuyến gói - ADR 0040 điều 7); vắng = không áp. */
+  shop?: boolean;
 }
 
 /**
@@ -34,6 +36,9 @@ export const CreateReadinessCard = memo(function CreateReadinessCard({
     { key: 'photos', done: readiness.photos, label: t('readyPhotos', { count: requiredPhotos }) },
     { key: 'info', done: readiness.info, label: t('readyInfo') },
     { key: 'pricing', done: readiness.pricing, label: t('readyPricing') },
+    ...(readiness.shop === undefined
+      ? []
+      : [{ key: 'shop', done: readiness.shop, label: t('readyShop') }]),
   ];
   const done = items.filter((item) => item.done).length;
   // Tiện ích & mô tả là TUỲ CHỌN (server không đòi) - hiện kèm "Không bắt buộc", không tính vào x/N.

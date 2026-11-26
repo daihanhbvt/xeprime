@@ -239,6 +239,17 @@
       }
     },
     "formTitle": "Create your partner account",
+    "partnerApp": {
+      "displayNamePlaceholder": "Nguyen Van A",
+      "emailPlaceholder": "nguyenvana@gmail.com",
+      "phonePlaceholder": "0901 567 789",
+      "confirmPasswordLabel": "Confirm password",
+      "provinceLabel": "Province/City",
+      "wardLabel": "Ward/Commune",
+      "wardPlaceholder": "Select or type to search",
+      "addressLineLabel": "Street address",
+      "addressLinePlaceholder": "E.g. 133 Trung Luong 11 Street"
+    },
     "formSub": "It only takes about 2 minutes to partner with XePrime",
     "footnote": "After signing up you can add documents & payout details in your dashboard",
     "consentRequired": "Please agree to the Marketplace rules and Terms of use",
@@ -248,6 +259,8 @@
     "title": "Add your shop logo",
     "body": "Your shop needs a logo before you pick a plan. The logo appears on your shop page and on every vehicle you list.",
     "required": "Upload your shop logo to continue",
-    "save": "Save logo and pick a plan"
+    "save": "Save logo and pick a plan",
+    "appBody": "Your shop needs a logo to complete its profile. The logo appears on your shop page and on every vehicle you list.",
+    "appSave": "Save logo"
   }
 }

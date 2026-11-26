@@ -20,6 +20,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Chip } from '@/components/ui/Chip';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { ROUTES } from '@/navigation/routes';
@@ -107,7 +108,6 @@ export function ReceiptListScreen() {
   const navigateOnce = useNavigateOnce();
   // Hai tab của "Lịch sử giao dịch" dùng CHUNG tiêu đề + mô tả của web (ledger 09 §3.11).
   const tHistory = useTranslations('Finance.history.page');
-  const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
@@ -470,20 +470,6 @@ export function ReceiptListScreen() {
     setPage(FIRST_PAGE);
   }, []);
 
-  const clearAll = useCallback(() => {
-    setScope({});
-    setType(FILTER_ALL);
-    setStatus(FILTER_ALL);
-    setCategoryId(FILTER_ALL);
-    setSource(FILTER_ALL);
-    setPaymentMethod(FILTER_ALL);
-    setFrom('');
-    setTo('');
-    setSearch('');
-    setPage(FIRST_PAGE);
-    // Web "Xoá lọc" gỡ cả chi nhánh.
-    branchFilter.select(undefined);
-  }, [branchFilter]);
 
   const renderItem = useCallback<ListRenderItem<Receipt>>(
     ({ item }) => <ReceiptCard receipt={item} showDescription onPress={setDetailId} />,
@@ -707,12 +693,7 @@ export function ReceiptListScreen() {
                     description={branchEmpty.hint}
                   />
                 ) : filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('table.noResults.title')}
-                    actionLabel={tActions('clear')}
-                    onAction={clearAll}
-                  />
+                  <NoResults />
                 ) : (
                   /*
                     KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),

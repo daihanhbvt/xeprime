@@ -476,9 +476,11 @@ function SurchargeRow({
           {fmt.money(surcharge.amount)}
         </Text>
       </XStack>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {surcharge.reason}
-      </Text>
+      {surcharge.reason ? (
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {surcharge.reason}
+        </Text>
+      ) : null}
       {surcharge.createdByName ? (
         <Text col={colors.placeholder} fos={fontSize.label}>
           {t('recordedBy', {

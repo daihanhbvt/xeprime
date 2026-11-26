@@ -26,6 +26,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { images } from '@/assets';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
+import { DotsLoader } from '@/components/ui/DotsLoader';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { Reveal } from '@/components/motion/Reveal';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -640,8 +641,8 @@ function ResultsBody({
                 />
               </YStack>
             ) : results.isFetchingNextPage ? (
-              <YStack pt={layout.block} accessibilityLabel={t('loadingMore')}>
-                <VehicleCardSkeleton />
+              <YStack pt={layout.block} pb={layout.block} accessibilityLabel={t('loadingMore')}>
+                <DotsLoader />
               </YStack>
             ) : showList && !results.hasNextPage && results.total > 0 ? (
               <YStack ai="center" gap={space.xs} py={layout.section}>

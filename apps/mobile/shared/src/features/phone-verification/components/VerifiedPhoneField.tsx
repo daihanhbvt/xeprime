@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { useController, useWatch, type Control, type FieldValues } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -219,7 +220,12 @@ export function VerifiedPhoneField({
             </Text>
           )}
           <XStack ai="center" gap={space.sm} minHeight={44}>
-            <Ionicons name="call-outline" size={iconSize.md} color={colors.textMuted} />
+            {appearance === 'v2' ? (
+              // Bộ ô `v2`: cùng nét "Calling 1" của Figma với ô nhập SĐT trước khi xác thực.
+              <LineIcon name="calling" size={FIELD_V2.icon} color={colors.placeholder} />
+            ) : (
+              <Ionicons name="call-outline" size={iconSize.md} color={colors.textMuted} />
+            )}
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
               {phone}
             </Text>

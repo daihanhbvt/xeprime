@@ -705,5 +705,67 @@
     "checkedBy": "Checked by {name} at {time}",
     "checkedAt": "Checked at {time}",
     "menu": "Documents checked"
+  },
+  "app": {
+    "searchPlaceholder": "Search name, phone, account...",
+    "chips": {
+      "all": "All",
+      "active": "Linked",
+      "invited": "Pending",
+      "licenceCheck": "To check",
+      "suspended": "Suspended",
+      "closed": "Closed"
+    },
+    "licence": {
+      "verified": "Licence verified",
+      "classes": "Class {classes}",
+      "none": "Driver has not added a licence",
+      "pending": "Reading licence photo",
+      "mismatch": "Check the name on the licence",
+      "invited": "Waiting for the driver to accept",
+      "classesUpper": "CLASS {classes}",
+      "verifiedShort": "Verified",
+      "expiry": "Exp. {date}",
+      "noExpiry": "No expiry"
+    },
+    "noTrips": "No trips yet",
+    "detail": {
+      "call": "Call",
+      "zalo": "Zalo",
+      "wageTitle": "RECORDED WAGES",
+      "month": "Month {month}",
+      "deltaUp": "+{pct}% vs last month",
+      "deltaDown": "-{pct}% vs last month",
+      "completed": "Completed",
+      "averageDaily": "Avg / driving day",
+      "upcoming": "Upcoming",
+      "reliability": "Reliability",
+      "window": "Last {days} days",
+      "rateLine": "Acceptance rate · {accepted}/{decided} trips assigned",
+      "response": "Average response",
+      "declined": "Declined",
+      "times": "{count, plural, one {# time} other {# times}}",
+      "expired": "No response",
+      "trips": "{count, plural, one {# trip} other {# trips}}",
+      "pending": "Awaiting reply",
+      "barMonth": "M{month}",
+      "upcomingTitle": "Upcoming trips",
+      "noteTitle": "Internal note",
+      "noteEdit": "Edit",
+      "unlink": "Unlink",
+      "linkInfo": "Link details",
+      "edit": "Edit details"
+    },
+    "trips": {
+      "total": "Total recorded · {month}",
+      "statement": "Statement",
+      "rangeDays": "{range} · {days, plural, one {# day} other {# days}}"
+    },
+    "invite": {
+      "title": "Add a new driver",
+      "subtitle": "Review the details before sending to XePrime",
+      "submit": "Invite driver",
+      "cancel": "Cancel"
+    }
   }
 }

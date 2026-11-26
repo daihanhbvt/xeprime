@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { ROUTES } from '@/navigation/routes';
 import {
   FINANCE_GRANULARITY,
@@ -15,7 +14,8 @@ import { buildPeriodRange, isZeroMoney } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
 import { SectionHeader } from '@/components/ui/CardTitle';
 import { Card } from '@/components/ui/Card';
-import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { CompactSelect } from '@/components/ui/SelectTrigger';
+import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -26,7 +26,7 @@ import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filt
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontWeight, space, typeScale } from '@/theme/tokens';
 import { CategoryBreakdown } from './components/CategoryBreakdown';
 import { CustomerRevenueList } from './components/CustomerRevenueList';
 import { FinanceOverviewCards } from './components/FinanceOverviewCards';
@@ -43,7 +43,6 @@ import {
 import {
   FINANCE_OVERVIEW_DEFAULT_PERIOD,
   FINANCE_OVERVIEW_PERIOD_VALUES,
-  VEHICLE_PROFIT_PAGE_SIZE,
 } from './constants';
 import {
   useCustomerRevenue,
@@ -52,9 +51,13 @@ import {
   useFinanceSummary,
   useVehicleProfit,
 } from './hooks/use-finance';
-import type { FinanceCategoryBreakdown } from './api';
 
-const EMPTY_META = { page: FIRST_PAGE, limit: VEHICLE_PROFIT_PAGE_SIZE, total: 0, hasNext: false };
+/** Figma "Hiệu suất kinh doanh": chỉ TOP 5 của mỗi tab (người dùng chốt 25/11/2026). */
+const PERFORMANCE_TOP = 5;
+/** Figma `24228:98979`: ô độ mịn "Tuần" rộng 100. */
+const GRANULARITY_SELECT_WIDTH = 100;
+/** Figma: khoảng 12 giữa các phần trong thẻ và giữa hai ô lọc. */
+const CARD_GAP = 12;
 
 /**
  * Tổng quan tài chính (FIN-01) — bản native của `/manage/finance`.
@@ -84,19 +87,12 @@ export function FinanceOverviewScreen() {
    * khách. Chỉ bảng của tab đang mở được gọi — tab kia không tốn một lượt truy vấn.
    */
   const [perf, setPerf] = useState<FinancePerformanceView>(FINANCE_PERFORMANCE_VIEW.VEHICLES);
-  const [vehicleSort, setVehicleSort] = useState<string | undefined>(undefined);
-  const [vehiclePage, setVehiclePage] = useState(FIRST_PAGE);
-  const [customerSort, setCustomerSort] = useState<string | undefined>(undefined);
-  const [customerPage, setCustomerPage] = useState(FIRST_PAGE);
 
   /*
    * Ô "Chi nhánh" (ADR 0052) — mọi khối của màn theo CÙNG chi nhánh. Phần chung không gắn xe được
    * nói ra ở thẻ chi phí và dưới hai dải xếp hạng (`unassignedCost`/`unassignedRevenue`).
    */
-  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => {
-    setVehiclePage(FIRST_PAGE);
-    setCustomerPage(FIRST_PAGE);
-  });
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => undefined);
   const branchScope = useMemo(() => (branchId ? { branchId } : {}), [branchId]);
 
   const period = useMemo(
@@ -105,24 +101,20 @@ export function FinanceOverviewScreen() {
   );
 
   /**
-   * Bộ lọc của hai dải xếp hạng.
-   *
-   * Tiền tố `customer*` chỉ tồn tại ở tầng giao diện — `customerRevenueParams` hoá nó thành
-   * `sort`/`page` lúc gửi. Giữ chúng trong CÙNG một object để hai dải không đọc trúng cache
-   * của nhau.
+   * Bộ lọc của hai dải TOP: trang đầu, sắp xếp mặc định của server (xe theo lợi nhuận, khách theo
+   * doanh thu). Tiền tố `customer*` chỉ sống ở tầng giao diện - `customerRevenueParams` hoá nó
+   * thành `page`/`limit` lúc gửi; chung một object để hai dải không đọc trúng cache của nhau.
    */
   const rankingFilters = useMemo(
     () => ({
       ...range,
       ...branchScope,
-      ...(vehicleSort ? { sort: vehicleSort } : {}),
-      page: vehiclePage,
-      limit: VEHICLE_PROFIT_PAGE_SIZE,
-      ...(customerSort ? { customerSort } : {}),
-      customerPage,
-      customerLimit: VEHICLE_PROFIT_PAGE_SIZE,
+      page: FIRST_PAGE,
+      limit: PERFORMANCE_TOP,
+      customerPage: FIRST_PAGE,
+      customerLimit: PERFORMANCE_TOP,
     }),
-    [range, branchScope, vehicleSort, vehiclePage, customerSort, customerPage],
+    [range, branchScope],
   );
 
   const summary = useFinanceSummary(period, undefined, canViewFinance);
@@ -137,9 +129,6 @@ export function FinanceOverviewScreen() {
     rankingFilters,
     canViewFinance && perf === FINANCE_PERFORMANCE_VIEW.CUSTOMERS,
   );
-  // Dồn các trang đã tải (nút "Xem thêm"): đổi sắp xếp/kỳ thì trang về 1 nên mảng dồn tự làm mới.
-  const vehicleItems = useAccumulatedPages(vehicles.data?.items, vehicles.data?.meta.page, (row) => row.vehicleId);
-  const customerItems = useAccumulatedPages(customers.data?.items, customers.data?.meta.page, (row) => row.tenantCustomerId ?? 'none');
 
   const granularityOptions = useMemo(
     () => FINANCE_GRANULARITY_VALUES.map((value) => ({ value, label: t(`chart.every.${value}`) })),
@@ -169,12 +158,7 @@ export function FinanceOverviewScreen() {
     void customers.refetch();
   }, [summary, series, income, expense, vehicles, customers]);
 
-  const changeRange = useCallback((next: { from: string; to: string }) => {
-    setRange(next);
-    // Đổi kỳ là đổi tập dữ liệu của cả hai dải — trang 7 của kỳ cũ gần như chắc chắn không tồn tại.
-    setVehiclePage(FIRST_PAGE);
-    setCustomerPage(FIRST_PAGE);
-  }, []);
+  const changeRange = useCallback((next: { from: string; to: string }) => setRange(next), []);
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái thiếu quyền, KHÔNG giả thành rỗng,
   // và KHÔNG phát một request tài chính nào.
@@ -217,49 +201,47 @@ export function FinanceOverviewScreen() {
         onRefresh={refreshAll}
       >
         <YStack gap={layout.section}>
-          <Text col={colors.textMuted} fos={fontSize.body}>
-            {t('page.subtitle')}
-          </Text>
-
-          <BranchFilterField filter={branchFilter} value={branchId} />
-
-          <FinancePeriodBar
-            periods={FINANCE_OVERVIEW_PERIOD_VALUES}
-            from={range.from}
-            to={range.to}
-            onChange={changeRange}
-          />
+          {/* Figma `24228:98931`: ô Chi nhánh + ô kỳ "01/11 - 30/11" chia đôi một hàng (khoảng 12). */}
+          <XStack gap={CARD_GAP}>
+            {branchFilter.visible ? (
+              <YStack f={1} minWidth={0}>
+                <BranchFilterField filter={branchFilter} value={branchId} select />
+              </YStack>
+            ) : null}
+            <YStack f={1} minWidth={0}>
+              <FinancePeriodBar
+                compact
+                periods={FINANCE_OVERVIEW_PERIOD_VALUES}
+                from={range.from}
+                to={range.to}
+                onChange={changeRange}
+              />
+            </YStack>
+          </XStack>
 
           <FinanceOverviewCards
             data={summary.data}
             filters={period}
-            revenueReceipts={receiptCountOf(income.data)}
-            costReceipts={receiptCountOf(expense.data)}
             loading={summary.isFetching}
             error={summary.isError}
           />
 
-          {/*
-            ── Biểu đồ xu hướng ─────────────────────────────────────────────────
-            MỘT thẻ như web (ledger 09 §3.9 #5-6): tiêu đề, nút độ mịn có khung (`Segmented`), chú
-            giải ba chấm, trục Y ghi số triệu kèm "Đơn vị: triệu đồng".
-          */}
+          {/* Biểu đồ - Figma `24228:98976`: tiêu đề + ô độ mịn "Tuần" (rộng 100) cùng một hàng. */}
           <Card lift="flat">
-            <YStack gap={space.sm}>
-              <SectionHeader icon="stats-chart-outline">{t('chart.title')}</SectionHeader>
-
-              <XStack accessibilityLabel={t('chart.every.label')}>
-                <SegmentedTabs
-                  fit
-                  variant="neutral"
-                  items={granularityOptions.map((option) => ({
-                    key: option.value,
-                    label: option.label,
-                  }))}
-                  // Web tô theo độ mịn SERVER thật dùng (kỳ dài bị hạ về Tháng).
-                  value={actualGranularity}
-                  onChange={setGranularity}
-                />
+            <YStack gap={CARD_GAP}>
+              <XStack ai="center" gap={space.md}>
+                <YStack f={1} minWidth={0}>
+                  <SectionHeader>{t('chart.titleShort')}</SectionHeader>
+                </YStack>
+                <YStack w={GRANULARITY_SELECT_WIDTH}>
+                  <CompactSelect
+                    title={t('chart.every.label')}
+                    // Web tô theo độ mịn SERVER thật dùng (kỳ dài bị hạ về Tháng).
+                    value={actualGranularity}
+                    options={granularityOptions}
+                    onChange={setGranularity}
+                  />
+                </YStack>
               </XStack>
 
               {series.isError && !series.data ? (
@@ -288,36 +270,56 @@ export function FinanceOverviewScreen() {
             </YStack>
           </Card>
 
-          <CategoryBreakdown
-            title={t('categories.incomeTitle')}
-            type={RECEIPT_TYPE.INCOME}
-            tone="revenue"
-            data={income.data}
-            filters={period}
-            loading={income.isFetching}
-            error={income.isError}
-          />
-          <CategoryBreakdown
-            title={t('categories.expenseTitle')}
-            type={RECEIPT_TYPE.EXPENSE}
-            tone="cost"
-            data={expense.data}
-            filters={period}
-            loading={expense.isFetching}
-            error={expense.isError}
-          />
+          {/* Figma `24228:99092`: cơ cấu thu và cơ cấu chi chung MỘT thẻ, ngăn bằng một vạch. */}
+          <Card lift="flat">
+            <YStack gap={CARD_GAP}>
+              <CategoryBreakdown
+                title={t('categories.incomeTitle')}
+                type={RECEIPT_TYPE.INCOME}
+                tone="revenue"
+                data={income.data}
+                filters={period}
+                loading={income.isFetching}
+                error={income.isError}
+              />
+              <YStack h={1} bg={colors.border} />
+              <CategoryBreakdown
+                title={t('categories.expenseTitle')}
+                type={RECEIPT_TYPE.EXPENSE}
+                tone="cost"
+                data={expense.data}
+                filters={period}
+                loading={expense.isFetching}
+                error={expense.isError}
+              />
+            </YStack>
+          </Card>
 
           {/*
-            "Hiệu suất kinh doanh" — MỘT thẻ (web `BusinessPerformanceCard`, ledger 09 §3.9 #8):
-            tiêu đề, tab Theo xe / Theo khách có khung, rồi dải của tab đang mở.
+            "Hiệu suất kinh doanh" - Figma `24228:99117`: tiêu đề + "Top 5 theo ..." mờ bên phải, tab
+            gạch chân Theo xe / Theo khách (đổi KHỐI, không lọc cùng danh sách), rồi top 5 của tab.
           */}
           <Card lift="flat">
-            <YStack gap={space.sm}>
-              <SectionHeader icon="stats-chart-outline">{t('performance.title')}</SectionHeader>
-              <XStack accessibilityLabel={t('performance.tabs.label')}>
-                <SegmentedTabs
-                  fit
-                  variant="neutral"
+            <YStack gap={CARD_GAP}>
+              <XStack ai="center" gap={space.sm}>
+                <YStack f={1} minWidth={0}>
+                  <SectionHeader>{t('performance.title')}</SectionHeader>
+                </YStack>
+                <Text
+                  col={colors.textPlaceholder}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.regular}
+                  numberOfLines={1}
+                >
+                  {perf === FINANCE_PERFORMANCE_VIEW.VEHICLES
+                    ? t('performance.top.vehicles', { count: PERFORMANCE_TOP })
+                    : t('performance.top.customers', { count: PERFORMANCE_TOP })}
+                </Text>
+              </XStack>
+              <YStack accessibilityLabel={t('performance.tabs.label')}>
+                <UnderlineTabs
+                  stretch
                   items={FINANCE_PERFORMANCE_VIEW_VALUES.map((value) => ({
                     key: value,
                     label: t(`performance.tabs.${value}`),
@@ -325,14 +327,11 @@ export function FinanceOverviewScreen() {
                   value={perf}
                   onChange={setPerf}
                 />
-              </XStack>
+              </YStack>
 
               {perf === FINANCE_PERFORMANCE_VIEW.VEHICLES ? (
                 <VehicleProfitList
-                  items={vehicleItems}
-                  meta={vehicles.data?.meta ?? EMPTY_META}
-                  sort={vehicleSort}
-                  unassignedCost={summary.data?.unassignedCost}
+                  items={vehicles.data?.items ?? []}
                   loading={vehicles.isFetching}
                   /* Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ dải đang đọc. */
                   error={
@@ -340,31 +339,16 @@ export function FinanceOverviewScreen() {
                       ? { error: vehicles.error, onRetry: () => void vehicles.refetch() }
                       : null
                   }
-                  onSortChange={(next) => {
-                    setVehicleSort(next);
-                    setVehiclePage(FIRST_PAGE);
-                  }}
-                  onPageChange={setVehiclePage}
-                  embedded
                 />
               ) : (
                 <CustomerRevenueList
-                  items={customerItems}
-                  meta={customers.data?.meta ?? EMPTY_META}
-                  sort={customerSort}
-                  unassignedRevenue={summary.data?.unassignedRevenue}
+                  items={customers.data?.items ?? []}
                   loading={customers.isFetching}
                   error={
                     customers.isError && !customers.data
                       ? { error: customers.error, onRetry: () => void customers.refetch() }
                       : null
                   }
-                  onSortChange={(next) => {
-                    setCustomerSort(next);
-                    setCustomerPage(FIRST_PAGE);
-                  }}
-                  onPageChange={setCustomerPage}
-                  embedded
                 />
               )}
             </YStack>
@@ -379,9 +363,4 @@ export function FinanceOverviewScreen() {
       </Screen>
     </>
   );
-}
-
-/** Số phiếu của một chiều tiền trong kỳ — cộng từ bảng theo danh mục, như web. */
-function receiptCountOf(data: FinanceCategoryBreakdown | undefined): number | undefined {
-  return data?.items.reduce((sum, item) => sum + item.count, 0);
 }

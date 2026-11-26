@@ -213,16 +213,6 @@ function AutoAcceptForm({
                   {`• ${t(`autoAccept.rules.${rule}` as never)}`}
                 </Text>
               ))}
-              {withDriver ? (
-                <>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {`• ${t('autoAccept.rules.driver')}`}
-                  </Text>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {`• ${t('autoAccept.rules.appHold')}`}
-                  </Text>
-                </>
-              ) : null}
               <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
                 {t('autoAccept.policyTitle')}
               </Text>
@@ -354,15 +344,18 @@ function AutoAcceptForm({
 
       {capabilityCallout}
 
-      <Card>
-        <ToggleRow
-          label={t(withDriver ? 'autoAccept.instantTitle' : 'autoAccept.toggleTitle')}
-          hint={t(withDriver ? 'autoAccept.instantBody' : 'autoAccept.toggleBody')}
-          checked={enabled}
-          disabled={toggleAuto.disabled}
-          onToggle={() => toggleAuto.change(!enabled)}
-        />
-      </Card>
+      {/* Có tài xế luôn duyệt tay (web PR #338) - không có công tắc, chỉ lời giải thích ở trên. */}
+      {withDriver ? null : (
+        <Card>
+          <ToggleRow
+            label={t('autoAccept.toggleTitle')}
+            hint={t('autoAccept.toggleBody')}
+            checked={enabled}
+            disabled={toggleAuto.disabled}
+            onToggle={() => toggleAuto.change(!enabled)}
+          />
+        </Card>
+      )}
 
       {withDriver ? (
         <Card>
@@ -386,16 +379,6 @@ function AutoAcceptForm({
               {`• ${t(`autoAccept.rules.${rule}` as never)}`}
             </Text>
           ))}
-          {withDriver ? (
-            <>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {`• ${t('autoAccept.rules.driver')}`}
-              </Text>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {`• ${t('autoAccept.rules.appHold')}`}
-              </Text>
-            </>
-          ) : null}
           <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold} mt={space.xs}>
             {t('autoAccept.policyTitle')}
           </Text>

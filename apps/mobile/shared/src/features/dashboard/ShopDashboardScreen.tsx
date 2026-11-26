@@ -1,17 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PERMISSION, RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
-import { dayjs, moneyChangePercent } from '@xeprime/domain';
+import { RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
+import { moneyChangePercent } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
 import DollarOutlined from '@ant-design/icons-svg/es/asn/DollarOutlined';
-import LockOutlined from '@ant-design/icons-svg/es/asn/LockOutlined';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { AccountTrackNotice } from '@/features/account/components/AccountTrackNotice';
 import { useOpenPushPermissionGate } from '@/features/notifications/push-permission-gate';
-import { ManageHeader } from '@/features/shell/ManageHeader';
-import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -22,23 +17,20 @@ import { withBranchParam } from '@/features/branches/branch-link';
 import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { dashboardMonthRange } from './api';
-import { greetingKey, todayLabel } from './dashboard-model';
 import { AgendaPanel } from './components/AgendaPanel';
-import { ShopOnboardingCard } from './components/ShopOnboardingCard';
+import { OverviewHeader } from './components/OverviewHeader';
 import {
   FleetPlanPanel,
   OwnerVehiclesPanel,
   ReputationPanel,
   WalletPanel,
 } from './components/SidePanels';
-import { AnswerBanner, TodayFocus } from './components/TodayFocus';
+import { TodayFocus } from './components/TodayFocus';
 import { TrendCard } from './components/TrendPanels';
 import {
-  useDashboardAnswer,
   useDashboardLinks,
   useDashboardRefresh,
   useDashboardMoney,
-  useFleetStats,
   useIsShopOwner,
   usePartnerOverview,
 } from './hooks/use-dashboard';
@@ -61,10 +53,10 @@ export function ShopDashboardScreen() {
   // `<Screen>` dựng cột giữa màn trên iPad, nên nội dung bên trong giữ lề điện thoại.
   const gutter = layout.screenX;
   const t = useTranslations('Dashboard');
+  const tApp = useTranslations('Dashboard.partnerApp');
   const tCommon = useTranslations('Common.labels');
   const tStates = useTranslations('Common.states');
   const fmt = useAppFormat();
-  const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
   useOpenPushPermissionGate();
   const isOwner = useIsShopOwner();
@@ -77,14 +69,11 @@ export function ShopDashboardScreen() {
    */
   const commission = resolvePartnerTrack(session.data) === PARTNER_TRACK.COMMISSION;
 
-  const canViewVehicles = has(PERMISSION.VEHICLE_VIEW);
   const { branchId, filter: branchFilter } = useScreenBranchFilter();
   const overview = usePartnerOverview(branchId);
-  const fleet = useFleetStats(canViewVehicles, branchId);
   const money = useDashboardMoney(branchId);
   const links = useDashboardLinks(branchId);
   const refresh = useDashboardRefresh();
-  const answer = useDashboardAnswer(overview.data);
   const data = overview.data;
   const monthCards = useMonthKpiCards(data?.month, overview.isError, links);
 
@@ -97,22 +86,6 @@ export function ShopDashboardScreen() {
             status: RECEIPT_STATUS.APPROVED,
             type: RECEIPT_TYPE.INCOME,
             sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
-          }),
-          branchId,
-        ),
-      ),
-    [navigateOnce, branchId],
-  );
-
-  /* Web: bấm một phiếu của "Thu Chi hôm nay" mở sổ thu chi lọc HÔM NAY (kèm chi nhánh). */
-  /* Thẻ cọc KHÔNG mang kỳ: `depositHeld` là số TẠI THỜI ĐIỂM NÀY. */
-  const goDepositReceipts = useCallback(
-    () =>
-      navigateOnce(
-        withBranchParam(
-          ROUTES.manage.receipts({
-            status: RECEIPT_STATUS.APPROVED,
-            sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS,
           }),
           branchId,
         ),
@@ -153,38 +126,20 @@ export function ShopDashboardScreen() {
 
   cards.push(...monthCards);
 
-  // "Xe sẵn sàng" nằm trong thẻ Đội xe (`FleetPlanPanel`), cùng chỗ với web (chốt 17/11/2026).
-  if (money.visible) {
-    cards.push({
-      key: 'deposit',
-      icon: LockOutlined,
-      label: t('stats.deposit'),
-      ...(money.summary.data
-        ? { hint: t('stats.depositHint', { count: money.summary.data.depositHeldBookings }) }
-        : {}),
-      value: cellValue(
-        money.summary.isError,
-        money.summary.data ? fmt.money(money.summary.data.depositHeld) : undefined,
-      ),
-      tone: 'gold',
-      loading: money.summary.isPending,
-      onPress: goDepositReceipts,
-    });
-  }
+  /*
+   * App Partner: KPI tháng ĐÚNG bốn ô của Figma (doanh thu · đơn mới · chuyến hoàn thành · tỷ lệ lấp
+   * đầy) - bỏ ô "Tiền cọc đang giữ" (người dùng chốt 20/11/2026).
+   */
 
   const trend = data?.trend ?? null;
-  const now = dayjs();
-  // Lời chào theo tên tài khoản cho CẢ HAI tuyến — như web (Figma Overview, chốt 17/11/2026).
-  const greetName = session.data?.displayName?.trim();
-  const title = greetName ? t(`greeting.${greetingKey(now)}`, { name: greetName }) : t('title');
 
   const goReport = useCallback(
     () => navigateOnce(withBranchParam(ROUTES.manage.finance(), branchId)),
     [navigateOnce, branchId],
   );
   const report = useMemo(
-    () => (money.visible ? { label: t('kpi.report'), onPress: goReport } : undefined),
-    [money.visible, t, goReport],
+    () => (money.visible ? { label: tApp('report'), onPress: goReport } : undefined),
+    [money.visible, tApp, goReport],
   );
   const refetchOverview = overview.refetch;
   const retryOverview = useCallback(() => void refetchOverview(), [refetchOverview]);
@@ -204,72 +159,60 @@ export function ShopDashboardScreen() {
   );
   const showMarket = data?.market !== null && !commission;
 
+  /*
+   * Figma Overview MB (24175:52345) - CHỈ những gì bản vẽ có (người dùng chốt 20/11/2026): đầu màn
+   * riêng (lời chào + chat + chuông, không thanh trên/ngày), phạm vi chi nhánh · bốn ô việc · ví · lịch
+   * giao nhận · (tuyến hoa hồng) xe của bạn · KPI tháng · thu chi / đơn & chuyến · đội xe · uy tín.
+   * Đã bỏ: câu trả lời đầu trang, thẻ ba bước mở gian hàng, ô tiền cọc, hàng "Xe sẵn sàng", dải
+   * thông báo của thanh trên chung.
+   */
   return (
-    <>
-      <ManageHeader />
-      <Screen
-        edges={['left', 'right', 'bottom']}
-        padded={false}
-        refreshing={refresh.refreshing}
-        onRefresh={refresh.onRefresh}
-      >
-        {/* Dải tuyến (chờ trả gói / lỗi cấu hình gói) - chủ xe cá nhân, TRÊN tiêu đề như web `OwnerLiteHome`. */}
-        {commission ? (
-          <YStack px={gutter} pt={space.md}>
-            <AccountTrackNotice />
-          </YStack>
+    <Screen padded={false} refreshing={refresh.refreshing} onRefresh={refresh.onRefresh}>
+      <OverviewHeader />
+      {/* Đáy: đã chừa sẵn chiều cao thanh tab (`Screen`) - chỉ thêm 8 (feedback 20/11/2026: thừa). */}
+      <YStack px={gutter} pt={HEADER_GAP} gap={PAGE_GAP} pb={space.sm}>
+        <BranchFilterField filter={branchFilter} value={branchId} scope />
+        <TodayFocus overview={data} isError={overview.isError} links={links} />
+
+        {isOwner ? <WalletPanel showIncome={commission} href={links.balance} /> : null}
+
+        {data?.agenda !== null ? (
+          <AgendaPanel
+            agenda={data?.agenda ?? undefined}
+            generatedAt={data?.generatedAt}
+            isError={overview.isError}
+            onRetry={retryOverview}
+            bookingHref={links.booking}
+            moreHref={links.allBookings}
+          />
         ) : null}
-        <ManagePageTitle title={title} total={todayLabel(fmt, now)} />
+
+        {/* Chủ xe 1–3 xe: thấy CHÍNH chiếc xe thay vì số đếm "Xe trên chợ" của gian hàng. */}
+        {commission ? <OwnerVehiclesPanel links={links} /> : null}
+
+        <MonthKpis cards={cards} {...(report ? { report } : {})} />
+
+        <TrendCard series={money.visible ? money.series : null} trips={tripsState} />
 
         {/*
-          Thứ tự theo Figma Overview MB (24175:52345), các khối cách 16: phạm vi chi nhánh · câu trả
-          lời · ba bước mở gian hàng · bốn ô việc · ví · lịch giao nhận · (tuyến hoa hồng) xe của bạn ·
-          KPI tháng · thu chi / đơn & chuyến · đội xe & gói · uy tín.
+          App Partner: Tổng quan CHỈ hiện đội xe - thông tin gói nằm ở Thông tin gian hàng (sau cờ
+          `isPlanPromotionEnabled`), người dùng chốt 13/11/2026. Không có hàng "Xe sẵn sàng" (chốt
+          20/11/2026 theo Figma).
         */}
-        <YStack px={gutter} gap={PAGE_GAP} pb={layout.section}>
-          <BranchFilterField filter={branchFilter} value={branchId} scope />
-          <AnswerBanner answer={answer} />
-          {commission ? null : <ShopOnboardingCard vehicleCount={fleet.data?.total} />}
-          <TodayFocus overview={data} isError={overview.isError} links={links} />
-
-          {isOwner ? <WalletPanel showIncome={commission} href={links.balance} /> : null}
-
-          {data?.agenda !== null ? (
-            <AgendaPanel
-              agenda={data?.agenda ?? undefined}
-              generatedAt={data?.generatedAt}
-              isError={overview.isError}
-              onRetry={retryOverview}
-              bookingHref={links.booking}
-              moreHref={links.allBookings}
-            />
-          ) : null}
-
-          {/* Chủ xe 1–3 xe: thấy CHÍNH chiếc xe thay vì số đếm "Xe trên chợ" của gian hàng. */}
-          {commission ? <OwnerVehiclesPanel links={links} /> : null}
-
-          <MonthKpis cards={cards} {...(report ? { report } : {})} />
-
-          <TrendCard series={money.visible ? money.series : null} trips={tripsState} />
-
-          {/*
-            App Partner: Tổng quan CHỈ hiện đội xe - thông tin gói nằm ở Thông tin gian hàng (sau cờ
-            `isPlanPromotionEnabled`), người dùng chốt 13/11/2026.
-          */}
-          <FleetPlanPanel
-            showPlan={false}
-            showMarket={showMarket}
-            market={data?.market ?? undefined}
-            fleet={canViewVehicles ? fleet : null}
-            links={links}
-          />
-          <ReputationPanel metrics={data?.reputation} />
-          {/* "Thu chi hôm nay" rời Tổng quan (cả web) - đã có ở Lịch sử giao dịch, chốt 17/11/2026. */}
-        </YStack>
-      </Screen>
-    </>
+        <FleetPlanPanel
+          showPlan={false}
+          showMarket={showMarket}
+          market={data?.market ?? undefined}
+          fleet={null}
+          links={links}
+        />
+        <ReputationPanel metrics={data?.reputation} />
+      </YStack>
+    </Screen>
   );
 }
 
+/** Figma: nội dung cách đầu màn 24 (y 135 → 159). */
+const HEADER_GAP = 24;
 /** Figma Overview MB: các khối cách 16. */
 const PAGE_GAP = 16;

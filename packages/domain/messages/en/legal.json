@@ -36,7 +36,8 @@
     "subscription": "Buying a plan means you agree to the <terms>Terms of Service</terms> and the <rules>Marketplace Operating Rules</rules>.",
     "shop": "Creating a shop means you agree to the <rules>Marketplace Operating Rules</rules> and the <terms>Terms of Service</terms>.",
     "marketAuth": "By continuing, you agree to XePrime's <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
-    "shopCheck": "I agree to the XePrime <rules>Marketplace rules</rules> and <terms>Terms of use</terms>"
+    "shopCheck": "I agree to the XePrime <rules>Marketplace rules</rules> and <terms>Terms of use</terms>",
+    "shopCheckPlain": "I agree to the XePrime Marketplace rules and Terms of use"
   },
   "docs": {
     "terms": {

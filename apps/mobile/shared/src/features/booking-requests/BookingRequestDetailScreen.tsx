@@ -34,6 +34,8 @@ import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { DataRow } from '@/components/ui/DataRow';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { requestPaymentRows } from './components/BookingRequestCard';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -80,8 +82,15 @@ export function BookingRequestDetailScreen({
   const fmt = useAppFormat();
   const paymentRows = requestPaymentRows(request, t);
   const tKanban = useTranslations('Bookings.board.kanban');
+  const tCard = useTranslations('BookingRequests.card');
+  const tDetailApp = useTranslations('BookingRequests.detail.partnerApp');
   const holdRowState = paymentRows.find((row) => row.key === 'hold')?.state;
-  const holdState = holdRowState === 'awaiting' ? 'unpaid' : holdRowState;
+  // Chờ duyệt mà chưa có giữ chỗ (dài hạn chưa chốt giá) vẫn nói "Chờ duyệt" như thẻ (20/11/2026).
+  const holdState =
+    holdRowState === 'awaiting'
+      ? 'unpaid'
+      : (holdRowState ??
+        (request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ? 'expected' : undefined));
   const requestClosed = (BOOKING_REQUEST_CLOSED_STATUSES as readonly string[]).includes(request.status);
   const holdChip =
     !requestClosed && (holdState === 'paid' || holdState === 'unpaid' || holdState === 'expected') ? (
@@ -123,6 +132,7 @@ export function BookingRequestDetailScreen({
         primary={<Button label={t('approve.confirm')} variant="gradient" onPress={() => onApprove(request)} />}
       />
     ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && canApprove ? (
+      // Hạn thanh toán nằm trong thẻ mốc thời gian của màn (người dùng 20/11/2026), không ở thanh đáy.
       <StickyActionBar
         primary={<Button label={t('actions.cancel')} variant="dangerOutline" onPress={() => onCancel(request)} />}
       />
@@ -161,14 +171,16 @@ export function BookingRequestDetailScreen({
         title={t('detail.title')}
         onBack={onClose}
         subtitle={
+          // Giờ gửi giữ trọn; viên trạng thái dùng nhãn NGẮN như thẻ danh sách, vẫn chật thì "…" (20/11/2026).
           <XStack ai="center" jc="space-between" gap={space.sm}>
-            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1} flexShrink={1}>
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1} flexShrink={0}>
               {t('card.sentAt', { value: fmt.dateTime(request.createdAt) })}
             </Text>
             {/* Cùng viên với thẻ: yêu cầu còn mở có giữ chỗ thì nói trạng thái GIỮ CHỖ (web 16/11/2026). */}
             {holdChip ?? (
               <Pill
-                label={domainLabel('bookingRequestStatus', status, meta.label)}
+                shrink
+                label={tDetailApp.has(`statusShort.${status}`) ? tDetailApp(`statusShort.${status}`) : domainLabel('bookingRequestStatus', status, meta.label)}
                 tone={(BOOKING_REQUEST_CLOSED_STATUSES as readonly string[]).includes(request.status) ? 'danger' : pillToneOfStatusColor(meta.color)}
               />
             )}
@@ -256,6 +268,17 @@ export function BookingRequestDetailScreen({
                       ...(request.deliveryRequested && request.deliveryAddress
                         ? { lines: [request.deliveryAddress] }
                         : {}),
+                      ...(request.deliveryRequested
+                        ? {
+                            titleExtra: (
+                              <InfoHint
+                                content={t('schedule.deliveryFeeHint')}
+                                label={t('schedule.handoverDelivery')}
+                                size={HINT_ICON}
+                              />
+                            ),
+                          }
+                        : {}),
                       meta: fmt.rentalDuration(pickup, dropoff),
                     },
                     { key: 'return', dot: 'return', title: fmt.rentalPoint(dropoff) },
@@ -269,7 +292,23 @@ export function BookingRequestDetailScreen({
                       fmt.packageLabel(request.longTermPackageMonths) ?? t('schedule.packageMissing')
                     }
                   />
-                  <DataRow size="md" label={t('schedule.pickupWish')} value={fmt.pickupWish(request)} />
+                  {/* Ghi chú giờ nhận (+ phí giao xe nếu có) thành dấu "i" của dòng (20/11/2026). */}
+                  <DataRow
+                    size="md"
+                    label={t('schedule.pickupWish')}
+                    value={fmt.pickupWish(request)}
+                    action={
+                      <InfoHint
+                        content={
+                          request.deliveryRequested
+                            ? `${t('schedule.pickupWishHint')} ${t('schedule.deliveryFeeHint')}`
+                            : t('schedule.pickupWishHint')
+                        }
+                        label={t('schedule.pickupWish')}
+                        size={HINT_ICON}
+                      />
+                    }
+                  />
                 </>
               )}
               {hasSchedule && isLongTerm && request.longTermPackageMonths ? (
@@ -298,19 +337,35 @@ export function BookingRequestDetailScreen({
                 <DataRow size="md" label={t('schedule.destination')} value={request.destination} block />
               ) : null}
 
-              {isLongTerm && !hasSchedule ? <Hint>{t('schedule.pickupWishHint')}</Hint> : null}
-              {request.deliveryRequested ? <Hint>{t('schedule.deliveryFeeHint')}</Hint> : null}
             </YStack>
           </Card>
 
           {/* Thẻ khách - cùng `CustomerSideCard` của chi tiết đơn: tên + "Khách quen", SĐT · Zalo, lối tắt. */}
           <Card>
             <YStack gap={space.sm}>
-              <XStack ai="center" flexWrap="wrap" gap={space.sm}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {request.customerName}
-                </Text>
-                {request.customerIsRegular ? <Pill label={t('detail.regular')} tone="success" /> : null}
+              {/* "Xem hồ sơ" + mũi tên ở góc PHẢI hàng tên (người dùng chốt 20/11/2026). */}
+              <XStack ai="center" gap={space.sm}>
+                <XStack f={1} minWidth={0} ai="center" flexWrap="wrap" gap={space.sm}>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} flexShrink={1}>
+                    {request.customerName}
+                  </Text>
+                  {request.customerIsRegular ? <Pill label={t('detail.regular')} tone="success" /> : null}
+                </XStack>
+                {/* Ghi chú "chưa có hồ sơ" thành dấu "i" cạnh tên (người dùng 20/11/2026). */}
+                {!request.tenantCustomerId ? (
+                  <InfoHint content={t('customer.noProfile')} label={request.customerName} size={HINT_ICON} />
+                ) : null}
+                {/* "Xem hồ sơ" là nút icon vuông cùng kiểu nút lịch của thẻ xe (người dùng 20/11/2026). */}
+                {customerProfileAccess && request.tenantCustomerId ? (
+                  <IconSquareButton
+                    label={t('detail.viewProfile')}
+                    onPress={() =>
+                      navigateOnce(ROUTES.manage.customerDetail(request.tenantCustomerId as string))
+                    }
+                  >
+                    <LineIcon name="profile" size={18} color={colors.primary} />
+                  </IconSquareButton>
+                ) : null}
               </XStack>
               {request.customerPhone ? (
                 <XStack ai="center" gap={space.md}>
@@ -339,20 +394,6 @@ export function BookingRequestDetailScreen({
               {request.customerEmail ? (
                 <Text col={colors.textMuted} fos={fontSize.body}>
                   {request.customerEmail}
-                </Text>
-              ) : null}
-              {customerProfileAccess && request.tenantCustomerId ? (
-                <Text
-                  alignSelf="flex-start"
-                  col={colors.accentText}
-                  fos={fontSize.body}
-                  fow={fontWeight.semibold}
-                  accessibilityRole="link"
-                  onPress={() =>
-                    navigateOnce(ROUTES.manage.customerDetail(request.tenantCustomerId as string))
-                  }
-                >
-                  {t('detail.viewProfile')}
                 </Text>
               ) : null}
               {request.customerAccountPhone ? (
@@ -390,11 +431,6 @@ export function BookingRequestDetailScreen({
                   })}
                 </Text>
               ) : null}
-              {!request.tenantCustomerId ? (
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('customer.noProfile')}
-                </Text>
-              ) : null}
             </YStack>
           </Card>
 
@@ -412,7 +448,13 @@ export function BookingRequestDetailScreen({
                   khi nhận xe), dòng cuối nổi bật.
                 */}
                 <XStack ai="center" jc="space-between" gap={space.sm}>
-                  <SectionTitle>{t('detail.paymentHeading')}</SectionTitle>
+                  {/* Dấu "i" giải thích số tạm tính đứng cạnh tiêu đề "Thanh toán" (người dùng 20/11/2026). */}
+                  <XStack ai="center" gap={space.xs} flexShrink={1}>
+                    <SectionTitle>{t('detail.paymentHeading')}</SectionTitle>
+                    {request.pricing.isEstimate ? (
+                      <InfoHint content={t('pricing.estimateHint')} label={t('detail.paymentHeading')} size={HINT_ICON} />
+                    ) : null}
+                  </XStack>
                   {request.pricing.isEstimate ? (
                     <StatusBadge label={t('card.estimate')} color={STATUS_COLOR.WARNING} size="sm" />
                   ) : null}
@@ -444,7 +486,6 @@ export function BookingRequestDetailScreen({
                     </XStack>
                   );
                 })}
-                {request.pricing.isEstimate ? <Hint>{t('pricing.estimateHint')}</Hint> : null}
               </YStack>
             </Card>
           ) : null}
@@ -463,32 +504,45 @@ export function BookingRequestDetailScreen({
 
           {request.rejectReason ? (
             <Card>
+              {/* Nhãn mờ như "Hình thức" của thẻ xe, lý do ở dưới (20/11/2026). */}
               <YStack gap={space.xs}>
-                <SectionTitle>{t('trace.rejectReason')}</SectionTitle>
-                <Text col={colors.text} fos={fontSize.body}>
+                <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                  {t('trace.rejectReason')}
+                </Text>
+                <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
                   {request.rejectReason}
                 </Text>
               </YStack>
             </Card>
           ) : null}
 
-          <Card>
-            <YStack gap={space.sm}>
-              <DataRow size="md" label={t('detail.createdAt')} value={fmt.dateTime(request.createdAt)} />
-              {needsDecision ? (
-                <DataRow size="md" label={t('deadline.label')} value={fmt.dateTime(request.respondBy)} />
-              ) : null}
-              {request.decidedAt ? (
-                <DataRow size="md" label={t('detail.decidedAt')} value={fmt.dateTime(request.decidedAt)} />
-              ) : null}
-            </YStack>
-          </Card>
-
           {/*
-            KHÔNG có đồng hồ đếm lùi ở đây — đúng như `BookingRequestDetailDialog` bên web: chi
-            tiết chỉ nói mốc hạn TUYỆT ĐỐI (`deadline.label` ở khối trên). Đồng hồ sống ở thẻ trong
-            hộp thư, nơi người trực lướt tìm yêu cầu sắp hết hạn.
+            MỌI mốc thời gian của yêu cầu gom vào MỘT thẻ (người dùng 20/11/2026): hạn phản hồi (còn
+            chờ duyệt), xử lý lúc, hạn thanh toán (chờ khách trả). "Gửi lúc" đã ở dòng phụ tiêu đề.
           */}
+          {needsDecision ||
+          request.decidedAt ||
+          (request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && request.holdExpiresAt) ? (
+            <Card>
+              <YStack gap={space.sm}>
+                {needsDecision ? (
+                  <DataRow size="md" labelWide label={t('deadline.label')} value={fmt.dateTime(request.respondBy)} />
+                ) : null}
+                {request.decidedAt ? (
+                  <DataRow size="md" labelWide label={t('detail.decidedAt')} value={fmt.dateTime(request.decidedAt)} />
+                ) : null}
+                {request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && request.holdExpiresAt ? (
+                  <DataRow
+                    size="md"
+                    labelWide
+                    label={tCard('awaitingPayment').replace(/:$/, '')}
+                    value={fmt.dateTime(request.holdExpiresAt)}
+                  />
+                ) : null}
+              </YStack>
+            </Card>
+          ) : null}
+
           {needsDecision && pastDue && !decidable ? (
             <Text col={colors.textMuted} fos={fontSize.body}>
               {t('deadline.pastDueHint')}
@@ -504,17 +558,12 @@ function SectionTitle({ children }: { children: string }) {
   const colors = useColors();
   return (
     // Tiêu đề khối như "Nhóm thông tin" của Figma / thẻ chi tiết đơn: 16/24 semibold, không vạch.
-    <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
+    <Text col={colors.text} fos={typeScale.title.fontSize} lh={typeScale.title.lineHeight} fow={fontWeight.semibold}>
       {children}
     </Text>
   );
 }
 
-function Hint({ children }: { children: string }) {
-  const colors = useColors();
-  return (
-    <Text col={colors.textMuted} fos={fontSize.label}>
-      {children}
-    </Text>
-  );
-}
+/** Dấu "i" của các ghi chú nhỏ - cỡ chữ thân bài. */
+const HINT_ICON = 16;
+

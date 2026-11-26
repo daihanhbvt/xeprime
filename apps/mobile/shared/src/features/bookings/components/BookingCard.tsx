@@ -8,12 +8,9 @@ import {
   BOOKING_LIST_PRESET,
   BOOKING_STATUS,
   BOOKING_STATUS_META,
-  canTransitionBooking,
-  HANDOVER_STATUS,
   isCancellationParty,
-  isNoShowGracePassed,
+  longClockText,
   PERMISSION,
-  SERVICE_TYPE,
   type BookingHandoverPlace,
   type BookingListPreset,
   type BookingStatus,
@@ -36,8 +33,8 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useStartBookingRequestConversation } from '@/features/booking-requests/hooks/use-booking-requests';
 import { useListingSpecSummary } from '@/features/booking-requests/hooks/use-listing-spec-summary';
-import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { useNow } from '@/hooks/use-now';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
@@ -67,25 +64,20 @@ type Tone = 'muted' | 'warning' | 'danger';
  * (giao xe hôm nay · quá giờ giao · còn bao lâu tới giờ trả) và các nút.
  *
  * "Xử lý giao xe" mở chi tiết đơn (Chuẩn bị bàn giao); "Nhận xe" mở thẳng màn "Xác nhận đã nhận lại
- * xe"; "Khách không đến" mở thẳng tấm ghi nhận (sổ cái §3.2b dòng 15 · §3.2c dòng 11).
+ * xe". Thẻ là bản TÓM TẮT như Figma (người dùng chốt 20/11/2026): "Khách không đến", "Gia hạn",
+ * "Xem lịch xe", dòng gói thuê… chỉ còn ở màn chi tiết đơn.
  */
 function BookingCardImpl({
   booking,
   onPress,
-  onExtend,
   onReceive,
-  onNoShow,
   awaitingPickup = false,
   group,
 }: {
   booking: BookingListItem;
   onPress: (booking: BookingListItem) => void;
-  /** "Gia hạn" (ADR 0077) — chỉ truyền khi có `bookings.update`. */
-  onExtend?: (booking: BookingListItem) => void;
   /** "Nhận xe" ở thẻ Đang thuê — chỉ truyền khi có `handovers.confirm`. */
   onReceive?: (booking: BookingListItem) => void;
-  /** "Khách không đến" ở thẻ Chờ giao xe — chỉ truyền khi có `bookings.update`. */
-  onNoShow?: (booking: BookingListItem) => void;
   /** Cũ: thẻ thuộc nhóm "Chờ giao xe". Nơi gọi mới truyền `group`. */
   awaitingPickup?: boolean;
   /** Nhóm của màn gộp — quyết câu tình trạng và nút. Vắng thì suy từ trạng thái đơn. */
@@ -95,7 +87,7 @@ function BookingCardImpl({
   const t = useTranslations('Bookings.board');
   const tKanban = useTranslations('Bookings.board.kanban');
   const tBookings = useTranslations('Bookings');
-  const tExtension = useTranslations('Bookings.extension');
+  const tApp = useTranslations('Bookings.board.kanban.partnerApp');
   const tRequests = useTranslations('BookingRequests');
   const tActions = useTranslations('BookingRequests.actions');
   const fmt = useAppFormat();
@@ -104,7 +96,7 @@ function BookingCardImpl({
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const startConversation = useStartBookingRequestConversation();
-  const specs = useListingSpecSummary(booking);
+  const specs = useListingSpecSummary(booking, { transmission: false });
   const domainLabel = useDomainLabel();
 
   const status = booking.status as BookingStatus;
@@ -125,23 +117,7 @@ function BookingCardImpl({
   const canHandle = onReceive !== undefined;
 
   const open = useCallback(() => onPress(booking), [onPress, booking]);
-  const extend = useCallback(() => onExtend?.(booking), [onExtend, booking]);
   const receive = useCallback(() => onReceive?.(booking), [onReceive, booking]);
-  const noShow = useCallback(() => onNoShow?.(booking), [onNoShow, booking]);
-
-  const extendable =
-    onExtend !== undefined &&
-    stage === BOOKING_LIST_PRESET.RENTING &&
-    booking.serviceType === SERVICE_TYPE.LONG_TERM &&
-    // Chỉ đơn đặt qua chợ: đơn tự lập không có tài khoản khách nhận QR / tiền hoàn (ADR 0077).
-    booking.bookingRequestId != null;
-  /* Cùng bộ điều kiện server kiểm: còn cạnh `→ no_show`, qua ân hạn, chưa có biên bản giao xe. */
-  const noShowable =
-    onNoShow !== undefined &&
-    stage === BOOKING_LIST_PRESET.AWAITING_PICKUP &&
-    canTransitionBooking(status, BOOKING_STATUS.NO_SHOW) &&
-    isNoShowGracePassed(booking.pickupAt) &&
-    booking.pickupHandoverStatus !== HANDOVER_STATUS.CONFIRMED;
 
   const pickup = toAppTz(booking.pickupAt);
   const dropoff = toAppTz(booking.returnAt);
@@ -150,10 +126,6 @@ function BookingCardImpl({
   )
     ? (booking.handoverPlaceKind as BookingHandoverPlace)
     : null;
-  const durationLabel =
-    booking.serviceType === SERVICE_TYPE.LONG_TERM && booking.longTermPackageMonths
-      ? fmt.packageLabel(booking.longTermPackageMonths)
-      : fmt.rentalDuration(pickup, dropoff);
 
   /* Nhắn tin = hội thoại của yêu cầu gốc, kèm thẻ chuyến (web `openConversation`). */
   const canMessage =
@@ -178,8 +150,13 @@ function BookingCardImpl({
     danger: colors.danger,
   };
 
-  /* Câu tình trạng của nhóm ở chân thẻ — Figma "Confirmation Status": icon đồng hồ 16 · chữ 14/20. */
-  const footerStatus = (
+  /*
+    Câu tình trạng của nhóm ở chân thẻ — Figma "Confirmation Status": icon đồng hồ 16 · chữ 14/20
+    thường, NGHIÊNG (cùng kiểu với đồng hồ của thẻ yêu cầu, `RespondDeadline`).
+  */
+  const footerStatus = statusLine.clock ? (
+    <StatusClock clock={statusLine.clock} tone={statusLine.tone} />
+  ) : (
     <XStack ai="flex-start" gap={space.xs}>
       <YStack pt={STATUS_ICON_NUDGE}>
         <LineIcon name="time-circle" size={iconSize.sm} color={toneColor[statusLine.tone]} />
@@ -190,39 +167,25 @@ function BookingCardImpl({
         col={toneColor[statusLine.tone]}
         fos={typeScale.body.fontSize}
         lh={typeScale.body.lineHeight}
-        fow={fontWeight.medium}
+        fow={fontWeight.regular}
+        fontStyle="italic"
       >
         {statusLine.text}
       </Text>
     </XStack>
   );
 
+  /* Figma: Chờ giao xe - "Xử lý giao xe"; Đang thuê - "Chi tiết" · "Nhận xe". */
   const actions =
     stage === BOOKING_LIST_PRESET.AWAITING_PICKUP ? (
-      <>
-        {noShowable ? (
-          <Button label={t('noShowAction')} variant="neutral" size="compact" block={false} onPress={noShow} />
-        ) : null}
-        {canHandle ? (
-          <Button label={t('handlePickup')} variant="gradient" size="compact" block={false} onPress={open} />
-        ) : (
-          <Button label={t('viewDetailShort')} variant="neutral" size="compact" block={false} onPress={open} />
-        )}
-      </>
+      canHandle ? (
+        <Button label={t('handlePickup')} variant="gradient" size="compact" block={false} onPress={open} />
+      ) : (
+        <Button label={t('viewDetailShort')} variant="neutral" size="compact" block={false} onPress={open} />
+      )
     ) : stage === BOOKING_LIST_PRESET.RENTING ? (
       <>
         <Button label={t('viewDetailShort')} variant="neutral" size="compact" block={false} onPress={open} />
-        {/* Web giữ CẢ "Gia hạn" lẫn "Nhận xe" trên thẻ dài hạn (sổ cái §3.2 dòng 12). */}
-        {extendable ? (
-          <Button
-            label={tExtension('action')}
-            icon="sync-outline"
-            variant="primarySubtle"
-            size="compact"
-            block={false}
-            onPress={extend}
-          />
-        ) : null}
         {canHandle ? (
           <Button label={t('receiveBack')} variant="success" size="compact" block={false} onPress={receive} />
         ) : null}
@@ -238,27 +201,25 @@ function BookingCardImpl({
   const customerTotal = booking.customerTotalAmount ?? booking.totalAmount;
   const marketplace = booking.payAtPickupAmount != null;
   const held = marketplace && booking.holdPaidAmount != null;
+  /*
+   * App: hàng tiền theo Figma (người dùng chốt 20/11/2026; web giữ `bookingBoardMoney`): Khách trả ·
+   * Trả khi nhận xe · Giữ chỗ. Đơn lập tay (không qua chợ): Khách trả · Đã thu · Còn phải thu.
+   * "Cộng ví" xem ở chi tiết đơn.
+   */
   const moneyColumns = marketplace
     ? [
+        { key: 'customerTotal', label: tKanban('money.customerTotal'), value: fmt.money(customerTotal) },
+        {
+          key: 'pickup',
+          label: tApp('payAtPickup'),
+          value: fmt.money(booking.payAtPickupAmount as string),
+        },
         ...(held
           ? [{ key: 'hold', label: tKanban('money.hold'), value: fmt.money(booking.holdPaidAmount as string) }]
           : []),
-        {
-          key: 'pickup',
-          label: tKanban('money.payAtPickup'),
-          value: fmt.money(booking.payAtPickupAmount as string),
-        },
-        ...(held && booking.ownerPayableAmount != null
-          ? [
-              {
-                key: 'walletCredit',
-                label: tKanban('money.walletCredit'),
-                value: fmt.money(booking.ownerPayableAmount),
-              },
-            ]
-          : []),
       ]
     : [
+        { key: 'customerTotal', label: tKanban('money.customerTotal'), value: fmt.money(customerTotal) },
         { key: 'collected', label: tKanban('money.collected'), value: fmt.money(booking.collectedAmount) },
         {
           key: 'debt',
@@ -267,13 +228,7 @@ function BookingCardImpl({
           emphasis: isPositiveMoney(booking.debtAmount),
         },
       ];
-  /* Web `bookingBoardPlace`: nhãn theo hình thức, địa chỉ gọn (chi nhánh rơi về hồ sơ gian hàng). */
-  const placeLabel =
-    place === BOOKING_HANDOVER_PLACE.DELIVERY
-      ? tKanban('schedule.placeDelivery')
-      : place === BOOKING_HANDOVER_PLACE.DRIVER_PICKUP
-        ? tKanban('schedule.placeDriverPickup')
-        : tKanban('schedule.placeBranch');
+  /* Địa chỉ gọn (chi nhánh rơi về hồ sơ gian hàng) - web `bookingBoardPlace`. */
   const placeAddress = shortAddress(
     place === BOOKING_HANDOVER_PLACE.BRANCH
       ? (booking.pickupPointAddress ?? booking.handoverPlace)
@@ -282,6 +237,7 @@ function BookingCardImpl({
 
   return (
     <RentalCard
+      alert={stage === BOOKING_LIST_PRESET.AWAITING_PICKUP && statusLine.tone === 'danger'}
       accessibilityLabel={t('openDetail', { code: booking.code })}
       onOpenDetail={open}
       code={`#${booking.code}`}
@@ -294,22 +250,7 @@ function BookingCardImpl({
         specs,
         plateLine,
         ...(canViewVehicle
-          ? {
-              onOpen: () => navigateOnce(ROUTES.manage.vehicleDetail(booking.vehicleId)),
-              schedule: {
-                label: tRequests('vehicle.viewSchedule'),
-                accessibilityLabel: tRequests('vehicle.viewScheduleFor', {
-                  vehicle: booking.vehicleName,
-                }),
-                onPress: () =>
-                  navigateOnce(
-                    vehicleSchedulePath(
-                      { name: booking.vehicleName, plateNumber: booking.vehiclePlate },
-                      { back: true },
-                    ),
-                  ),
-              },
-            }
+          ? { onOpen: () => navigateOnce(ROUTES.manage.vehicleDetail(booking.vehicleId)) }
           : {}),
         noImageLabel: tRequests('vehicle.noImage'),
       }}
@@ -334,14 +275,11 @@ function BookingCardImpl({
       schedule={
         <>
           <RentalFact
-            label={tKanban('schedule.period')}
+            label={tApp('pickup')}
             value={`${keepTogether(fmt.rentalPoint(pickup))} → ${keepTogether(fmt.rentalPoint(dropoff))}`}
           />
-          {booking.serviceType === SERVICE_TYPE.LONG_TERM && booking.longTermPackageMonths ? (
-            <RentalFact label={tRequests('card.package')} value={durationLabel} />
-          ) : null}
           {place ? (
-            <RentalFact label={placeLabel} value={placeAddress ?? tKanban('schedule.placeUnknown')} />
+            <RentalFact label={tApp('place')} value={placeAddress ?? tKanban('schedule.placeUnknown')} />
           ) : null}
         </>
       }
@@ -409,18 +347,28 @@ function statusLineOf(
   group: BookingListPreset,
   t: ReturnType<typeof useTranslations<'Bookings.board'>>,
   fmt: ReturnType<typeof useAppFormat>,
-): { text: string; tone: Tone } {
+): StatusLine {
   switch (group) {
     case BOOKING_LIST_PRESET.AWAITING_PICKUP: {
       if (Date.now() >= new Date(booking.returnAt).getTime()) {
+        // App: chân thẻ chỉ là đồng hồ như Figma - quá cả giờ trả vẫn là "Quá giờ giao xe: …".
         return {
           text: t('pickupNeverConfirmed', { date: fmt.rentalPoint(toAppTz(booking.returnAt)) }),
           tone: 'danger',
+          clock: { kind: 'pickupOverdue', at: booking.pickupAt },
         };
       }
       const urgency = pickupUrgency(booking.pickupAt);
       const time = fmt.time(booking.pickupAt);
-      if (urgency === PICKUP_URGENCY.OVERDUE) return { text: t('pickupOverdue', { time }), tone: 'danger' };
+      // App: đồng hồ "đã trễ bao lâu" chạy theo giây (Figma, người dùng chốt 20/11/2026); `text` giữ
+      // câu giờ hẹn cho nơi khác đọc.
+      if (urgency === PICKUP_URGENCY.OVERDUE) {
+        return {
+          text: t('pickupOverdue', { time }),
+          tone: 'danger',
+          clock: { kind: 'pickupOverdue', at: booking.pickupAt },
+        };
+      }
       if (urgency === PICKUP_URGENCY.TODAY) return { text: t('pickupToday', { time }), tone: 'warning' };
       return {
         text: t('pickupUpcoming', {
@@ -445,12 +393,18 @@ function statusLineOf(
         booking.actualPickupAt ?? booking.pickupAt,
         booking.returnAt,
       );
+      // App: đồng hồ chạy như Figma ("1d 12:09" tới giờ trả; quá giờ thì đếm xuôi, đỏ).
       if (overdueMinutes > 0) {
-        return { text: t('overdueReturn', { duration: fmt.roughDuration(overdueMinutes) }), tone: 'danger' };
+        return {
+          text: t('overdueReturn', { duration: fmt.roughDuration(overdueMinutes) }),
+          tone: 'danger',
+          clock: { kind: 'returnOverdue', at: booking.returnAt },
+        };
       }
       return {
         text: t('remaining', { remaining: fmt.roughDuration(remainingMinutes) }),
         tone: remainingMinutes <= RETURN_SOON_MINUTES ? 'warning' : 'muted',
+        clock: { kind: 'remaining', at: booking.returnAt },
       };
     }
     case BOOKING_LIST_PRESET.COMPLETED:
@@ -471,4 +425,57 @@ function statusLineOf(
 /** Một mốc thời gian không bị bẻ giữa chừng - dòng "Thời gian" chỉ xuống dòng trước "→" (web `RentalBoardPeriod`). */
 function keepTogether(text: string): string {
   return text.replace(/ /g, ' ');
+}
+
+interface StatusLine {
+  text: string;
+  tone: Tone;
+  /** Đồng hồ CHẠY thay cho câu tĩnh (app, Figma): quá giờ giao · quá giờ trả · còn tới giờ trả. */
+  clock?: { kind: 'pickupOverdue' | 'returnOverdue' | 'remaining'; at: string };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+/**
+ * Đồng hồ ở chân thẻ - Figma "Confirmation Status": "59:39" · "1d 12:09" (từ một ngày trở lên:
+ * ngày + giờ:phút). Còn tới giờ trả thì đếm NGƯỢC; quá giờ giao / trả thì đếm XUÔI kèm câu
+ * "Quá giờ …: 00:13". Chạy theo đồng hồ chung (`useNow`, dừng khi màn mất tiêu điểm); 14/20 nghiêng.
+ */
+function StatusClock({ clock, tone }: { clock: NonNullable<StatusLine['clock']>; tone: Tone }) {
+  const t = useTranslations('Bookings.board');
+  const tApp = useTranslations('Bookings.board.kanban.partnerApp');
+  const colors = useColors();
+  const now = useNow();
+  const at = new Date(clock.at).getTime();
+  const ms = Math.max(0, clock.kind === 'remaining' ? at - now : now - at);
+  const days = Math.floor(ms / DAY_MS);
+  const rest = ms - days * DAY_MS;
+  const hhmm = `${String(Math.floor(rest / HOUR_MS)).padStart(2, '0')}:${String(Math.floor((rest % HOUR_MS) / MINUTE_MS)).padStart(2, '0')}`;
+  const value = days > 0 ? tApp('dayClock', { days, clock: hhmm }) : longClockText(ms);
+  const text =
+    clock.kind === 'pickupOverdue'
+      ? t('pickupOverdueFor', { elapsed: value })
+      : clock.kind === 'returnOverdue'
+        ? tApp('returnOverdueFor', { elapsed: value })
+        : value;
+  const color = tone === 'danger' ? colors.danger : tone === 'warning' ? colors.warning : colors.placeholder;
+  return (
+    <XStack ai="flex-start" gap={space.xs}>
+      <YStack pt={STATUS_ICON_NUDGE}>
+        <LineIcon name="time-circle" size={iconSize.sm} color={color} />
+      </YStack>
+      <Text
+        flexShrink={1}
+        col={color}
+        fos={typeScale.body.fontSize}
+        lh={typeScale.body.lineHeight}
+        fow={fontWeight.regular}
+        fontStyle="italic"
+      >
+        {text}
+      </Text>
+    </XStack>
+  );
 }

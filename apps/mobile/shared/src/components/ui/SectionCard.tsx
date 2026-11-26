@@ -37,7 +37,8 @@ export function SectionCard({
       gap={space.md}
       bw={1}
       bc={tone === 'danger' ? colors.dangerBorder : colors.border}
-      br={radius.md}
+      // Bo 16 như mọi thẻ Figma ("Nhóm thông tin"), feedback thiết kế 20/11/2026.
+      br={radius.card}
       bg={colors.surface}
       style={dark ? undefined : elevation.card}
     >

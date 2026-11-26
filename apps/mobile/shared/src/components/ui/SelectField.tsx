@@ -1,4 +1,5 @@
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { LockedValueField, type FieldLock } from './LockedValueField';
 import { SelectControl, type SelectControlOption } from './SelectControl';
 
 /**
@@ -24,6 +25,7 @@ export function SelectField<T extends FieldValues>({
   emptyText,
   onValueChange,
   allowClear = false,
+  lock,
 }: {
   control: Control<T>;
   name: Path<T>;
@@ -50,8 +52,23 @@ export function SelectField<T extends FieldValues>({
   onValueChange?: (value: string) => void;
   /** Cho phép bỏ chọn — xem `SelectControl`. Ô được xoá về `null`, không phải chuỗi rỗng. */
   allowClear?: boolean;
+  /** Khoá tại chỗ của ô tự điền (ADR 0102) - khoá thì ô chỉ đọc + bút để mở. */
+  lock?: FieldLock | undefined;
 }) {
   const { field, fieldState } = useController({ control, name });
+  const current = (field.value as string | null) ?? null;
+  if (lock?.locked && current != null) {
+    return (
+      <LockedValueField
+        label={label}
+        value={options.find((o) => o.value === current)?.label ?? current}
+        lock={lock}
+        required={required}
+        hint={hint}
+        error={fieldState.error?.message}
+      />
+    );
+  }
 
   return (
     <SelectControl

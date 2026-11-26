@@ -1,3 +1,4 @@
+import { dismissKeyboardFirst } from '@/lib/dismiss-keyboard-first';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
@@ -453,7 +454,7 @@ export function RentalRangeSheet({
         Tách ra thì chạm vào tấm trượt không bao giờ tới lớp phủ, mà cũng chẳng có gì chặn cuộn.
       */}
       <YStack f={1}>
-        <Pressable style={appStyles.scrim} onPress={onCancel} />
+        <Pressable style={appStyles.scrim} onPress={dismissKeyboardFirst(onCancel)} />
         <YStack style={modalColumn}>
           <YStack
             maxHeight={height * SHEET_RATIO}

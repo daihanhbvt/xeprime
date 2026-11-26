@@ -130,7 +130,6 @@ export function MaintenanceEventSheet({
                   />
                   <Button
                     label={t('maintenance.reschedule')}
-                    icon="calendar-outline"
                     variant="secondary"
                     onPress={() => setRecordSheet({ mode: 'edit', record })}
                   />

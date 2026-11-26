@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { useColors } from '@/theme/ThemeProvider';
 import { useTranslations } from 'use-intl';
 import { dayjs, nowInAppTz, type Dayjs } from '@xeprime/domain';
@@ -19,6 +20,11 @@ export const MONTH_PERIOD_FORMAT = 'YYYY-MM';
  * Số kỳ GẦN NHẤT bày sẵn trong tấm chọn — chỉ là lối tắt. Kỳ cũ hơn tới được bằng nút ‹.
  */
 const RECENT_CHOICES = 36;
+
+/** Ô `compact` - kích thước Figma `24228:102418` (124 × 40, đệm ngang 14). */
+const COMPACT_WIDTH = 124;
+const COMPACT_HEIGHT = 40;
+const COMPACT_PAD_X = 14;
 
 /**
  * Các kỳ bày trong tấm chọn: 12 tháng gần nhất (tính theo giờ VN, không theo giờ máy) + kỳ đang
@@ -45,6 +51,12 @@ function parsePeriod(value: string): Dayjs {
   return dayjs(`${value}-01`);
 }
 
+/** `YYYY-MM` → `MM/YYYY` - chữ của ô tháng gọn ("10/2026"). */
+export function periodLabel(value: string): string {
+  const [year, month] = value.split('-');
+  return `${month}/${year}`;
+}
+
 /** Kỳ liền trước / liền sau của một kỳ `YYYY-MM`. */
 export function shiftMonthPeriod(value: string, delta: number): string {
   return parsePeriod(value).add(delta, 'month').format(MONTH_PERIOD_FORMAT);
@@ -66,9 +78,23 @@ export function MonthPeriodField({
   onChange,
   maxPeriod,
   variant = 'field',
+  display,
+  block = false,
 }: {
-  /** `stepper` - thanh gọn "‹ Tháng 11 năm 2026 ›", chạm giữa mở danh sách tháng (không nhãn trên ô). */
-  variant?: 'field' | 'stepper';
+  /**
+   * `stepper` - thanh gọn "‹ Tháng 11 năm 2026 ›", chạm giữa mở danh sách tháng (không nhãn trên ô).
+   * `compact` - ô 124 × 40 đứng cạnh tiêu đề khối, chữ "MM/YYYY" + icon lịch bên phải (Figma
+   * Partner-XePrime "Input - Select" `24228:102418` của trang Quản lý ví).
+   * `chip` - viên nhỏ nền xám bo 8, chữ 12 + mũi tên 12 (Figma Chi tiết tài xế `24512:119081`); chữ là `display`.
+   */
+  variant?: 'field' | 'stepper' | 'compact' | 'text' | 'chip';
+  /**
+   * Chữ hiển thị của biến thể `text` - chữ 14 mờ đứng cạnh tiêu đề khối ("Tháng 11" của Figma
+   * Tổng quan doanh thu `24228:99210`); nơi gọi tự dựng câu vì cách gọi kỳ thuộc về khối đó.
+   */
+  display?: string;
+  /** `compact` trải hết bề ngang thay vì 124 (Figma `24612:145586`, ô trong thẻ hai tab); chữ lấy `display` nếu có. */
+  block?: boolean;
   label: string;
   /** `YYYY-MM`. */
   value: string;
@@ -86,6 +112,121 @@ export function MonthPeriodField({
   const atMax = maxPeriod != null && value >= maxPeriod;
   const colors = useColors();
   const [picking, setPicking] = useState(false);
+
+  if (variant === 'text' || variant === 'chip') {
+    const shown = display ?? value;
+    const chip = variant === 'chip';
+    return (
+      <>
+        <Pressable
+          onPress={() => setPicking(true)}
+          accessibilityRole="button"
+          accessibilityLabel={label + ': ' + shown}
+          hitSlop={space.sm}
+        >
+          {chip ? (
+            <XStack
+              ai="center"
+              gap={space.xs}
+              px={space.sm}
+              py={space.xs}
+              bg={colors.background}
+              bw={1}
+              bc={colors.border}
+              br={radius.thumb}
+            >
+              <Text
+                col={colors.textMuted}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+                fow={fontWeight.medium}
+                numberOfLines={1}
+              >
+                {shown}
+              </Text>
+              <LineIcon name="chevron-down-xs" size={12} color={colors.placeholder} />
+            </XStack>
+          ) : (
+            <Text
+              col={colors.textPlaceholder}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              numberOfLines={1}
+            >
+              {shown}
+            </Text>
+          )}
+        </Pressable>
+        <BottomSheet open={picking} onClose={() => setPicking(false)} title={label} chrome="v2" headerDivider>
+          <MenuOptionList>
+            {options.map((option) => (
+              <MenuOption
+                key={option.value}
+                label={option.label}
+                selected={option.value === value}
+                onPress={() => {
+                  onChange(option.value);
+                  setPicking(false);
+                }}
+              />
+            ))}
+          </MenuOptionList>
+        </BottomSheet>
+      </>
+    );
+  }
+
+  if (variant === 'compact') {
+    const short = display ?? periodLabel(value);
+    return (
+      <>
+        <Pressable
+          onPress={() => setPicking(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`${label}: ${short}`}
+          hitSlop={4}
+        >
+          <XStack
+            w={block ? '100%' : COMPACT_WIDTH}
+            minHeight={COMPACT_HEIGHT}
+            ai="center"
+            gap={space.sm}
+            px={COMPACT_PAD_X}
+            bg={colors.surface}
+            bw={1}
+            bc={colors.borderInput}
+            br={radius.control}
+          >
+            <Text
+              f={1}
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              numberOfLines={1}
+            >
+              {short}
+            </Text>
+            <LineIcon name="calendar" size={iconSize.lg} color={colors.placeholder} />
+          </XStack>
+        </Pressable>
+        <BottomSheet open={picking} onClose={() => setPicking(false)} title={label} chrome="v2" headerDivider>
+          <MenuOptionList>
+            {options.map((option) => (
+              <MenuOption
+                key={option.value}
+                label={option.label}
+                selected={option.value === value}
+                onPress={() => {
+                  onChange(option.value);
+                  setPicking(false);
+                }}
+              />
+            ))}
+          </MenuOptionList>
+        </BottomSheet>
+      </>
+    );
+  }
 
   if (variant === 'field') {
     // Ô chọn tháng như web (`DatePicker picker="month"`): MỘT ô có icon lịch + mũi tên, không nhãn trên,

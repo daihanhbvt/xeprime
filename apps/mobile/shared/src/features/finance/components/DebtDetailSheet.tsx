@@ -75,7 +75,6 @@ export function DebtDetailSheet({
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const finance = useFeature(PLAN_FEATURE.FINANCE);
-  const contracts = useFeature(PLAN_FEATURE.CONTRACTS);
   const createContract = useCreateContract();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -90,7 +89,6 @@ export function DebtDetailSheet({
   const canCollect =
     permissions.has(PERMISSION.PAYMENT_RECORD) && finance.isVisible && !moneyClosed;
   const customerProfileAccess = useCustomerProfileAccess();
-  const canDocuments = permissions.has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE);
   const startConversation = useStartBookingRequestConversation();
   const tRequestActions = useTranslations('BookingRequests.actions');
   const canHistory = finance.isVisible;
@@ -99,7 +97,8 @@ export function DebtDetailSheet({
   const status = booking?.status as BookingStatus | undefined;
   const title = t('title', { code: booking?.code ?? '…' });
 
-  const canContract = permissions.has(PERMISSION.CONTRACT_MANAGE) && contracts.isVisible;
+  // Hợp đồng thuộc bộ cơ bản (ADR 0027 sửa 20/11/2026) - chỉ xét quyền.
+  const canContract = permissions.has(PERMISSION.CONTRACT_MANAGE);
   /* Chưa có dữ liệu chuẩn bị bàn giao thì coi như đã biết — nhãn "Hợp đồng", như web. */
   const contractKnown = booking?.handoverPrep ? booking.handoverPrep.contractId != null : true;
 
@@ -289,14 +288,6 @@ export function DebtDetailSheet({
                   }
                 : undefined
             }
-            onDocuments={
-              booking.tenantCustomerId && canDocuments
-                ? () => {
-                    onClose();
-                    navigateOnce(ROUTES.manage.customerDetail(booking.tenantCustomerId as string));
-                  }
-                : undefined
-            }
           />
           <RentalContactButtons
             name={booking.customerName}
@@ -381,7 +372,7 @@ function DebtBanner({
         >
           <YStack h={TRACK_HEIGHT} br={radius.pill} bg={colors.success} width={`${percent}%`} />
         </YStack>
-        {onCollect ? <Button label={t('collect')} icon="cash-outline" onPress={onCollect} /> : null}
+        {onCollect ? <Button label={t('collect')} onPress={onCollect} /> : null}
       </YStack>
     </Card>
   );

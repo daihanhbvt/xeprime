@@ -3,5 +3,13 @@
   "bellWithCount": "Thông báo, {count, plural, other {# chưa đọc}}",
   "markAllRead": "Đánh dấu tất cả đã đọc",
   "empty": "Chưa có thông báo",
-  "unreadMark": "Chưa đọc"
+  "unreadMark": "Chưa đọc",
+  "markAllShort": "Đọc tất cả",
+  "groupToday": "Hôm nay",
+  "groupEarlier": "Trước đây",
+  "justNow": "Vừa xong",
+  "minutesAgo": "{count} phút trước",
+  "hoursAgo": "{count} giờ",
+  "clock": "{hour}h{minute}",
+  "yesterdayAt": "Hôm qua {time}"
 }

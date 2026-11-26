@@ -6,14 +6,14 @@ import { useTranslations } from 'use-intl';
 import {
   DEPOSIT_STATUS,
   DEPOSIT_STATUS_META,
-  FEE_BEARER,
   FEE_LINE,
   HOLD_REFUND_STATUS,
   PRICE_ROW,
   hasDepositToShow,
   type DepositStatus,
 } from '@xeprime/types';
-import { isZeroMoney } from '@xeprime/domain';
+import { customerFeeLines, isZeroMoney, type IncludedInsuranceServiceFee } from '@xeprime/domain';
+import { InsuranceFeeHint } from '@/components/ui/InsuranceFeeHint';
 import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { InfoHint } from '@/components/ui/InfoHint';
@@ -134,7 +134,7 @@ function OpenFinanceCard({ finance }: { finance: CustomerTripFinance }) {
                   <DataRow
                     key={`${row.category}-${row.recordedAt}-${index}`}
                     label={domainLabel('surchargeCategory', row.category)}
-                    hint={row.reason}
+                    hint={row.reason || null}
                     value={fmt.money(row.amount)}
                   />
                 ))}
@@ -340,6 +340,7 @@ type RefundPillKey =
   | 'paid'
   | 'refundPaid'
   | 'refundCredited'
+  | 'refundScheduled'
   | 'refundProcessing'
   | 'refundNeedsAccount'
   | 'noRefund';
@@ -353,6 +354,9 @@ function refundPill(refund: HoldRefund): { key: RefundPillKey; tone: TripRequest
       return { key: 'refundCredited', tone: 'success' };
     case HOLD_REFUND_STATUS.REJECTED:
       return { key: 'noRefund', tone: 'danger' };
+    // Chờ hoàn vào ví (biên bản họp 19/11/2026) - giờ dự kiến nằm ở dòng ghi chú bên dưới.
+    case HOLD_REFUND_STATUS.SCHEDULED:
+      return { key: 'refundScheduled', tone: 'warning' };
     default:
       return refund.hasAccount
         ? { key: 'refundProcessing', tone: 'warning' }
@@ -391,12 +395,9 @@ function ClosedInvoice({
 
   const fees = finance.breakdown?.fees ?? null;
   const baseRow = finance.breakdown?.rows.find((row) => row.key === PRICE_ROW.BASE);
-  const feeLines = (fees?.lines ?? []).filter(
-    (line) =>
-      line.bearer !== FEE_BEARER.OWNER &&
-      !isZeroMoney(line.amount) &&
-      line.key !== FEE_LINE.TAX &&
-      line.key !== FEE_LINE.OWNER_COMMISSION,
+  // Phí thu hộ bảo hiểm GỘP vào dòng `IV`, ⓘ tách hai số (ADR 0091 điều 3, web `TripFinanceCard`).
+  const feeLines = customerFeeLines(fees?.lines ?? []).filter(
+    (line) => line.key !== FEE_LINE.TAX && line.key !== FEE_LINE.OWNER_COMMISSION,
   );
   const promoDiscount = fees?.promoDiscountAmount ?? '0';
   const totalAmount = finance.customerTotalAmount ?? finance.finalTotal;
@@ -426,6 +427,11 @@ function ClosedInvoice({
   const note = refund
     ? [
         refund.paidAt ? tInv('refundPaidAt', { date: fmt.dateTime(refund.paidAt) }) : null,
+        refund.status === HOLD_REFUND_STATUS.SCHEDULED
+          ? refund.releaseAt
+            ? tInv('refundScheduledAt', { date: fmt.dateTime(refund.releaseAt) })
+            : tInv('refundScheduledReview')
+          : null,
         refund.bankReference ? tInv('refundRef', { reference: refund.bankReference }) : null,
         refund.accountHint ? tInv('refundAccount', { hint: refund.accountHint }) : null,
         needsAccount ? tInv('refundNeedsAccount') : null,
@@ -486,6 +492,7 @@ function ClosedInvoice({
               label={dl('feeLine', line.key)}
               sub={subText || null}
               value={fmt.money(line.amount)}
+              includedServiceFee={line.includedServiceFee ?? null}
             />
           );
         })}
@@ -592,19 +599,25 @@ function InvoiceRow({
   sub = null,
   value,
   discount = false,
+  includedServiceFee = null,
 }: {
   label: string;
   sub?: string | null;
   value: string;
   discount?: boolean;
+  /** Dòng `IV` đã gộp phí thu hộ - ⓘ tách hai số. */
+  includedServiceFee?: IncludedInsuranceServiceFee | null;
 }) {
   const colors = useColors();
   return (
     <XStack ai="center" jc="space-between" gap={ROW_GAP}>
       <YStack f={1} minWidth={0} gap={space.xs}>
-        <Text col={colors.textMuted} fos={fontSize.body}>
-          {label}
-        </Text>
+        <XStack ai="center" gap={space.xs}>
+          <Text col={colors.textMuted} fos={fontSize.body}>
+            {label}
+          </Text>
+          {includedServiceFee ? <InsuranceFeeHint fee={includedServiceFee} /> : null}
+        </XStack>
         {sub ? (
           <Text col={colors.placeholder} fos={fontSize.bodySm}>
             {sub}

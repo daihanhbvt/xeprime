@@ -11,6 +11,7 @@ import { SelectField } from '@/components/ui/SelectField';
 import { useDomainLabel } from '@/i18n/domain';
 import { space } from '@/theme/tokens';
 import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
+import { useCatalogSpecLock, useSpecFieldLock } from '../hooks/use-vehicle-data';
 
 /**
  * Ô PHÂN LOẠI xe — bản native của `VehicleClassificationFields` bên web.
@@ -51,6 +52,16 @@ export function VehicleClassificationFields({
   // Khoá CHỈ khi giá trị đã khớp mẫu: xe cũ lưu lệch (VF 5 mà ghi 4 chỗ) vẫn phải sửa lại được.
   const seatLocked =
     Boolean(spec.model) && spec.seats.kind === 'fixed' && seatCount === spec.seats.value;
+  // Khoá theo xe chuẩn đang chọn hoặc theo dòng một cấu hình; bút trong ô mở lại (ADR 0102).
+  const tCatalog = useTranslations('Vehicles.form.catalog');
+  const seatLock = useCatalogSpecLock(control, vehicleType, 'seatCount', { modelLocked: seatLocked });
+  const toFieldLock = useSpecFieldLock();
+  const seatLockActive = seatLock.locked && !disabled && seatCount != null;
+  const seatLockHelp = seatLock.fromData
+    ? tCatalog('specLocked')
+    : seatLock.locked && spec.model
+      ? t('specFromModel', { model: spec.model.label })
+      : undefined;
 
   const categoryOptions = useMemo(
     () =>
@@ -79,7 +90,7 @@ export function VehicleClassificationFields({
         chỉ chọn trong đó; mẫu chưa khai ⇒ nhập tự do.
       */}
       {policy.seatCount !== 'hidden' ? (
-        spec.model && spec.seats.kind === 'choice' ? (
+        !seatLockActive && spec.model && spec.seats.kind === 'choice' ? (
           <SeatChoiceField
             control={control}
             label={t('seatCount')}
@@ -101,10 +112,9 @@ export function VehicleClassificationFields({
             placeholder={t('seatPlaceholder')}
             min={1}
             max={64}
-            editable={!disabled && !seatLocked}
-            {...(seatLocked && spec.model
-              ? { hint: t('specFromModel', { model: spec.model.label }) }
-              : {})}
+            editable={!disabled}
+            {...(seatLockActive && seatLockHelp ? { hint: seatLockHelp } : {})}
+            lock={toFieldLock(seatLock, t('seatCount'), seatLockActive)}
           />
         )
       ) : null}

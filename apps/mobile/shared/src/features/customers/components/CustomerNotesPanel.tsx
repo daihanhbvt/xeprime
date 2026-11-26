@@ -55,10 +55,16 @@ export function CustomerNotesPanel({
   customerId,
   canManage,
   disabled,
+  addOnly = false,
+  onAdded,
 }: {
   customerId: string;
   canManage: boolean;
   disabled?: boolean;
+  /** Chỉ hiện form thêm (tấm "Thêm ghi chú"): không danh sách, không phân trang. */
+  addOnly?: boolean;
+  /** Gọi sau khi thêm xong (tấm tự đóng). */
+  onAdded?: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Customers');
@@ -69,7 +75,7 @@ export function CustomerNotesPanel({
   const toast = useAppToast();
 
   const [page, setPage] = useState(FIRST_PAGE);
-  const { data, isLoading, isError, error, refetch } = useCustomerNotes(customerId, page);
+  const { data, isLoading, isError, error, refetch } = useCustomerNotes(customerId, page, !addOnly);
   const add = useAddCustomerNote();
   const remove = useDeleteCustomerNote();
   const [removing, setRemoving] = useState<CustomerNote | null>(null);
@@ -100,13 +106,14 @@ export function CustomerNotesPanel({
           toast.showSuccess(t('notes.added'));
           reset(EMPTY);
           setPage(FIRST_PAGE);
+          onAdded?.();
         },
         onError: (err) => toast.showError(errorMessage(err)),
       },
     );
   });
 
-  const items = data?.items ?? [];
+  const items = addOnly ? [] : (data?.items ?? []);
   const meta = data?.meta;
 
   return (
@@ -126,7 +133,7 @@ export function CustomerNotesPanel({
               name="body"
               label={t('notes.body')}
               required
-              multiline
+              multiline scrollable
               rows={3}
               maxLength={TENANT_CUSTOMER_FIELD_MAX.NOTE_BODY}
               placeholder={t('notes.bodyPlaceholder')}
@@ -134,7 +141,6 @@ export function CustomerNotesPanel({
             />
             <Button
               label={t('notes.add')}
-              icon="add-outline"
               loading={add.isPending}
               onPress={() => void submit()}
             />
@@ -142,13 +148,13 @@ export function CustomerNotesPanel({
         </Card>
       ) : null}
 
-      {isLoading && !data ? <SkeletonText lines={4} /> : null}
+      {!addOnly && isLoading && !data ? <SkeletonText lines={4} /> : null}
 
-      {isError && !data ? (
+      {!addOnly && isError && !data ? (
         <ScreenError error={error} title={t('notes.errorTitle')} onRetry={() => void refetch()} />
       ) : null}
 
-      {!isLoading && !isError && items.length === 0 ? (
+      {!addOnly && !isLoading && !isError && items.length === 0 ? (
         <ScreenMessage icon="document-text-outline" title={t('notes.emptyTitle')} />
       ) : null}
 

@@ -89,3 +89,25 @@ export function useErrorMessage(): (error: unknown) => string {
     [t, waitDuration],
   );
 }
+
+/**
+ * MÃ lỗi (không có đối tượng lỗi) → câu tiếng người - bản native của web `useErrorCodeMessage`. Dùng
+ * khi giao diện tự biết sự cố mà không có response, vd. màn quên mật khẩu mất mã đã xác minh nên nói
+ * như `OTP_EXPIRED`. Mã lạ rơi về câu chung.
+ */
+export function useErrorCodeMessage(): (code: string | null | undefined) => string {
+  const t = useTranslations('Errors');
+
+  return useCallback(
+    (code: string | null | undefined) => {
+      if (code) {
+        const appKey = `appCode.${code}` as `appCode.${AppErrorCodeKey}`;
+        if (t.has(appKey)) return t(appKey);
+        const key = `code.${code}` as `code.${ErrorCodeKey}`;
+        if (t.has(key)) return t(key);
+      }
+      return t('fallback');
+    },
+    [t],
+  );
+}

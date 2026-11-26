@@ -1,3 +1,4 @@
+import { SHOP_ONBOARDING_STATE } from './shop-onboarding';
 /**
  * "Hồ sơ gian hàng đã đủ để gửi duyệt chưa" — MỘT định nghĩa cho cả hai phía.
  *
@@ -231,4 +232,36 @@ export function missingPackageShopRegistrationFields(
   return missingPackageShopListingRequirements(input).filter(
     (key) => key !== PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO,
   );
+}
+
+/** Phần hồ sơ gian hàng (`GET /tenants/current/shop`) mà cổng đăng xe cần đọc ở client. */
+export interface PackageShopListingSource {
+  name?: string | null;
+  onboardingState?: string | null;
+  defaultBranch?: { provinceCode?: string | null; address?: string | null } | null;
+  profile?: { logoUrl?: string | null } | null;
+}
+
+/**
+ * Mục hồ sơ gian hàng còn thiếu để GỬI DUYỆT xe - chỉ cho gian hàng tuyến gói (ADR 0040 điều 7),
+ * `null` = không áp (chưa tải hồ sơ hoặc tuyến hoa hồng). MỘT bản cho web và app native.
+ *
+ * SĐT liên hệ server đọc ở chi nhánh mặc định; client không có trường đó nên KHÔNG đoán (coi là có),
+ * server vẫn là cổng cuối.
+ */
+export function packageShopListingGapsOf(
+  shop: PackageShopListingSource | null | undefined,
+): PackageShopListingRequirement[] | null {
+  if (!shop) return null;
+  const packageTrack =
+    shop.onboardingState === SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE ||
+    shop.onboardingState === SHOP_ONBOARDING_STATE.PACKAGE_PENDING;
+  if (!packageTrack) return null;
+  return missingPackageShopListingRequirements({
+    displayName: shop.name ?? null,
+    contactPhone: 'n/a',
+    provinceCode: shop.defaultBranch?.provinceCode ?? null,
+    addressLine: shop.defaultBranch?.address ?? null,
+    logoUrl: shop.profile?.logoUrl ?? null,
+  });
 }

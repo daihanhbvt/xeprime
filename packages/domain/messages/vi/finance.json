@@ -415,7 +415,9 @@
       "businessInfoLabel": "Giải thích về doanh thu và chi phí",
       "businessNote": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ - chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
       "cashInfoLabel": "Giải thích về dòng tiền ròng",
-      "cashNote": "Tiền vào trừ tiền ra của mọi phiếu đã duyệt, gồm cả tiền cọc thu và hoàn - đây là số tiền thực sự đi qua tay trong kỳ."
+      "cashNote": "Tiền vào trừ tiền ra của mọi phiếu đã duyệt, gồm cả tiền cọc thu và hoàn - đây là số tiền thực sự đi qua tay trong kỳ.",
+      "profitMonth": "Lợi nhuận tháng {month}",
+      "netCashShort": "Ròng trong kỳ"
     },
     "chart": {
       "title": "Dòng tiền & Lợi nhuận theo thời gian",
@@ -435,7 +437,8 @@
       "yAxisUnit": "Đơn vị: triệu đồng",
       "legend": "Chú giải biểu đồ",
       "weekRange": "{from} - {to}",
-      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc."
+      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc.",
+      "titleShort": "Dòng tiền & Lợi nhuận"
     },
     "categories": {
       "incomeTitle": "Cơ cấu doanh thu",
@@ -512,7 +515,15 @@
         "vehicles": "Theo xe",
         "customers": "Theo khách"
       },
-      "sortValue": "Sắp xếp: {label}"
+      "sortValue": "Sắp xếp: {label}",
+      "top": {
+        "vehicles": "Top {count} theo lợi nhuận",
+        "customers": "Top {count} theo doanh thu"
+      }
+    },
+    "periodSheet": {
+      "title": "Chọn kỳ",
+      "custom": "Khoảng ngày tự chọn"
     }
   },
   "entity": {
@@ -582,7 +593,8 @@
     },
     "ratePair": "GTGT {vat, number}% + TNCN {pit, number}%",
     "notSplit": "Dòng cũ - không tách",
-    "monthValue": "Tháng {month}"
+    "monthValue": "Tháng {month}",
+    "periodShortYear": "Tháng {month}/{year}"
   },
   "history": {
     "page": {

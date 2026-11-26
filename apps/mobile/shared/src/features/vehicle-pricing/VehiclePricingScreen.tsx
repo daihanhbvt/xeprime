@@ -14,6 +14,7 @@ import {
   POLICY_SOURCE,
   isVehicleServiceTypeAllowed,
   SERVICE_TYPE,
+  VEHICLE_TYPE,
   SERVICE_TYPE_VALUES,
   type ServiceType,
   STATUS_COLOR,
@@ -71,6 +72,8 @@ import {
   type PolicyBlock,
 } from '@/features/rental-policies/components/PolicySections';
 import { formToSaveInput, policyToForm } from '@/features/rental-policies/form';
+import { InsuranceModeBlock } from '@/features/rental-policies/components/InsuranceModeBlock';
+import { useVehicleInsuranceStatus } from '@/features/vehicle-documents/hooks/use-documents';
 import {
   vehiclePricingFormSchema,
   type VehiclePricingFormValues,
@@ -123,6 +126,7 @@ const POLICY_FIELDS: ReadonlySet<string> = new Set([
   'overtimeFeePerHour',
   'overtimeGraceMinutes',
   'overtimeRoundingMinutes',
+  'insuranceMode',
 ]);
 
 export function shouldSendPolicy({
@@ -336,6 +340,13 @@ function VehiclePricingForm({
   const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
   const save = useSaveVehiclePricing(vehicleId);
+  /*
+   * Bảo hiểm vật chất xe Bắt buộc/Tuỳ chọn (ADR 0091 điều 1, web `PolicyPane`) - chỉ ô tô, chỉ khi
+   * nền tảng đang bán theo bậc. Theo chính sách gian hàng thì khoá như mọi ô khác của bộ chính sách.
+   */
+  const isCarVehicle = vehicle.vehicleType === VEHICLE_TYPE.CAR;
+  const insuranceStatus = useVehicleInsuranceStatus(vehicleId, isCarVehicle);
+  const insuranceApplies = isCarVehicle && insuranceStatus.data?.applies === true;
 
   const overriding = pricing.source === POLICY_SOURCE.VEHICLE;
   // Bật form ghi đè TRƯỚC khi lưu lần đầu — state cục bộ, chỉ commit khi bấm Lưu.
@@ -653,7 +664,10 @@ function VehiclePricingForm({
             Web `ServicesPane`: hàng "Nhận chuyến tự động" (công tắc, năng lực tài xế, luật) nằm NGAY
             dưới công tắc dịch vụ, trước thẻ giá - chỉ khi dịch vụ của tab đang bật.
           */}
-          {servicesPane && (services as readonly string[]).includes(serviceTab) ? (
+          {/* Có tài xế không tự nhận (19/11/2026, web PR #338) - chỉ tab tự lái có công tắc. */}
+          {servicesPane &&
+          serviceTab === SERVICE_TYPE.SELF_DRIVE &&
+          (services as readonly string[]).includes(serviceTab) ? (
             <AutoAcceptBody
               vehicleId={vehicleId}
               serviceType={serviceTab}
@@ -851,9 +865,8 @@ function VehiclePricingForm({
                   {servicesPane ? tServices('price.title') : t('withDriver.title')}
                 </SectionHeader>
                 {/* Web `ServicesPane` (`!isManage`): cảnh báo giá tạm tính NGAY trong thẻ giá. */}
-                {servicesPane && customerScope ? (
-                  <Callout tone="warning">{tSection('withDriverEstimateHint')}</Callout>
-                ) : null}
+                {/* Web `WithDriverPriceReminder` (20/11/2026): giá có tài xế tuỳ chọn - nhắc khách đang thấy giá nào. */}
+                {servicesPane ? <WithDriverPriceReminder control={control} /> : null}
                 <MoneyField
                   control={control}
                   name="withDriverDailyPrice"
@@ -953,6 +966,17 @@ function VehiclePricingForm({
                   numbered={false}
                   legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
                   blocks={OWNER_POLICY_BLOCKS}
+                  {...(insuranceApplies
+                    ? {
+                        afterRules: (
+                          <InsuranceModeBlock
+                            control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
+                            disabled={!canEdit || save.isPending || !editMode}
+                            vehicle={{ vehicleId, gaps: insuranceStatus.data?.gaps ?? [] }}
+                          />
+                        ),
+                      }
+                    : {})}
                 />
               </YStack>
             </Card>
@@ -966,6 +990,17 @@ function VehiclePricingForm({
                 disabled={!canEdit || save.isPending}
                 numbered={false}
                 legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
+                {...(insuranceApplies
+                  ? {
+                      afterRules: (
+                        <InsuranceModeBlock
+                          control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
+                          disabled={!canEdit || save.isPending}
+                          vehicle={{ vehicleId, gaps: insuranceStatus.data?.gaps ?? [] }}
+                        />
+                      ),
+                    }
+                  : {})}
                 {...(policyBlocks
                   ? { blocks: policyBlocks }
                   : policyPane
@@ -1431,4 +1466,28 @@ function CalendarPriceLink({ href }: { href: Href }) {
       </Text>
     </YStack>
   );
+}
+
+/**
+ * Nhắc chủ xe khách đang thấy giá nào cho chuyến có tài xế - bản native của web
+ * `WithDriverPriceReminder` (ServicesPane, 20/11/2026). Giá có tài xế tuỳ chọn: thiếu giá nội thành
+ * thì khách thấy giá thuê tự lái kèm "chưa gồm tài xế".
+ */
+function WithDriverPriceReminder({ control }: { control: Control<VehiclePricingFormValues> }) {
+  const t = useTranslations('Vehicles.pricing.withDriver.reminder');
+  const fmt = useAppFormat();
+  const [daily, interCity, oneWay, weekday] = useWatch({
+    control,
+    name: ['withDriverDailyPrice', 'withDriverInterCityPrice', 'withDriverOneWayPrice', 'weekdayPrice'],
+  });
+  const has = (value: number | null | undefined) => value != null && value > 0;
+  if (!has(daily)) {
+    return (
+      <Callout tone="warning" title={t('missingTitle')}>
+        {has(weekday) ? t('missingBody', { price: fmt.money(String(weekday)) }) : t('missingNoPriceBody')}
+      </Callout>
+    );
+  }
+  if (!has(interCity) || !has(oneWay)) return <Callout tone="info">{t('partial')}</Callout>;
+  return <Callout tone="success">{t('complete')}</Callout>;
 }

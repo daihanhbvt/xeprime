@@ -1,3 +1,4 @@
+import { dismissKeyboardFirst } from '@/lib/dismiss-keyboard-first';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { memo, useCallback, useMemo, useState } from 'react';
 import {
@@ -176,7 +177,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
         Tách ra thì chạm vào tấm trượt không bao giờ tới lớp phủ, mà cũng chẳng có gì chặn cuộn.
       */}
       <YStack f={1}>
-        <Pressable style={appStyles.scrim} onPress={onClose} />
+        <Pressable style={appStyles.scrim} onPress={dismissKeyboardFirst(onClose)} />
         <YStack style={modalColumn}>
           <YStack
             h={height * SHEET_RATIO}
