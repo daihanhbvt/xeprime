@@ -95,6 +95,14 @@ vi.mock('../api', async (importOriginal) => {
     },
     fetchDashboardPreviousFinanceSummary: () => Promise.resolve(state.previous),
     fetchDashboardFinanceSeries: () => Promise.resolve({ granularity: 'day', buckets: [] }),
+    fetchDashboardFinanceBySource: () =>
+      Promise.resolve({
+        total: '0',
+        marketplaceAmount: '0',
+        directAmount: '0',
+        unlinkedAmount: '0',
+        items: [],
+      }),
     fetchDashboardTodayReceipts: () => {
       state.receiptCalls += 1;
       return Promise.resolve({

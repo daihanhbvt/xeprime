@@ -115,6 +115,11 @@ export interface FinanceOverviewFilters extends FinancePeriodFilters {
   customerSort?: string;
   customerPage?: number;
   customerLimit?: number;
+  /**
+   * Góc nhìn theo nguồn doanh thu (ADR 0110) - `REVENUE_SOURCE_VIEW`; trống = mọi nguồn. Chỉ đổi
+   * phần nhấn trên biểu đồ và danh sách nguồn, không gửi xuống API.
+   */
+  revenueSource?: string;
 }
 
 /**

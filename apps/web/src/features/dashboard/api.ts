@@ -1,4 +1,5 @@
 import {
+  fetchFinanceBySource,
   fetchFinanceSeries,
   fetchFinanceSummary,
   fetchReceipts,
@@ -6,7 +7,13 @@ import {
   overviewRangeParams,
   type ReceiptListResult,
 } from '@/features/finance/api';
-import type { FinanceSeries, FinancePeriodFilters, FinanceSummary, ReceiptFilters } from '@/features/finance/types';
+import type {
+  FinanceSeries,
+  FinancePeriodFilters,
+  FinanceSourceBreakdown,
+  FinanceSummary,
+  ReceiptFilters,
+} from '@/features/finance/types';
 import { apiGet, type QueryParams } from '@/services/api-client';
 import { DAY_PARAM_FORMAT, buildPeriodRange, nowInAppTz } from '@/lib/datetime';
 import { FINANCE_GRANULARITY } from '@xeprime/types';
@@ -102,6 +109,13 @@ export const fetchDashboardPreviousFinanceSummary = (branchId?: string): Promise
 export const fetchDashboardFinanceSeries = (branchId?: string): Promise<FinanceSeries> =>
   fetchFinanceSeries(dashboardRevenueSeriesFilters(branchId));
 
+/**
+ * Doanh thu theo nguồn đơn (ADR 0110) của CÙNG cửa sổ với biểu đồ thu chi - số chuyến và tỷ trọng
+ * sàn / tự khai thác của khối "Thu chi 30 ngày".
+ */
+export const fetchDashboardFinanceBySource = (branchId?: string): Promise<FinanceSourceBreakdown> =>
+  fetchFinanceBySource(dashboardRevenueSeriesFilters(branchId));
+
 /** Bộ lọc của panel "Thu Chi hôm nay" — mọi trạng thái, để phiếu chờ duyệt cũng nhìn thấy được. */
 export const dashboardTodayReceiptFilters = (branchId?: string): ReceiptFilters => ({
   ...dashboardTodayRange(),
@@ -131,6 +145,10 @@ export const dashboardFinanceSeriesParams = (branchId?: string): QueryParams => 
   const filters = dashboardRevenueSeriesFilters(branchId);
   return { ...overviewRangeParams(filters), granularity: filters.granularity ?? null };
 };
+
+/** Cùng khoá với `useFinanceBySource` - màn Tổng quan doanh thu cùng kỳ đọc trúng cache này. */
+export const dashboardFinanceBySourceParams = (branchId?: string): QueryParams =>
+  overviewRangeParams(dashboardRevenueSeriesFilters(branchId));
 
 export const dashboardTodayReceiptParams = (branchId?: string): QueryParams =>
   filtersToParams(dashboardTodayReceiptFilters(branchId));

@@ -15,7 +15,7 @@ import {
   PERMISSION,
   STATUS_COLOR,
   type BookingStatus,
-  type HandoverPrepItem,
+  type HandoverPrepManualItem,
   type HandoverType,
   type StatusColor,
 } from '@xeprime/types';
@@ -197,7 +197,7 @@ export function HandoverPrepCard() {
   const prep = booking.handoverPrep;
   if (!prep) return null;
 
-  const toggle = (item: HandoverPrepItem, checked: boolean) => {
+  const toggle = (item: HandoverPrepManualItem, checked: boolean) => {
     if (setCheck.isPending) return;
     setCheck.mutate({ item, checked }, { onError: (err) => message.error(errorMessage(err)) });
   };
