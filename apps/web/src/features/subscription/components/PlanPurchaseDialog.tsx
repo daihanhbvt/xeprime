@@ -504,7 +504,7 @@ function ConfirmStep({
         Đây là lần duy nhất gian hàng trả tiền cho XePrime, và quy chế sàn là văn bản quy định
         phí dịch vụ với thứ tự hiển thị mà họ đang mua.
       */}
-      <LegalConsentNote place="subscription" className={styles.consent} />
+      <LegalConsentNote place="packagePurchase" className={styles.consent} />
     </>
   );
 }

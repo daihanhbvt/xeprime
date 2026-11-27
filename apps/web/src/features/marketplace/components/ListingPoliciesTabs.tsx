@@ -13,6 +13,8 @@ import {
   requiredIdentityDocuments,
   serviceRequiresDriverLicence,
 } from '@xeprime/types';
+import { LEGAL_DOC } from '@/constants/legal';
+import { LegalDocLink } from '@/features/legal/components/LegalDocLink';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
@@ -352,10 +354,22 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
             <span className={styles.bullet} />
             <span>{tp('cancellation.release')}</span>
           </div>
+          {/*
+            Hậu quả khi huỷ muộn phải nằm NGAY ở đây, trước khi khách gửi yêu cầu (thông tin bắt
+            buộc trước giao kết) — không chỉ nằm trong văn bản đầy đủ.
+          */}
+          <div className={styles.ruleItem}>
+            <span className={styles.bullet} />
+            <span>{tp.rich('cancellation.late', { strong })}</span>
+          </div>
           <div className={styles.noteBox}>
             <span aria-hidden="true">🛡️ </span>
             {tp('cancellation.protection')}
           </div>
+          {/* Toàn văn mở trong hộp xem nhanh — khách đang ở trang xe, không đẩy họ sang trang khác. */}
+          <LegalDocLink doc={LEGAL_DOC.CANCELLATION} className={styles.policyLink}>
+            {tp('cancellation.viewFull')}
+          </LegalDocLink>
         </div>
       </div>
     </section>

@@ -141,6 +141,23 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Lối xem toàn văn chính sách huỷ — mở hộp xem nhanh, không rời trang xe. */
+.policyLink {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+  color: var(--xp-color-primary-active);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.policyLink:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
 .subSection {
   display: flex;
   flex-direction: column;

@@ -159,7 +159,7 @@ export function BookingReviewStep({
             <CheckboxField control={control} name="acceptedTerms">
               <LegalConsentNote
                 as="span"
-                place={agreementCoversHostTerms ? 'bookingCheckHost' : 'bookingCheck'}
+                place={agreementCoversHostTerms ? 'bookingAgreeHost' : 'bookingAgree'}
                 className={styles.agreement}
               />
             </CheckboxField>

@@ -587,8 +587,9 @@ describe('RequestBookingModal - luồng đặt xe', () => {
         name: /Tôi đã đọc và đồng ý/,
       }) as HTMLInputElement;
       expect(box.checked).toBe(false);
-      expect(screen.getByRole('link', { name: 'Chính sách huỷ & hoàn tiền' })).toBeTruthy();
-      expect(screen.getByRole('link', { name: 'Chính sách bảo mật' })).toBeTruthy();
+      // Hai liên kết: Điều khoản (viện dẫn cả bộ văn bản) + Chính sách huỷ.
+      expect(screen.getByRole('link', { name: 'Điều khoản sử dụng' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Chính sách huỷ chuyến' })).toBeTruthy();
 
       // Bằng lái soát NGAY trên màn Xem lại: nút gửi mở khoá khi bằng đã nạp xong và hợp lệ.
       const send = screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }) as HTMLButtonElement;

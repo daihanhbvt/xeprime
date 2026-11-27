@@ -5,6 +5,8 @@ import styles from './LegalDocPager.module.css';
 
 export interface LegalDocPagerProps {
   readonly current: LegalDoc;
+  /** Thứ tự đọc của bề mặt này (WebView của app khách bỏ văn bản chỉ-web). */
+  readonly docs?: readonly LegalDoc[];
 }
 
 /**
@@ -12,7 +14,7 @@ export interface LegalDocPagerProps {
  *
  * **Vì sao thay cho danh sách "văn bản liên quan".** Bốn văn bản là MỘT BỘ đọc theo thứ tự —
  * điều khoản → bảo mật → quy chế sàn → huỷ/hoàn tiền. Người đọc hết một bản thường muốn đọc
- * bản kế, và một dải bốn liên kết bằng nhau bắt họ tự nhớ mình vừa đọc cái nào. Cặp trước/sau
+ * bản kế, và một dải liên kết bằng nhau bắt họ tự nhớ mình vừa đọc cái nào. Cặp trước/sau
  * trả lời đúng câu hỏi đó, và nó cũng là thứ chân trang KHÔNG làm được (chân trang không biết
  * người ta đang đọc gì).
  *
@@ -22,12 +24,11 @@ export interface LegalDocPagerProps {
  * Văn bản đầu không có "trước", văn bản cuối không có "sau": ô tương ứng bỏ trống chứ không
  * render một liên kết chết hay một nút mờ bấm không được.
  */
-export function LegalDocPager({ current }: LegalDocPagerProps) {
+export function LegalDocPager({ current, docs = LEGAL_DOC_VALUES }: LegalDocPagerProps) {
   const t = useTranslations('Legal');
-  const index = LEGAL_DOC_VALUES.indexOf(current);
-  const prev = index > 0 ? LEGAL_DOC_VALUES[index - 1] : undefined;
-  const next =
-    index >= 0 && index < LEGAL_DOC_VALUES.length - 1 ? LEGAL_DOC_VALUES[index + 1] : undefined;
+  const index = docs.indexOf(current);
+  const prev = index > 0 ? docs[index - 1] : undefined;
+  const next = index >= 0 && index < docs.length - 1 ? docs[index + 1] : undefined;
 
   if (!prev && !next) return null;
 

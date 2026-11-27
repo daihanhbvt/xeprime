@@ -1,0 +1,292 @@
+/*
+ * Thân văn bản pháp lý — dùng chung cho trang `/legal/<doc>` và hộp xem nhanh.
+ *
+ * Văn bản pháp lý là thứ người ta ĐỌC HẾT chứ không lướt: cột chữ ~68 ký tự, dòng thưa (1.8),
+ * cỡ chữ 16px chứ không phải 14px của giao diện. Biến thể `compact` (hộp xem nhanh) hạ một bậc
+ * vì khung hộp đã hẹp hơn trang.
+ */
+/*
+ * Cột chữ 68 ký tự áp cho TỪNG khối chữ, không cho cả thân văn bản: bảng (ma trận huỷ, ai nhận
+ * khoản nào) được rộng hết cột bài để bốn cột không bị bóp thành ô hẹp xuống dòng liên tục.
+ */
+.body {
+  min-width: 0;
+}
+
+.heading,
+.paragraph,
+.itemList {
+  max-width: 68ch;
+}
+
+.section {
+  padding-top: 30px;
+  /* Neo cuộn không được chui xuống dưới header dính. */
+  scroll-margin-top: calc(var(--xp-market-header-height) + 20px);
+}
+
+/* Mục vừa được nhảy tới từ mục lục sáng lên — không có nó, một cú bấm mục lục trông hệt như
+   trang không phản ứng gì. */
+.section:target .heading {
+  color: var(--xp-color-primary-active);
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  color: var(--xp-color-text);
+}
+
+/*
+ * Neo chia sẻ. Ẩn bằng `opacity` chứ không phải `display: none`: một phần tử `display: none`
+ * biến mất khỏi luồng Tab, và người dùng bàn phím sẽ không bao giờ tới được nó.
+ */
+.anchor {
+  opacity: 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--xp-color-text-tertiary);
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.section:hover .anchor,
+.anchor:focus-visible {
+  opacity: 1;
+}
+
+.anchor:hover {
+  color: var(--xp-color-primary);
+}
+
+.anchor:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* Trên màn cảm ứng không có "rê chuột": neo hiện mờ sẵn thay vì không bao giờ xuất hiện. */
+@media (hover: none) {
+  .anchor {
+    opacity: 0.45;
+  }
+}
+
+.paragraph {
+  margin-top: 10px;
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--xp-color-text-secondary);
+}
+
+/*
+ * Các khoản trong một điều. Dấu đầu dòng là một chấm VÀNG nhỏ vẽ bằng `::before`: `globals.css`
+ * đã tắt list-style toàn cục, và một chấm màu thương hiệu tách "khoản" khỏi "đoạn văn" mà không
+ * cần thụt lề sâu.
+ */
+.itemList {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  position: relative;
+  padding-left: 20px;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  /* Canh chấm theo DÒNG ĐẦU của khoản, không theo giữa cả khối nhiều dòng. */
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+}
+
+/* ─── Bảng ──────────────────────────────────────────────────────────────────── */
+.tableWrap {
+  margin-top: 14px;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* Tên bảng = tên mục ngay phía trên; chỉ để trình đọc màn hình gọi đúng bảng. */
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.th {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: bottom;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  background: var(--xp-color-bg-muted);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.rowHead,
+.td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.rowHead {
+  width: 28%;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.td {
+  color: var(--xp-color-text-secondary);
+}
+
+.tr:last-child .rowHead,
+.tr:last-child .td {
+  border-bottom: 0;
+}
+
+/*
+ * Dưới 640px: mỗi dòng thành một thẻ. Cột đầu là tiêu đề thẻ; mỗi ô sau hiện nhãn cột ở trên
+ * (`data-label`), vì hàng tiêu đề bảng bị ẩn.
+ */
+@media (max-width: 640px) {
+  .tableWrap {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .table,
+  .table tbody,
+  .tr,
+  .rowHead,
+  .td {
+    display: block;
+    width: 100%;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tr {
+    margin-bottom: 10px;
+    border: 1px solid var(--xp-color-border-subtle);
+    border-radius: var(--xp-border-radius-card);
+    overflow: hidden;
+  }
+
+  .rowHead {
+    background: var(--xp-color-bg-muted);
+  }
+
+  .td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--xp-color-text-tertiary);
+  }
+
+  .tr .rowHead,
+  .tr .td {
+    border-bottom: 1px solid var(--xp-color-border-subtle);
+  }
+
+  .tr .td:last-child {
+    border-bottom: 0;
+  }
+
+  .paragraph {
+    font-size: 15.5px;
+  }
+}
+
+/* ─── Hộp xem nhanh ─────────────────────────────────────────────────────────── */
+.compact {
+  max-width: none;
+}
+
+.compact .section {
+  padding-top: 22px;
+  scroll-margin-top: 0;
+}
+
+.compact .section:first-child {
+  padding-top: 0;
+}
+
+.compact .heading {
+  font-size: 16px;
+}
+
+.compact .paragraph {
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+.compact .item {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* ─── Bản in ────────────────────────────────────────────────────────────────── */
+@media print {
+  .anchor {
+    display: none !important;
+  }
+
+  .body {
+    max-width: none;
+  }
+
+  .section {
+    padding-top: 18px;
+    /* Không tách tiêu đề khỏi đoạn của nó sang trang sau. */
+    break-inside: avoid;
+  }
+
+  .paragraph,
+  .item,
+  .td {
+    font-size: 11.5pt;
+    line-height: 1.6;
+    color: var(--xp-color-text);
+  }
+}

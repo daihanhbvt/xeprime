@@ -69,7 +69,6 @@ import { checkAvailability, submitBookingRequest } from '../api';
 import { clearBookingDraft, readBookingDraft, saveBookingDraft } from '../booking-draft';
 import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../schema';
 import { BookingPriceSummary } from './BookingPriceSummary';
-import { NearPickupHoldNotice } from './NearPickupHoldNotice';
 import { PromoCodeField } from '@/features/promo-codes/components/PromoCodeField';
 import { usePromoCode } from '@/features/promo-codes/use-promo-code';
 import { useCustomerCostView } from '../hooks/use-customer-cost-view';
@@ -1299,7 +1298,7 @@ export function RequestBookingFlow({
     setStepError(null);
     /*
      * Ô đồng ý của màn Xem lại (design v2) là BẮT BUỘC cho mọi chuyến; khi chủ xe có điều khoản
-     * riêng, CÙNG ô đó phủ luôn điều khoản ấy (`bookingCheckHost`) và server kiểm lại khi xe bắt
+     * riêng, CÙNG ô đó phủ luôn điều khoản ấy (`bookingAgreeHost`) và server kiểm lại khi xe bắt
      * buộc (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`).
      */
     if (!getValues('acceptedTerms')) {
@@ -1624,21 +1623,13 @@ export function RequestBookingFlow({
           deposit={pickupDeposit}
           agreementCoversHostTerms={agreementCoversHostTerms}
           journey={<BookingJourney current="request" hasHoldStage={hasHoldStage} />}
-          costs={
-            <>
-              <BookingPriceSummary {...priceProps} variant="review" promoSlot={promoField} />
-              {/*
-              Đặt sát giờ ⇒ hạn thanh toán ngắn, có thể không có huỷ miễn phí — nói TRƯỚC khi gửi
-              (ADR 0032 điều 5 · ADR 0064). Dài hạn chưa có giờ nhận nên không ước được.
-            */}
-              {watchedService === SERVICE_TYPE.LONG_TERM ? null : (
-                <NearPickupHoldNotice
-                  pickupAt={watchedPickup}
-                  fees={quoteWithPromo?.breakdown.fees}
-                />
-              )}
-            </>
-          }
+          /*
+            Hộp ước tính "đặt sát giờ nhận xe" đã gỡ khỏi màn Xem lại (27/11/2026, người dùng chốt):
+            nó báo cả những chuyến còn gần 2 giờ để thanh toán, và chỉ là ƯỚC TÍNH ở bước chưa thu
+            tiền. Mốc thanh toán và huỷ miễn phí THẬT được công bố ở bước thanh toán, kèm ô xác nhận
+            (`TripAwaitingHoldView`) — đó là chỗ ADR 0032 điều 5 yêu cầu ("trước khi khách trả tiền").
+          */
+          costs={<BookingPriceSummary {...priceProps} variant="review" promoSlot={promoField} />}
           nextStep={nextStep}
           agreementMissing={agreementMissing && !watchedAccepted}
           stepError={stepError}

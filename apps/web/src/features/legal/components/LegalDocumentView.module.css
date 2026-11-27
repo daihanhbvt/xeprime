@@ -3,9 +3,9 @@
  *
  * Ba ràng buộc quyết định bố cục này, theo thứ tự:
  *
- *  1. Văn bản pháp lý là thứ người ta ĐỌC HẾT chứ không lướt — cột chữ giữ ở ~68 ký tự, dòng
- *     thưa (1.8), cỡ chữ 16px chứ không phải 14px của giao diện.
- *  2. Bản điều khoản có 14 mục. Không có mục lục đứng yên thì người đọc mất dấu ngay sau mục
+ *  1. Văn bản pháp lý là thứ người ta ĐỌC HẾT chứ không lướt — kiểu chữ của thân văn bản sống ở
+ *     `LegalDocBody.module.css` (dùng chung với hộp xem nhanh).
+ *  2. Bản điều khoản có 20 mục. Không có mục lục đứng yên thì người đọc mất dấu ngay sau mục
  *     thứ ba, và cách duy nhất quay lại là cuộn ngược hết trang.
  *  3. Trang này được MỜI in ra (`meta.printHint`), nên nó phải ra giấy tử tế — xem khối
  *     `@media print` ở cuối file.
@@ -39,113 +39,6 @@
 .doc {
   min-width: 0;
   padding-top: 24px;
-}
-
-.body {
-  max-width: 68ch;
-}
-
-.section {
-  padding-top: 30px;
-  /* Neo cuộn không được chui xuống dưới header dính. */
-  scroll-margin-top: calc(var(--xp-market-header-height) + 20px);
-}
-
-/* Mục vừa được nhảy tới từ mục lục sáng lên — không có nó, một cú bấm mục lục trông hệt như
-   trang không phản ứng gì. */
-.section:target .heading {
-  color: var(--xp-color-primary-active);
-}
-
-.heading {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: -0.005em;
-  color: var(--xp-color-text);
-}
-
-/*
- * Neo chia sẻ. Ẩn bằng `opacity` chứ không phải `display: none`: một phần tử `display: none`
- * biến mất khỏi luồng Tab, và người dùng bàn phím sẽ không bao giờ tới được nó.
- */
-.anchor {
-  opacity: 0;
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--xp-color-text-tertiary);
-  transition:
-    opacity 0.15s ease,
-    color 0.15s ease;
-}
-
-.section:hover .anchor,
-.anchor:focus-visible {
-  opacity: 1;
-}
-
-.anchor:hover {
-  color: var(--xp-color-primary);
-}
-
-.anchor:focus-visible {
-  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
-  outline-offset: 2px;
-  border-radius: var(--xp-border-radius-sm);
-}
-
-/* Trên màn cảm ứng không có "rê chuột": neo hiện mờ sẵn thay vì không bao giờ xuất hiện. */
-@media (hover: none) {
-  .anchor {
-    opacity: 0.45;
-  }
-}
-
-.paragraph {
-  margin-top: 10px;
-  font-size: 16px;
-  line-height: 1.8;
-  color: var(--xp-color-text-secondary);
-}
-
-/*
- * Các khoản trong một điều.
- *
- * Dấu đầu dòng là một chấm VÀNG nhỏ vẽ bằng `::before`, không phải `list-style` mặc định:
- * `globals.css` đã tắt list-style toàn cục, và một chấm màu thương hiệu làm mắt tách được
- * "khoản" khỏi "đoạn văn" mà không cần thụt lề sâu.
- *
- * Giãn dòng nhỏ hơn đoạn văn (1.7 so với 1.8) vì mỗi khoản là một câu ngắn — giữ 1.8 thì các
- * khoản trôi xa nhau và không còn đọc thành một danh sách.
- */
-.itemList {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.item {
-  position: relative;
-  padding-left: 20px;
-  font-size: 15.5px;
-  line-height: 1.7;
-  color: var(--xp-color-text-secondary);
-}
-
-.item::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  /* Canh chấm theo DÒNG ĐẦU của khoản, không theo giữa cả khối nhiều dòng. */
-  top: 0.62em;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--xp-color-primary);
 }
 
 /*
@@ -194,9 +87,6 @@
   .layout {
     padding: 0 16px 48px;
   }
-  .paragraph {
-    font-size: 15.5px;
-  }
 }
 
 /*
@@ -208,8 +98,7 @@
  */
 @media print {
   .side,
-  .footer,
-  .anchor {
+  .footer {
     display: none !important;
   }
 
@@ -221,22 +110,5 @@
 
   .doc {
     padding-top: 0;
-  }
-
-  .body {
-    max-width: none;
-  }
-
-  .section {
-    padding-top: 18px;
-    /* Không tách tiêu đề khỏi đoạn của nó sang trang sau. */
-    break-inside: avoid;
-  }
-
-  .paragraph,
-  .item {
-    font-size: 11.5pt;
-    line-height: 1.6;
-    color: var(--xp-color-text);
   }
 }

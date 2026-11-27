@@ -13,7 +13,7 @@
       "value": "contact@softrent.vn",
       "note": "For complaints, personal-data requests, and anything that needs documents attached."
     },
-    "lead": "These two channels are how XePrime receives requests.",
+    "lead": "These two channels are how XePrime receives requests. The hotline is staffed 08:00 - 22:00 every day; outside these hours, support requests sent in the app or on the web are still recorded and handled from the next shift.",
     "pendingBadge": "Coming soon",
     "pendingNote": "Official staffed hours will be announced soon. Outside those hours, requests are still logged and handled in the next shift."
   },
@@ -59,6 +59,10 @@
       "title": "My personal data",
       "desc": "What we collect, who we share it with, how long we keep it and how you ask for deletion."
     },
+    "complaints": {
+      "title": "Complaints and disputes",
+      "desc": "Channels, time limits, trip conclusions and what XePrime does not arbitrate."
+    },
     "start": {
       "title": "Start renting out a vehicle",
       "desc": "The two ways to join, the records you need, and the review before a vehicle goes live."
@@ -70,6 +74,10 @@
     "terms": {
       "title": "Terms of service",
       "desc": "The rights and obligations that apply to everyone using XePrime."
+    },
+    "payout": {
+      "title": "Getting paid and the Points wallet",
+      "desc": "When each trip’s money reaches your wallet, and how and how fast you withdraw it to your bank."
     },
     "manage": {
       "title": "Manage vehicles and bookings",

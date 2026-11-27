@@ -70,8 +70,8 @@ export function MarketFooter() {
    * Mục ĐANG XEM: chữ vàng + `aria-current="page"`. Ba mục dịch vụ (`/search?serviceType=…`)
    * không bao giờ sáng — xem `isActivePath`.
    */
-  const linkProps = (href: string) => {
-    const current = isActivePath(pathname, href);
+  const linkProps = (href: string, exact = false) => {
+    const current = exact ? pathname === href : isActivePath(pathname, href);
     return {
       className: cx(styles.link, current && styles.linkActive),
       'aria-current': current ? ('page' as const) : undefined,
@@ -152,7 +152,7 @@ export function MarketFooter() {
                 <ul className={styles.colLinks}>
                   {col.links.map((link) => (
                     <li key={link.key}>
-                      <Link href={link.href} {...linkProps(link.href)}>
+                      <Link href={link.href} {...linkProps(link.href, link.exact)}>
                         {t(link.key)}
                       </Link>
                     </li>
@@ -175,12 +175,19 @@ export function MarketFooter() {
         </div>
 
         <div className={styles.bottom}>
-          <p className={styles.copyright}>
-            {t.rich('copyrightCompany', {
-              year: COPYRIGHT_YEAR,
-              brand: (chunks) => <span className={styles.copyrightBrand}>{chunks}</span>,
-            })}
-          </p>
+          {/*
+            Thông tin đơn vị vận hành ngay dưới bản quyền: luật thương mại điện tử buộc website sàn
+            công khai tên doanh nghiệp, mã số thuế, địa chỉ và kênh liên hệ trên trang chủ.
+          */}
+          <div className={styles.legalInfo}>
+            <p className={styles.copyright}>
+              {t.rich('copyrightCompany', {
+                year: COPYRIGHT_YEAR,
+                brand: (chunks) => <span className={styles.copyrightBrand}>{chunks}</span>,
+              })}
+            </p>
+            <p className={styles.companyInfo}>{t('companyInfo')}</p>
+          </div>
 
           <div className={styles.locales} role="group" aria-label={t('localeLabel')}>
             {SUPPORTED_LOCALES.map((value, index) => (

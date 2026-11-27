@@ -23,12 +23,14 @@
       },
       "legal": {
         "title": "Legal",
-        "terms": "Terms of Service",
-        "privacy": "Privacy Policy",
+        "terms": "Terms of Use",
+        "privacy": "Personal data protection",
         "marketplaceRules": "Marketplace Operating Rules",
         "cancellation": "Cancellation and Refund Policy",
         "cancellationShort": "Cancellation & refund policy",
-        "ownerTax": "Tax policy for owners"
+        "ownerTax": "Tax Policy for Owners",
+        "complaints": "Complaints",
+        "allDocs": "All legal documents"
       }
     },
     "apps": {
@@ -38,7 +40,8 @@
     "copyright": "© {year} XePrime",
     "country": "A car rental platform in Vietnam",
     "copyrightCompany": "© {year} <brand>XePrime</brand>. All rights reserved.",
-    "localeLabel": "Language"
+    "localeLabel": "Language",
+    "companyInfo": "Operated by Softrent Technology Company Limited · Tax code 0402359663 · 133 Trung Luong 11, Hoa Xuan Ward, Da Nang City · Hotline 0352 063 205 · contact@softrent.vn"
   },
   "steps": {
     "title": "Rent a car in 4 steps",

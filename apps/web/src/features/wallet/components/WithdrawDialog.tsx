@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import { BankAccountCard } from '@/features/bank-accounts/components/BankAccountCard';
 import { BankAccountForm } from '@/features/bank-accounts/components/BankAccountForm';
 import { currentBankAccount } from '@/features/bank-accounts/current-account';
@@ -189,6 +190,22 @@ export function WithdrawDialog({
           showIcon
           className={styles.commitment}
           title={t('commitment', { days: summary.data?.maxBusinessDays ?? 2 })}
+          description={t.rich('policyLink', {
+            /*
+             * Tab mới chứ không phải hộp xem nhanh: hộp rút tiền đã là một hộp thoại, chồng thêm một
+             * hộp nữa lên trên là bẫy điều hướng.
+             */
+            policy: (chunks) => (
+              <a
+                href={legalPath.doc(LEGAL_DOC.PAYMENT)}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.policyLink}
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         />
       </ResponsiveDialog>
 

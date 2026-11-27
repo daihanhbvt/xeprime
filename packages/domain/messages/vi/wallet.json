@@ -43,6 +43,7 @@
     "accountEmpty": "Thêm tài khoản nhận tiền",
     "addAccount": "Thêm tài khoản nhận",
     "commitment": "XePrime chuyển trong tối đa {days} ngày làm việc kể từ khi duyệt.",
+    "policyLink": "Điều kiện rút tiền xem tại <policy>Chính sách thanh toán và Ví điểm</policy>.",
     "submit": "Gửi yêu cầu rút",
     "created": "Đã gửi yêu cầu rút. XePrime sẽ chuyển trong thời gian cam kết.",
     "cancelled": "Đã huỷ yêu cầu rút.",

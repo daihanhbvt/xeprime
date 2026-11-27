@@ -188,7 +188,9 @@
         "free": "<strong>Free cancellation:</strong> from the moment your holding payment succeeds, you get back 100% of what you paid if you cancel within {percent}% of the time left until pick-up (at least {minMinutes} minutes, at most {hours} hours, never past pick-up).",
         "hold": "<strong>Reservation window:</strong> once the owner accepts your trip, you have {percent}% of the time left until pick-up to pay the reservation fee (at least {minMinutes} minutes, at most {minutes} minutes).",
         "release": "If the reservation fee isn't paid in full in time, the request closes automatically and the vehicle's dates open up for other renters.",
-        "protection": "Renter protection: if the owner cancels after you have paid the reservation fee, you get back 100% of what you paid."
+        "late": "<strong>Cancelling after the free cancellation period, or not showing up:</strong> the booking fee and the rent paid in advance are not refunded; insurance (if any) is refunded in full.",
+        "protection": "Renter protection: if the owner cancels after you have paid the reservation fee, you get back 100% of what you paid.",
+        "viewFull": "View the full cancellation and refund policy"
       }
     },
     "booking": {

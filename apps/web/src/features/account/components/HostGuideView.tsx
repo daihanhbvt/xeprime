@@ -24,7 +24,13 @@ export function HostGuideView() {
   const t = useTranslations('Account.hostGuide');
   const tLegal = useTranslations('Legal.docs');
   const fmt = useAppFormat();
-  const policyDocs = [LEGAL_DOC.MARKETPLACE_RULES, LEGAL_DOC.OWNER_TAX, LEGAL_DOC.TERMS] as const;
+  const policyDocs = [
+    LEGAL_DOC.MARKETPLACE_RULES,
+    LEGAL_DOC.RENTAL_CONTRACT,
+    LEGAL_DOC.PAYMENT,
+    LEGAL_DOC.OWNER_TAX,
+    LEGAL_DOC.TERMS,
+  ] as const;
 
   return (
     <div className={styles.page}>
