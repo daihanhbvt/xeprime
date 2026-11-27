@@ -48,7 +48,8 @@
       "payoutNote": "Payout note",
       "status": "Status",
       "partner": "Partner connection",
-      "daily": "Daily premium"
+      "daily": "Daily premium",
+      "summary": "Short description"
     },
     "fields": {
       "nameVi": "Name (Vietnamese)",
@@ -74,7 +75,9 @@
       "serviceFeePercent": "% of the premium",
       "agencyCommissionPercent": "Agency commission",
       "dailyAmountCar": "Daily premium - car",
-      "dailyAmountMotorbike": "Daily premium - motorbike"
+      "dailyAmountMotorbike": "Daily premium - motorbike",
+      "summaryVi": "Short description (Vietnamese)",
+      "summaryEn": "Short description (English)"
     },
     "help": {
       "amountEmpty": "Leave empty if not applicable.",
@@ -83,7 +86,9 @@
       "premiumTiersHint": "Premium = vehicle value × the trip-length tier's rate (VAT included), per MIC's M1.11 schedule. Tiers increase in both days and rate; partial days round up to the next tier. Sold with eligible self-drive cars; the owner picks Required or Optional.",
       "serviceFeePercent": "Charged on the premium. A new rate applies to quotes and approvals from save - existing bookings and holds keep their locked amount.",
       "partnerSection": "Product code issued by MIC. The hotline is shown next to the certificate for renters and owners. The URL template starts with https:// and contains '{certCode}' - where the certificate number goes.",
-      "dailyAmount": "Optional for the renter, charged per rental day. Leave blank or 0 to not sell it for that vehicle type. A new rate applies to quotes from save - existing bookings keep their locked amount."
+      "dailyAmount": "Optional for the renter, charged per rental day. Leave blank or 0 to not sell it for that vehicle type. A new rate applies to quotes from save - existing bookings keep their locked amount.",
+      "summary": "One line under the product name in the insurance picker on the vehicle page. Leave empty to join the coverage items.",
+      "coverage": "Each item is one ticked line in the insurance picker, the benefits popup and the /insurance page. Empty items are dropped on save."
     },
     "validation": {
       "required": "Required.",
@@ -98,7 +103,8 @@
       "serviceFeePercent": "Rate from 0 to {max}%, up to 2 decimals.",
       "serviceFeePercentRequired": "The rate must be above 0 when the fee is on.",
       "agencyCommissionPercent": "From 0 to {max}%, at most two decimals",
-      "bands": "The premium table by manufacture year is invalid: each % must be above 0, at most 4 decimals and increase with the tier."
+      "bands": "The premium table by manufacture year is invalid: each % must be above 0, at most 4 decimals and increase with the tier.",
+      "coverageItems": "Add between 1 and {max} items with text."
     },
     "saved": "Saved product {name}.",
     "actions": {
@@ -124,7 +130,9 @@
       "payoutNote": "Note examples",
       "isActive": "What turning it off does",
       "partner": "About the connection fields",
-      "daily": "How the daily premium works"
+      "daily": "How the daily premium works",
+      "summary": "Where the short description shows",
+      "coverage": "How coverage is shown"
     },
     "placeholders": {
       "notApplicable": "Not applicable",
@@ -145,6 +153,12 @@
       "hintLabel": "How the preview is calculated",
       "sampleValue": "Sample vehicle value",
       "invalidTiers": "Fix the premium tiers to see a preview."
+    },
+    "coverage": {
+      "add": "Add item",
+      "remove": "Remove this item",
+      "itemAria": "Coverage item {index}",
+      "itemPlaceholder": "E.g. Collision or overturning during the rental"
     }
   },
   "certificates": {

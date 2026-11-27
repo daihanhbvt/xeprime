@@ -261,7 +261,7 @@
     "title": "Chính sách bảo vệ dữ liệu",
     "badge": "Bảo vệ dữ liệu",
     "heading": "An tâm tối đa cùng XePrime",
-    "intro": "Tóm tắt những gì XePrime làm với dữ liệu của bạn, theo Chính sách bảo mật đang có hiệu lực.",
+    "intro": "Tóm tắt những gì XePrime làm với dữ liệu của bạn, theo Chính sách bảo vệ dữ liệu cá nhân đang có hiệu lực.",
     "points": {
       "location": "Dữ liệu vị trí chỉ dùng để tìm xe gần bạn và tính quãng đường giao xe.",
       "bank": "Thông tin tài khoản ngân hàng chỉ dùng để chuyển trả và hoàn tiền theo đúng quy định.",
@@ -313,7 +313,7 @@
     "warningTitle": "Đây là một yêu cầu, XePrime xử lý thủ công",
     "warningBody": "Sau khi gửi, tài khoản vẫn đăng nhập bình thường cho tới khi XePrime xác nhận và hoàn tất. Bạn rút yêu cầu được trong lúc chờ.",
     "confirmTitle": "Xác nhận gửi yêu cầu xoá tài khoản",
-    "confirmBody": "Khi yêu cầu được chấp nhận, những nội dung sau sẽ được xử lý theo Chính sách bảo mật và nghĩa vụ lưu trữ hiện hành:",
+    "confirmBody": "Khi yêu cầu được chấp nhận, những nội dung sau sẽ được xử lý theo Chính sách bảo vệ dữ liệu cá nhân và nghĩa vụ lưu trữ hiện hành:",
     "items": {
       "profile": "Thông tin cá nhân & hồ sơ người bán",
       "vehicles": "Danh sách xe đã đăng",
@@ -355,7 +355,7 @@
     "successTitle": "Đã ghi nhận",
     "successBody": "Yêu cầu xoá tài khoản của bạn đã được ghi nhận.",
     "whatHeading": "Sau khi yêu cầu được chấp nhận",
-    "whatLead": "Những nhóm dữ liệu sau được xử lý theo Chính sách bảo mật và nghĩa vụ lưu trữ hiện hành:",
+    "whatLead": "Những nhóm dữ liệu sau được xử lý theo Chính sách bảo vệ dữ liệu cá nhân và nghĩa vụ lưu trữ hiện hành:",
     "retentionHeading": "Dữ liệu phải giữ lại",
     "retentionBody": "Hoá đơn, chứng từ thuế và nhật ký giao dịch có thể phải lưu theo thời hạn pháp luật quy định trước khi xoá hẳn. Đây là nghĩa vụ pháp lý, không phải lựa chọn của XePrime.",
     "inAppHeading": "Đang đăng nhập được?",

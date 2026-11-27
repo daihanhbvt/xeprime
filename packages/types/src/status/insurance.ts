@@ -322,6 +322,10 @@ export const INSURANCE_PRODUCT_LIMITS = {
   partnerProductCode: { min: 2, max: 100 },
   name: { min: 2, max: 255 },
   coverage: { min: 5, max: 2000 },
+  /** Một mục phạm vi bảo vệ (một dòng của `coverage*`) - tối đa 10 mục. */
+  coverageItem: { max: 200 },
+  coverageItems: { max: 10 },
+  summary: { max: 255 },
   maxPayoutNote: { max: 255 },
   certificateUrlTemplate: { max: 500 },
   displayOrder: { min: 0, max: 1000 },

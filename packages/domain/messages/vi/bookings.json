@@ -1344,10 +1344,12 @@
     },
     "terms": {
       "title": "Điều khoản",
-      "handover": "Bên B nhận và trả xe đúng thời gian, địa điểm đã thỏa thuận; giữ gìn xe cẩn thận.",
-      "liability": "Bên B chịu trách nhiệm về vi phạm giao thông, hư hỏng, mất mát phát sinh trong thời gian thuê.",
-      "deposit": "Tiền cọc được hoàn lại sau khi trả xe, trừ các khoản phát sinh (nếu có).",
-      "platform": "Hai bên tự thỏa thuận và giải quyết trên tinh thần hợp tác; XePrime chỉ là nền tảng kết nối."
+      "handover": "Bên B nhận và trả xe đúng thời gian, địa điểm đã thoả thuận. Quyền chiếm hữu, sử dụng xe chuyển sang Bên B từ lúc giao xe tới lúc Bên A nhận lại xe, theo biên bản bàn giao.",
+      "liability": "Trong thời gian chiếm hữu xe, Bên B chịu trách nhiệm về vi phạm giao thông (kể cả thông báo phạt nguội đến sau khi trả xe), hư hỏng, mất mát và thiệt hại do xe gây ra, trừ phần được bảo hiểm chi trả.",
+      "deposit": "Tiền cọc và tài sản thế chấp được hoàn lại ngay khi trả xe, sau khi trừ các khoản phát sinh hai bên đã xác nhận.",
+      "idDocs": "Bên A chỉ đối chiếu, không giữ bản gốc thẻ căn cước, căn cước công dân hoặc hộ chiếu của Bên B.",
+      "platform": "XePrime là nền tảng ghi nhận giao dịch, không phải một bên của hợp đồng này.",
+      "general": "Những nội dung chưa ghi trong hợp đồng này, hai bên áp dụng Điều kiện chung hợp đồng thuê xe công bố tại {url}."
     },
     "note": "Ghi chú",
     "signHint": "(Ký, ghi rõ họ tên)"

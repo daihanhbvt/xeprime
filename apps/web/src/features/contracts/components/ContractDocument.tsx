@@ -2,6 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LEGAL_DOC, legalPath } from '@/constants/legal';
+import { ZONE, zoneHref } from '@/zones';
 import type { Contract } from '../types';
 import styles from './ContractDocument.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -31,6 +33,10 @@ export function ContractDocument({ contract }: { contract: Contract }) {
     .filter(Boolean)
     .join(LIST_SEPARATOR);
   const extraCharges = s.pricing.extraCharges ?? [];
+  const generalTermsUrl = zoneHref(ZONE.MARKET, legalPath.doc(LEGAL_DOC.RENTAL_CONTRACT)).replace(
+    /^https?:\/\//,
+    '',
+  );
   const collaterals = s.collaterals ?? [];
 
   return (
@@ -179,7 +185,14 @@ export function ContractDocument({ contract }: { contract: Contract }) {
           <li>{t('terms.handover')}</li>
           <li>{t('terms.liability')}</li>
           <li>{t('terms.deposit')}</li>
+          <li>{t('terms.idDocs')}</li>
           <li>{t('terms.platform')}</li>
+          {/*
+            Viện dẫn Điều kiện chung hợp đồng thuê xe (checklist VB.05): tờ hợp đồng chỉ ghi số liệu
+            của đơn, phần điều khoản đầy đủ nằm ở văn bản công khai. Địa chỉ in dạng đọc được (bỏ
+            giao thức) vì tờ này để in ra giấy.
+          */}
+          <li>{t('terms.general', { url: generalTermsUrl })}</li>
         </ol>
       </Section>
 

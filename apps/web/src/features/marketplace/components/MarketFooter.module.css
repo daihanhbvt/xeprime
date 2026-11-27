@@ -173,6 +173,21 @@
   color: var(--xp-color-primary-bright);
 }
 
+.legalInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 420px;
+}
+
+.companyInfo {
+  margin: 0;
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-sm);
+  line-height: var(--xp-line-height-body);
+}
+
 .locales {
   display: flex;
   align-items: center;

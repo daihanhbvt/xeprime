@@ -15,7 +15,6 @@ import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { PercentSliderField } from '@/components/form/PercentSliderField';
 import { SwitchField } from '@/components/form/SwitchField';
-import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useLocalizedText } from '@/i18n/localized';
@@ -38,6 +37,7 @@ import {
 import { useUpdateInsuranceProduct } from '../hooks';
 import { newestBand, premiumConfigOf } from '../premium-plan';
 import type { InsuranceProduct } from '../types';
+import { CoverageItemsField } from './CoverageItemsField';
 import { PremiumSyncNotice } from './PremiumSyncNotice';
 import { PremiumTiersField } from './PremiumTiersField';
 import { PremiumYearBandsField } from './PremiumYearBandsField';
@@ -98,6 +98,7 @@ export function InsuranceProductFormDialog({
         serviceFeePercent: (max) => t('validation.serviceFeePercent', { max }),
         serviceFeePercentRequired: t('validation.serviceFeePercentRequired'),
         agencyCommissionPercent: (max) => t('validation.agencyCommissionPercent', { max }),
+        coverageItems: (max) => t('validation.coverageItems', { max }),
       }),
     [t],
   );
@@ -300,21 +301,31 @@ export function InsuranceProductFormDialog({
             <TextField control={control} name="nameEn" label={t('fields.nameEn')} required />
           </div>
         </FormSection>
-        <FormSection title={t('sections.coverage')}>
+        <FormSection
+          title={t('sections.summary')}
+          hint={t('help.summary')}
+          hintLabel={t('hints.summary')}
+        >
           <div className={styles.grid2}>
-            <TextAreaField
+            <TextField control={control} name="summaryVi" label={t('fields.summaryVi')} />
+            <TextField control={control} name="summaryEn" label={t('fields.summaryEn')} />
+          </div>
+        </FormSection>
+        <FormSection
+          title={t('sections.coverage')}
+          hint={t('help.coverage')}
+          hintLabel={t('hints.coverage')}
+        >
+          <div className={styles.grid2}>
+            <CoverageItemsField
               control={control}
               name="coverageVi"
               label={t('fields.coverageVi')}
-              rows={4}
-              required
             />
-            <TextAreaField
+            <CoverageItemsField
               control={control}
               name="coverageEn"
               label={t('fields.coverageEn')}
-              rows={4}
-              required
             />
           </div>
         </FormSection>

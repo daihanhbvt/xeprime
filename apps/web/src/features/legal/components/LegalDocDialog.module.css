@@ -1,0 +1,49 @@
+/* Hộp xem nhanh văn bản pháp lý. Kiểu chữ thân văn bản: `LegalDocBody.module.css` (biến thể compact). */
+.content {
+  display: flex;
+  flex-direction: column;
+}
+
+.lead {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--xp-color-text-secondary);
+}
+
+.meta {
+  margin-top: 6px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.fullPage {
+  flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--xp-color-primary-active);
+}
+
+.fullPage:hover {
+  text-decoration: underline;
+}
+
+.fullPage:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}

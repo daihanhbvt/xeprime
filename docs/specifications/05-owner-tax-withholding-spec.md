@@ -18,7 +18,8 @@
 | Văn bản | Nội dung áp dụng cho XePrime |
 | :--- | :--- |
 | **NĐ 117/2025/NĐ-CP** (hiệu lực 01/07/2025) | Nền tảng số **có chức năng thanh toán** khấu trừ, kê khai, nộp thay thuế GTGT + TNCN cho **hộ, cá nhân** kinh doanh trên nền tảng; khấu trừ khi giao dịch thành công; giao dịch huỷ thì bù trừ; kê khai theo tháng; chứng từ khấu trừ điện tử theo năm; người bán cung cấp MST hoặc số định danh. |
-| **NĐ 68/2026/NĐ-CP** (hiệu lực 05/03/2026) | Hộ, cá nhân doanh thu ≤ **500 triệu/năm** không phải nộp GTGT, TNCN; nền tảng vẫn khấu trừ theo **từng giao dịch**; số TNCN đã nộp thay được trừ khi người bán quyết toán. |
+| **NĐ 68/2026/NĐ-CP** (hiệu lực 05/03/2026) | Nền tảng vẫn khấu trừ theo **từng giao dịch** (Điều 11 khoản 1); số TNCN đã nộp thay được trừ khi xác định số phải nộp; người dưới ngưỡng bù trừ / hoàn số nộp thừa với cơ quan thuế (Điều 12 khoản 1). |
+| **NĐ 141/2026/NĐ-CP** (29/04/2026, áp dụng từ 01/01/2026) | Sửa NĐ 68/2026: ngưỡng doanh thu năm không phải nộp GTGT, TNCN nâng từ 500 triệu lên **01 tỷ đồng** (Luật 09/2026/QH16 giao Chính phủ quy định ngưỡng). Doanh thu xét ngưỡng gộp mọi hoạt động, trước phí nền tảng. |
 
 XePrime thu tiền giữ chỗ qua SePay ⇒ là nền tảng **có chức năng thanh toán** ⇒ thuộc diện khấu trừ, nộp thay.
 
@@ -150,7 +151,7 @@ Có mặt ở **hộp duyệt yêu cầu**, **chi tiết đơn** và **sao kê v
 
 ### 7.3. Văn bản "Chính sách thuế" cho đối tác
 
-Trang `/legal/owner-tax`: căn cứ, bảng mức, ai bị khấu trừ, cơ sở, thời điểm, bù trừ khi huỷ, quyền đề nghị hoàn của người dưới ngưỡng 500 triệu, nghĩa vụ cung cấp MST/CCCD, chứng từ khấu trừ năm.
+Trang `/legal/owner-tax`: căn cứ, bảng mức, ai bị khấu trừ, cơ sở, thời điểm, bù trừ khi huỷ, quyền đề nghị hoàn của người dưới ngưỡng 01 tỷ, nghĩa vụ cung cấp MST/CCCD, chứng từ khấu trừ năm.
 
 ---
 
@@ -175,7 +176,7 @@ Trang **Tài chính → Thuế** (`/money`): theo kỳ tháng, tổng GTGT / TNC
 1. Thuê xe tự lái / dài hạn qua nền tảng là nhóm "dịch vụ" (7%) — đang áp theo Mioto.
 2. Phí giao xe `G` (khách trả tay ngoài nền tảng) có tính vào doanh thu khấu trừ không — đang KHÔNG tính.
 3. Khoản đền huỷ muộn cho chủ xe có thuộc diện khấu trừ không — đang KHÔNG khấu trừ.
-4. Người bán ≤ 500 triệu/năm: nền tảng luôn khấu trừ rồi người bán tự đề nghị hoàn — đang làm theo cách này.
+4. Người bán ≤ 01 tỷ/năm (NĐ 141/2026): nền tảng luôn khấu trừ rồi người bán tự đề nghị bù trừ / hoàn (Điều 11 khoản 1, Điều 12 khoản 1 NĐ 68/2026) — đang làm theo cách này; chờ luật sư xác nhận thủ tục cụ thể.
 5. Số hiệu mẫu tờ khai, mẫu chứng từ khấu trừ hiện hành sau NĐ 68/2026 + TT 18/2026.
 
 ## 10. BACKLOG (CHƯA LÀM)

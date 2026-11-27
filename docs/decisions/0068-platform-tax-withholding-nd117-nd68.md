@@ -24,6 +24,8 @@ Căn cứ pháp lý đã đọc (cần tư vấn thuế xác nhận trước khi
 
 2. **Nghị định 68/2026/NĐ-CP** (hiệu lực 05/03/2026): hộ, cá nhân doanh thu ≤ **500 triệu đồng/năm** không thuộc diện nộp GTGT, TNCN; nền tảng có chức năng đặt hàng + thanh toán vẫn khấu trừ, khai thay, nộp thay **theo từng giao dịch**; số TNCN nền tảng đã nộp thay được trừ khi người bán quyết toán. Văn bản không nói nền tảng ngừng khấu trừ với người dưới ngưỡng — việc hoàn/bù là giữa người bán và cơ quan thuế.
 
+   > **Cập nhật 27/11/2026 — ngưỡng nay là 01 tỷ đồng/năm.** Luật số 09/2026/QH16 (24/04/2026, sửa bốn luật thuế) giao Chính phủ quy định ngưỡng; **NĐ 141/2026/NĐ-CP** (29/04/2026, áp dụng từ 01/01/2026) thay "500 triệu đồng" bằng "01 tỷ đồng" ở các điều của NĐ 68/2026 (gồm Điều 3, 4 và khoản 3 Điều 11). Không sửa khoản 1 Điều 11: nền tảng vẫn khấu trừ mỗi giao dịch. Người có doanh thu thực tế ≤ 01 tỷ làm thủ tục bù trừ / hoàn trả / hoàn trả kiêm bù trừ số nộp thừa (Điều 12 khoản 1 NĐ 68/2026, Cục Thuế TP.HCM trả lời 08/2026). Doanh thu xét ngưỡng gộp mọi hoạt động, trước phí nền tảng; mức trừ 01 tỷ dùng một lần/năm (Điều 4 khoản 3). Doanh thu năm > 01 tỷ phải dùng HĐĐT có mã (Điều 8 khoản 5). Đề xuất nâng lên 2 tỷ bị Chính phủ không nhận (11/2026). Văn bản `/legal/owner-tax` mục 7 ghi đúng con số này, `legal.test.ts` khoá nó.
+
 3. Thực tiễn thị trường: Mioto áp **7%** (5% GTGT + 2% TNCN) cho thuê xe tự lái và **4,5%** cho xe có tài xế, trừ vào ví chủ xe, gửi chứng từ khấu trừ trước kỳ quyết toán tháng 4. Mức 10% đang cấu hình của XePrime là tỷ lệ Thông tư 40/2021 cho "cho thuê tài sản" khi cá nhân TỰ khai — không phải tỷ lệ khấu trừ của nền tảng.
 
 ## Quyết định đề xuất
@@ -75,7 +77,7 @@ Dùng cùng một khối ở hộp duyệt yêu cầu, chi tiết đơn, và dò
 | Đơn giá thuê × Số ngày | `B / ngày` × N | — |
 | Doanh thu cho thuê xe | `B` | Sau khuyến mãi của xe; không gồm phí giao xe |
 | **Phí dịch vụ – Chủ xe** | `−H` | Chỉ tuyến hoa hồng: % lũy tiến theo ngày (10% ngày 1–2 · 7% ngày 3–7 · 3% ngày 8–30 · 0% từ ngày 31, theo chính sách đang áp dụng). Tuyến gói: 0đ, ẩn dòng. Liệt kê XePrime làm gì cho khoản này |
-| **Thuế khấu trừ (GTGT x% + TNCN y%)** | `−T` | Căn cứ NĐ 117/2025, 68/2026; mức theo loại dịch vụ; doanh nghiệp không bị khấu trừ; dưới 500 triệu/năm thì người bán liên hệ cơ quan thuế để hoàn; link "Chính sách thuế" |
+| **Thuế khấu trừ (GTGT x% + TNCN y%)** | `−T` | Căn cứ NĐ 117/2025, 68/2026; mức theo loại dịch vụ; doanh nghiệp không bị khấu trừ; dưới ngưỡng (01 tỷ/năm từ NĐ 141/2026) thì người bán liên hệ cơ quan thuế để hoàn; link "Chính sách thuế" |
 | **Thu nhập chủ xe (a)** | `B − H − T` | |
 | Khách thanh toán trực tiếp (b) | phần tiền thuê khách trả tay | Không gồm phí giao xe |
 | **Số tiền cộng ví (a − b)** | `D − T` | Ghi có khi chuyến hoàn thành |
@@ -100,7 +102,7 @@ Mục "Thuế khấu trừ" thay ô `% thuế` + nhãn bằng:
 1. Thuê xe tự lái / dài hạn qua nền tảng là "dịch vụ" (5% + 2%) hay áp tỷ lệ "cho thuê tài sản".
 2. Có tính phí giao xe `G` (trả tay ngoài nền tảng) vào doanh thu khấu trừ không.
 3. Khoản đền huỷ muộn có thuộc diện khấu trừ không.
-4. Người bán ≤ 500 triệu/năm (NĐ 68/2026): nền tảng có được ngừng khấu trừ khi người bán chứng minh không thuộc diện không, hay luôn khấu trừ rồi người bán tự đề nghị hoàn.
+4. ~~Người bán ≤ 500 triệu/năm (NĐ 68/2026): nền tảng có được ngừng khấu trừ khi người bán chứng minh không thuộc diện không, hay luôn khấu trừ rồi người bán tự đề nghị hoàn.~~ Rõ ngày 27/11/2026: ngưỡng 01 tỷ (NĐ 141/2026); nền tảng luôn khấu trừ mỗi giao dịch (Điều 11 khoản 1 NĐ 68/2026 không đổi), người dưới ngưỡng bù trừ/hoàn với cơ quan thuế (Điều 12 khoản 1). Còn chờ luật sư xác nhận thủ tục cụ thể để ghi hướng dẫn cho chủ xe.
 5. Mẫu tờ khai và mẫu chứng từ đúng số hiệu hiện hành sau NĐ 68/2026 và Thông tư 18/2026/TT-BTC.
 
 ## Hệ quả

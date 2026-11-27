@@ -55,3 +55,12 @@
     gap: 4px;
   }
 }
+
+.coverageList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding-inline-start: var(--xp-space-md);
+  white-space: normal;
+}

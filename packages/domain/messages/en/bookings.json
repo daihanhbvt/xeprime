@@ -1344,10 +1344,12 @@
     },
     "terms": {
       "title": "Terms",
-      "handover": "Party B collects and returns the vehicle at the agreed time and place and takes good care of it.",
-      "liability": "Party B is responsible for traffic violations, damage and loss arising during the rental.",
-      "deposit": "The deposit is refunded after the vehicle is returned, minus any extra charges.",
-      "platform": "Both parties settle matters by mutual agreement; XePrime is only the connecting platform."
+      "handover": "Party B collects and returns the vehicle at the agreed times and places. Possession and use of the vehicle pass to Party B from handover until Party A takes the vehicle back, as recorded in the handover records.",
+      "liability": "While in possession of the vehicle, Party B is responsible for traffic violations (including camera fines notified after return), damage, loss and harm caused by the vehicle, except what insurance pays.",
+      "deposit": "The deposit and security are returned as soon as the vehicle is returned, after deducting amounts both parties have confirmed.",
+      "idDocs": "Party A only checks, and does not keep, the original ID card, citizen ID card or passport of Party B.",
+      "platform": "XePrime is the platform recording the transaction and is not a party to this contract.",
+      "general": "For anything not stated in this contract, both parties apply the General Terms of the Rental Contract published at {url}."
     },
     "note": "Notes",
     "signHint": "(Sign and print full name)"

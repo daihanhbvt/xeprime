@@ -237,6 +237,17 @@
   /* Thẻ đơn/yêu cầu site partner (Figma Partner-XePrime, 02/11/2026): viền nhãn dịch vụ "Tự lái",
      nút Zalo (`Status/information-300`); viền nút "Từ chối" (`Status/error-300`) khai cùng nhóm lỗi ở trên. */
   --xp-color-info-border: #84caff;
+  /* Ô chọn + popup bảo hiểm MIC (Figma `22548:36923` · `22548:38581`, 27/11/2026). */
+  --xp-color-success-soft: #d1fadf;
+  --xp-color-success-border-subtle: #a6f4c5;
+  --xp-color-success-text: #027a48;
+  --xp-color-info-subtle: #eff8ff;
+  --xp-color-info-tint: #f5faff;
+  --xp-color-info-border-subtle: #b2ddff;
+  --xp-color-info-text: #175cd3;
+  --xp-color-warning-tint: #fffcf5;
+  --xp-color-warning-border-subtle: #fedf89;
+  --xp-color-warning-text: #b54708;
   /* Viên "Thuê xe dài hạn" (`Status/pink-*`, Partner-XePrime 02/11/2026). */
   --xp-color-pink: #dd2590;
   --xp-color-pink-bg: #fdf2fa;
@@ -265,6 +276,9 @@
     linear-gradient(90deg, #ffffff 0%, #ffffff 100%);
   --xp-gradient-text-destination: linear-gradient(90deg, #fded9d 0%, #f7dd91 52.404%, #f1a940 100%);
   --xp-gradient-instant-badge: linear-gradient(90deg, #a4dded 0.89%, #dfe7f1 100.89%);
+  /* Thẻ bảo hiểm + dải đầu popup quyền lợi MIC (Figma 27/11/2026). */
+  --xp-gradient-insurance-card: linear-gradient(180deg, rgba(235, 252, 245, 0.7) 0%, rgba(255, 255, 255, 0) 45%);
+  --xp-gradient-insurance-hero: linear-gradient(161deg, #dbfcf0 0%, rgba(240, 250, 255, 0.9) 40.741%, rgba(255, 247, 224, 0.95) 74.074%);
   --xp-gradient-card-highlight: linear-gradient(
     145deg,
     rgba(220, 192, 148, 0.2) 24.208%,
@@ -548,6 +562,19 @@
   --xp-color-warning-strong: #fb6514;
   --xp-color-info-strong: #53b1fd;
   --xp-color-warning-subtle: rgba(247, 144, 9, 0.1);
+  /* Bảo hiểm MIC: pastel sáng thành chính sắc đó pha trong suốt; chữ đậm sáng lên để đọc được. */
+  --xp-color-success-soft: rgba(3, 152, 85, 0.22);
+  --xp-color-success-border-subtle: rgba(166, 244, 197, 0.35);
+  --xp-color-success-text: #32d583;
+  --xp-color-info-subtle: rgba(21, 112, 239, 0.16);
+  --xp-color-info-tint: rgba(21, 112, 239, 0.1);
+  --xp-color-info-border-subtle: rgba(178, 221, 255, 0.35);
+  --xp-color-info-text: #84caff;
+  --xp-color-warning-tint: rgba(247, 144, 9, 0.08);
+  --xp-color-warning-border-subtle: rgba(254, 223, 137, 0.35);
+  --xp-color-warning-text: #fdb022;
+  --xp-gradient-insurance-card: linear-gradient(180deg, rgba(3, 152, 85, 0.12) 0%, rgba(3, 152, 85, 0) 45%);
+  --xp-gradient-insurance-hero: linear-gradient(161deg, rgba(3, 152, 85, 0.18) 0%, rgba(21, 112, 239, 0.1) 40.741%, rgba(233, 172, 41, 0.12) 74.074%);
 
   /* Chữ sáng trên nền tối */
   --xp-color-text: #ffffff;

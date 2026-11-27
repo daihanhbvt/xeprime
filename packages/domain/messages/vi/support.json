@@ -13,7 +13,7 @@
       "value": "contact@softrent.vn",
       "note": "Dành cho khiếu nại, yêu cầu về dữ liệu cá nhân và các việc cần gửi kèm chứng từ."
     },
-    "lead": "Hai kênh dưới đây là cách XePrime tiếp nhận yêu cầu.",
+    "lead": "Hai kênh dưới đây là cách XePrime tiếp nhận yêu cầu. Tổng đài trực 08:00 - 22:00 hằng ngày; ngoài giờ, yêu cầu hỗ trợ gửi trên ứng dụng và web vẫn được ghi nhận và xử lý từ ca kế tiếp.",
     "pendingBadge": "Sắp công bố",
     "pendingNote": "Khung giờ trực chính thức sẽ được công bố sớm. Ngoài giờ, yêu cầu vẫn được ghi nhận và xử lý ở ca kế tiếp."
   },
@@ -59,6 +59,10 @@
       "title": "Dữ liệu cá nhân của tôi",
       "desc": "Chúng tôi thu thập gì, chia sẻ với ai, giữ bao lâu và bạn yêu cầu xoá bằng cách nào."
     },
+    "complaints": {
+      "title": "Khiếu nại và tranh chấp",
+      "desc": "Kênh tiếp nhận, thời hạn xử lý, kết luận chuyến và những việc XePrime không phân xử."
+    },
     "start": {
       "title": "Bắt đầu cho thuê xe",
       "desc": "Hai cách tham gia, hồ sơ cần chuẩn bị và vòng duyệt trước khi xe lên chợ."
@@ -70,6 +74,10 @@
     "terms": {
       "title": "Điều khoản sử dụng",
       "desc": "Quyền và nghĩa vụ chung của mọi người dùng XePrime."
+    },
+    "payout": {
+      "title": "Nhận tiền và Ví điểm",
+      "desc": "Tiền của từng chuyến vào ví lúc nào, rút về ngân hàng ra sao và trong bao lâu."
     },
     "manage": {
       "title": "Quản lý xe và đơn thuê",

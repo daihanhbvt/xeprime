@@ -5707,8 +5707,13 @@ model InsuranceProduct {
   partnerProductCode     String   @map("partner_product_code") @db.VarChar(100)
   nameVi                 String   @map("name_vi") @db.VarChar(255)
   nameEn                 String   @map("name_en") @db.VarChar(255)
+  /// Phạm vi bảo vệ - MỖI DÒNG MỘT MỤC (chữ thường, không HTML: app, trang /insurance và snapshot
+  /// trên đơn đọc nguyên văn). Web tách dòng thành danh sách tích (`insuranceCoverageItems`).
   coverageVi             String   @map("coverage_vi") @db.Text
   coverageEn             String   @map("coverage_en") @db.Text
+  /// Mô tả MỘT dòng dưới tên sản phẩm ở ô chọn bảo hiểm. NULL = web ghép từ các mục phạm vi.
+  summaryVi              String?  @map("summary_vi") @db.VarChar(255)
+  summaryEn              String?  @map("summary_en") @db.VarChar(255)
   /// Mức khấu trừ mỗi vụ theo loại xe. NULL = không áp dụng khấu trừ. CHECK ≥ 0, bội số 1.000.
   deductibleCar          Decimal? @map("deductible_car") @db.Decimal(14, 2)
   deductibleMotorbike    Decimal? @map("deductible_motorbike") @db.Decimal(14, 2)

@@ -12,6 +12,7 @@ import {
   insurancePremiumYearBandsProblem,
   MONEY_STEP_VND,
 } from '@xeprime/types';
+import { insuranceCoverageItems, joinInsuranceCoverageItems } from '@xeprime/domain';
 import { newestBand } from './premium-plan';
 import { tabErrorCounts } from '@/lib/form-tabs';
 import type { InsuranceProduct, UpdateInsuranceProductInput } from './types';
@@ -67,6 +68,8 @@ export interface InsuranceProductFormMessages {
   serviceFeePercentRequired: string;
   /** % hoa hồng đại lý ngoài 0..trần hoặc quá hai chữ số lẻ (ADR 0097). */
   agencyCommissionPercent: (max: number) => string;
+  /** Phạm vi bảo vệ cần 1..`max` mục. */
+  coverageItems: (max: number) => string;
 }
 
 /** Trần % hoa hồng đại lý — cùng trần bảng kê và CHECK ở DB. */
@@ -100,13 +103,34 @@ export function buildInsuranceProductSchema(m: InsuranceProductFormMessages) {
         m.tooLong(INSURANCE_PRODUCT_LIMITS.maxPayoutNote.max),
       )
       .default('');
-  const { displayOrder, certificateUrlTemplate } = INSURANCE_PRODUCT_LIMITS;
+  const { displayOrder, certificateUrlTemplate, coverageItem, coverageItems, summary } =
+    INSURANCE_PRODUCT_LIMITS;
+  /*
+   * Phạm vi bảo vệ - danh sách mục, mỗi mục một dòng của `coverage*` (cùng trần server kiểm ở
+   * `normalizeCoverage`). Mục trống bị bỏ lúc lưu, nên chỉ đếm mục có chữ.
+   */
+  const coverage = () =>
+    yup
+      .array(
+        yup.object({
+          text: yup.string().trim().max(coverageItem.max, m.tooLong(coverageItem.max)).default(''),
+        }),
+      )
+      .default([])
+      .test('items', m.coverageItems(coverageItems.max), (items) => {
+        const filled = (items ?? []).filter((i) => (i.text ?? '').trim().length > 0).length;
+        return filled >= 1 && filled <= coverageItems.max;
+      });
+  const shortText = () => yup.string().trim().max(summary.max, m.tooLong(summary.max)).default('');
 
   return yup.object({
     nameVi: text(INSURANCE_PRODUCT_LIMITS.name),
     nameEn: text(INSURANCE_PRODUCT_LIMITS.name),
-    coverageVi: text(INSURANCE_PRODUCT_LIMITS.coverage),
-    coverageEn: text(INSURANCE_PRODUCT_LIMITS.coverage),
+    coverageVi: coverage(),
+    coverageEn: coverage(),
+    /* Mô tả một dòng dưới tên sản phẩm ở ô chọn bảo hiểm - trống thì ghép từ các mục phạm vi. */
+    summaryVi: shortText(),
+    summaryEn: shortText(),
     deductibleCar: money(),
     deductibleMotorbike: money(),
     maxPayoutCar: money(),
@@ -247,7 +271,7 @@ export const INSURANCE_PRODUCT_FORM_TAB_FIELDS: Record<
     'serviceFeePercent',
     'agencyCommissionPercent',
   ],
-  content: ['nameVi', 'nameEn', 'coverageVi', 'coverageEn'],
+  content: ['nameVi', 'nameEn', 'summaryVi', 'summaryEn', 'coverageVi', 'coverageEn'],
   payout: [
     'deductibleCar',
     'deductibleMotorbike',
@@ -294,14 +318,22 @@ export function insuranceProductFormTabErrors(
 /** Tiền trên dây là chuỗi số nguyên đồng; ô số trên form là `number`. Chỉ để HIỂN THỊ trong ô. */
 const toFormAmount = (value: string | null | undefined) => (value == null ? null : Number(value));
 
+/** Phạm vi đang lưu (mỗi dòng một mục) ⇒ các hàng của form; luôn có ít nhất một hàng để gõ. */
+const toCoverageRows = (value: string) => {
+  const items = insuranceCoverageItems(value);
+  return (items.length > 0 ? items : ['']).map((text) => ({ text }));
+};
+
 export function insuranceProductFormDefaults(
   product: InsuranceProduct,
 ): InsuranceProductFormValues {
   return {
     nameVi: product.nameVi,
     nameEn: product.nameEn,
-    coverageVi: product.coverageVi,
-    coverageEn: product.coverageEn,
+    coverageVi: toCoverageRows(product.coverageVi),
+    coverageEn: toCoverageRows(product.coverageEn),
+    summaryVi: product.summaryVi ?? '',
+    summaryEn: product.summaryEn ?? '',
     deductibleCar: toFormAmount(product.deductibleCar),
     deductibleMotorbike: toFormAmount(product.deductibleMotorbike),
     maxPayoutCar: toFormAmount(product.maxPayoutCar),
@@ -349,8 +381,10 @@ export function toUpdateInsuranceProductBody(
   const body: UpdateInsuranceProductInput = {
     nameVi: form.nameVi,
     nameEn: form.nameEn,
-    coverageVi: form.coverageVi,
-    coverageEn: form.coverageEn,
+    coverageVi: joinInsuranceCoverageItems(form.coverageVi.map((i) => i.text ?? '')),
+    coverageEn: joinInsuranceCoverageItems(form.coverageEn.map((i) => i.text ?? '')),
+    summaryVi: form.summaryVi.trim() || null,
+    summaryEn: form.summaryEn.trim() || null,
     maxPayoutNoteVi: form.maxPayoutNoteVi || null,
     maxPayoutNoteEn: form.maxPayoutNoteEn || null,
     partnerProductCode: form.partnerProductCode,

@@ -43,6 +43,7 @@
     "accountEmpty": "Add a payout account",
     "addAccount": "Add payout account",
     "commitment": "XePrime transfers within {days} business days of approval.",
+    "policyLink": "Withdrawal conditions are set out in the <policy>Payment and Points Wallet Policy</policy>.",
     "submit": "Request withdrawal",
     "created": "Withdrawal requested. XePrime will transfer within the committed time.",
     "cancelled": "Withdrawal request cancelled.",
