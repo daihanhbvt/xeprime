@@ -48,7 +48,8 @@ vi.mock('@/features/branches/hooks/use-branches', () => ({
 }));
 
 vi.mock('../hooks/use-finance-categories', () => ({
-  useFinanceCategories: () => ({ data: [], isFetching: false }),
+  // Danh mục bắt buộc từ 26/11/2026 — một danh mục để form gửi được.
+  useFinanceCategories: () => ({ data: [{ id: 'cat-1', name: 'Rửa xe' }], isFetching: false }),
 }));
 
 vi.mock('../hooks/use-booking-options', () => ({
@@ -127,6 +128,9 @@ function fillAndSubmit(amount = '250000') {
   fireEvent.change(screen.getByRole('textbox', { name: /Diễn giải/ }), {
     target: { value: 'Rửa xe' },
   });
+  // Danh mục bắt buộc (26/11/2026). Bản hiển thị của AntD mang `title`; role=option chỉ cho trình đọc.
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: /Danh mục/ }));
+  fireEvent.click(screen.getByTitle('Rửa xe'));
   fireEvent.click(screen.getByRole('button', { name: /Tạo phiếu/ }));
 }
 

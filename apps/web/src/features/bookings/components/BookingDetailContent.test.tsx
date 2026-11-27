@@ -233,7 +233,7 @@ describe('"Lợi nhuận chuyến"', () => {
       },
     });
     expect(screen.getByText('Lợi nhuận chuyến')).toBeTruthy();
-    expect(screen.getByText('Số tiền cộng ví (a − b)')).toBeTruthy();
+    expect(screen.getByText('Số tiền cộng ví (A − B)')).toBeTruthy();
   });
 
   it('đơn lập tay / đơn cũ không có bảng phí ⇒ không có khối', () => {

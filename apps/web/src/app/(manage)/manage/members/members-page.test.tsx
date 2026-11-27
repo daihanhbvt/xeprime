@@ -202,7 +202,7 @@ afterEach(cleanup);
 describe('/manage/members - khung trang', () => {
   it('tiêu đề, mô tả và nút "Vai trò & quyền" như design', () => {
     renderWith([member()]);
-    expect(screen.getByRole('heading', { level: 1, name: 'Nhân viên & Phân quyền' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Nhân viên & phân quyền' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Vai trò & quyền/ }).getAttribute('href')).toContain(
       '/members/roles',
     );

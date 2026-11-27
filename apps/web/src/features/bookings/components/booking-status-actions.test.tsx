@@ -215,7 +215,7 @@ describe('Hộp xác nhận hủy đơn', () => {
     renderActions(booking({ status: BOOKING_STATUS.RESERVED }));
     openClosingDialog('Hủy đơn');
 
-    expect(await screen.findByText(/Hủy đơn DH-0007/)).toBeTruthy();
+    expect(await screen.findByText(/Hủy đơn #DH-0007/)).toBeTruthy();
     expect(screen.getByText(/không mở lại được/)).toBeTruthy();
     expect(screen.getByText('Lê Minh Cường')).toBeTruthy();
     expect(screen.getByText(/Mazda 3/)).toBeTruthy();

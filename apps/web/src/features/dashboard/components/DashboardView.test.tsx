@@ -320,6 +320,8 @@ describe('Tổng quan gian hàng - việc cần làm', () => {
         returnsToday: 0,
         returnsOverdue: 0,
         returnsDue: 0,
+        nextPickupAt: null,
+        nextReturnAt: null,
       },
       requests: { pending: 0, pendingUrgent: 0, nextRespondBy: null, awaitingPayment: 0 },
       agenda: { items: [], hasMore: false },

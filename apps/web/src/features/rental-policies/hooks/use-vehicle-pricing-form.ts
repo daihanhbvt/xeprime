@@ -86,10 +86,13 @@ export function useVehiclePricingForm({
     ? (savedKey.split(',') as PolicySection[])
     : [];
   const [inherited, setInherited] = useState<readonly PolicySection[]>(savedInherited);
-  // Lưu xong (hoặc dữ liệu đổi từ nơi khác) ⇒ về đúng bản server.
-  useEffect(() => {
-    setInherited(savedKey ? (savedKey.split(',') as PolicySection[]) : []);
-  }, [savedKey]);
+  // Lưu xong (hoặc dữ liệu đổi từ nơi khác) ⇒ về đúng bản server. Chỉnh ngay trong lúc render khi
+  // bản server đổi (mẫu "điều chỉnh state khi prop đổi" của React), không qua effect.
+  const [syncedKey, setSyncedKey] = useState(savedKey);
+  if (syncedKey !== savedKey) {
+    setSyncedKey(savedKey);
+    setInherited(savedInherited);
+  }
   const inheritedRef = useRef(inherited);
   useEffect(() => {
     inheritedRef.current = inherited;

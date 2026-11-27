@@ -66,6 +66,7 @@ import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintena
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
 import { VehicleMaintenanceController } from '../src/modules/vehicles/maintenance/vehicle-maintenance.controller';
 import { VehicleAlertsService } from '../src/modules/vehicles/vehicle-alerts.service';
+import { VehicleBookingPickerService } from '../src/modules/vehicles/vehicle-booking-picker.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import { VehicleSourceService } from '../src/modules/vehicles/vehicle-source.service';
 import { VehiclesController } from '../src/modules/vehicles/vehicles.controller';
@@ -431,6 +432,8 @@ beforeAll(async () => {
       { provide: VehicleSourceService, useValue: {} },
       { provide: VehicleContractsService, useValue: files },
       { provide: VehicleAlertsService, useValue: {} },
+      // Bộ chọn xe khi lập đơn - không route nào của spec này gọi tới nó.
+      { provide: VehicleBookingPickerService, useValue: {} },
       { provide: MaintenanceService, useValue: maintenance },
       { provide: OdometerService, useValue: odometer },
       { provide: R2Service, useValue: fakeR2 },

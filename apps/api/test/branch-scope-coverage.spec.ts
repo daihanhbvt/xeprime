@@ -24,6 +24,9 @@ const TENANT_LEVEL: Record<string, string> = {
     'CCCD/GPLX thuộc về khách (xem dòng trên), xác minh một lần dùng cho mọi chi nhánh.',
   'drivers/drivers.controller.ts':
     'Tài xế là nhân sự chung của gian hàng, điều động sang chi nhánh nào tuỳ chuyến.',
+  'drivers/internal-drivers.controller.ts':
+    'Danh bạ tài xế nội bộ là của GIAN HÀNG (ADR 0108), điều động sang chi nhánh nào tuỳ chuyến - ' +
+    'cùng lý do với tài xế liên kết ở dòng trên.',
   'finance/finance-categories.controller.ts': 'Danh mục thu chi là cấu hình của gian hàng.',
   'members/members.controller.ts':
     'Có trần riêng chặt hơn: `assertWithinActorScope` (không sửa/gỡ người rộng hơn mình).',
@@ -32,6 +35,10 @@ const TENANT_LEVEL: Record<string, string> = {
     'Phía NGƯỜI ĐƯỢC MỜI, khoá bằng token — chưa là thành viên nên không có phạm vi.',
   'bank-accounts/shop-bank-accounts.controller.ts':
     'Tiền của gian hàng — `@ShopOwnerOnly()`, chỉ chủ shop (luôn `all`) chạm được.',
+  'bank-accounts/bank-account-change-requests.controller.ts':
+    'Yêu cầu đổi tài khoản nhận tiền của gian hàng - `@ShopOwnerOnly()`, chỉ chủ shop (luôn `all`) ' +
+    'chạm được. Hai controller còn lại trong file là phía tài khoản KHÁCH và phía NỀN TẢNG, không ' +
+    'thuộc khu gian hàng.',
   'wallet/wallet.controller.ts': 'Ví thuộc tenant, `@ShopOwnerOnly()` (ADR 0038).',
   'support/support.controller.ts': 'Ticket giữa gian hàng và nền tảng, không gắn chi nhánh.',
   'customer-trips/customer-trips.controller.ts':

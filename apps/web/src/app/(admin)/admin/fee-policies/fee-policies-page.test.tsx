@@ -123,7 +123,11 @@ describe('/admin/fee-policies - sổ "Đang áp dụng" trình bày bản đang 
     expect(within(commission).getByText('Ngày 8-30')).toBeTruthy();
     expect(within(commission).getByText('Từ ngày 31')).toBeTruthy();
     expect(within(cardOf('Tiền giữ chỗ')).getByText('30%')).toBeTruthy();
-    expect(within(cardOf('Giới hạn đặt xe')).getByText('30 ngày')).toBeTruthy();
+    // Hai trần cùng 30 ngày (ADR 0091 điều 4): đặt trước tối đa + chuyến tự lái dài tối đa.
+    const limits = cardOf('Giới hạn đặt xe');
+    expect(within(limits).getByText('Đặt trước tối đa (tự lái, có tài xế)')).toBeTruthy();
+    expect(within(limits).getByText('Chuyến tự lái dài tối đa')).toBeTruthy();
+    expect(within(limits).getAllByText('30 ngày')).toHaveLength(2);
     // Thuế tắt — nói "chưa áp dụng", không nói 0%.
     expect(within(cardOf('Thuế khấu trừ')).getByText('Chưa áp dụng')).toBeTruthy();
     // Bảo hiểm KHÔNG còn là số của chính sách phí — quản lý ở Admin › Bảo hiểm (ADR 0098).

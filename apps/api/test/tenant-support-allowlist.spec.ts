@@ -50,6 +50,10 @@ const SUPPORT_ALLOWLIST = [
   'BookingsController.driverWageQuote',
   'BookingsController.getOne',
   'BookingsController.list',
+  // Tài sản thế chấp của đơn (ADR 0109) + nhãn nguồn đơn tự khai (ADR 0110) - CHỈ ĐỌC, cùng
+  // capability xem đơn.
+  'BookingsController.listCollaterals',
+  'BookingsController.sourceLabels',
   'BranchesController.get',
   'CalendarController.availability',
   'CalendarController.dailyPrices',
@@ -67,6 +71,13 @@ const SUPPORT_ALLOWLIST = [
   // Dải số đếm đầu màn Tài xế (04/11/2026) — cùng dữ liệu với danh sách, cùng capability.
   'DriversController.summary',
   'DriversController.wageSettings',
+  // Bảng điều phối tài xế + dải số đếm của nó, và danh bạ tài xế nội bộ (ADR 0108) - CHỈ ĐỌC, cùng
+  // capability xem tài xế. Tạo/sửa/lưu trữ tài xế nội bộ CỐ Ý không vào phiên.
+  'DriversController.roster',
+  'DriversController.rosterSummary',
+  'InternalDriversController.detail',
+  'InternalDriversController.list',
+  'InternalDriversController.trips',
   'HandoverQueueController.missingOdometer',
   'InvitesController.list',
   'MaintenanceBoardController.list',
@@ -93,6 +104,9 @@ const SUPPORT_ALLOWLIST = [
   'ShopPoliciesController.get',
   // Cảnh báo đổi sang bảo hiểm Bắt buộc (ADR 0091) — CHỈ ĐỌC, cùng capability với chính sách thuê.
   'ShopPoliciesController.insuranceImpact',
+  // Điều khoản thuê của gian hàng (ADR 0112 điều 3) - CHỈ ĐỌC, cùng capability với chính sách thuê.
+  // `ShopPoliciesController.saveTerms` (PUT) CỐ Ý không vào phiên.
+  'ShopPoliciesController.getTerms',
   // Một phiếu thanh toán gộp theo id (ADR 0083) — CHỈ ĐỌC, cùng `subscription_status.view` với
   // hoá đơn. Lối MUA (`purchase` · `createCheckout`) CỐ Ý không vào phiên.
   'SubscriptionController.checkout',
@@ -109,6 +123,8 @@ const SUPPORT_ALLOWLIST = [
   'TenantsController.vatInvoiceSetting',
   'VehicleBlocksController.getOne',
   'VehiclesController.getPricing',
+  // Bộ chọn xe khi lập đơn (lịch trống từng xe) - CHỈ ĐỌC, cùng capability xem xe.
+  'VehiclesController.bookingPicker',
   // ── Đợt 2B: GHI hẹp, mỗi thao tác một capability (ADR 0050 §13) ──
   'BranchesController.create',
   'BranchesController.update',

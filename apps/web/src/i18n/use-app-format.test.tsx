@@ -38,8 +38,9 @@ describe('tiền', () => {
   });
 
   it('rút gọn dùng bậc đọc của từng ngôn ngữ, cùng một ngưỡng', () => {
-    expect(format('vi').moneyCompact('12750000')).toBe('12,7tr');
-    expect(format('en').moneyCompact('12750000')).toBe('12.7M');
+    // Ba chữ số lẻ ở bậc triệu, cắt số 0 đuôi (`COMPACT_FRACTION_DIGITS`, chốt 25/11/2026).
+    expect(format('vi').moneyCompact('12750000')).toBe('12,75tr');
+    expect(format('en').moneyCompact('12750000')).toBe('12.75M');
     expect(format('vi').moneyCompact('2500000000')).toBe('2,5tỷ');
     expect(format('en').moneyCompact('2500000000')).toBe('2.5B');
   });
