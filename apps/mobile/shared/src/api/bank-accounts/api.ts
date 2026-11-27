@@ -14,6 +14,10 @@ export type BankAccount = Schemas['BankAccountDto'];
 /** Thân request thêm tài khoản. Chủ sở hữu suy từ session, không nằm ở đây. */
 export type SaveBankAccountInput = Schemas['SaveBankAccountDto'];
 
+/** Yêu cầu ĐỔI tài khoản nhận tiền (biên bản họp 19/11/2026) - tài khoản khoá từ lần khai đầu. */
+export type BankAccountChangeRequest = Schemas['BankAccountChangeRequestDto'];
+export type CreateBankAccountChangeRequestInput = Schemas['CreateBankAccountChangeRequestDto'];
+
 /**
  * Hai bề mặt dùng chung một feature — khác nhau đúng ở TIỀN TỐ đường dẫn, y như web.
  *
@@ -36,6 +40,22 @@ export const bankAccountsApi = {
 
   create(scope: BankAccountScope, body: SaveBankAccountInput): Promise<BankAccount> {
     return getApiClient().post<BankAccount>(base(scope), body);
+  },
+
+  /** Yêu cầu đổi đang chờ xác minh (`null` = không có) - web `fetchCurrentChangeRequest`. */
+  currentChangeRequest(scope: BankAccountScope): Promise<BankAccountChangeRequest | null> {
+    return getApiClient().get<BankAccountChangeRequest | null>(`${base(scope)}/change-requests/current`);
+  },
+
+  createChangeRequest(
+    scope: BankAccountScope,
+    body: CreateBankAccountChangeRequestInput,
+  ): Promise<BankAccountChangeRequest> {
+    return getApiClient().post<BankAccountChangeRequest>(`${base(scope)}/change-requests`, body);
+  },
+
+  cancelChangeRequest(scope: BankAccountScope, id: string): Promise<void> {
+    return getApiClient().post<void>(`${base(scope)}/change-requests/${id}/cancel`, {});
   },
 
   // Không còn `setDefault`/`archive` (web PR #159): mỗi chủ MỘT tài khoản, đổi là THAY qua `create`.

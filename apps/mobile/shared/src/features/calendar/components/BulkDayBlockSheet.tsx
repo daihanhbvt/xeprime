@@ -235,6 +235,9 @@ function BlockSheetInner({
 
           <TextControl
             label={t('bulkBlock.note')}
+            multiline
+            scrollable
+            rows={3}
             value={note}
             onChangeText={setNote}
             placeholder={t('bulkBlock.notePlaceholder')}

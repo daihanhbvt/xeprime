@@ -1,4 +1,4 @@
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -8,15 +8,13 @@ import {
 } from '@xeprime/types';
 import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { DetailChevron } from '@/components/ui/DetailArrow';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontWeight, space, typeScale } from '@/theme/tokens';
 import type {
   FinanceCategoryBreakdown,
   FinanceCategoryBreakdownItem,
@@ -24,7 +22,10 @@ import type {
 } from '../api';
 
 /** Chiều cao thanh tỷ trọng — đủ dày để đọc được ở đuôi mắt, không dày tới mức thành một khối. */
-const BAR_HEIGHT = 6;
+const BAR_HEIGHT = 8;
+const BAR_RADIUS = 4;
+/** Figma: tiêu đề và các dòng cách nhau 12. */
+const ROW_GAP = 12;
 
 /**
  * Cơ cấu doanh thu (hoặc chi phí) theo danh mục — thanh ngang, không phải bánh tròn.
@@ -73,9 +74,14 @@ export function CategoryBreakdown({
     return item.name ?? t('uncategorized');
   };
 
+  /*
+    Figma "Cơ cấu doanh thu" (`24228:99092`): khối NẰM TRONG một thẻ chung với cơ cấu chi phí (màn
+    gọi bọc thẻ + vạch chia). Mỗi dòng: "tên · N phiếu" 14 mờ + tỷ trọng 14 đậm vừa, số tiền 14 mờ
+    bên phải, rồi thanh 8 bo 4 - nền `information-low`, phần đầy xanh (thu) / tím (chi).
+  */
   return (
-    <YStack gap={space.sm}>
-      <SectionHeader icon="pie-chart-outline">{title}</SectionHeader>
+    <YStack gap={ROW_GAP}>
+      <SectionHeader>{title}</SectionHeader>
 
       {error && !data ? (
         <Callout tone="warning">{t('error')}</Callout>
@@ -84,66 +90,68 @@ export function CategoryBreakdown({
       ) : !data || data.items.length === 0 ? (
         <ScreenMessage icon="pie-chart-outline" title={t('empty')} description={t('emptyHint')} />
       ) : (
-        <Card>
-          <YStack gap={space.md}>
-            {data.items.map((item) => (
-              <Pressable
-                key={item.categoryId ?? 'uncategorized'}
-                accessibilityRole="button"
-                accessibilityLabel={`${labelOf(item)}: ${fmt.money(item.amount)}`}
-                onPress={() =>
-                  navigateOnce(
-                    ROUTES.manage.receipts({
-                      type,
-                      status: RECEIPT_STATUS.APPROVED,
-                      ...(item.categoryId ? { categoryId: item.categoryId } : {}),
-                      ...(filters.from ? { from: filters.from } : {}),
-                      ...(filters.to ? { to: filters.to } : {}),
-                    }),
-                  )
-                }
-                style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}
-              >
-                <YStack gap={space.xs}>
-                  <XStack ai="center" gap={space.sm}>
-                    <Text
-                      f={1}
-                      minWidth={0}
-                      col={colors.text}
-                      fos={fontSize.bodySm}
-                      numberOfLines={1}
-                    >
-                      {labelOf(item)}
-                    </Text>
-                    <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                      {fmt.money(item.amount)}
-                    </Text>
-                    <DetailChevron />
-                  </XStack>
-
-                  {/* Chiều dài thanh chỉ biết lúc chạy — server đã tính `sharePercent` trên Decimal. */}
-                  <YStack h={BAR_HEIGHT} br={radius.sm} bg={colors.surfaceMuted} ov="hidden">
-                    <YStack
-                      h={BAR_HEIGHT}
-                      w={`${Math.max(0, Math.min(100, item.sharePercent))}%`}
-                      br={radius.sm}
-                      bg={tone === 'revenue' ? colors.success : colors.danger}
-                    />
-                  </YStack>
-
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('share', { percent: item.sharePercent })} ·{' '}
-                    {t('count', { count: item.count })}
+        data.items.map((item) => (
+          <Pressable
+            key={item.categoryId ?? 'uncategorized'}
+            accessibilityRole="button"
+            accessibilityLabel={`${labelOf(item)}: ${fmt.money(item.amount)}`}
+            onPress={() =>
+              navigateOnce(
+                ROUTES.manage.receipts({
+                  type,
+                  status: RECEIPT_STATUS.APPROVED,
+                  ...(item.categoryId ? { categoryId: item.categoryId } : {}),
+                  ...(filters.from ? { from: filters.from } : {}),
+                  ...(filters.to ? { to: filters.to } : {}),
+                }),
+              )
+            }
+            style={({ pressed }) => (pressed ? styles.pressed : null)}
+          >
+            <YStack gap={space.sm}>
+              <XStack ai="center" jc="space-between" gap={space.sm}>
+                <XStack f={1} minWidth={0} ai="center" gap={space.sm}>
+                  <Text
+                    flexShrink={1}
+                    col={colors.textMuted}
+                    fos={typeScale.body.fontSize}
+                    lh={typeScale.body.lineHeight}
+                    numberOfLines={1}
+                  >
+                    {t('row', { name: labelOf(item), count: item.count })}
                   </Text>
-                </YStack>
-              </Pressable>
-            ))}
-          </YStack>
-        </Card>
+                  <Text
+                    col={colors.text}
+                    fos={typeScale.body.fontSize}
+                    lh={typeScale.body.lineHeight}
+                    fow={fontWeight.medium}
+                  >
+                    {t('share', { percent: item.sharePercent })}
+                  </Text>
+                </XStack>
+                <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                  {fmt.money(item.amount)}
+                </Text>
+              </XStack>
+
+              {/* Chiều dài thanh chỉ biết lúc chạy — server đã tính `sharePercent` trên Decimal. */}
+              <YStack h={BAR_HEIGHT} br={BAR_RADIUS} bg={colors.infoLow} ov="hidden">
+                <YStack
+                  h={BAR_HEIGHT}
+                  w={`${Math.max(0, Math.min(100, item.sharePercent))}%`}
+                  br={BAR_RADIUS}
+                  bg={tone === 'revenue' ? colors.infoStrong : colors.purpleStrong}
+                />
+              </YStack>
+            </YStack>
+          </Pressable>
+        ))
       )}
     </YStack>
   );
 }
+
+const styles = StyleSheet.create({ pressed: { opacity: 0.7 } });
 
 /** Khoá danh mục hệ thống có bản dịch riêng — mọi khoá khác rơi về tên trong DB. */
 function isSystemCategoryKey(key: string): key is SystemFinanceCategoryKey {

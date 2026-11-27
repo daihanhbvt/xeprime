@@ -26,6 +26,7 @@ import {
   customerSeesPickupAddress,
   provinceRegionPeers,
   storefrontAllowsPublicChat,
+  PLATFORM_RENTAL_CONDITIONS,
   type PaginationMeta,
   type SeatBucket,
   type ServiceType,
@@ -37,6 +38,7 @@ import {
 } from '../../common/storefront/storefront-identity';
 import { ProvincesService } from '../locations/provinces.service';
 import { PricingService } from '../pricing/pricing.service';
+import { TenantRentalTermsService } from '../vehicle-settings/tenant-rental-terms.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { HostMetricsService } from '../host-metrics/host-metrics.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -205,6 +207,8 @@ export class PublicListingsService {
     private readonly settings: VehicleSettingsService,
     /** Ba chỉ số công khai - nguồn tính DUY NHẤT (ADR 0045 điều 2). */
     private readonly hostMetrics: HostMetricsService,
+    /** Điều khoản thuê của gian hàng theo nhóm dịch vụ (ADR 0112 điều 3). */
+    private readonly rentalTermsService: TenantRentalTermsService,
   ) {}
 
   /** Số chuyến đã hoàn thành theo xe - một truy vấn cho cả trang (xem `listing-card.ts`). */
@@ -871,11 +875,22 @@ export class PublicListingsService {
   /**
    * Hồ sơ công khai của một gian hàng theo slug - chỉ shop đang `active`. 404 nếu không có/đã
    * khoá. Không lộ dữ liệu nội bộ (id, email, mã số thuế…), chỉ thứ marketplace cần.
+   *
+   * Nhận cả slug CŨ (`tenant_slug_aliases` — link `/shops/<tên>-<mã>` đã chia sẻ trước khi rút gọn):
+   * DTO luôn mang slug HIỆN TẠI, trang web so với slug trên URL và chuyển hẳn (301) sang link mới.
    */
   async getShopBySlug(slug: string): Promise<PublicShopDto> {
     const now = new Date();
+    const alias = await this.prisma.tenantSlugAlias.findUnique({
+      where: { slug },
+      select: { tenantId: true },
+    });
     const t = await this.prisma.tenant.findFirst({
-      where: { slug, status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      where: {
+        ...(alias ? { id: alias.tenantId } : { slug }),
+        status: TENANT_STATUS.ACTIVE,
+        deletedAt: null,
+      },
       select: {
         /*
          * Tên, ảnh và tuyến thu tiền HIỆU LỰC, đọc trên cùng một hàng tenant. Tuyến quyết định
@@ -1393,17 +1408,18 @@ export class PublicListingsService {
         v.serviceTypes
           .filter((s) => hasVehicleServiceSettings(s))
           .map(async (s): Promise<ListingRentalTermsDto> => {
-            const setting = await this.settings.serviceSettingFor(
-              this.prisma,
-              v.id,
-              s as ServiceType,
-            );
+            const [setting, terms] = await Promise.all([
+              this.settings.serviceSettingFor(this.prisma, v.id, s as ServiceType),
+              this.rentalTermsService.termsFor(this.prisma, v.tenantId, s),
+            ]);
             return {
               serviceType: s,
-              requiredDocuments: setting.effectiveRequiredDocuments,
-              identityVerifyMethod: setting.identityVerifyMethod,
-              termsText: setting.termsText,
-              requireTermsAcceptance: setting.requireTermsAcceptance,
+              // Giấy tờ: hình dạng cũ cho app đã phát hành, giá trị theo luật chuẩn; điều khoản của
+              // GIAN HÀNG theo nhóm dịch vụ (ADR 0112 điều 3).
+              requiredDocuments: [...PLATFORM_RENTAL_CONDITIONS.identityDocuments],
+              identityVerifyMethod: PLATFORM_RENTAL_CONDITIONS.verifyMethods[0],
+              termsText: terms.termsText,
+              requireTermsAcceptance: terms.requireTermsAcceptance,
               depositMode: s === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
               instantBookEnabled: setting.autoAcceptEnabled,
               minRentalMinutes: setting.minRentalMinutes,
@@ -1540,10 +1556,17 @@ export class PublicListingsService {
       collateral: policy
         ? {
             mode: policy.values.collateralMode,
+            cashEnabled: policy.values.collateralCashEnabled,
+            assetEnabled: policy.values.collateralAssetEnabled,
+            combination: policy.values.collateralCombination,
             assetTypes: policy.values.collateralAssetTypes,
             depositAmount: policy.values.depositAmount,
           }
         : null,
+      rentalConditions: {
+        identityDocuments: [...PLATFORM_RENTAL_CONDITIONS.identityDocuments],
+        verifyMethods: [...PLATFORM_RENTAL_CONDITIONS.verifyMethods],
+      },
       rentalTerms,
       // Khung giờ giao/nhận đã gỡ (ADR 0078): xe nhận/trả mọi giờ - giữ hình dạng cho app cũ.
       handover: { pickupWindows: [], returnWindows: [] },

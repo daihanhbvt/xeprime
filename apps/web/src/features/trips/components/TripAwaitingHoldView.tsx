@@ -1,7 +1,7 @@
 'use client';
 
 import { Checkbox } from 'antd';
-import Link from 'next/link';
+import { LegalDocLink } from '@/features/legal/components/LegalDocLink';
 import { useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
 import {
@@ -13,7 +13,7 @@ import {
 } from '@xeprime/types';
 import { Countdown } from '@/components/data-display/Countdown';
 import { InfoHint } from '@/components/data-display/InfoHint';
-import { LEGAL_DOC, legalPath } from '@/constants/legal';
+import { LEGAL_DOC } from '@/constants/legal';
 import { ROUTES, paymentPath } from '@/constants/routes';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
 import { BookingReviewCosts } from '@/features/booking-requests/components/BookingReviewCosts';
@@ -264,16 +264,11 @@ function HoldPaymentCard({
         onChange={(event) => setAcknowledged(event.target.checked)}
       >
         {t.rich('acknowledge', {
-          // Mở tab mới: rời trang ở đây là mất luôn dấu tích vừa đánh.
+          // Hộp xem nhanh: rời trang ở đây là mất luôn dấu tích vừa đánh và đồng hồ thanh toán.
           policy: (chunks) => (
-            <Link
-              href={legalPath.doc(LEGAL_DOC.CANCELLATION)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.ackLink}
-            >
+            <LegalDocLink doc={LEGAL_DOC.CANCELLATION} className={styles.ackLink}>
               {chunks}
-            </Link>
+            </LegalDocLink>
           ),
         })}
       </Checkbox>

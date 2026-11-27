@@ -30,15 +30,14 @@ import { CancellationsService } from '../src/modules/cancellations/cancellations
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
-import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
 import { InsuranceCertificateService } from '../src/modules/insurance/insurance-certificate.service';
 import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
-import { WalletService } from '../src/modules/wallet/wallet.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { cleanupDriverAccounts, seedDriverLink } from './helpers/driver-link';
 import {
+  makeBookingCollateralsService,
   makeBookingHoldsService,
   makeBookingsService,
   makeCustomersService,
@@ -46,6 +45,7 @@ import {
   makeNotificationService,
   makePricingService,
   makeSupportService,
+  makeHoldSettlementService,
 } from './helpers/service-factory';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
@@ -82,7 +82,7 @@ const trips = new CustomerTripsService(
   bookings,
   makeBookingHoldsService(asService),
   new VehicleContractsService(asService, fakeR2, audit),
-  new HoldSettlementService(asService, audit, notifications, new WalletService(asService)),
+  makeHoldSettlementService(asService, audit, notifications),
   new BankAccountsService(asService),
   notifications,
   audit,
@@ -154,7 +154,7 @@ function farPickup(): Date {
 }
 
 const EXTERNAL = { name: '  Nguyễn Văn Tài  ', phone: '0912345678' };
-const controller = new BookingsController(bookings);
+const controller = new BookingsController(bookings, makeBookingCollateralsService(asService));
 
 /** Đơn CŨ mang tài xế ngoài hệ thống — ghi thẳng DB vì API đã bỏ đường ghi (ADR 0074 điều 4). */
 async function setLegacyExternal(bookingId: string, name: string, phone: string): Promise<void> {

@@ -77,11 +77,12 @@ export const elevation = {
   /** Thẻ ở trạng thái nghỉ. */
   // Thẻ nghỉ: bóng NHẠT HƠN nữa (người dùng chốt 28/10/2026, hai lần) — Android elevation 1 với màu bóng
   // nhạt (Android 9+ tôn trọng `shadowColor`), iOS nửa độ đậm của `elevation-xs`. Thẻ có viền nên vẫn tách nền.
-  card: Platform.select<ViewStyle>({
-    ios: { ...parseBoxShadow(XP_TOKENS['elevation-xs']), shadowOpacity: parseBoxShadow(XP_TOKENS['elevation-xs']).shadowOpacity / 2 },
-    android: { elevation: 1, shadowColor: 'rgba(16, 24, 40, 0.35)' },
-    default: {},
-  }) as ViewStyle,
+  /*
+   * Feedback thiết kế 20/11/2026 ("bóng thẻ đang thô"): thẻ dùng ĐÚNG quầng đều bốn phía Figma
+   * "New/Sm Card" bằng `boxShadow` (vẽ y hệt trên iOS và Android - New Architecture), thay cho
+   * `elevation` Android vốn đổ bóng đậm xuống dưới.
+   */
+  card: { boxShadow: '0px 0px 6px 0px rgba(10, 13, 18, 0.04)' } as ViewStyle,
   /** Nổi lên: nhấn giữ, dropdown. */
   raised: shadow('raised', 'shadow-raised'),
   /** `--xp-elevation-panel` — bảng ô nhập của thẻ tìm kiếm trang chủ (`SearchCard .panel`). */
@@ -90,13 +91,15 @@ export const elevation = {
    * `--xp-elevation-ambient` (`0 0 8px rgba(10,13,18,0.04)`, Figma "New/8-4") — quầng bóng đều
    * bốn phía của ô việc cần làm Tổng quan Partner.
    */
-  ambient: shadow('xs', 'elevation-ambient'),
+  ambient: { boxShadow: '0px 0px 8px 0px rgba(10, 13, 18, 0.04)' } as ViewStyle,
   /** Figma "New/Sm Card" (`0 0 6px rgba(10,13,18,0.04)`) — thẻ ví Tổng quan Partner. */
-  ambientSm: Platform.select<ViewStyle>({
-    ios: parseBoxShadow('0 0 6px 0 rgba(10, 13, 18, 0.04)'),
-    android: { elevation: ANDROID_ELEVATION.xs },
-    default: {},
-  }) as ViewStyle,
+  ambientSm: { boxShadow: '0px 0px 6px 0px rgba(10, 13, 18, 0.04)' } as ViewStyle,
+  /** Figma `Shadow/sm` (`0 1 3 rgba(10,13,18,.1)` + `0 1 2 rgba(10,13,18,.06)`) - núm công tắc `_Toggle base`. */
+  sm: { boxShadow: '0px 1px 3px 0px rgba(10, 13, 18, 0.1), 0px 1px 2px 0px rgba(10, 13, 18, 0.06)' } as ViewStyle,
   /** Lớp phủ: modal, sheet. */
   overlay: shadow('overlay', 'shadow-overlay'),
+  /** Avatar nổi trên ảnh nền (Figma `24231:108392` "Avatar profile photo"). */
+  avatar: {
+    boxShadow: '0px 12px 8px 0px rgba(10, 13, 18, 0.08), 0px 4px 3px 0px rgba(10, 13, 18, 0.03)',
+  } as ViewStyle,
 } as const;

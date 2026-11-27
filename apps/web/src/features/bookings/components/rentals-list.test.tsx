@@ -308,17 +308,25 @@ describe('Ô "Tất cả" - bốn truy vấn nhỏ, đúng thứ tự một chuy
     });
   });
 
-  it('không có chuyến nào ⇒ mời tạo đơn; tuyến hoa hồng không có lối lập đơn tay', () => {
+  it('không có chuyến nào ⇒ mời tạo đơn; tuyến hoa hồng cũng lập được đơn tay (ADR 0110)', () => {
     renderPage();
     expect(screen.getByText('Gian hàng chưa có đơn thuê nào')).toBeTruthy();
     cleanup();
     me.billingMode = BILLING_MODE.COMMISSION;
     renderPage();
+    // Nút ở đầu trang và nút mời ở màn trống.
+    expect(screen.getAllByRole('button', { name: /Tạo đơn thuê/ }).length).toBeGreaterThan(0);
+  });
+
+  it('thiếu quyền bookings.create ⇒ không có lối lập đơn tay, ở cả hai tuyến', () => {
+    permissions.granted.delete(PERMISSION.BOOKING_CREATE);
+    renderPage();
     expect(screen.queryByRole('button', { name: /Tạo đơn thuê/ })).toBeNull();
   });
 
-  it('chủ xe tuyến hoa hồng, chưa có chuyến ⇒ câu của chuyến từ chợ + lối "Xem xe của tôi"', () => {
+  it('chủ xe tuyến hoa hồng không có quyền lập đơn, chưa có chuyến ⇒ câu của chuyến từ chợ + lối "Xem xe của tôi"', () => {
     me.billingMode = BILLING_MODE.COMMISSION;
+    permissions.granted.delete(PERMISSION.BOOKING_CREATE);
     renderPage();
     expect(screen.getByText('Chưa có chuyến thuê nào')).toBeTruthy();
     expect(screen.queryByText('Gian hàng chưa có đơn thuê nào')).toBeNull();
@@ -562,6 +570,58 @@ describe('Thẻ yêu cầu - Chờ khách thanh toán', () => {
     expect(within(card).getByRole('button', { name: 'Nhắc khách' })).toBeTruthy();
     expect(within(card).getByText(/Chờ thanh toán:/)).toBeTruthy();
     expect(within(card).queryByRole('button', { name: /^Xác nhận$/ })).toBeNull();
+  });
+
+  it('giao xe tận nơi: phí giao đã chốt thành dòng riêng, tách khỏi "Tiền thuê" (QC 27/11/2026)', () => {
+    seedRequests(BOOKING_REQUEST_STATUS.AWAITING_HOLD, [
+      awaiting({
+        deliveryRequested: true,
+        deliveryAddress: '12 Nguyễn Chí Thanh',
+        pricing: {
+          isEstimate: false,
+          // Tiền thuê từ snapshot ĐÃ GỒM phí giao: 600.000 + 500.000.
+          rentalTotal: '1100000',
+          deliveryFee: '500000',
+          customerTotalAmount: '1150000',
+          paidAmount: '0',
+          remainingAmount: '950000',
+          holdAmount: '200000',
+          holdPaidAmount: '0',
+          ownerPayableAmount: null,
+        },
+      }),
+    ]);
+    renderPage('preset=awaiting_payment');
+    const card = cardFor('Kia Carnival 2025');
+    const value = (label: string) =>
+      within(card).getByText(label).closest('div')?.textContent?.replace(/\s/g, '') ?? '';
+    expect(value('Tiền thuê:')).toContain('600.000');
+    expect(value('Phí giao xe tận nơi:')).toContain('500.000');
+    // Phí đã có số thì không còn câu "chốt sau khi hai bên thống nhất".
+    expect(within(card).queryByText(/chốt trên đơn sau khi hai bên thống nhất/)).toBeNull();
+  });
+
+  it('giao xe tận nơi bỏ trống phí lúc duyệt ⇒ "Miễn phí"', () => {
+    seedRequests(BOOKING_REQUEST_STATUS.AWAITING_HOLD, [
+      awaiting({
+        deliveryRequested: true,
+        pricing: {
+          isEstimate: false,
+          rentalTotal: '600000',
+          deliveryFee: '0',
+          customerTotalAmount: '650000',
+          paidAmount: '0',
+          remainingAmount: '450000',
+          holdAmount: '200000',
+          holdPaidAmount: '0',
+          ownerPayableAmount: null,
+        },
+      }),
+    ]);
+    renderPage('preset=awaiting_payment');
+    const card = cardFor('Kia Carnival 2025');
+    expect(within(card).getByText('Phí giao xe tận nơi:')).toBeTruthy();
+    expect(within(card).getByText('Miễn phí')).toBeTruthy();
   });
 
   it('bấm "Nhắc khách" gọi đúng yêu cầu', () => {

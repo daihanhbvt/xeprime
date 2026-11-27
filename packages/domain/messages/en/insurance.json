@@ -5,7 +5,41 @@
     "mandatory": "Required",
     "tripRate": "+{price}",
     "mandatoryNote": "The owner requires MIC vehicle damage insurance for the whole trip - the premium is included in the price.",
-    "benefitsPage": "See benefits and who bears the deductible"
+    "benefitsPage": "See benefits and who bears the deductible",
+    "perTrip": "/ trip",
+    "perDay": "/ day",
+    "showBenefits": "See benefits",
+    "hideBenefits": "Show less",
+    "deductiblePill": "{amount} deductible",
+    "noDeductiblePill": "No deductible",
+    "hotlinePill": "24/7 hotline",
+    "hotlineLine": "{provider} 24/7 incident hotline: <b>{number}</b>"
+  },
+  "offer": {
+    "title": "Trip insurance",
+    "note": "Optional insurance that protects the vehicle throughout your trip."
+  },
+  "provider": {
+    "mic": {
+      "short": "MIC",
+      "full": "Military Insurance Corporation"
+    }
+  },
+  "dialog": {
+    "priceCaption": "for this trip",
+    "priceCaptionDaily": "per rental day",
+    "deductibleCaption": "The most the renter pays per incident",
+    "noDeductibleCaption": "The renter bears no deductible",
+    "scopeTitle": "What's covered",
+    "noticeTitle": "Benefits & who bears the deductible",
+    "noticeBody": "The renter bears a deductible of up to {amount} per incident for losses covered by the policy. If something happens, keep the scene as it is and call the {provider} hotline right away for a quick assessment.",
+    "noticeBodyNoDeductible": "This product has no deductible. If something happens, keep the scene as it is and call the {provider} hotline right away for a quick assessment.",
+    "hotlineTitle": "{provider} 24/7 incident hotline",
+    "hotlineDesc": "Claims intake & assessment support nationwide",
+    "callHotline": "Call hotline {number}",
+    "rulesLink": "See the full insurance rules",
+    "select": "Add {provider} insurance (+{price})",
+    "deselect": "Remove insurance"
   },
   "benefits": {
     "coverage": "What's covered",

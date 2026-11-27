@@ -151,7 +151,8 @@ export class AccountPaymentsService {
     const zero = new Prisma.Decimal(0);
     const sumOf = (kind: PaymentKind) => byKind.find((k) => k.kind === kind)?._sum.amount ?? zero;
     const rental = sumOf(PAYMENT_KIND.RENTAL);
-    const deposit = sumOf(PAYMENT_KIND.DEPOSIT);
+    // Cọc RÒNG: phần chủ xe đã trả lại trước quyết toán (lượt sửa tiền cọc) không còn là tiền khách đã đưa.
+    const deposit = sumOf(PAYMENT_KIND.DEPOSIT).minus(sumOf(PAYMENT_KIND.DEPOSIT_RETURN));
 
     return {
       paidTotal: rental.add(deposit).toFixed(0),

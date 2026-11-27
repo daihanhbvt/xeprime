@@ -24,9 +24,16 @@ export function LegalConsentCheckbox({
   checked,
   onToggle,
   size = 'sm',
+  statement = 'auth',
 }: {
   checked: boolean;
   onToggle: () => void;
+  /**
+   * Câu cam kết: `auth` - tạo tài khoản khách (Điều khoản sử dụng + Chính sách bảo mật); `shop` -
+   * đăng ký ĐỐI TÁC (Quy chế hoạt động sàn + Điều khoản sử dụng), đúng câu `consent.shopCheck` của web
+   * `PartnerSignupForm` và Figma `24464:25550`.
+   */
+  statement?: 'auth' | 'shop';
   /**
    * `sm` (mặc định) - chữ 12, ô 20, liên kết vàng. `md` - ô đồng ý của form đăng ký đối tác app
    * Partner (Figma `24464:25550`): ô 16, chữ 14/20 đậm vừa, liên kết gạch chân cùng màu chữ.
@@ -43,7 +50,7 @@ export function LegalConsentCheckbox({
       onPress={onToggle}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
-      accessibilityLabel={t('consent.authCheckPlain')}
+      accessibilityLabel={t(statement === 'shop' ? 'consent.shopCheckPlain' : 'consent.authCheckPlain')}
     >
       <XStack ai="flex-start" gap={space.sm} minHeight={sizing.touchTarget} py={space.xs}>
         {/* `pt` nhỏ để ô thẳng hàng với DÒNG ĐẦU của câu, không phải với giữa cả khối. */}
@@ -56,7 +63,7 @@ export function LegalConsentCheckbox({
           fos={md ? typeScale.body.fontSize : fontSize.bodySm}
           {...(md ? { lh: typeScale.body.lineHeight, fow: fontWeight.medium } : {})}
         >
-          {t.rich('consent.authCheck', chunks)}
+          {t.rich(statement === 'shop' ? 'consent.shopCheck' : 'consent.authCheck', chunks)}
         </Text>
       </XStack>
     </Pressable>

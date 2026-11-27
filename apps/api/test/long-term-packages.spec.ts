@@ -154,6 +154,7 @@ beforeAll(async () => {
       id: newId(),
       tenantId,
       depositAmount: new Prisma.Decimal('5000000'),
+      collateralCashEnabled: true,
       discountEnabled: true,
       discountTiers: [
         { minMonths: 1, percent: 5 },

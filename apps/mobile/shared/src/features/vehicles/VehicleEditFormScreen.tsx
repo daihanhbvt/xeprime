@@ -112,7 +112,7 @@ export function VehicleEditFormScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={tPage('forbiddenTitle')}
@@ -130,7 +130,7 @@ ${tPermission('requires')} ${PERMISSION.VEHICLE_UPDATE}`}
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']}>
           <SkeletonText lines={10} />
         </Screen>
       </>
@@ -141,7 +141,7 @@ ${tPermission('requires')} ${PERMISSION.VEHICLE_UPDATE}`}
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError error={query.error} title={title} onRetry={() => void query.refetch()} />
         </Screen>
       </>
@@ -283,7 +283,8 @@ function EditForm({
         onBack={onBack}
       />
       <Screen
-        scrollReveal
+        scrollReveal={false}
+        motion={false}
         edges={['left', 'right', 'bottom']}
         {...refresh}
         footer={

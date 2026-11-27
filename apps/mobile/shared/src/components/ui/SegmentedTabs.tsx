@@ -1,14 +1,14 @@
+import { useMotionOff } from '@/components/motion/no-motion';
+import { IS_PARTNER_APP } from '@/lib/app-kind';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
-import { elevation } from '@/theme/elevation';
 import { duration, easing } from '@/theme/motion';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
@@ -20,6 +20,11 @@ export interface SegmentedTabItem<K extends string> {
   count?: number;
   /** Nhãn đọc cho trình đọc màn hình (mặc định = `label`). */
   accessibilityLabel?: string;
+  /**
+   * Chỉ với `fit`: ô CO VỪA chữ (không giãn) - các ô còn lại lấy hết phần dư. Dùng khi một nhãn dài
+   * bị cắt "…" (feedback 20/11/2026: "Thu chi 30 ngày" vừa chữ, "Đơn & chuyến 6 tháng" đủ chữ).
+   */
+  hug?: boolean;
 }
 
 const TRAY_PAD = 4;
@@ -45,7 +50,8 @@ export function SegmentedTabs<K extends string>({
   items,
   value,
   onChange,
-  variant = 'brand',
+  // App Partner: MỌI dải tab phân đoạn dùng khuôn v2 "Horizontal tabs" (người dùng chốt 20/11/2026).
+  variant = IS_PARTNER_APP ? 'neutral' : 'brand',
   fit = false,
 }: {
   /** Ô rộng theo NHÃN thay vì chia đều - nhãn dài ("Chuyến & thời gian") có đủ chỗ. */
@@ -67,7 +73,8 @@ export function SegmentedTabs<K extends string>({
   const activeBg = dark ? colors.surfaceElevated : colors.surface;
 
   const [trayWidth, setTrayWidth] = useState(0);
-  const reduceMotion = useReducedMotion();
+  // Máy bật Giảm chuyển động hoặc màn tắt hiệu ứng (`NoMotionScope`) ⇒ vạch chỉ đặt thẳng.
+  const reduceMotion = useMotionOff();
   const activeIndex = Math.max(
     items.findIndex((item) => item.key === value),
     0,
@@ -119,15 +126,18 @@ export function SegmentedTabs<K extends string>({
           style={[
             styles.indicator,
             {
-              width: indicatorWidth,
+              width: neutral ? indicatorWidth + 2 : indicatorWidth,
               backgroundColor: activeBg,
+              // Neutral (Figma `24175:52486`): ô chọn viền `stroke/gray-low300` + bóng xs, ĐÈ lên viền
+              // khay (lệch -1) nên cạnh ô chỉ thấy MỘT nét đậm, không hai nét sát nhau (20/11/2026).
               borderColor: neutral ? colors.borderInput : colors.borderSubtle,
-              top: pad,
-              bottom: pad,
-              left: pad,
+              top: neutral ? -1 : pad,
+              bottom: neutral ? -1 : pad,
+              left: neutral ? -1 : pad,
               borderRadius: segmentRadius,
             },
-            neutral ? elevation.xs : null,
+            // Figma `shadow-xs` ĐÚNG số (0 1 2 /5%) - `elevation.xs` của Android đọc thành viền đáy đậm.
+            neutral ? FIGMA_SHADOW_XS : null,
             indicatorStyle,
           ]}
         />
@@ -137,7 +147,7 @@ export function SegmentedTabs<K extends string>({
         return (
           <Pressable
             key={item.key}
-            style={fit ? styles.segmentFit : styles.segment}
+            style={fit ? (item.hug ? styles.segmentHug : styles.segmentFit) : styles.segment}
             {...(fit
               ? {
                   onLayout: (e: LayoutChangeEvent) => {
@@ -208,9 +218,12 @@ export function SegmentedTabs<K extends string>({
 const styles = StyleSheet.create({
   segment: { flex: 1 },
   segmentFit: { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' },
+  segmentHug: { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   // Nằm trong vùng đệm của khay (absolute tính từ mép TRONG viền 1px) — trùng khít ô đầu.
   indicator: {
     position: 'absolute',
     borderWidth: 1,
   },
 });
+
+const FIGMA_SHADOW_XS = { boxShadow: '0px 1px 2px 0px rgba(10, 13, 18, 0.05)' } as const;

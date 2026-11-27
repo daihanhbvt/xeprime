@@ -28,6 +28,7 @@ import {
   type BookingStatus,
   type BookingListPreset,
 } from '@xeprime/types';
+import { BookingSourceChip } from '@/components/data-display/BookingSourceChip';
 import { ServiceTypeChip } from '@/components/data-display/ServiceTypeChip';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { bookingPath, vehiclePath } from '@/constants/routes';
@@ -180,6 +181,7 @@ export function BookingCard({
         #{booking.code}
       </RentalCardDetailButton>
       <ServiceTypeChip value={booking.serviceType} />
+      <BookingSourceChip source={booking.source} sourceLabel={booking.sourceLabel} />
     </>
   );
 
@@ -310,7 +312,12 @@ export function BookingCard({
             #{booking.code}
           </RentalCardDetailButton>
         }
-        chip={<ServiceTypeChip value={booking.serviceType} />}
+        chip={
+          <span className={styles.chips}>
+            <ServiceTypeChip value={booking.serviceType} />
+            <BookingSourceChip source={booking.source} sourceLabel={booking.sourceLabel} size="sm" />
+          </span>
+        }
         vehicle={vehicle}
         customer={{
           identity: (

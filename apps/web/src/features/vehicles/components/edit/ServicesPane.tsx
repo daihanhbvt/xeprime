@@ -1,6 +1,6 @@
 'use client';
 
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Form, Switch, Tooltip } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { useForm, useWatch, type Control } from 'react-hook-form';
 import {
   LONG_TERM_PACKAGE_MONTHS,
   MIN_RENTAL_MINUTES_RANGE,
+  POLICY_SECTION,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SUPPORT_CAPABILITY,
@@ -23,7 +24,9 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/constants/routes';
 import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
+import { policyCollateral, useDescribeCollateral } from '@/features/rental-policies/collateral-text';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
+import { LimitBlocks } from '@/features/rental-policies/components/ShopPolicyBlocks';
 import {
   POLICY_BLOCK,
   PolicyFlatLayout,
@@ -32,7 +35,6 @@ import {
 import {
   CalendarPriceLink,
   DirectDiscountEditor,
-  LongTermPackagePreviewLive,
   LongTermPriceHintLive,
 } from '@/features/rental-policies/components/PricingParts';
 import type { VehiclePricingFormApi } from '@/features/rental-policies/hooks/use-vehicle-pricing-form';
@@ -64,7 +66,8 @@ import { SERVICE_TABS, serviceOfTab } from '../vehicle-edit-nav';
 import { CatalogRentHintFor } from '../CatalogSuggestions';
 import { EditCard, EditToggleRow as ToggleRow } from './EditCard';
 import { useEditForm } from './edit-actions';
-import { InheritedPolicyNote, PricingForm } from './PricingForm';
+import { PricingForm } from './PricingForm';
+import { VehiclePolicySection } from './VehiclePolicySection';
 import styles from './EditPanes.module.css';
 
 const HOUR = 60;
@@ -82,6 +85,12 @@ const FIELD_TAB: Readonly<Record<string, VehicleEditTab>> = {
   withDriverInterCityPrice: VEHICLE_EDIT_TAB.WITH_DRIVER,
   withDriverOneWayPrice: VEHICLE_EDIT_TAB.WITH_DRIVER,
   monthlyPrice: VEHICLE_EDIT_TAB.LONG_TERM,
+  mileageLimitEnabled: VEHICLE_EDIT_TAB.SELF_DRIVE,
+  includedDistanceKmPerDay: VEHICLE_EDIT_TAB.SELF_DRIVE,
+  excessDistanceFeePerKm: VEHICLE_EDIT_TAB.SELF_DRIVE,
+  overtimeEnabled: VEHICLE_EDIT_TAB.SELF_DRIVE,
+  overtimeFeePerHour: VEHICLE_EDIT_TAB.SELF_DRIVE,
+  overtimeGraceMinutes: VEHICLE_EDIT_TAB.SELF_DRIVE,
   discountEnabled: VEHICLE_EDIT_TAB.LONG_TERM,
   discountTiers: VEHICLE_EDIT_TAB.LONG_TERM,
 };
@@ -145,12 +154,13 @@ function ServicesBody({
   priced,
   pricingState,
 }: ServicesPaneProps & {
-  priced: { api: VehiclePricingFormApi; pricing: VehiclePricing; policyEditable: boolean } | null;
+  priced: { api: VehiclePricingFormApi; pricing: VehiclePricing } | null;
   /** Khung tải / lỗi của giá — đứng đúng chỗ các thẻ giá khi giá chưa có. */
   pricingState: ReactNode;
 }) {
   const t = useTranslations('Vehicles.editor.services');
   const tPricing = useTranslations('Vehicles.pricing');
+  const tWorkspace = useTranslations('Shop.policies.workspace');
   const tManage = useTranslations('VehicleManage');
   const tActions = useTranslations('Common.actions');
   const support = useSupportSession();
@@ -186,7 +196,6 @@ function ServicesBody({
 
   const api = priced?.api ?? null;
   const control = api?.form.control as Control<VehiclePricingFormValues> | undefined;
-  const policyEditable = priced?.policyEditable ?? false;
   const disabled = !canUpdate;
 
   return (
@@ -247,7 +256,8 @@ function ServicesBody({
                 )
               }
             />
-            {serviceOn && hasSetting ? (
+            {/* Có tài xế không tự nhận (19/11/2026) - không có công tắc, chỉ tự lái mới có. */}
+            {serviceOn && hasSetting && service === SERVICE_TYPE.SELF_DRIVE ? (
               settings.isLoading ? (
                 <LoadingState variant="inline" />
               ) : settings.isError ? (
@@ -266,7 +276,6 @@ function ServicesBody({
                   vehicleId={vehicle.id}
                   setting={setting}
                   canEdit={canUpdate && canOperate}
-                  withDriver={service === SERVICE_TYPE.WITH_DRIVER}
                 />
               ) : null
             ) : null}
@@ -306,6 +315,24 @@ function ServicesBody({
                     label={tPricing('calendarLink')}
                   />
                 </EditCard>
+                {/*
+                  Hạn mức km + phụ phí quá giờ (ADR 0112 điều 4): áp cho chuyến tự lái, công tắc kế
+                  thừa gian hàng của RIÊNG mục này. Dưới cùng là hình thức cọc đang áp, dẫn sang mục
+                  Bảo hiểm & Giao nhận - nơi đặt nó.
+                */}
+                <VehiclePolicySection
+                  api={api!}
+                  section={POLICY_SECTION.USAGE_LIMITS}
+                  canUpdate={canUpdate}
+                  title={tWorkspace('limits.title')}
+                >
+                  {(binding) => (
+                    <>
+                      <LimitBlocks control={binding.control} disabled={binding.disabled} />
+                      <CollateralStrip api={api!} onOpenPolicy={onOpenPolicy} />
+                    </>
+                  )}
+                </VehiclePolicySection>
               </>
             ) : null}
 
@@ -366,31 +393,30 @@ function ServicesBody({
                   {isManage ? null : <LongTermPriceHintLive control={control} />}
                 </EditCard>
                 {isManage ? (
-                  <EditCard title={t('policy.longTermTitle')}>
-                    <div className={styles.longTermDiscount}>
-                      <div className={styles.longTermDiscountSettings}>
-                        {!policyEditable ? (
-                          <InheritedPolicyNote onOpenSwitch={onOpenPolicy} />
-                        ) : null}
-                        {/* Phẳng: khối mốc đã nằm trong thẻ "Ưu đãi thuê dài hạn" — không thẻ lồng thẻ. */}
-                        <PolicyFlatLayout>
-                          <PolicySections
-                            control={
-                              control as unknown as Parameters<typeof PolicySections>[0]['control']
-                            }
-                            numbered={false}
-                            blocks={[POLICY_BLOCK.DISCOUNT]}
-                            legacyDiscountTiers={
-                              (priced!.pricing.policy ?? priced!.pricing.shopPolicy)
-                                ?.legacyDiscountTiers
-                            }
-                            disabled={disabled || !policyEditable}
-                          />
-                        </PolicyFlatLayout>
-                      </div>
-                      <LongTermPackagePreviewLive control={control} />
-                    </div>
-                  </EditCard>
+                  <VehiclePolicySection
+                    api={api!}
+                    section={POLICY_SECTION.LONG_TERM_DISCOUNT}
+                    canUpdate={canUpdate}
+                    title={t('policy.longTermTitle')}
+                  >
+                    {(binding) => (
+                      // Bảng mốc trải hết chiều ngang, hộp công thức bên dưới (Figma `24705:27510`).
+                      <PolicyFlatLayout>
+                        <PolicySections
+                          control={binding.control}
+                          numbered={false}
+                          blocks={[POLICY_BLOCK.DISCOUNT]}
+                          legacyDiscountTiers={
+                            (binding.inherited
+                              ? priced!.pricing.shopPolicy
+                              : (priced!.pricing.ownPolicy ?? priced!.pricing.policy))
+                              ?.legacyDiscountTiers
+                          }
+                          disabled={binding.disabled}
+                        />
+                      </PolicyFlatLayout>
+                    )}
+                  </VehiclePolicySection>
                 ) : null}
               </>
             ) : null}
@@ -412,6 +438,56 @@ function ServicesBody({
       </div>
       {toggle.dialog}
     </Form>
+  );
+}
+
+/**
+ * "Hình thức cọc xe hiện tại: … - Thiết lập tại Bảo hiểm & Giao nhận →" (design `24705:27729`). Đọc
+ * cọc ĐANG ÁP: của gian hàng khi mục cọc kế thừa, của xe khi riêng - kể cả số đang gõ dở.
+ */
+function CollateralStrip({
+  api,
+  onOpenPolicy,
+}: {
+  api: VehiclePricingFormApi;
+  onOpenPolicy?: () => void;
+}) {
+  const t = useTranslations('Vehicles.editor.services');
+  const describe = useDescribeCollateral();
+  const control = (
+    api.isInherited(POLICY_SECTION.COLLATERAL) ? api.shopForm.control : api.form.control
+  ) as Control<VehiclePricingFormValues>;
+  const [mode, cash, asset, combination, assetTypes, depositAmount] = useWatch({
+    control,
+    name: [
+      'collateralMode',
+      'collateralCashEnabled',
+      'collateralAssetEnabled',
+      'collateralCombination',
+      'collateralAssetTypes',
+      'depositAmount',
+    ],
+  });
+  const text = describe(
+    policyCollateral({
+      collateralMode: mode,
+      collateralCashEnabled: cash,
+      collateralAssetEnabled: asset,
+      collateralCombination: combination,
+      collateralAssetTypes: assetTypes,
+      depositAmount,
+    }),
+  );
+  if (!text) return null;
+  return (
+    <div className={styles.collateralStrip}>
+      <span>{t('collateralNow', { collateral: text })}</span>
+      {onOpenPolicy ? (
+        <button type="button" className={styles.stripLink} onClick={onOpenPolicy}>
+          {t('collateralSetup')} <ArrowRightOutlined aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -537,18 +613,16 @@ function PriceField({
 /**
  * "Tự động đồng ý nhận chuyến" — LƯU NGAY, cùng hook với thẻ "Tối ưu nhận chuyến" ở Hồ sơ xe. Điều
  * kiện để hệ thống tự nhận mở ra ngay dưới công tắc (design chỉ vẽ công tắc; bốn–sáu dòng này là
- * toàn bộ lời hứa của nó nên không được biến mất).
+ * toàn bộ lời hứa của nó nên không được biến mất). Chỉ tab tự lái có — có tài xế luôn duyệt tay.
  */
 function AutoAcceptRow({
   vehicleId,
   setting,
   canEdit,
-  withDriver,
 }: {
   vehicleId: string;
   setting: VehicleServiceSetting;
   canEdit: boolean;
-  withDriver: boolean;
 }) {
   const t = useTranslations('VehicleManage.autoAccept');
   const tEditor = useTranslations('Vehicles.editor.services');
@@ -589,18 +663,12 @@ function AutoAcceptRow({
         )
       }
     >
-      {withDriver ? (
-        // Có tài xế không tự nhận (19/11/2026) - nói lý do thay cho khung năng lực tài xế.
-        <Alert type="info" showIcon title={t('withDriverManualOnly')} />
-      ) : null}
       {rulesOpen ? (
         <div className={styles.rules}>
           <ul className={styles.rulesList}>
             <li>{t('rules.schedule')}</li>
             <li>{t('rules.quote')}</li>
             <li>{t('rules.longTerm')}</li>
-            {withDriver ? <li>{t('rules.driver')}</li> : null}
-            {withDriver ? <li>{t('rules.hold')}</li> : null}
           </ul>
           <p className={styles.rulesPolicy}>
             <strong>{t('policyTitle')}</strong> {t('policyBody')}

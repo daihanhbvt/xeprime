@@ -5,8 +5,6 @@ import {
   bookingFiltersToParams,
   bookingsApi,
   driversApi,
-  vehicleFiltersToParams,
-  vehiclesApi,
   type AssignableWindow,
   type AssignBookingDriverInput,
   type BookingDetail,
@@ -74,6 +72,23 @@ function invalidateBookingSurfaces(queryClient: ReturnType<typeof useQueryClient
 }
 
 /**
+ * Response các lượt sửa đơn là chi tiết THUẦN - không kèm `handoverPrep` /
+ * `customerCompletedRentals` (chỉ `GET /bookings/:id` dựng). Ghi đè thẳng làm thẻ "Chuẩn bị bàn
+ * giao" biến mất rồi hiện lại khi refetch (nháy); giữ phần cũ tới khi refetch mang số mới về.
+ */
+export function keepDetailExtras(
+  prev: BookingDetail | undefined,
+  next: BookingDetail,
+): BookingDetail {
+  if (!prev) return next;
+  return {
+    ...next,
+    handoverPrep: next.handoverPrep ?? prev.handoverPrep,
+    customerCompletedRentals: next.customerCompletedRentals ?? prev.customerCompletedRentals,
+  };
+}
+
+/**
  * Đổi trạng thái đơn — CHỈ dùng cho hai quyết định bấm tay: huỷ đơn và khách không đến.
  *
  * `active`/`completed` không bao giờ đi qua đây: chúng là HỆ QUẢ của một lần xác nhận bàn giao
@@ -85,7 +100,9 @@ export function useTransitionBooking(id: string) {
   return useMutation({
     mutationFn: (body: TransitionBookingInput) => bookingsApi.transition(id, body),
     onSuccess: (booking) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), booking);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, booking),
+      );
       invalidateBookingSurfaces(queryClient, id);
     },
   });
@@ -98,7 +115,9 @@ export function useUpdateDeliveryFee(id: string) {
   return useMutation({
     mutationFn: (body: UpdateDeliveryFeeInput) => bookingsApi.updateDeliveryFee(id, body),
     onSuccess: (booking: BookingDetail) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), booking);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, booking),
+      );
       invalidateBookingSurfaces(queryClient, id);
     },
   });
@@ -114,7 +133,9 @@ export function useAssignDriver(id: string) {
   return useMutation({
     mutationFn: (body: AssignBookingDriverInput) => bookingsApi.assignDriver(id, body),
     onSuccess: (booking: BookingDetail) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), booking);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, booking),
+      );
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all });
     },
@@ -213,29 +234,6 @@ export function useCheckConflict() {
   });
 }
 
-/** Bộ chọn hiện một tấm trượt, không phải cả trang — 30 dòng là quá đủ để tìm rồi bấm. */
-const VEHICLE_PICKER_LIMIT = 30;
-
-/**
- * Đội xe cho bộ chọn khi tạo đơn.
- *
- * Tìm ở SERVER (`q`); không kéo cả kho về rồi lọc tại chỗ — seed demo đã có gian hàng 40 xe,
- * và một gian hàng thật có thể vài trăm.
- */
-export function useVehiclePicker(search: string, enabled: boolean, branchId?: string) {
-  const filters = {
-    ...(search ? { q: search } : {}),
-    ...(branchId ? { branchId } : {}),
-    limit: VEHICLE_PICKER_LIMIT,
-  };
-
-  return useQuery({
-    queryKey: queryKeys.vehicles.list(vehicleFiltersToParams(filters)),
-    queryFn: () => vehiclesApi.list(filters),
-    enabled,
-  });
-}
-
 /**
  * Sửa một đơn đã tạo.
  *
@@ -251,7 +249,9 @@ export function useUpdateBooking(id: string) {
   return useMutation({
     mutationFn: (body: UpdateBookingInput) => bookingsApi.update(id, body),
     onSuccess: (booking) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), booking);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, booking),
+      );
       invalidateBookingSurfaces(queryClient, id);
     },
   });

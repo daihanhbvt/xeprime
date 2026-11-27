@@ -11,19 +11,15 @@ import {
   PARTNER_TRACK_SHOP_RATIO,
   images,
 } from '@/assets';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { Screen } from '@/components/layout/Screen';
-import { Button } from '@/components/ui/Button';
-import type { IconName } from '@/components/ui/Chip';
-import {
-  ListYourVehicleNotes,
-  StartSteps,
-  useStartSteps,
-} from '@/features/list-vehicle/ListYourVehicleScreen';
+import { BackArrow } from '@/components/ui/BackArrow';
+import { Button, MAIN_GRADIENT } from '@/components/ui/Button';
+import { FitOneLineText } from '@/components/ui/FitOneLineText';
 import { usePartnerOffer } from '@/features/list-vehicle/use-partner-offer';
 import { layout } from '@/theme/layout';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
-import { fontWeight, gradients, market, radius, space, typeScale } from '@/theme/tokens';
+import { fontWeight, market, radius, space, typeScale } from '@/theme/tokens';
 
 /**
  * Số xe tối đa của chủ xe tuyến hoa hồng (Owner Lite — ADR 0041 điều 4) - cùng hằng số với
@@ -43,32 +39,30 @@ const RIBBON = { width: 117, offsetRight: -12, offsetTop: -14, textLeft: 20, tex
 const SHOP_BG_OPACITY = { light: 0.3, dark: 0.08 } as const;
 
 /**
- * Phần NHẤN trong câu ICU (`<strong>`): lồng `Text` trong `Text` để đổi kiểu chữ giữa câu.
- */
-function strong(chunks: ReactNode): ReactNode {
-  return <Text fow={fontWeight.semibold}>{chunks}</Text>;
-}
-
-/**
- * MÀN CHỌN TUYẾN của app Partner — Figma Partner-XePrime "Signup - Plan" (`24464:25566`): tiêu đề
- * "Chọn mô hình hợp tác cùng XePrime" 20/30, lời dẫn 14/20, rồi HAI THẺ tuyến xếp dọc, mỗi thẻ một
- * nút "đi tiếp" của chính nó (như web `ListYourVehicleLanding`): thẻ cá nhân nút viền vàng, thẻ gian
- * hàng nút gradient + ruy băng "Gói đề xuất".
+ * MÀN CHỌN TUYẾN của app Partner — Figma Partner-XePrime "Signup - Plan" (`24464:25566`): mũi tên
+ * lui (chỉ khi chưa đăng nhập), tiêu đề "Chọn mô hình hợp tác cùng XePrime" 20/30 MỘT dòng, lời dẫn
+ * 14/20, rồi HAI THẺ tuyến xếp dọc, mỗi thẻ một nút "đi tiếp" của chính nó (như web
+ * `ListYourVehicleLanding`): thẻ cá nhân nút viền vàng, thẻ gian hàng nút gradient + ruy băng "Đề xuất".
  *
- * Bấm nút của thẻ nào là chọn tuyến đó (`onChoose`) - cùng một lượt chọn như trước, chỉ khác chỗ đặt
- * nút. Dưới hai thẻ giữ các khối app đã có mà bản vẽ chưa vẽ: "Bắt đầu trong 3 bước", "Linh hoạt
- * chuyển đổi khi cần", liên kết quy định chợ xe, rồi phần đuôi của nơi dùng (mời đăng nhập / Đăng xuất).
+ * Bấm nút của thẻ nào là chọn tuyến đó (`onChoose`). Màn CHỈ có những gì bản vẽ có (người dùng chốt
+ * 20/11/2026): đã bỏ "Bắt đầu trong 3 bước", "Linh hoạt chuyển đổi khi cần", liên kết quy định chợ
+ * xe và dòng mời đăng nhập / Đăng xuất.
  */
 export function PartnerTrackChooser({
   onChoose,
-  footer,
+  onBack,
 }: {
   onChoose: (track: RegistrationTrack) => void;
-  footer?: ReactNode;
+  /** Mũi tên lui đầu màn (Figma "Back navigation") - vắng = không có mũi tên (người đã đăng nhập). */
+  onBack?: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('ListYourVehicle.landing');
-  const steps = useStartSteps();
+  /*
+   * Câu chữ RIÊNG của app Partner (Figma "Signup - Plan"): không nhắc "gói", chữ thẻ gian hàng theo
+   * bản vẽ (người dùng chốt 20/11/2026). Web `/list-your-vehicle` giữ các khoá chung.
+   */
+  const tApp = useTranslations('ListYourVehicle.landing.partnerApp');
   // Khoảng % hoa hồng đọc từ chính sách phí hiện hành; chưa có thì giữ câu chung, không đoán số.
   const offer = usePartnerOffer().data;
   const commissionRange =
@@ -76,12 +70,33 @@ export function PartnerTrackChooser({
       ? { min: offer.minOwnerCommissionPercent, max: offer.maxOwnerCommissionPercent }
       : null;
 
+  /*
+   * Đoạn nhấn lồng trong câu: `Text` lồng của Tamagui KHÔNG giữ độ đậm của `Text` cha - khai lại
+   * `fow` ở chính đoạn đó, nếu không "XePrime" / "0%" rơi về chữ thường.
+   */
   const brand = useCallback(
-    (chunks: ReactNode) => <Text col={colors.brandLink}>{chunks}</Text>,
+    (chunks: ReactNode) => (
+      <Text col={colors.brandLink} fow={fontWeight.bold}>
+        {chunks}
+      </Text>
+    ),
     [colors.brandLink],
   );
   const offerGreen = useCallback(
-    (chunks: ReactNode) => <Text col={colors.success}>{chunks}</Text>,
+    (chunks: ReactNode) => (
+      <Text col={colors.success} fow={fontWeight.semibold}>
+        {chunks}
+      </Text>
+    ),
+    [colors.success],
+  );
+  /** "0% phí hoa hồng" trong mô tả thẻ gian hàng: xanh `status/success-high`, đậm vừa (Figma `24464:26350`). */
+  const offerStrongGreen = useCallback(
+    (chunks: ReactNode) => (
+      <Text col={colors.success} fow={fontWeight.semibold}>
+        {chunks}
+      </Text>
+    ),
     [colors.success],
   );
   const choosePersonal = useCallback(() => onChoose(REGISTRATION_TRACK.COMMISSION), [onChoose]);
@@ -90,18 +105,23 @@ export function PartnerTrackChooser({
   return (
     <Screen padded={false}>
       <YStack gap={space.xl} px={layout.padXLg} py={space.lg}>
+        {onBack ? <BackArrow onPress={onBack} /> : null}
         <YStack gap={2}>
-          <Text
+          {/*
+            Figma `whitespace-nowrap`: MỘT dòng. Cỡ chữ tính vừa KHÍT bề ngang cột (`FitOneLineText`),
+            không co theo nấc như `adjustsFontSizeToFit` - hai lề đều nhau.
+          */}
+          <FitOneLineText
             col={colors.text}
-            fos={TITLE.fontSize}
-            lh={TITLE.lineHeight}
+            fontSize={TITLE.fontSize}
+            lineHeight={TITLE.lineHeight}
             fow={fontWeight.bold}
             accessibilityRole="header"
           >
             {t.rich('heroTitle', { brand })}
-          </Text>
+          </FitOneLineText>
           <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
-            {t.rich('subtitle', { br: () => '\n' })}
+            {tApp.rich('subtitle', { br: () => '\n' })}
           </Text>
         </YStack>
 
@@ -113,20 +133,21 @@ export function PartnerTrackChooser({
             tagline={t('personal.tagline')}
             body={t('personal.body', { maxVehicles: BASIC_OWNER_VEHICLE_CAP })}
             features={[
-              { key: 'noFee', icon: 'pricetag-outline', label: t('personal.features.noFee') },
+              { key: 'noFee', icon: 'discount', label: tApp('personalFeatures.noFee') },
               {
                 key: 'vehicleCap',
-                icon: 'car-outline',
-                label: t('personal.features.vehicleCap', { maxVehicles: BASIC_OWNER_VEHICLE_CAP }),
+                icon: 'car-side',
+                label: tApp('personalFeatures.vehicleCap', { maxVehicles: BASIC_OWNER_VEHICLE_CAP }),
               },
-              { key: 'simple', icon: 'settings-outline', label: t('personal.features.simple') },
+              { key: 'simple', icon: 'setting-sm', label: tApp('personalFeatures.simple') },
             ]}
             art={images.partnerTrackPersonal}
             offerTitle={t('personal.offerTitle')}
+            // Khuôn câu Figma, khoảng % THẬT đọc từ chính sách phí (ADR 0101; người dùng chốt 20/11/2026).
             offerBody={
               commissionRange
-                ? t.rich('personal.offerBodyRange', { ...commissionRange, strong })
-                : t.rich('personal.offerBody', { strong })
+                ? tApp('personalOfferBodyRange', commissionRange)
+                : tApp('personalOfferBody')
             }
             // Nhãn CHUNG của Figma cho cả hai thẻ (người dùng chốt 19/11/2026); bấm vẫn chọn đúng tuyến của thẻ.
             cta={t('chooseCta')}
@@ -137,36 +158,37 @@ export function PartnerTrackChooser({
             // Nhãn NGẮN của Figma ("Đề xuất"): dải đỏ chỉ còn chừng 70pt trước biểu tượng 👍.
             ribbon={t('shop.recommendedShort')}
             badge={t('shop.badge')}
-            title={t('shop.title')}
-            tagline={t('shop.tagline')}
-            body={t.rich('shop.body', { strong })}
+            title={tApp('shopTitle')}
+            tagline={tApp('shopTagline')}
+            body={tApp.rich('shopBody', { offer: offerStrongGreen })}
             features={[
-              { key: 'fleet', icon: 'business-outline', label: t('shop.features.fleet') },
-              { key: 'operations', icon: 'car-outline', label: t('shop.features.operations') },
-              { key: 'reports', icon: 'settings-outline', label: t('shop.features.reports') },
+              { key: 'fleet', icon: 'buildings-sm', label: t('shop.features.fleet') },
+              { key: 'operations', icon: 'car-side', label: t('shop.features.operations') },
+              { key: 'reports', icon: 'setting-sm', label: t('shop.features.reports') },
             ]}
             art={images.partnerTrackShop}
             offerTitle={t.rich('shop.offerHighlight', { big: offerGreen })}
-            offerBody={t('shop.offerBody')}
+            offerBody={tApp('shopOfferBody')}
             cta={t('chooseCta')}
             onChoose={chooseShop}
           />
         </YStack>
 
-        <StartSteps title={t('how.title')} steps={steps} />
-        <ListYourVehicleNotes />
-        {footer}
       </YStack>
     </Screen>
   );
 }
 
-/** Figma `20px/Bold` - tiêu đề màn. */
-const TITLE = { fontSize: 20, lineHeight: 30 } as const;
+/**
+ * Tiêu đề màn: Figma `20px/Bold` 20/30, app nâng lên 22/32 (người dùng chốt 20/11/2026) - vẫn MỘT dòng,
+ * máy hẹp nhỏ lại vừa đúng bề ngang (`FitOneLineText`).
+ */
+const TITLE = { fontSize: 22, lineHeight: 32 } as const;
 
 interface TrackFeature {
   key: string;
-  icon: IconName;
+  /** Icon nét Figma 16 của ô điểm nhấn (`LineIcon`). */
+  icon: LineIconName;
   label: string;
 }
 
@@ -233,8 +255,8 @@ const TrackCard = memo(function TrackCard({
           {shop ? (
             <View style={styles.shopBadge}>
               <LinearGradient
-                colors={gradients.primary.colors}
-                locations={gradients.primary.locations}
+                colors={MAIN_GRADIENT.colors}
+                locations={MAIN_GRADIENT.locations}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={StyleSheet.absoluteFill}
@@ -298,7 +320,11 @@ const TrackCard = memo(function TrackCard({
         {body}
       </Text>
 
-      <XStack gap={space.sm} alignSelf="stretch">
+      {/*
+        Nhãn GIỮ cỡ 12 (người dùng chốt 20/11/2026: không co chữ) - nhường chỗ cho chữ thay vì thu chữ:
+        hàng lấn ra 4 mỗi bên vào đệm thẻ, khe ô 6 (Figma 8), ô không đệm ngang (Figma 8).
+      */}
+      <XStack gap={FEATURE_GAP} alignSelf="stretch" mx={-space.xs}>
         {features.map((feature) => (
           <YStack
             key={feature.key}
@@ -308,12 +334,12 @@ const TrackCard = memo(function TrackCard({
             // Biểu tượng thẳng hàng ở ĐẦU ô (Figma) - căn giữa dọc thì ô có nhãn 3 dòng đẩy biểu tượng lệch.
             jc="flex-start"
             gap={space.sm}
-            p={space.sm}
+            py={space.sm}
             br={radius.control}
             bg={colors.brandWash}
           >
             <XStack p={space.sm} br={radius.pill} bg={colors.brandIconBg}>
-              <Ionicons name={feature.icon} size={FEATURE_ICON} color={colors.primaryHover} />
+              <LineIcon name={feature.icon} size={FEATURE_ICON} color={colors.primary} />
             </XStack>
             <Text
               col={colors.text}
@@ -398,6 +424,8 @@ const TrackCard = memo(function TrackCard({
 
 /** Biểu tượng 16 trong ô tròn đệm 8 của ô điểm nhấn. */
 const FEATURE_ICON = 16;
+/** Khe giữa ba ô điểm nhấn (Figma 8) - hẹp lại để nhãn dài cỡ 12 đủ hai dòng. */
+const FEATURE_GAP = 6;
 
 const styles = StyleSheet.create({
   cardBg: {

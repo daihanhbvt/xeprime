@@ -12,11 +12,16 @@ import {
   BOOKING_HOLD_STATUS,
   BOOKING_STATUS,
   FEE_LINE,
+  CUSTOMER_FAULT_REFUND_REASONS,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
   HOLD_SETTLE_REASON,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
+  PAYMENT_METHOD,
+  RECEIPT_SOURCE,
+  RECEIPT_TYPE,
+  SYSTEM_FINANCE_CATEGORY,
   isOutcomeAllowed,
   isWithinFreeCancel,
   type AuditActorScope,
@@ -37,8 +42,10 @@ import {
   resolveHoldAllocation,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
-import { WalletService, type WalletOwner } from '../wallet/wallet.service';
+import { ScheduledCreditService } from '../wallet/scheduled-credit.service';
+import { WalletService, type CreditInput, type WalletOwner } from '../wallet/wallet.service';
 import { AuditService } from '../audit/audit.service';
+import { ReceiptsService } from '../finance/receipts.service';
 import { NotificationService } from '../notification/notification.service';
 import { formatMoneyVndVi } from '@xeprime/domain';
 import { holdSettleReason, NO_OPEN_SETTLEMENT_CASES } from './hold-settle-queue';
@@ -77,6 +84,10 @@ export class HoldSettlementService {
     private readonly notifications: NotificationService,
     /** Sổ công nợ phải trả — writer duy nhất của ví (ADR 0023 ràng buộc 3). */
     private readonly wallet: WalletService,
+    /** Khoản cộng ví hẹn giờ — tiền hoàn/chủ xe khi khách huỷ chờ vài giờ (biên bản 19/11/2026). */
+    private readonly scheduledCredits: ScheduledCreditService,
+    /** Sổ Thu-Chi của gian hàng - phần chủ xe trong lượt quyết toán thành phiếu tự động. */
+    private readonly receipts: ReceiptsService,
   ) {}
 
   /**
@@ -298,35 +309,43 @@ export class HoldSettlementService {
       where: { holdId: input.holdId },
       select: { id: true, status: true },
     });
+    /*
+     * CHỜ HOÀN (biên bản họp 19/11/2026): lỗi phía khách (khách huỷ / không đến) ⇒ tiền vào ví sau
+     * `cancel_refund_delay_hours`, không ngay — kịp xử lý tranh chấp. 0 giờ ⇒ như trước.
+     */
+    const delayHours =
+      input.customerUserId && CUSTOMER_FAULT_REFUND_REASONS.has(input.reason)
+        ? (await this.scheduledCredits.delaysWithinTx(tx)).refundHours
+        : 0;
     if (existing) {
       /*
-       * Khoản trước ĐÃ vào ví điểm (thường là phần chuyển THỪA lúc tiền về) và khoản mới là một
-       * NGUỒN khác — phần hoàn của lượt chốt kết cục. Bỏ qua ở đây là nuốt tiền hoàn huỷ của một
-       * khách chỉ vì họ từng chuyển dư 1đ. Ghi có ví thêm một bút toán (khác `kind` nên unique 4 cột
-       * của sổ ví vẫn chống cộng đôi), rồi cộng dồn số tiền vào cùng yêu cầu hoàn (một hold — một
-       * yêu cầu, `hold_refunds.hold_id` unique).
+       * Khoản trước ĐÃ vào ví điểm (thường là phần chuyển THỪA lúc tiền về) — hoặc đang CHỜ HOÀN — và
+       * khoản mới là một NGUỒN khác. Bỏ qua ở đây là nuốt tiền hoàn huỷ của một khách chỉ vì họ từng
+       * chuyển dư 1đ. Ghi có (hoặc hẹn ghi có) thêm một bút toán (khác `kind` nên unique 4 cột của sổ
+       * ví vẫn chống cộng đôi), rồi cộng dồn số tiền vào cùng yêu cầu hoàn (một hold — một yêu cầu,
+       * `hold_refunds.hold_id` unique). Phần mới phải chờ ⇒ yêu cầu về `scheduled` cho tới khi vào ví.
        */
-      if (existing.status === HOLD_REFUND_STATUS.CREDITED && input.customerUserId) {
-        const credited = await this.wallet.creditWithinTx(tx, {
-          owner: this.refundWalletOwner(input.customerUserId),
-          kind:
-            input.reason === HOLD_REFUND_REASON.OVERPAID
-              ? WALLET_ENTRY_KIND.HOLD_OVERPAY
-              : WALLET_ENTRY_KIND.HOLD_REFUND,
-          sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
-          sourceRefId: input.holdId,
-          amount: input.amount,
-          holdId: input.holdId,
-          note: input.note,
-        });
-        if (!credited) {
+      if (
+        (existing.status === HOLD_REFUND_STATUS.CREDITED ||
+          existing.status === HOLD_REFUND_STATUS.SCHEDULED) &&
+        input.customerUserId
+      ) {
+        const result = await this.scheduledCredits.scheduleWithinTx(
+          tx,
+          { ...this.refundCreditInput(input, input.customerUserId), holdRefundId: existing.id },
+          delayHours,
+        );
+        if (!result.scheduledId && !result.entryId) {
           // Nguồn này đã ghi có rồi — không cộng đôi; người gọi tự đưa khoản này tới người xử lý.
           this.logger.warn(`Hold ${input.holdId}: khoản ${input.reason} đã ghi có ví trước đó`);
           return { id: existing.id, created: false, recorded: false };
         }
         await tx.holdRefund.update({
           where: { id: existing.id },
-          data: { amount: { increment: input.amount } },
+          data: {
+            amount: { increment: input.amount },
+            ...(result.scheduledId ? { status: HOLD_REFUND_STATUS.SCHEDULED } : {}),
+          },
         });
         return { id: existing.id, created: false, recorded: true };
       }
@@ -344,24 +363,39 @@ export class HoldSettlementService {
       return { id: existing.id, created: false, recorded: true };
     }
     /*
+     * Lỗi phía khách + có tài khoản ⇒ yêu cầu hoàn `scheduled` và một khoản cộng ví HẸN GIỜ, cùng
+     * transaction: tới hạn vòng quét cộng vào ví và lật yêu cầu sang `credited`.
+     */
+    if (input.customerUserId && delayHours > 0) {
+      const id = newId();
+      await tx.holdRefund.create({
+        data: {
+          id,
+          holdId: input.holdId,
+          tenantId: input.tenantId,
+          customerUserId: input.customerUserId,
+          amount: input.amount,
+          status: HOLD_REFUND_STATUS.SCHEDULED,
+          settlementMode: REFUND_SETTLEMENT_MODE.BALANCE,
+          walletEntryId: null,
+          reason: input.reason,
+          note: input.note,
+        },
+      });
+      await this.scheduledCredits.scheduleWithinTx(
+        tx,
+        { ...this.refundCreditInput(input, input.customerUserId), holdRefundId: id },
+        delayHours,
+      );
+      return { id, created: true, recorded: true };
+    }
+    /*
      * Khách CÓ tài khoản ⇒ ghi có ví điểm ngay trong chính transaction này. Không tách ra một
      * bước sau: khoản hoàn và bút toán sinh ra nó phải cùng sống hoặc cùng chết, nếu không sẽ có
      * lúc sổ nói một đằng và trạng thái khoản hoàn nói một nẻo.
      */
     const credited = input.customerUserId
-      ? await this.wallet.creditWithinTx(tx, {
-          // Ví của TÀI KHOẢN KHÁCH đã đặt chuyến (ADR 0053 điều 8).
-          owner: this.refundWalletOwner(input.customerUserId),
-          kind:
-            input.reason === HOLD_REFUND_REASON.OVERPAID
-              ? WALLET_ENTRY_KIND.HOLD_OVERPAY
-              : WALLET_ENTRY_KIND.HOLD_REFUND,
-          sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
-          sourceRefId: input.holdId,
-          amount: input.amount,
-          holdId: input.holdId,
-          note: input.note,
-        })
+      ? await this.wallet.creditWithinTx(tx, this.refundCreditInput(input, input.customerUserId))
       : null;
 
     const created = await tx.holdRefund.create({
@@ -390,6 +424,40 @@ export class HoldSettlementService {
    */
   private refundWalletOwner(customerUserId: string): WalletOwner {
     return { type: WALLET_OWNER_TYPE.USER, userId: resolveRefundWalletOwner(customerUserId).userId };
+  }
+
+  /**
+   * Số giờ khoản hoàn mang `reason` sẽ CHỜ trước khi vào ví (0 = vào ngay) — cho màn xem trước huỷ
+   * chuyến nói trước với khách (biên bản họp 19/11/2026). Cùng luật với `upsertRefundWithinTx`.
+   */
+  async refundDelayHours(reason: HoldRefundReason | null): Promise<number> {
+    if (!reason || !CUSTOMER_FAULT_REFUND_REASONS.has(reason)) return 0;
+    return (await this.scheduledCredits.delaysWithinTx(this.prisma)).refundHours;
+  }
+
+  /** Bút toán hoàn vào ví khách — một chỗ dựng, dùng cho cả cộng ngay lẫn hẹn giờ. */
+  private refundCreditInput(
+    input: {
+      holdId: string;
+      amount: Prisma.Decimal;
+      reason: HoldRefundReason;
+      note: string | null;
+    },
+    customerUserId: string,
+  ): CreditInput {
+    return {
+      // Ví của TÀI KHOẢN KHÁCH đã đặt chuyến (ADR 0053 điều 8).
+      owner: this.refundWalletOwner(customerUserId),
+      kind:
+        input.reason === HOLD_REFUND_REASON.OVERPAID
+          ? WALLET_ENTRY_KIND.HOLD_OVERPAY
+          : WALLET_ENTRY_KIND.HOLD_REFUND,
+      sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
+      sourceRefId: input.holdId,
+      amount: input.amount,
+      holdId: input.holdId,
+      note: input.note,
+    };
   }
 
   /** Khách khai tài khoản nhận hoàn — điều kiện để admin chuyển được. */
@@ -735,6 +803,7 @@ export class HoldSettlementService {
       customerUserId: string | null;
       outcome: BookingHoldOutcome;
       refundReason: HoldRefundReason | null;
+      actorUserId: string | null;
       note: string | null;
     },
     /** Phân bổ đã tính ở `applyOutcomeWithinTx` — không tính lại để hai nơi không ra hai số. */
@@ -757,19 +826,40 @@ export class HoldSettlementService {
 
     const toOwner = sumFor(allocation, ALLOCATION_TARGET.OWNER_BALANCE);
     if (toOwner.gt(0)) {
-      await this.wallet.creditWithinTx(tx, {
-        owner: { type: WALLET_OWNER_TYPE.TENANT, tenantId: input.tenantId },
-        kind:
-          input.outcome === BOOKING_HOLD_OUTCOME.SETTLED
-            ? WALLET_ENTRY_KIND.HOLD_RELEASE
-            : WALLET_ENTRY_KIND.HOLD_FORFEIT,
-        sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
-        sourceRefId: input.holdId,
-        amount: toOwner,
-        holdId: input.holdId,
-        note: input.note,
-      });
+      /*
+       * Khách huỷ / không đến (lỗi phía khách) ⇒ phần của chủ xe cũng CHỜ `cancel_owner_payout_delay_hours`
+       * (biên bản họp 19/11/2026: khách huỷ rồi liên hệ thẳng chủ xe để thuê lại — admin cần thời gian
+       * xem trước khi tiền vào ví chủ xe). Chuyến hoàn thành bình thường vẫn cộng ngay.
+       */
+      const ownerDelay =
+        input.refundReason && CUSTOMER_FAULT_REFUND_REASONS.has(input.refundReason)
+          ? (await this.scheduledCredits.delaysWithinTx(tx)).ownerPayoutHours
+          : 0;
+      await this.scheduledCredits.scheduleWithinTx(
+        tx,
+        {
+          owner: { type: WALLET_OWNER_TYPE.TENANT, tenantId: input.tenantId },
+          kind:
+            input.outcome === BOOKING_HOLD_OUTCOME.SETTLED
+              ? WALLET_ENTRY_KIND.HOLD_RELEASE
+              : WALLET_ENTRY_KIND.HOLD_FORFEIT,
+          sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
+          sourceRefId: input.holdId,
+          amount: toOwner,
+          holdId: input.holdId,
+          note: input.note,
+        },
+        ownerDelay,
+      );
     }
+
+    await this.recordOwnerReceiptsWithinTx(tx, {
+      holdId: input.holdId,
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      ownerAmount: toOwner,
+      taxAmount: sumFor(allocation, ALLOCATION_TARGET.TAX_LEDGER),
+    });
 
     /*
      * Phần của XePrime (`platform_revenue`) KHÔNG đi qua ví: nền tảng không có ví. Nó được đóng
@@ -778,6 +868,70 @@ export class HoldSettlementService {
      * thêm một sổ riêng ở `booking_insurance_policies` (Phase 7).
      */
     return refundId;
+  }
+
+  /**
+   * Phần của CHỦ XE trong lượt quyết toán lên sổ Thu-Chi của gian hàng - cùng transaction với lượt
+   * chốt (migration `20261126150000_xeprime_payout_receipts`).
+   *
+   *  - phiếu THU `xeprime_payout` = phần chủ xe TRƯỚC thuế (`ownerAmount + taxAmount`): đó là tiền
+   *    thuê khách đã trả cho chuyến này qua XePrime. Thiếu phiếu này thì doanh thu đơn qua sàn hụt
+   *    đúng phần trả trước online;
+   *  - phiếu CHI `tax_withheld` = thuế XePrime khấu trừ, nộp thay (ADR 0068). Thu trừ chi = số thật
+   *    vào Ví điểm.
+   *
+   * Ghi theo SỐ đã chốt (không tính lại) và mốc là lúc chốt. Unique `(tenant, source, hold)` chặn
+   * ghi đôi; lượt chốt vốn chỉ chạy một lần nhờ `outcome IS NULL`.
+   */
+  private async recordOwnerReceiptsWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      holdId: string;
+      tenantId: string;
+      actorUserId: string | null;
+      ownerAmount: Prisma.Decimal;
+      taxAmount: Prisma.Decimal;
+    },
+  ): Promise<void> {
+    const gross = input.ownerAmount.plus(input.taxAmount);
+    if (gross.lte(0)) return;
+    const hold = await tx.bookingHold.findUnique({
+      where: { id: input.holdId },
+      select: {
+        booking: { select: { id: true, code: true, vehicleId: true, tenantCustomerId: true } },
+      },
+    });
+    const booking = hold?.booking;
+    // Khoản giữ chỗ chưa thành đơn thì không có gì của chủ xe để ghi (không có chuyến, không có xe).
+    if (!booking) return;
+    const occurredAt = new Date();
+    const link = {
+      bookingId: booking.id,
+      vehicleId: booking.vehicleId,
+      tenantCustomerId: booking.tenantCustomerId,
+      paymentMethod: PAYMENT_METHOD.OTHER,
+      sourceRefId: input.holdId,
+      occurredAt,
+    };
+
+    await this.receipts.createApprovedWithinTx(tx, input.tenantId, input.actorUserId, {
+      ...link,
+      type: RECEIPT_TYPE.INCOME,
+      amount: gross.toString(),
+      source: RECEIPT_SOURCE.XEPRIME_PAYOUT,
+      categoryKey: SYSTEM_FINANCE_CATEGORY.XEPRIME_PAYOUT,
+      description: `Tiền thuê khách trả trước qua XePrime - đơn ${booking.code}`,
+    });
+    if (input.taxAmount.gt(0)) {
+      await this.receipts.createApprovedWithinTx(tx, input.tenantId, input.actorUserId, {
+        ...link,
+        type: RECEIPT_TYPE.EXPENSE,
+        amount: input.taxAmount.toString(),
+        source: RECEIPT_SOURCE.TAX_WITHHELD,
+        categoryKey: SYSTEM_FINANCE_CATEGORY.TAX_WITHHELD,
+        description: `Thuế XePrime khấu trừ, nộp thay - đơn ${booking.code}`,
+      });
+    }
   }
 
   private async applyOutcomeWithinTx(

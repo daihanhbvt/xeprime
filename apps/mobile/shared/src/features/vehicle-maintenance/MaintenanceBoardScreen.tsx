@@ -18,6 +18,7 @@ import {
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import {
@@ -157,7 +158,6 @@ export function MaintenanceBoardScreen() {
   const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
-  const tCommonActions = useTranslations('Common.actions');
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   const canManage = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
   const canCorrectOdometer = permissions.has(PERMISSION.VEHICLE_ODOMETER_CORRECT);
@@ -206,7 +206,8 @@ export function MaintenanceBoardScreen() {
   /** Truy vấn ĐANG cầm lái màn hình — hai nhóm việc, hai endpoint, chung một khung trạng thái. */
   const active = isQueue ? queue : query;
   // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
-  const items = useAccumulatedPages(query.data?.items, query.data?.meta?.page, (row) => row.vehicleId);
+  const realItems = useAccumulatedPages(query.data?.items, query.data?.meta?.page, (row) => row.vehicleId);
+  const items = realItems;
   const queueItems = queue.data?.items ?? [];
 
   /**
@@ -246,8 +247,13 @@ export function MaintenanceBoardScreen() {
         label: t('title'),
         value: filter,
         resetValue: ALL,
+        // Tên chiều là tên màn - "Tất cả trung tâm bảo dưỡng" đọc sai, dùng chữ riêng (20/11/2026).
+        display: 'option' as const,
         options: [...BOARD_FILTER_VALUES, ...(canViewHandovers ? [QUEUE_FILTER] : [])].map(
-          (value) => ({ value, label: domainLabel('maintenanceBoardFilter', value) }),
+          (value) => ({
+            value,
+            label: value === ALL ? t('partnerApp.filterAll') : domainLabel('maintenanceBoardFilter', value),
+          }),
         ),
       },
       /*
@@ -290,6 +296,7 @@ export function MaintenanceBoardScreen() {
               label: t('sortLabel'),
               value: sort,
               resetValue: DEFAULT_SORT,
+              display: 'option' as const,
               options: SORT_VALUES.map((value) => ({ value, label: sortLabel(t, value) })),
             },
           ] as const)),
@@ -338,15 +345,6 @@ export function MaintenanceBoardScreen() {
     ? searchTerm.length > 0
     : filter !== ALL || type !== ALL || Boolean(from) || Boolean(to) || searchTerm.length > 0;
   /* Web `CLEARED`: về tab "Tất cả", gỡ hạng mục, khoảng lịch, tìm kiếm và chi nhánh. */
-  const clearFilters = () => {
-    setFilter(ALL);
-    setType(ALL);
-    setFrom('');
-    setTo('');
-    setSearch('');
-    branchFilter.select(undefined);
-    setPage(FIRST_PAGE);
-  };
 
   if (!permissions.isLoading && !canView) {
     return (
@@ -383,21 +381,20 @@ export function MaintenanceBoardScreen() {
           }
           tabs={
             /*
-              Dải chip "việc cần làm" kèm số đếm ngay dưới hàng lọc (web `MaintenanceBoardTabs`,
-              ledger §3.8 #4). Cùng state `filter` với ô "Nhóm việc" trong tấm lọc.
+              Dải chip "việc cần làm" kèm số đếm - ĐÚNG dải tab web `MaintenanceBoardTabs` (nhãn,
+              thứ tự, "Thiếu KM trả" chỉ khi có `handovers.view`) - người dùng chốt 25/11/2026.
+              Style chip theo Figma 24512:121433. Cùng state `filter` với ô "Nhóm việc" trong tấm lọc.
             */
             <ChipTabs
               label={tMaintenance('tabsAria')}
               value={filter}
               onSelect={(value) => changeFilter('filter', value)}
               gutter={layout.screenX}
-              items={[...BOARD_FILTER_VALUES, ...(canViewHandovers ? [QUEUE_FILTER] : [])].map(
-                (value) => ({
-                  value: value as string,
-                  label: domainLabel('maintenanceBoardFilter', value),
-                  count: boardSummary.data ? (TAB_COUNT[value]?.(boardSummary.data) ?? undefined) : undefined,
-                }),
-              )}
+              items={[...BOARD_FILTER_VALUES, ...(canViewHandovers ? [QUEUE_FILTER] : [])].map((value) => ({
+                value: value as string,
+                label: domainLabel('maintenanceBoardFilter', value),
+                count: boardSummary.data ? TAB_COUNT[value]?.(boardSummary.data) : undefined,
+              }))}
             />
           }
           onPageChange={setPage}
@@ -442,13 +439,7 @@ export function MaintenanceBoardScreen() {
                     description={branchEmpty.hint}
                   />
                 ) : filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('emptyFilteredTitle')}
-                    description={t('emptyFilteredBody')}
-                    actionLabel={tCommonActions('clear')}
-                    onAction={clearFilters}
-                  />
+                  <NoResults />
                 ) : isQueue ? (
                   /* Hàng đợi rỗng là TIN VUI, không phải "chưa có dữ liệu" — nói đúng như vậy. */
                   <ScreenMessage

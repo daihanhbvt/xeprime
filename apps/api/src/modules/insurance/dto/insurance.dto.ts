@@ -292,8 +292,15 @@ export class InsuranceProductDto {
   @ApiProperty() partnerProductCode!: string;
   @ApiProperty() nameVi!: string;
   @ApiProperty() nameEn!: string;
-  @ApiProperty() coverageVi!: string;
-  @ApiProperty() coverageEn!: string;
+  @ApiProperty({ description: 'Phạm vi bảo vệ - mỗi dòng một mục' }) coverageVi!: string;
+  @ApiProperty({ description: 'Phạm vi bảo vệ - mỗi dòng một mục' }) coverageEn!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mô tả một dòng dưới tên sản phẩm. `null` = ghép từ các mục phạm vi',
+  })
+  summaryVi!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) summaryEn!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -469,6 +476,22 @@ export class UpdateInsuranceProductDto {
   @MaxLength(INSURANCE_PRODUCT_LIMITS.coverage.max)
   coverageEn?: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mô tả một dòng dưới tên sản phẩm. Rỗng/`null` = ghép từ các mục phạm vi',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(INSURANCE_PRODUCT_LIMITS.summary.max)
+  summaryVi?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(INSURANCE_PRODUCT_LIMITS.summary.max)
+  summaryEn?: string | null;
+
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
@@ -618,8 +641,15 @@ export class PublicInsuranceProductDto {
   @ApiProperty({ enum: INSURANCE_PROVIDER_VALUES }) provider!: InsuranceProvider;
   @ApiProperty() nameVi!: string;
   @ApiProperty() nameEn!: string;
-  @ApiProperty() coverageVi!: string;
-  @ApiProperty() coverageEn!: string;
+  @ApiProperty({ description: 'Phạm vi bảo vệ - mỗi dòng một mục' }) coverageVi!: string;
+  @ApiProperty({ description: 'Phạm vi bảo vệ - mỗi dòng một mục' }) coverageEn!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mô tả một dòng dưới tên sản phẩm. `null` = ghép từ các mục phạm vi',
+  })
+  summaryVi!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) summaryEn!: string | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,

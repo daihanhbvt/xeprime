@@ -12,6 +12,7 @@ export type PillTone =
   | 'success'
   | 'info'
   | 'warning'
+  | 'orange'
   | 'purple'
   | 'pink';
 /** `caption` = đệm 2/8, chữ 10/14 (viên "Sẵn sàng vận hành" của thẻ xe - Figma Vehicle List MB). */
@@ -34,6 +35,8 @@ export const usePillSkin = themed<Record<PillTone, { bg: string; border: string;
   success: { bg: colors.successSurface, border: colors.successBorder, fg: colors.success },
   info: { bg: colors.infoLow, border: colors.infoBorder, fg: colors.infoStrong },
   warning: { bg: colors.warningSubtle, border: colors.warningBorder, fg: colors.warningHigh },
+  /** Cam `#fff6ed/#fec84b/#ec860a` - "Chưa thanh toán" (Figma tấm duyệt). */
+  orange: { bg: colors.orangeLow, border: colors.warningBorder, fg: colors.orangeHigh },
   purple: { bg: colors.purpleSurface, border: colors.purpleBorder, fg: colors.purpleStrong },
   pink: { bg: colors.pinkSurface, border: colors.pinkBorder, fg: colors.pink },
 }));
@@ -74,6 +77,7 @@ export const Pill = memo(function Pill({
   shape = 'round',
   borderless = false,
   leading,
+  shrink = false,
 }: {
   label: string;
   tone?: PillTone;
@@ -82,13 +86,16 @@ export const Pill = memo(function Pill({
   borderless?: boolean;
   /** Biểu tượng đứng TRƯỚC chữ, cùng trong viên (vd. ✓ "Đã kiểm duyệt"). Nơi gọi tô màu theo tông. */
   leading?: ReactNode;
+  /** Cho viên CO lại và cắt chữ bằng "…" khi hàng chật (vd. dòng phụ tiêu đề trang). */
+  shrink?: boolean;
 }) {
   const skin = usePillSkin()[tone];
   const type = size === 'sm' || size === 'caption' ? typeScale.caption : size === 'lg' ? typeScale.body : typeScale.label;
   return (
     <YStack
       alignSelf="flex-start"
-      flexShrink={0}
+      flexShrink={shrink ? 1 : 0}
+      {...(shrink ? { minWidth: 0 } : {})}
       px={size === 'sm' ? PAD_X_SM : PAD_X_MD}
       py={PAD_Y}
       br={shape === 'tag' ? TAG_RADIUS : radius.card}
@@ -98,9 +105,16 @@ export const Pill = memo(function Pill({
       ai="center"
       jc="center"
     >
-      <XStack ai="center" gap={LEADING_GAP}>
+      <XStack ai="center" gap={LEADING_GAP} {...(shrink ? { maxWidth: '100%' } : {})}>
         {leading}
-        <Text col={skin.fg} fos={type.fontSize} lh={type.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
+        <Text
+          col={skin.fg}
+          fos={type.fontSize}
+          lh={type.lineHeight}
+          fow={fontWeight.medium}
+          numberOfLines={1}
+          {...(shrink ? { flexShrink: 1 } : {})}
+        >
           {label}
         </Text>
       </XStack>

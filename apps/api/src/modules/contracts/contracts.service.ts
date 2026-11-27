@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, CATALOG_TYPE, CONTRACT_STATUS } from '@xeprime/types';
-import { bookingDebt } from '../../common/money';
+import {
+  API_ERROR_CODE,
+  CATALOG_TYPE,
+  CONTRACT_STATUS,
+  PRICE_ROW,
+  type BookingPriceSnapshot,
+} from '@xeprime/types';
+import { bookingDebt, onlineShareOf } from '../../common/money';
 import {
   resolveStorefront,
   storefrontTenantSelect,
@@ -75,7 +81,16 @@ export class ContractsService {
         totalAmount: true,
         depositAmount: true,
         paidAmount: true,
+        // Phần tiền thuê khách đã trả online qua XePrime (đơn qua sàn) - đã trả, nên vào "đã trả".
+        hold: { select: { depositAmount: true, paidAt: true } },
+        priceSnapshot: true,
         note: true,
+        // Tài sản ĐANG GIỮ lúc lập (ADR 0109) — món đã trả không vào văn bản.
+        collaterals: {
+          where: { returnedAt: null },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: { collateralType: true, description: true },
+        },
         vehicle: {
           select: {
             name: true,
@@ -125,7 +140,7 @@ export class ContractsService {
       tenantId,
     });
     const total = new Prisma.Decimal(booking.totalAmount);
-    const paid = new Prisma.Decimal(booking.paidAmount);
+    const paid = new Prisma.Decimal(booking.paidAmount).plus(onlineShareOf(booking.hold));
     /*
      * CỐ Ý dùng `total − paid`, KHÔNG dùng công thức phải-thu đầy đủ của `booking-money.ts`.
      *
@@ -198,7 +213,13 @@ export class ContractsService {
         depositAmount: booking.depositAmount.toString(),
         paidAmount: paid.toString(),
         remainingAmount: remaining.toString(),
+        extraCharges: (
+          (booking.priceSnapshot as unknown as BookingPriceSnapshot | null)?.rows ?? []
+        )
+          .filter((r) => r.key === PRICE_ROW.EXTRAS)
+          .map((r) => ({ label: r.label, amount: r.amount })),
       },
+      collaterals: booking.collaterals,
       note: booking.note,
     };
 

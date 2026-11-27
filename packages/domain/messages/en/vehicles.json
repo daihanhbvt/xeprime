@@ -253,6 +253,8 @@
       "consumption": "Fuel consumption",
       "consumptionPlaceholder": "7.5",
       "consumptionHelp": "Litres of fuel per 100 km",
+      "consumptionShort": "Average consumption",
+      "consumptionUnit": "L/100km",
       "electricRange": "Range per full charge",
       "electricRangePlaceholder": "350",
       "electricRangeHelp": "Kilometres the vehicle covers on one full charge",
@@ -631,6 +633,8 @@
       "useRent": "Use {price}",
       "modelVariant": "Model",
       "modelVariantPlaceholder": "Search model or variant",
+      "modelVariantShort": "Model",
+      "modelVariantPick": "Select a model",
       "modelVariantHelp": "Pick a model to fill in the specs",
       "manualEntry": "Enter manually - car not in the list",
       "backToList": "Pick from the model list",
@@ -851,7 +855,7 @@
   },
   "overview": {
     "odometerLabel": "Odometer:",
-    "actionsMenu": "More actions",
+    "actionsMenu": "Actions",
     "profileLabel": "Vehicle profile",
     "plate": "Licence plate: <b>{value}</b>",
     "odometer": "Odometer: <b>{value}</b>",
@@ -859,22 +863,23 @@
     "axisPublic": "Review",
     "edit": "Edit",
     "schedule": "View calendar",
-    "editMobile": "Edit vehicle",
-    "scheduleMobile": "View calendar",
+    "editMobile": "Edit",
+    "scheduleMobile": "View vehicle calendar",
     "delete": "Delete vehicle",
     "deleteConfirmTitle": "Delete \"{name}\"?",
     "deleteConfirmBody": "The vehicle will be hidden from the list and removed from the marketplace. Existing bookings and receipts are kept for reconciliation. It cannot be deleted while it still has current or future rentals.",
     "loadFailed": "Could not load the data.",
     "metric": "{value} {unit}",
     "todo": {
-      "title": "To do",
+      "title": "To do", "notice": "{count, plural, one {# item needs attention} other {# items need attention}}", "noticeStatus": "Review status",
       "handleNow": "Handle now"
     },
     "schedules": {
       "title": "Upcoming rentals",
       "empty": "No upcoming rentals.",
       "item": "{customer} • {range}",
-      "sub": "{amount} • {status}"
+      "sub": "{amount} • {status}",
+      "subApp": "{amount} · {status}"
     },
     "performance": {
       "title": "All-time performance",
@@ -886,7 +891,9 @@
       "rating": "Rating",
       "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}",
       "ratingScore": "{rating}/5",
-      "ratingCount": "{count, plural, one {# review} other {# reviews}}"
+      "ratingCount": "{count, plural, one {# review} other {# reviews}}",
+      "ratingCountApp": "{count, plural, one {# review} other {# reviews}}",
+      "noRatingApp": "No reviews yet"
     },
     "pricing": {
       "title": "Pricing & policies",
@@ -981,7 +988,8 @@
       "empty": "No activity for this vehicle yet.",
       "item": "Booking {code} · {status}",
       "sub": "{customer} • {range} • {amount}",
-      "bookingRange": "Booking {code} • {range}"
+      "bookingRange": "Booking {code} • {range}",
+      "bookingRangeApp": "Booking {code} · {range}"
     },
     "dateRange": "{from} - {to}",
     "automation": {
@@ -991,6 +999,7 @@
       "toggle": "Auto-accept trips",
       "toggleFor": "Auto-accept {service} trips",
       "toggleHint": "Save response time and convert more customers into confirmed trips.",
+      "toggleHintApp": "Reply instantly and close more bookings",
       "driverRequired": "You need at least one driver available to take trips before turning this on."
     },
     "repairListing": {
@@ -1013,11 +1022,14 @@
       "title": "Key specs",
       "viewAll": "View all",
       "brandModel": "Make & model",
+      "transmissionAutoApp": "Automatic",
       "viewAllLabel": "View all specifications",
       "odometer": "Current odometer",
-      "odometerInput": "Enter reading"
+      "odometerInput": "Enter reading",
+      "odometerInputApp": "Enter data →"
     },
     "scheduleFull": "View schedule",
+    "deleteShort": "Delete vehicle",
     "deleteLabel": "Delete vehicle {name}",
     "features": {
       "title": "Features on this vehicle",
@@ -1166,6 +1178,7 @@
       "titleOptional": "Attachments (optional)",
       "title": "Contract documents",
       "fileFinanced": "Loan agreement (uploaded)",
+      "fileFinancedShort": "Loan agreement",
       "fileRented": "Rental agreement (scan)",
       "filePartnership": "Partnership agreement (signed copy)",
       "fileOwned": "Purchase papers / invoice (if any)",
@@ -1287,6 +1300,8 @@
       "resetBody": "Resetting to the shop policy deletes every customisation for this vehicle and returns it to the shared configuration.",
       "resetOk": "Reset",
       "resetCancel": "Keep customisation",
+      "sectionResetTitle": "Use the shop policy again?",
+      "sectionResetBody": "This vehicle's own settings for \"{section}\" stop applying once you save - the vehicle follows the shop policy for this section.",
       "viewShopPolicy": "View shop policy →",
       "tipLabel": "About the policy source",
       "info": "A vehicle can inherit the deposit, delivery and discounts from the shop, or keep its own policy."
@@ -1567,7 +1582,9 @@
       "excessFeeMax": "That excess mileage fee is too high",
       "moneyThousandStep": "The amount must be a multiple of 1,000 VND",
       "perKmRequired": "Enter a price per km above 0 - for free delivery choose a 0 VND flat fee",
-      "overtimeFeeRequired": "Enter the fee per extra hour, or turn the late fee off"
+      "overtimeFeeRequired": "Enter the fee per extra hour, or turn the late fee off",
+      "collateralFormRequired": "Pick at least one collateral form: cash or asset.",
+      "termsTooLong": "Terms can be at most 4,000 characters."
     },
     "calendarLink": "Custom prices by calendar",
     "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar - one price source, no second seasonal table.",
@@ -1619,6 +1636,7 @@
       "moreActions": "More actions",
       "view": "View",
       "expiry": "Expires on: <b>{value}</b>",
+      "expiryShort": "Due: <b>{value}</b>",
       "updatedAt": "Updated: <b>{value}</b>",
       "noExpiry": "No expiry",
       "expiryUnknown": "--/--/----",
@@ -1744,6 +1762,7 @@
     "registrationReminder": "Cars need a registration certificate with owner name, chassis and engine numbers to be sold with vehicle damage insurance - upload it and fill in the details on the Registration row."
   },
   "maintenance": {
+    "app": {"odoTitle": "Current odometer (Odo)", "adjust": "Adjust", "oilTitle": "Oil change interval", "intervalKm": "Oil change interval", "lastServiceKm": "Odometer at last oil change", "nextMilestone": "Next:", "add": "Add", "cost": "Cost: {value}", "odo": "Odo: {value}", "completedCount": "{count, plural, one {# completed} other {# completed}}", "notesPlaceholder": "Notes", "history": "History", "addReading": "Add new reading", "updatedLast": "Last updated: <b>{value}</b>", "addSchedule": "Add maintenance schedule", "plannedTime": "Planned time", "odoLabel": "Service odometer", "costLabel": "Cost", "receiptLabel": "Expense voucher", "notesLabel": "Notes: <b>{value}</b>", "historyTitle": "Maintenance & repair history"},
     "title": "Maintenance",
     "noPermission": "No permission to view maintenance",
     "loadError": "Could not load the maintenance details",
@@ -1766,6 +1785,7 @@
       "newValue": "New odometer",
       "newValuePlaceholder": "Enter the odometer as it reads now",
       "reasonCode": "Reason for the adjustment",
+      "reasonCodePlaceholder": "Select a reason for the adjustment",
       "reason": "Detailed note",
       "reasonPlaceholder": "Explain the odometer adjustment in detail…",
       "auditNote": "Every odometer adjustment is written to the history with who did it and why.",
@@ -1832,6 +1852,9 @@
       }
     },
     "board": {
+      "partnerApp": {
+        "filterAll": "All maintenance"
+      },
       "title": "Maintenance centre",
       "searchLabel": "Find a vehicle",
       "searchPlaceholder": "Vehicle name, code or plate…",
@@ -1930,8 +1953,8 @@
         "media": "Photos",
         "documents": "Vehicle documents",
         "trip-history": "Trip history",
-        "services": "Services & prices",
-        "policy": "Rental policy",
+        "services": "Vehicle services",
+        "policy": "Insurance & handover",
         "maintenance": "Maintenance & mileage",
         "source": "Source & financing"
       },
@@ -1966,6 +1989,9 @@
       "general": "General information",
       "bodyType": "Body type",
       "bodyTypeHint": "Pick the right body type - customers filter by it on the marketplace.",
+      "bodyTypeSwipe": "Swipe to see more",
+      "bodyTypePrev": "Previous body types",
+      "bodyTypeNext": "Next body types",
       "energy": "Engine & fuel",
       "features": "Features",
       "advanced": "Advanced specs",
@@ -1997,7 +2023,7 @@
           "title": "Long-term rental",
           "target": "long-term customers"
         },
-        "hint": "Turn on to accept {service}. Deposit, delivery and terms are in <conditions>Rental policy</conditions>."
+        "hint": "Turn on to accept {service}. Collateral, insurance and delivery are in <conditions>Insurance & handover</conditions>."
       },
       "offNote": "This service is off - turn it on above to set prices and accept trips for it.",
       "price": {
@@ -2008,7 +2034,9 @@
         "longTermTitle": "Long-term discounts (over 1 month)"
       },
       "extras": "Other",
-      "policyInvalid": "Some fields in Rental policy are invalid - open that section, fix them, then save again."
+      "collateralNow": "Current collateral: {collateral}",
+      "collateralSetup": "Set up in Insurance & handover",
+      "policyInvalid": "Some fields in Insurance & handover are invalid - open that section, fix them, then save again."
     },
     "policy": {
       "useShop": "Apply the shop's policy",
@@ -2017,8 +2045,8 @@
       "inheritedElsewhere": "Following the <policies>shop policy</policies>. To customise this vehicle, turn off the switch at the top of <switch>Rental policy</switch>.",
       "deliveryTitle": "Doorstep delivery",
       "rulesTitle": "Delivery, deposit & extra fees",
-      "pricesInvalid": "Some prices in Services & prices are invalid - open that section, fix them, then save again.",
-      "pricesInvalidFields": "Some fields in Services & prices are invalid: {fields} - open that section, fix them, then save again.",
+      "pricesInvalid": "Some fields in Vehicle services are invalid - open that section, fix them, then save again.",
+      "pricesInvalidFields": "Some fields in Vehicle services are invalid: {fields} - open that section, fix them, then save again.",
       "bufferTipLabel": "Which bookings the preparation time applies to",
       "savedAll": "Rental policy saved"
     },

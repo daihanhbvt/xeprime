@@ -95,6 +95,14 @@ vi.mock('../api', async (importOriginal) => {
     },
     fetchDashboardPreviousFinanceSummary: () => Promise.resolve(state.previous),
     fetchDashboardFinanceSeries: () => Promise.resolve({ granularity: 'day', buckets: [] }),
+    fetchDashboardFinanceBySource: () =>
+      Promise.resolve({
+        total: '0',
+        marketplaceAmount: '0',
+        directAmount: '0',
+        unlinkedAmount: '0',
+        items: [],
+      }),
     fetchDashboardTodayReceipts: () => {
       state.receiptCalls += 1;
       return Promise.resolve({
@@ -312,6 +320,8 @@ describe('Tổng quan gian hàng - việc cần làm', () => {
         returnsToday: 0,
         returnsOverdue: 0,
         returnsDue: 0,
+        nextPickupAt: null,
+        nextReturnAt: null,
       },
       requests: { pending: 0, pendingUrgent: 0, nextRespondBy: null, awaitingPayment: 0 },
       agenda: { items: [], hasMore: false },

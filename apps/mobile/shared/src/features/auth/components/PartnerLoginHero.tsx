@@ -100,13 +100,26 @@ export const PartnerLoginHero = memo(function PartnerLoginHero({
           accessible={false}
         />
 
-        <YStack flexGrow={1} gap={space.xl} px={layout.padXLg} pt={space.lg} pb={space.xl}>
+        {/*
+          Khe nhỉnh GỌN hơn bản vẽ một chút (24 → 20, đệm trên 16 → 12, đáy 24 → 20) để cả màn gói
+          trong một khung máy (người dùng chốt 20/11/2026: chỉ giảm nhẹ).
+        */}
+        <YStack
+          flexGrow={1}
+          gap={LOGIN_SECTION_GAP}
+          px={layout.padXLg}
+          pt={space.md}
+          pb={LOGIN_SECTION_GAP}
+        >
           {children}
         </YStack>
       </YStack>
     </YStack>
   );
 });
+
+/** Khe giữa các khối của màn đăng nhập Partner: bản vẽ 24, giảm nhẹ còn 20 (chốt 20/11/2026). */
+export const LOGIN_SECTION_GAP = space.lg + space.xs;
 
 const styles = StyleSheet.create({
   edge: { left: 0, position: 'absolute' },

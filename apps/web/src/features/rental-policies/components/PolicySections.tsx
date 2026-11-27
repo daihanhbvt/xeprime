@@ -1,40 +1,17 @@
 'use client';
 
-import {
-  CheckCircleOutlined,
-  DeleteOutlined,
-  InfoCircleOutlined,
-  PlusOutlined,
-} from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { createContext, useContext, type ReactNode } from 'react';
-import {
-  useFieldArray,
-  useFormState,
-  useWatch,
-  type Control,
-  type FieldErrors,
-} from 'react-hook-form';
-import {
-  COLLATERAL_ASSET_TYPE_VALUES,
-  COLLATERAL_MODE,
-  COLLATERAL_MODE_VALUES,
-  LONG_TERM_PACKAGE_MONTHS,
-  MILEAGE_LIMIT,
-  type CollateralMode,
-} from '@xeprime/types';
-import { LIST_SEPARATOR, isFreeDeliveryFee } from '@xeprime/domain';
-import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
+import { useFieldArray, useFormState, useWatch, type Control } from 'react-hook-form';
+import { LONG_TERM_PACKAGE_MONTHS } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { NumberField } from '@/components/form/NumberField';
-import { RadioGroupField } from '@/components/form/RadioGroupField';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
-import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
-import { deliverySummaryText } from '../form';
 import type { PolicyFormValues } from '../schema';
 import { PolicyInfoTip } from './PolicyInfoTip';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
@@ -55,99 +32,41 @@ export function PolicyFlatLayout({ children }: { children: ReactNode }) {
   return <FlatLayout.Provider value>{children}</FlatLayout.Provider>;
 }
 
-/** Năm khối của một bộ chính sách thuê — mã để nơi gọi chọn khối nào hiện. */
+/**
+ * Khối còn dùng ở màn sửa xe: mốc ưu đãi dài hạn (tab Dài hạn). Cọc · giao nhận · km · quá giờ nay
+ * dùng CHUNG các khối của trang Chính sách thuê (`ShopPolicyBlocks` - ADR 0112), không còn bản thứ hai.
+ */
 export const POLICY_BLOCK = {
-  COLLATERAL: 'collateral',
-  DELIVERY: 'delivery',
-  MILEAGE: 'mileage',
-  OVERTIME: 'overtime',
   DISCOUNT: 'discount',
 } as const;
 export type PolicyBlock = (typeof POLICY_BLOCK)[keyof typeof POLICY_BLOCK];
 
-const ALL_BLOCKS: readonly PolicyBlock[] = [
-  POLICY_BLOCK.COLLATERAL,
-  POLICY_BLOCK.DELIVERY,
-  POLICY_BLOCK.MILEAGE,
-  POLICY_BLOCK.OVERTIME,
-  POLICY_BLOCK.DISCOUNT,
-];
-
 interface PolicySectionsProps {
   control: Control<PolicyFormValues>;
   legacyDiscountTiers?: readonly LegacyTierView[];
-  depositHint?: ReactNode;
   numbered?: boolean;
   disabled?: boolean;
-  /**
-   * Khối nào HIỆN — mặc định đủ năm. Khối ẩn vẫn nằm trong form (giá trị nạp từ chính sách đang
-   * có) và vẫn được gửi đi: lưu là gửi TOÀN BỘ chính sách, ẩn một khối không làm mất nó.
-   */
   blocks?: readonly PolicyBlock[];
 }
 
-/**
- * Bốn khối dùng chung cho policy gian hàng và policy ghi đè theo xe.
- *
- * Từng khối cũng được export riêng (`CollateralPolicySection`, `DeliveryPolicySection`) để không
- * gian quản lý xe (08/09/2026) dựng màn "Giao xe tận nơi" và "Thủ tục cho thuê" từ ĐÚNG các ô
- * này — không có bản sao thứ hai của bảng bậc phí hay ba chế độ bảo đảm.
- */
 export function PolicySections({
   control,
-  depositHint,
   legacyDiscountTiers,
   numbered = true,
   disabled = false,
-  blocks = ALL_BLOCKS,
+  blocks = [POLICY_BLOCK.DISCOUNT],
 }: PolicySectionsProps) {
   const t = useTranslations('Vehicles.pricing');
-  // Đánh số theo khối ĐANG HIỆN — ẩn một khối không để lại một con số bị nhảy cóc.
-  const shown = ALL_BLOCKS.filter((block) => blocks.includes(block));
-  const n = (block: PolicyBlock, title: string) =>
-    numbered ? `${shown.indexOf(block) + 1}. ${title}` : title;
   const flat = useContext(FlatLayout);
-
+  if (!blocks.includes(POLICY_BLOCK.DISCOUNT)) return null;
+  const title = t('longTermDiscount.title');
   const body = (
-    <>
-      {shown.includes(POLICY_BLOCK.COLLATERAL) ? (
-        <CollateralPolicySection
-          control={control}
-          title={n(POLICY_BLOCK.COLLATERAL, t('deposit.title'))}
-          hint={depositHint}
-          disabled={disabled}
-        />
-      ) : null}
-      {shown.includes(POLICY_BLOCK.DELIVERY) ? (
-        <DeliveryPolicySection
-          control={control}
-          title={n(POLICY_BLOCK.DELIVERY, t('delivery.title'))}
-          disabled={disabled}
-        />
-      ) : null}
-      {shown.includes(POLICY_BLOCK.MILEAGE) ? (
-        <MileagePolicySection
-          control={control}
-          title={n(POLICY_BLOCK.MILEAGE, t('mileage.title'))}
-          disabled={disabled}
-        />
-      ) : null}
-      {shown.includes(POLICY_BLOCK.OVERTIME) ? (
-        <OvertimeSection
-          control={control}
-          title={n(POLICY_BLOCK.OVERTIME, t('overtime.title'))}
-          disabled={disabled}
-        />
-      ) : null}
-      {shown.includes(POLICY_BLOCK.DISCOUNT) ? (
-        <DiscountSection
-          control={control}
-          title={n(POLICY_BLOCK.DISCOUNT, t('longTermDiscount.title'))}
-          legacyTiers={legacyDiscountTiers}
-          disabled={disabled}
-        />
-      ) : null}
-    </>
+    <DiscountSection
+      control={control}
+      title={numbered ? `1. ${title}` : title}
+      legacyTiers={legacyDiscountTiers}
+      disabled={disabled}
+    />
   );
   return flat ? body : <div className={styles.stack}>{body}</div>;
 }
@@ -171,14 +90,6 @@ function SectionTitle({
 }
 
 /** Công thức / bản xem trước trong icon ⓘ của tiêu đề khối (bố cục phẳng). */
-function TipPreview({ title, text }: { title: string; text: string }) {
-  return (
-    <span className={styles.tipPreview}>
-      <strong>{title}</strong> {text}
-    </span>
-  );
-}
-
 function HeadLabel({
   children,
   infoLabel,
@@ -193,467 +104,6 @@ function HeadLabel({
       <span>{children}</span>
       {infoLabel && info ? <PolicyInfoTip label={infoLabel}>{info}</PolicyInfoTip> : null}
     </span>
-  );
-}
-
-/** Mã chế độ bảo đảm → khoá câu mô tả. Mã là dữ liệu, chỉ NHÃN mới dịch (ADR 0012). */
-const MODE_HINT_KEY: Readonly<Record<CollateralMode, 'modeCash' | 'modeAsset' | 'modeNone'>> = {
-  [COLLATERAL_MODE.CASH]: 'modeCash',
-  [COLLATERAL_MODE.ASSET]: 'modeAsset',
-  [COLLATERAL_MODE.NONE]: 'modeNone',
-};
-
-/**
- * Khối BẢO ĐẢM — ba chế độ loại trừ nhau (gap C-04). Chỉ phần thuộc chế độ đang chọn hiện ra:
- * ô tiền cọc ở `cash`, danh mục tài sản ở `asset`, `none` không có gì để nhập.
- *
- * Giấu phần không liên quan thay vì disable nó: một ô tiền cọc mờ đi bên cạnh "Miễn thế chấp"
- * vẫn khiến người dùng tưởng số cũ còn hiệu lực, trong khi `formToSaveInput` đã ép nó về 0.
- */
-export function CollateralPolicySection<T extends PolicyFormValues>({
-  control: outerControl,
-  title,
-  hint,
-  disabled = false,
-  /** Mô tả từng chế độ do nơi gọi truyền để nói đúng ngữ cảnh (gian hàng vs một xe). */
-  optionDescriptions,
-}: {
-  control: Control<T>;
-  title: string;
-  hint?: ReactNode;
-  disabled?: boolean;
-  optionDescriptions?: Partial<Record<string, string>>;
-}) {
-  /*
-   * Form của nơi gọi có thể là một BỘ BAO HÀM `PolicyFormValues` (màn "Thủ tục cho thuê" gộp
-   * chính sách bảo đảm với thiết lập dịch vụ). RHF không suy được `'collateralMode' extends
-   * Path<T>`, nên quy chiếu MỘT lần ở đây thay vì ép kiểu ở từng ô bên dưới — vẫn an toàn vì
-   * ràng buộc `T extends PolicyFormValues` bảo đảm các trường này có thật.
-   */
-  const control = outerControl as unknown as Control<PolicyFormValues>;
-  const t = useTranslations('Vehicles.pricing.deposit');
-  const domainLabel = useDomainLabel();
-  const flat = useContext(FlatLayout);
-  const mode = useWatch({ control, name: 'collateralMode' });
-
-  /*
-   * Nhãn chế độ và loại tài sản lấy từ namespace `Domain`, KHÔNG từ `*_META`/`*_LABEL` của
-   * `@xeprime/types`: bản đồ trong types là tiếng Việt cứng, dùng cho email/thông báo của
-   * apps/api. Mỗi lựa chọn còn kèm MỘT CÂU nói nó là gì — ba cái tên trần không cho biết tiền
-   * có hoàn lại không, gian hàng có giữ tiền không, hay xe sẽ mang nhãn gì trên sàn.
-   */
-  const modeOptions = COLLATERAL_MODE_VALUES.map((value) => ({
-    value,
-    label: domainLabel('collateralMode', value),
-    description: optionDescriptions?.[value] ?? t(MODE_HINT_KEY[value]),
-  }));
-  const assetOptions = COLLATERAL_ASSET_TYPE_VALUES.map((value) => ({
-    value,
-    label: domainLabel('collateralAssetType', value),
-  }));
-
-  return (
-    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
-      <SectionTitle title={title} infoLabel={t('tipLabel')}>
-        {t('hint')}
-      </SectionTitle>
-
-      <RadioGroupField
-        control={control}
-        name="collateralMode"
-        label={t('mode')}
-        options={modeOptions}
-        disabled={disabled}
-        required
-      />
-
-      {mode === COLLATERAL_MODE.CASH ? (
-        <div className={styles.depositRow}>
-          <div className={styles.depositField}>
-            <NumberField
-              control={control}
-              name="depositAmount"
-              label={t('amount')}
-              labelAccessory={
-                <PolicyInfoTip label={t('amountTipLabel')}>{t('amountHint')}</PolicyInfoTip>
-              }
-              money
-              required
-              min={0}
-              disabled={disabled}
-            />
-          </div>
-          {hint ? <div className={styles.depositHint}>{hint}</div> : null}
-        </div>
-      ) : null}
-
-      {mode === COLLATERAL_MODE.ASSET ? (
-        <CheckboxGroupField
-          control={control}
-          name="collateralAssetTypes"
-          label={t('assetTypes')}
-          options={assetOptions}
-          disabled={disabled}
-          required
-          help={t('assetTypesHint')}
-        />
-      ) : null}
-
-      {/* Bản phẳng: mô tả của lựa chọn "Miễn thế chấp" đã nói đúng điều này. */}
-      {mode === COLLATERAL_MODE.NONE && !flat ? (
-        <Alert type="info" showIcon title={t('noneTitle')} description={t('noneBody')} />
-      ) : null}
-    </section>
-  );
-}
-
-export function DeliveryPolicySection<T extends PolicyFormValues>({
-  control: outerControl,
-  title,
-  disabled = false,
-}: {
-  control: Control<T>;
-  title: string;
-  disabled?: boolean;
-}) {
-  /*
-   * Form của nơi gọi có thể là một BỘ BAO HÀM `PolicyFormValues` (màn "Thủ tục cho thuê" gộp
-   * chính sách bảo đảm với thiết lập dịch vụ). RHF không suy được `'collateralMode' extends
-   * Path<T>`, nên quy chiếu MỘT lần ở đây thay vì ép kiểu ở từng ô bên dưới — vẫn an toàn vì
-   * ràng buộc `T extends PolicyFormValues` bảo đảm các trường này có thật.
-   */
-  const control = outerControl as unknown as Control<PolicyFormValues>;
-  const t = useTranslations('Vehicles.pricing.delivery');
-  const tActions = useTranslations('Common.actions');
-  const tLabels = useTranslations('Common.labels');
-  const fmt = useAppFormat();
-
-  const enabled = useWatch({ control, name: 'deliveryEnabled' });
-  const tiers = useWatch({ control, name: 'deliveryTiers' }) ?? [];
-  const radius = useWatch({ control, name: 'deliveryMaxRadiusKm' });
-  const { errors } = useFormState({ control, name: ['deliveryTiers', 'deliveryMaxRadiusKm'] });
-  const { fields, append, remove } = useFieldArray({ control, name: 'deliveryTiers' });
-  // Phiên hỗ trợ (ADR 0050 §12): form chỉ đọc thì không dựng nút thêm/xoá mốc.
-  const hideControls = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && disabled;
-
-  const tierErrors = errors.deliveryTiers as
-    | (FieldErrors<PolicyFormValues>['deliveryTiers'] & {
-        root?: { message?: string };
-        message?: string;
-      })
-    | undefined;
-  const crossError = tierErrors?.root?.message ?? tierErrors?.message;
-  const tiersComplete =
-    tiers.length > 0 && tiers.every((tier) => tier?.toKm != null) && radius != null;
-  const flat = useContext(FlatLayout);
-  const summary = tiersComplete
-    ? deliverySummaryText(
-        { deliveryTiers: tiers, deliveryMaxRadiusKm: radius },
-        { money: fmt.money, free: t('free'), quote: t('summaryQuote') },
-      )
-    : null;
-
-  return (
-    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
-      <div className={styles.cardHeader}>
-        <SectionTitle title={title} infoLabel={t('tipLabel')}>
-          {t('hint')}
-          {flat && enabled && summary ? (
-            <TipPreview title={t('previewTitle')} text={summary} />
-          ) : null}
-        </SectionTitle>
-        <SwitchField
-          control={control}
-          name="deliveryEnabled"
-          label={enabled ? tLabels('enabled') : tLabels('disabled')}
-          disabled={disabled}
-        />
-      </div>
-      {enabled ? (
-        <>
-          <div className={styles.tierTable} role="group" aria-label={t('tiers')}>
-            <div className={styles.tierHead}>
-              <HeadLabel infoLabel={t('fromKmTipLabel')} info={t('fromKmTip')}>
-                {t('fromKmLabel')}
-              </HeadLabel>
-              <HeadLabel infoLabel={t('toKmTipLabel')} info={t('toKmTip')}>
-                {t('toKmLabel')}
-              </HeadLabel>
-              <HeadLabel infoLabel={t('feeTipLabel')} info={t('feeTip')}>
-                {t('feeLabel')}
-              </HeadLabel>
-              <span className={styles.tierActionHead}>{tLabels('actions')}</span>
-            </div>
-            <div className={styles.tierMobileHead} aria-hidden="true">
-              <span>{t('headDistance')}</span>
-              <span>{t('headFee')}</span>
-              <span>{tLabels('actions')}</span>
-            </div>
-
-            {fields.map((field, index) => (
-              <div key={field.id} className={styles.tierRow}>
-                <div className={styles.distanceCell}>
-                  <span className={styles.tierFrom}>
-                    {index === 0 ? '0' : `> ${tiers[index - 1]?.toKm ?? '-'}`}
-                  </span>
-                  <span className={styles.distanceSeparator} aria-hidden="true">
-                    -
-                  </span>
-                  <div className={styles.tierTo}>
-                    <NumberField
-                      control={control}
-                      name={`deliveryTiers.${index}.toKm`}
-                      label={t('tierToLabel', { index: index + 1 })}
-                      addonAfter={t('unitKm')}
-                      min={0}
-                      disabled={disabled}
-                    />
-                  </div>
-                </div>
-                {/* Mỗi bậc MỘT phí trọn gói — phí theo km đã gỡ (ADR 0078). */}
-                <div className={styles.feeCell}>
-                  <NumberField
-                    control={control}
-                    name={`deliveryTiers.${index}.fee`}
-                    label={t('tierFeeLabel', { index: index + 1 })}
-                    money
-                    help={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
-                    disabled={disabled}
-                  />
-                </div>
-                {hideControls ? null : (
-                  <Button
-                    className={styles.deleteButton}
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined aria-hidden="true" />}
-                    aria-label={t('removeTierAt', { index: index + 1 })}
-                    onClick={() => remove(index)}
-                    disabled={disabled}
-                  >
-                    <span className={styles.deleteText}>{tActions('delete')}</span>
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.tierFooter}>
-            {hideControls ? null : (
-              <Button
-                icon={<PlusOutlined aria-hidden="true" />}
-                onClick={() => append({ toKm: null, fee: null })}
-                disabled={disabled}
-              >
-                {t('addTier')}
-              </Button>
-            )}
-            {crossError ? (
-              <span className={styles.tierError} role="alert">
-                ⚠ {crossError}
-              </span>
-            ) : tiersComplete ? (
-              <span className={styles.tierOk}>
-                <CheckCircleOutlined aria-hidden="true" /> {t('tierOk')}
-              </span>
-            ) : null}
-          </div>
-
-          <div className={styles.radiusField}>
-            <NumberField
-              control={control}
-              name="deliveryMaxRadiusKm"
-              label={t('maxRadiusLabel')}
-              labelAccessory={
-                <PolicyInfoTip label={t('maxRadiusTipLabel')}>{t('maxRadiusHint')}</PolicyInfoTip>
-              }
-              addonAfter={t('unitKm')}
-              min={0}
-              required
-              disabled={disabled}
-            />
-          </div>
-
-          {summary && !flat ? (
-            <div className={styles.previewCard}>
-              <InfoCircleOutlined className={styles.previewIcon} aria-hidden="true" />
-              <span>
-                <strong>{t('previewTitle')}</strong> {summary}
-              </span>
-            </div>
-          ) : null}
-        </>
-      ) : flat ? null : (
-        <p className={styles.disabledNote}>{t('disabledNote')}</p>
-      )}
-    </section>
-  );
-}
-
-/**
- * Khối HẠN MỨC QUÃNG ĐƯỜNG của chuyến tự lái — một công tắc, hai ô đi CẶP.
- *
- * Cùng hình dạng và cùng mã lỗi với bước "Cho thuê" của wizard đăng xe nhanh
- * (`QuickVehicleRentalStep`): hai màn hỏi cùng một chính sách thì phải hỏi giống nhau, nếu
- * không chủ xe sẽ thấy hai bộ luật cho một con số.
- *
- * Bật/tắt là trường của FORM. Backend chỉ biết "cả hai null = không giới hạn"
- * (`formToSaveInput` dịch qua lại), nên nếu không có công tắc thì "tắt" và "mới nhập được một
- * nửa" trông y hệt nhau trên màn hình.
- *
- * Phí vượt KHÔNG cộng vào báo giá lúc đặt — lúc đó chưa ai biết khách sẽ chạy bao xa. Nó chỉ
- * thành một khoản ĐỀ XUẤT lúc quyết toán, và chủ xe vẫn phải bấm ghi.
- */
-export function MileagePolicySection<T extends PolicyFormValues>({
-  control: outerControl,
-  title,
-  disabled = false,
-}: {
-  control: Control<T>;
-  title: string;
-  disabled?: boolean;
-}) {
-  // Cùng lý do quy chiếu như `DeliveryPolicySection` — xem ghi chú ở đó.
-  const control = outerControl as unknown as Control<PolicyFormValues>;
-  const t = useTranslations('Vehicles.pricing.mileage');
-  const tLabels = useTranslations('Common.labels');
-  const fmt = useAppFormat();
-
-  const enabled = useWatch({ control, name: 'mileageLimitEnabled' });
-  const includedKm = useWatch({ control, name: 'includedDistanceKmPerDay' });
-  const feePerKm = useWatch({ control, name: 'excessDistanceFeePerKm' });
-  const flat = useContext(FlatLayout);
-  const preview =
-    includedKm != null && feePerKm != null
-      ? t('preview', { km: fmt.km(includedKm), fee: fmt.money(String(feePerKm)) })
-      : t('previewIncomplete');
-
-  return (
-    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
-      <div className={styles.cardHeader}>
-        <SectionTitle title={title} infoLabel={t('tipLabel')}>
-          {t('hint')}
-          {flat && enabled ? <TipPreview title={t('previewTitle')} text={preview} /> : null}
-        </SectionTitle>
-        <SwitchField
-          control={control}
-          name="mileageLimitEnabled"
-          label={enabled ? tLabels('enabled') : tLabels('disabled')}
-          disabled={disabled}
-        />
-      </div>
-      {enabled ? (
-        <>
-          <div className={styles.mileageRow}>
-            <div className={styles.overtimeField}>
-              <NumberField
-                control={control}
-                name="includedDistanceKmPerDay"
-                label={t('includedLabel')}
-                labelAccessory={
-                  <PolicyInfoTip label={t('includedTipLabel')}>{t('includedHint')}</PolicyInfoTip>
-                }
-                addonAfter={t('unitPerDay')}
-                min={MILEAGE_LIMIT.minKmPerDay}
-                max={MILEAGE_LIMIT.maxKmPerDay}
-                required
-                disabled={disabled}
-              />
-            </div>
-            <div className={styles.overtimeField}>
-              <NumberField
-                control={control}
-                name="excessDistanceFeePerKm"
-                label={t('excessLabel')}
-                labelAccessory={
-                  <PolicyInfoTip label={t('excessTipLabel')}>{t('excessHint')}</PolicyInfoTip>
-                }
-                money
-                addonAfter={t('unitPerKm')}
-                min={0}
-                max={MILEAGE_LIMIT.maxFeePerKm}
-                required
-                disabled={disabled}
-              />
-            </div>
-          </div>
-          {flat ? null : (
-            <div className={styles.formulaCard}>
-              <span className={styles.previewTitle}>{t('previewTitle')}</span>
-              <span className={styles.previewText}>{preview}</span>
-            </div>
-          )}
-        </>
-      ) : flat ? null : (
-        <p className={styles.disabledNote}>{t('disabledNote')}</p>
-      )}
-    </section>
-  );
-}
-
-function OvertimeSection({
-  control,
-  title,
-  disabled,
-}: {
-  control: Control<PolicyFormValues>;
-  title: string;
-  disabled: boolean;
-}) {
-  const t = useTranslations('Vehicles.pricing.overtime');
-  const fmt = useAppFormat();
-
-  const fee = useWatch({ control, name: 'overtimeFeePerHour' });
-  const flat = useContext(FlatLayout);
-  // Không còn ô làm tròn (06/11/2026): quyết toán luôn làm tròn LÊN theo giờ — công thức nói thẳng ra.
-  const formula =
-    fee != null ? t('formulaRounded', { fee: fmt.money(String(fee)) }) : t('formulaNone');
-
-  return (
-    <section className={cx(styles.card, flat && styles.flat)} aria-label={title}>
-      <SectionTitle title={title} infoLabel={t('tipLabel')}>
-        {t('hintRounded')}
-        {flat ? <TipPreview title={t('formulaTitle')} text={formula} /> : null}
-      </SectionTitle>
-      <div className={styles.fieldRow}>
-        <div className={styles.overtimeField}>
-          <NumberField
-            control={control}
-            name="overtimeFeePerHour"
-            label={t('feePerHour')}
-            labelAccessory={
-              <PolicyInfoTip label={t('feePerHourTipLabel')}>{t('feePerHourHint')}</PolicyInfoTip>
-            }
-            money
-            addonAfter={t('unitPerHour')}
-            placeholder={t('placeholder')}
-            disabled={disabled}
-          />
-        </div>
-        <div className={styles.overtimeField}>
-          <NumberField
-            control={control}
-            name="overtimeGraceMinutes"
-            label={t('graceMinutes')}
-            labelAccessory={
-              <PolicyInfoTip label={t('graceMinutesTipLabel')}>
-                {t('graceMinutesHint')}
-              </PolicyInfoTip>
-            }
-            addonAfter={t('unitMinutes')}
-            min={0}
-            placeholder={t('placeholder')}
-            disabled={disabled}
-          />
-        </div>
-      </div>
-      {flat ? null : (
-        <div className={styles.formulaCard}>
-          <span className={styles.previewTitle}>{t('formulaTitle')}</span>
-          <span className={styles.previewText}>{formula}</span>
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -698,8 +148,6 @@ function DiscountSection({
       <div className={styles.cardHeader}>
         <SectionTitle title={title} infoLabel={t('tipLabel')}>
           {t('hint')}
-          {/* Phẳng: đã có khung xem trước giá gói đứng cạnh — công thức chỉ còn trong ⓘ. */}
-          {flat ? <TipPreview title={t('formulaTitle')} text={t('formula')} /> : null}
         </SectionTitle>
         <SwitchField
           control={control}
@@ -800,12 +248,10 @@ function DiscountSection({
               }
             />
           ) : null}
-          {flat ? null : (
-            <div className={styles.formulaCard}>
-              <span className={styles.previewTitle}>{t('formulaTitle')}</span>
-              <span className={styles.previewText}>{t('formula')}</span>
-            </div>
-          )}
+          <div className={styles.formulaCard}>
+            <span className={styles.previewTitle}>{t('formulaTitle')}</span>
+            <span className={styles.previewText}>{t('formula')}</span>
+          </div>
         </>
       ) : (
         <p className={styles.disabledNote}>{t('disabledNote')}</p>

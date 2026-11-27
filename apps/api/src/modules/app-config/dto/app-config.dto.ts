@@ -4,13 +4,20 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
+  IsInt,
+  Max,
+  Min,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { APP_CONFIG_CONTACT_PHONE_PATTERN, SUPPORTED_LOCALES } from '@xeprime/types';
+import {
+  APP_CONFIG_CONTACT_PHONE_PATTERN,
+  CANCEL_CREDIT_DELAY_BOUNDS,
+  SUPPORTED_LOCALES,
+} from '@xeprime/types';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 /** Chuỗi rỗng ⇒ `null` (xoá dòng hotline/Zalo khỏi email). */
@@ -30,12 +37,18 @@ export class PartnerAppConfigDto {
 
   @ApiProperty({ example: 3, description: 'Tăng 1 mỗi lần cấu hình đổi.' })
   version!: number;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '1900 1234',
+    description: 'Hotline hỗ trợ đối tác - Trung tâm hỗ trợ của app Partner hiện kèm nút gọi. `null` = ẩn dòng.',
+  })
+  supportHotline!: string | null;
 }
 
 /** Bản đầy đủ cho admin. */
 export class PartnerAppConfigAdminDto extends PartnerAppConfigDto {
-  @ApiProperty({ type: String, nullable: true, example: '1900 1234' })
-  supportHotline!: string | null;
 
   @ApiProperty({ type: String, nullable: true, example: '0901234567' })
   supportZalo!: string | null;
@@ -52,6 +65,20 @@ export class PartnerAppConfigAdminDto extends PartnerAppConfigDto {
     description: 'true ở production: công tắc SMS bị khoá ở BẬT (luôn gửi SMS thật).',
   })
   otpSmsLocked!: boolean;
+
+  @ApiProperty({
+    example: 4,
+    description:
+      'Số giờ tiền hoàn do LỖI PHÍA KHÁCH (khách huỷ / không đến) chờ trước khi vào ví khách. 0 = cộng ngay.',
+  })
+  cancelRefundDelayHours!: number;
+
+  @ApiProperty({
+    example: 4,
+    description:
+      'Số giờ phần của CHỦ XE khi khách huỷ / không đến chờ trước khi vào ví chủ xe. 0 = cộng ngay.',
+  })
+  cancelOwnerPayoutDelayHours!: number;
 
   @ApiProperty({ example: '2026-10-12T03:00:00.000Z' })
   updatedAt!: string;
@@ -85,6 +112,28 @@ export class UpdatePartnerAppConfigDto {
   @Transform(trimToNull)
   @Matches(CONTACT_PHONE)
   supportZalo?: string | null;
+
+  @ApiPropertyOptional({
+    example: 4,
+    minimum: CANCEL_CREDIT_DELAY_BOUNDS.min,
+    maximum: CANCEL_CREDIT_DELAY_BOUNDS.max,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(CANCEL_CREDIT_DELAY_BOUNDS.min)
+  @Max(CANCEL_CREDIT_DELAY_BOUNDS.max)
+  cancelRefundDelayHours?: number;
+
+  @ApiPropertyOptional({
+    example: 4,
+    minimum: CANCEL_CREDIT_DELAY_BOUNDS.min,
+    maximum: CANCEL_CREDIT_DELAY_BOUNDS.max,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(CANCEL_CREDIT_DELAY_BOUNDS.min)
+  @Max(CANCEL_CREDIT_DELAY_BOUNDS.max)
+  cancelOwnerPayoutDelayHours?: number;
 }
 
 /** Yêu cầu tư vấn gói từ app Partner. */

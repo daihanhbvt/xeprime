@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Shop information",
-    "subtitle": "Your shop’s details and settings.",
+    "subtitle": "Shop information & settings",
     "viewPublicPage": "View shop page",
     "loadError": "Couldn't load your shop profile",
     "forbidden": {
@@ -202,7 +202,12 @@
         "label": "Rental policy sections",
         "rules": "Rental policies & rules",
         "delivery": "Vehicle delivery",
-        "longTerm": "Long-term discounts"
+        "longTerm": "Long-term discounts",
+        "payment": "Payment & invoices",
+        "insurance": "Vehicle damage insurance",
+        "collateral": "Collateral",
+        "limits": "Mileage limit & late fees",
+        "conditions": "Rental conditions"
       },
       "actionsLabel": "Save rental policies",
       "switchType": {
@@ -221,8 +226,21 @@
       "collateral": {
         "title": "Collateral",
         "modeCash": "The customer leaves a sum of money, refunded by the owner once the vehicle is handed back.",
-        "modeNone": "Makes booking as easy as possible to attract more customers.",
-        "overriddenTipLabel": "Vehicles with their own policy"
+        "modeNone": "No cash deposit and no assets held - a strong boost to bookings",
+        "overriddenTipLabel": "Vehicles with their own policy",
+        "subtitle": "Choose Collateral required (cash deposit, asset deposit or both) or No collateral.",
+        "modeLabel": "Collateral",
+        "modeRequired": "Turn on one or both forms: cash deposit & asset deposit",
+        "bothOn": "2 collateral forms on",
+        "methodTitle": "Accepted collateral (pick one or both)",
+        "cashTitle": "Cash / bank transfer deposit",
+        "cashHint": "The renter leaves a security amount at pickup, refunded after the vehicle is returned.",
+        "amountLabel": "Default deposit amount",
+        "presetsLabel": "Suggested deposit amounts",
+        "assetTitle": "Asset deposit",
+        "assetHint": "The renter leaves an asset as security (original papers, a motorbike...), no cash held.",
+        "noneBadgeTitle": "The vehicle gets a prominent \"No collateral\" badge on XePrime",
+        "noneBadgeBody": "Renters leave no cash deposit and no assets at pickup. The badge shows on the vehicle card, the vehicle page and in the \"No collateral\" filter."
       },
       "mileage": {
         "hint": "Daily km limit and the fee for going over it."
@@ -262,6 +280,33 @@
         "impactTitle": "{count, plural, one {# car} other {# cars}} with incomplete insurance details will stop taking self-drive bookings",
         "impactNamesMore": "{names} and {count, plural, one {# other car} other {# other cars}}",
         "vehicleBlockedTitle": "This car stays closed to self-drive bookings until its insurance details are complete:"
+      },
+      "inherit": {
+        "title": "Apply the shop policy",
+        "hint": "When on, this vehicle automatically follows the <policies>shared policy</policies> of the whole shop"
+      },
+      "limits": {
+        "title": "Mileage limit & late return fees"
+      },
+      "conditions": {
+        "title": "Rental conditions",
+        "groups": {
+          "self_drive": "Self-drive & long-term rental",
+          "with_driver": "With driver"
+        },
+        "documents": "Required rental documents",
+        "verify": "Verification method",
+        "platformNote": "Documents and verification are XePrime rules shared by every shop - they cannot be edited.",
+        "acceptTitle": "Renters must accept the terms before sending a booking request",
+        "acceptHint": "The time of acceptance is recorded on the request and the booking for later reference.",
+        "acceptTitleWithDriver": "Renters must accept the with-driver rental terms",
+        "acceptHintWithDriver": "Renters accept before sending a booking request; the time of acceptance is kept on the request and the booking.",
+        "contractTemplate": "A contract template is available in <link>Contracts & documents</link>",
+        "termsTitle": "Rental terms",
+        "termsHint": "Rules renters must follow throughout the rental and use of the vehicle, so rights, responsibilities and operations stay clear for both sides.",
+        "termsTitleWithDriver": "Service terms for with-driver rentals",
+        "termsHintWithDriver": "Mandatory internal rules for renters while the trip is running.",
+        "termsPlaceholder": "Enter the rental terms (up to {max, number} characters)"
       }
     }
   },
@@ -368,7 +413,7 @@
   },
   "owner": {
     "title": "Shop owner",
-    "hint": "Taken from the owner’s account.",
+    "hint": "Taken from the owner account information",
     "email": "Email",
     "phone": "Phone number",
     "noEmail": "No email yet",

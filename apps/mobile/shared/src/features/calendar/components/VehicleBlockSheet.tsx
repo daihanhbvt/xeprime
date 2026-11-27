@@ -39,7 +39,14 @@ const NOTE_MAX = 2000;
 
 /** Tạo mới từ ô lịch (biết xe + ngày) hoặc sửa một khoá đang có. */
 export type VehicleBlockSheetState =
-  | { mode: 'create'; vehicleId: string; vehicleName: string; date: string }
+  | {
+      mode: 'create';
+      vehicleId: string;
+      vehicleName: string;
+      date: string;
+      /** Ngày CUỐI (tính cả) khi chọn nhiều ngày ở ô lịch — web `endDate`. Vắng = một ngày. */
+      endDate?: string;
+    }
   | { mode: 'edit'; block: VehicleBlock }
   | null;
 
@@ -68,7 +75,10 @@ export function VehicleBlockSheet({
    */
   if (state === null) return null;
 
-  const key = state.mode === 'edit' ? state.block.id : `${state.vehicleId}-${state.date}`;
+  const key =
+    state.mode === 'edit'
+      ? state.block.id
+      : `${state.vehicleId}-${state.date}-${state.endDate ?? state.date}`;
   return <BlockForm key={key} state={state} onClose={onClose} />;
 }
 
@@ -106,7 +116,10 @@ function BlockForm({
     // Mốc UTC đang lưu → giờ VIỆT NAM cho hộp chọn khoảng (CLAUDE.md mục 9).
     if (editing) return { pickupAt: toAppTz(editing.startAt), returnAt: toAppTz(editing.endAt) };
     const dayStart = startOfAppDay(state.mode === 'create' ? state.date : '');
-    return { pickupAt: dayStart, returnAt: dayStart.add(1, 'day') };
+    // N ngày đã chọn ⇒ khoá từ đầu ngày đầu tới hết ngày cuối (web `VehicleBlockDialog endDate`).
+    const lastDay =
+      state.mode === 'create' && state.endDate ? startOfAppDay(state.endDate) : dayStart;
+    return { pickupAt: dayStart, returnAt: lastDay.add(1, 'day') };
   });
   const [rentalMode, setRentalMode] = useState<RentalMode>(RENTAL_MODE.DAILY);
   const [picking, setPicking] = useState(false);

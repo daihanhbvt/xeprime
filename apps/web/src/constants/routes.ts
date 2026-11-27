@@ -7,6 +7,7 @@
 import {
   PARTNER_PAYMENT_RETURN_PATH,
   PARTNER_PLAN_PURCHASE_PATH,
+  PAYMENT_CHECKOUT_PAGE_PATH,
   PAYMENT_PAGE_PATH,
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
@@ -992,6 +993,17 @@ export const customerPath = {
   detail: (id: string): string => `${ROUTES.MANAGE.CUSTOMERS}/${id}`,
 };
 
+/**
+ * Trang chi tiết MỘT tài xế (Figma `24042:71009`, 25/11/2026) - route thật thay cho ngăn kéo
+ * `?open=<id>` cũ của danh sách. Tài xế LIÊN KẾT và tài xế NỘI BỘ là hai bảng id riêng nên hai
+ * đường dẫn riêng. Link cũ `/drivers?open=<id>&tab=` được danh sách chuyển tiếp về `detail`.
+ */
+export const driverPath = {
+  detail: (id: string, tab?: string): string =>
+    `${ROUTES.MANAGE.DRIVERS}/${id}${tab ? `?tab=${tab}` : ''}`,
+  internal: (id: string): string => `${ROUTES.MANAGE.DRIVERS}/internal/${id}`,
+};
+
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
   detail: (id: string): string => `${ROUTES.MANAGE.CONTRACTS}/${id}`,
@@ -1110,7 +1122,7 @@ export const paymentPath = {
     `${ROUTES.MANAGE.PAYMENT}/${encodeURIComponent(invoiceId)}`,
   /** Một phiếu thanh toán gộp nhiều gói (ADR 0083) - site partner. */
   checkout: (checkoutId: string): string =>
-    `${ROUTES.MANAGE.PAYMENT}/checkout/${encodeURIComponent(checkoutId)}`,
+    `${partner(PAYMENT_CHECKOUT_PAGE_PATH)}/${encodeURIComponent(checkoutId)}`,
 };
 
 /** Trang thanh toán hoá đơn gói TRONG khung site partner - xem `ROUTES.MANAGE.SHOP_PAYMENT`. */
@@ -1138,9 +1150,12 @@ export const listingPath = {
   detail: (id: string): string => `/listings/${id}`,
 };
 
-/** Đường dẫn trang gian hàng công khai `/shops/[slug]`. */
+/**
+ * Đường dẫn trang gian hàng công khai — `xeprime.vn/<slug>` (biên bản họp 19/11/2026, bỏ `/shops`).
+ * Slug không bao giờ trùng một route gốc: `RESERVED_SHOP_SLUGS` ở `@xeprime/types`.
+ */
 export const shopPath = {
-  detail: (slug: string): string => `/shops/${slug}`,
+  detail: (slug: string): string => `/${slug}`,
 };
 
 /**

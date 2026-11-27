@@ -239,6 +239,17 @@
       }
     },
     "formTitle": "Tạo tài khoản đối tác",
+    "partnerApp": {
+      "displayNamePlaceholder": "Nguyễn Văn A",
+      "emailPlaceholder": "nguyenvana@gmail.com",
+      "phonePlaceholder": "0901 567 789",
+      "confirmPasswordLabel": "Xác nhận mật khẩu",
+      "provinceLabel": "Tỉnh/Thành phố",
+      "wardLabel": "Xã/Phường",
+      "wardPlaceholder": "Chọn hoặc gõ để tìm kiếm",
+      "addressLineLabel": "Địa chỉ cụ thể",
+      "addressLinePlaceholder": "VD: 133 đường Trung Lương 11"
+    },
     "formSub": "Chỉ mất khoảng 2 phút để hợp tác cùng XePrime",
     "footnote": "Sau khi đăng ký, bạn có thể bổ sung giấy tờ & thông tin tài chính trong trang quản lý",
     "consentRequired": "Vui lòng đồng ý với Quy chế hoạt động sàn và Điều khoản sử dụng",
@@ -248,6 +259,8 @@
     "title": "Thêm logo gian hàng",
     "body": "Gian hàng cần có logo trước khi chọn gói. Logo hiện trên trang gian hàng và trên mọi xe bạn đăng.",
     "required": "Tải logo gian hàng lên để tiếp tục",
-    "save": "Lưu logo và chọn gói"
+    "save": "Lưu logo và chọn gói",
+    "appBody": "Gian hàng cần có logo để hoàn tất hồ sơ. Logo hiện trên trang gian hàng và trên mọi xe bạn đăng.",
+    "appSave": "Lưu logo"
   }
 }

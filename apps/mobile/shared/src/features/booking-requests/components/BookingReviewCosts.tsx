@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  COLLATERAL_MODE,
   FEE_LINE,
   PRICE_ROW,
   type PublicListingDetail,
@@ -12,6 +11,8 @@ import { InfoHint } from '@/components/ui/InfoHint';
 import { useFeeLineSublabel, type PriceBreakdownFeesInput } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { InsuranceFeeHint } from '@/components/ui/InsuranceFeeHint';
+import type { IncludedInsuranceServiceFee } from '@xeprime/domain';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
@@ -60,6 +61,7 @@ export function BookingReviewCosts({
   surface = 'review',
   frozen = false,
   showDeposit = true,
+  depositDetail,
 }: {
   listing: PublicListingDetail | null;
   breakdown: ReviewCostsBreakdown | null;
@@ -78,6 +80,8 @@ export function BookingReviewCosts({
   showDeposit?: boolean;
   /** Số đã CHỐT — tổng không còn "dự kiến", không còn câu "giá chốt khi duyệt". */
   frozen?: boolean;
+  /** Màn chuyến đã có đơn: cọc khách ĐÃ giao (tiền + tài sản) ngay dưới dòng cọc (web). */
+  depositDetail?: ReactNode;
 }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
@@ -118,15 +122,29 @@ export function BookingReviewCosts({
       tone?: 'discount';
       /** Ghi chú giải thích — dấu "i" cạnh nhãn thay cho đoạn chữ hiện sẵn. */
       hint?: { content: string; label: string } | null;
+      /** Dòng IV đã gộp phí thu hộ - ⓘ tách hai số (ADR 0091 điều 3). */
+      includedServiceFee?: IncludedInsuranceServiceFee | null;
+      /**
+       * Giá trị là một CÂU (mô tả cọc - ADR 0112) chứ không phải một con số: nhãn ở trên, giá trị
+       * xuống dòng bên dưới - không bóp nhãn, không tràn thẻ.
+       */
+      stacked?: boolean;
     } = {},
   ) => (
-    <XStack key={key} ai="flex-start" jc="space-between" gap={space.sm}>
+    <XStack
+      key={key}
+      fd={opts.stacked ? 'column' : 'row'}
+      ai={opts.stacked ? 'stretch' : 'flex-start'}
+      jc="space-between"
+      gap={opts.stacked ? 2 : space.sm}
+    >
       <YStack f={1} gap={2}>
         <XStack ai="center" gap={4}>
           <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
             {label}
           </Text>
           {opts.hint ? <InfoHint content={opts.hint.content} label={opts.hint.label} /> : null}
+          {opts.includedServiceFee ? <InsuranceFeeHint fee={opts.includedServiceFee} /> : null}
         </XStack>
         {opts.sub ? (
           <Text col={colors.placeholder} fos={fontSize.label}>
@@ -138,6 +156,7 @@ export function BookingReviewCosts({
         col={opts.tone === 'discount' ? colors.danger : colors.text}
         fos={fontSize.bodySm}
         fow={fontWeight.semibold}
+        flexShrink={1}
       >
         {amount}
       </Text>
@@ -172,6 +191,7 @@ export function BookingReviewCosts({
               {feeLines.map((line) =>
                 row(line.key, dl('feeLine', line.key), fmt.money(line.amount), {
                   sub: feeLineSublabel(line) || null,
+                  includedServiceFee: line.includedServiceFee ?? null,
                 }),
               )}
               {/* Ô áp mã (khi có) tự hiện mã + số giảm — dòng chỉ-đọc chỉ khi không có ô. */}
@@ -243,11 +263,13 @@ export function BookingReviewCosts({
                 {row(
                   'deposit',
                   tPrice('deposit'),
-                  deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
-                    ? fmt.money(deposit.amount)
-                    : dl('collateralMode', deposit.mode),
-                  { hint: { content: deposit.note, label: tPrice('depositHintLabel') } },
+                  deposit.display,
+                  {
+                    hint: { content: deposit.note, label: tPrice('depositHintLabel') },
+                    stacked: deposit.textual,
+                  },
                 )}
+                {depositDetail}
               </YStack>
             ) : null}
           </YStack>

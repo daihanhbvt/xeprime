@@ -4,7 +4,8 @@ import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { fontSize, fontWeight, radius, sizing, space, typeScale } from '@/theme/tokens';
 
 export const OTP_LENGTH = 6;
 
@@ -17,6 +18,12 @@ const styles = StyleSheet.create({
 /** Cao hơn sàn chạm rõ rệt: ô mã là trọng tâm của bước này, không phải một ô nhập phụ. */
 const OTP_BOX_HEIGHT = sizing.touchTarget + space.md;
 
+/** Figma "_Input" (`24131:70052`…`70057`): ô vuông 48, cách nhau 12, cả hàng canh giữa. */
+const V2_BOX = 48;
+const V2_GAP = 12;
+/** Ô CHƯA gõ của bản vẽ hiện một gạch ngắn mờ - chỉ là hình, trình đọc màn hình đọc nhãn của ô thật. */
+const V2_EMPTY = '-';
+
 interface OtpCodeInputProps {
   value: string;
   onChange: (next: string) => void;
@@ -26,6 +33,13 @@ interface OtpCodeInputProps {
   autoFocus?: boolean;
   /** Ref của ô nhập thật — để nơi gọi chuyển focus sang ô mã (vd. phím gửi của ô SĐT). */
   inputRef?: RefObject<TextInput | null>;
+  /**
+   * `v2` = sáu ô của Figma Partner (tấm đổi SĐT `24231:109668`): ô trắng viền xám, ô đang chờ gõ nền
+   * vàng nhạt viền vàng, ô trống hiện "-". `default` giữ kiểu cũ cho các màn chưa ghép Figma.
+   */
+  look?: 'default' | 'v2';
+  /** Chỉ `v2`: viền đỏ cả hàng khi mã vừa bị từ chối. */
+  invalid?: boolean;
 }
 
 export function OtpCodeInput({
@@ -35,6 +49,8 @@ export function OtpCodeInput({
   disabled = false,
   autoFocus = false,
   inputRef: externalRef,
+  look = 'default',
+  invalid = false,
 }: OtpCodeInputProps) {
   const colors = useColors();
   const ownRef = useRef<TextInput>(null);
@@ -78,29 +94,60 @@ export function OtpCodeInput({
       accessibilityRole="none"
       style={styles.stretch}
     >
-      <XStack gap={space.sm}>
-        {digits.map((digit, index) => (
-          <XStack
-            key={index}
-            f={1}
-            ai="center"
-            jc="center"
-            minHeight={OTP_BOX_HEIGHT}
-            bg={colors.surfaceMuted}
-            br={radius.sm}
-            bw={1}
-            bc={focused && index === activeIndex ? colors.primary : 'transparent'}
-          >
-            <Text
-              col={disabled ? colors.textMuted : colors.text}
-              fos={fontSize.h2}
-              fow={fontWeight.bold}
+      {look === 'v2' ? (
+        <XStack gap={V2_GAP} jc="center">
+          {digits.map((digit, index) => {
+            const active = focused && index === activeIndex && !disabled;
+            return (
+              <XStack
+                key={index}
+                w={V2_BOX}
+                h={V2_BOX}
+                ai="center"
+                jc="center"
+                br={radius.control}
+                bw={1}
+                bg={active ? colors.brandWash : colors.surface}
+                bc={invalid ? colors.danger : active ? colors.brandBorderStrong : colors.borderInput}
+              >
+                <Text
+                  col={digit ? (active ? colors.brandShape : colors.text) : colors.textPlaceholder}
+                  fos={typeScale.title.fontSize}
+                  lh={typeScale.title.lineHeight}
+                  fontFamily={FONT_FAMILY.medium}
+                  fow={fontWeight.medium}
+                >
+                  {digit || V2_EMPTY}
+                </Text>
+              </XStack>
+            );
+          })}
+        </XStack>
+      ) : (
+        <XStack gap={space.sm}>
+          {digits.map((digit, index) => (
+            <XStack
+              key={index}
+              f={1}
+              ai="center"
+              jc="center"
+              minHeight={OTP_BOX_HEIGHT}
+              bg={colors.surfaceMuted}
+              br={radius.sm}
+              bw={1}
+              bc={focused && index === activeIndex ? colors.primary : 'transparent'}
             >
-              {digit}
-            </Text>
-          </XStack>
-        ))}
-      </XStack>
+              <Text
+                col={disabled ? colors.textMuted : colors.text}
+                fos={fontSize.h2}
+                fow={fontWeight.bold}
+              >
+                {digit}
+              </Text>
+            </XStack>
+          ))}
+        </XStack>
+      )}
 
       <TextInput
         ref={inputRef}

@@ -24,11 +24,13 @@
       "legal": {
         "title": "Pháp lý",
         "terms": "Điều khoản sử dụng",
-        "privacy": "Chính sách bảo mật",
+        "privacy": "Bảo vệ dữ liệu cá nhân",
         "marketplaceRules": "Quy chế hoạt động sàn",
         "cancellation": "Chính sách huỷ và hoàn tiền",
         "cancellationShort": "Chính sách huỷ & hoàn tiền",
-        "ownerTax": "Chính sách thuế cho chủ xe"
+        "ownerTax": "Chính sách thuế cho chủ xe",
+        "complaints": "Giải quyết khiếu nại",
+        "allDocs": "Tất cả văn bản pháp lý"
       }
     },
     "apps": {
@@ -38,7 +40,8 @@
     "copyright": "© {year} XePrime",
     "country": "Nền tảng cho thuê xe tại Việt Nam",
     "copyrightCompany": "© {year} <brand>XePrime</brand>. Bảo lưu mọi quyền.",
-    "localeLabel": "Ngôn ngữ"
+    "localeLabel": "Ngôn ngữ",
+    "companyInfo": "Đơn vị vận hành: Công ty TNHH Công nghệ Softrent · MST 0402359663 · 133 Trung Lương 11, P. Hòa Xuân, TP. Đà Nẵng · Tổng đài 0352 063 205 · contact@softrent.vn"
   },
   "steps": {
     "title": "Thuê xe chỉ với 4 bước",

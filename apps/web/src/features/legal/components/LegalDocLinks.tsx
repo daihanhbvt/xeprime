@@ -18,7 +18,7 @@ interface LegalDocLinksProps {
 }
 
 /**
- * Danh sách liên kết tới bốn văn bản pháp lý.
+ * Danh sách liên kết tới bộ văn bản pháp lý.
  *
  * Trước đây mỗi nơi tự lặp lại `LEGAL_DOC_VALUES.map(...)` cùng CSS gần giống nhau — thêm một
  * văn bản thứ năm sẽ phải nhớ sửa từng chỗ, và chỗ nào quên thì im lặng thiếu. Tiêu đề luôn lấy

@@ -7,7 +7,8 @@
  *                production. Tỉnh/xã không ở đây: migration nạp sẵn.
  *   • `demo`   — mặc định: thêm 3 gian hàng tuyến gói (12 / 5 / 2 xe — mỗi bậc một gian hàng),
  *                3 chủ xe cá nhân tuyến hoa hồng (1 / 2 / 3 xe), 3 khách, 3 nhân viên gian hàng,
- *                2 tài khoản nền tảng demo, kèm dữ liệu vận hành mẫu và tài khoản song sinh.
+ *                2 tài khoản nền tảng demo, 9 mã khuyến mãi mẫu, kèm dữ liệu vận hành mẫu và tài
+ *                khoản song sinh.
  *
  * Idempotent: chạy nhiều lần không nhân bản. Mọi bản ghi có khoá tự nhiên thì `upsert` theo
  * khoá đó; phần còn lại dùng ID TẤT ĐỊNH suy từ khoá nghiệp vụ (`seedId`), nên chạy lại là cập
@@ -36,7 +37,12 @@ import { CROSS_REALM_TWINS, CUSTOMER_ACCOUNTS, PLATFORM_ACCOUNTS } from './seed/
 import { buildShop } from './seed/shop';
 import { SHOP_SPECS } from './seed/shops';
 import { seedVehicleCatalog } from './seed/catalog-sync';
-import { publishDraftPlansForDemo, seedDemoPromoBanners, seedSystemData } from './seed/system';
+import {
+  publishDraftPlansForDemo,
+  seedDemoPromoBanners,
+  seedDemoPromoCodes,
+  seedSystemData,
+} from './seed/system';
 
 /**
  * Gian hàng và tài khoản của SEED ĐỜI TRƯỚC (một gian hàng `xeprime-demo` duy nhất).
@@ -115,6 +121,8 @@ async function main(): Promise<void> {
   const drivers = await seedDriverAccounts();
   await seedCustomerDriverLicences(customers, adminUserId);
   await seedDemoPromoBanners();
+  // Mã khuyến mãi mẫu do nền tảng tài trợ - chỉ demo, production không được có mã tự bật.
+  await seedDemoPromoCodes();
   // Sáu bậc gói giá giữ chỗ chờ admin mở bán ở production (ADR 0065) — dữ liệu demo mở sẵn.
   await publishDraftPlansForDemo();
 

@@ -46,9 +46,11 @@ export class PaymentGatewayConfig {
   constructor(config: ConfigService) {
     this.sandbox = config.get<string>('PAYMENT_GATEWAY_MODE') !== 'live';
     this.apiPublicUrl = config.getOrThrow<string>('API_PUBLIC_URL').replace(/\/+$/, '');
+    const subscription = config.get<string>('PAYMENT_GATEWAY_SUBSCRIPTION') === 'on';
     this.targets = {
-      [PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE]:
-        config.get<string>('PAYMENT_GATEWAY_SUBSCRIPTION') === 'on',
+      [PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE]: subscription,
+      // Phiếu gộp là CÙNG luồng mua gói (ADR 0083 điều 6) — một công tắc, không hai.
+      [PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT]: subscription,
       [PAYMENT_ORDER_TARGET.BOOKING_HOLD]: config.get<string>('PAYMENT_GATEWAY_BOOKING_HOLD') === 'on',
     };
 

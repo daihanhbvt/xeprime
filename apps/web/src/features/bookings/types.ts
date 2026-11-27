@@ -15,6 +15,9 @@ export type BookingListItem = Schemas['BookingListItemDto'];
 /** Meta của trang danh sách đơn — thêm số đếm bốn ngăn của cột trái. */
 export type BookingListMeta = Schemas['BookingPageMetaDto'];
 export type BookingDetail = Schemas['BookingDetailDto'];
+/** Một món tài sản thế chấp khách để lại cho đơn (ADR 0109). */
+export type BookingCollateral = Schemas['BookingCollateralDto'];
+export type BookingCollateralInput = Schemas['BookingCollateralInputDto'];
 /** Phụ lục gia hạn đơn dài hạn (ADR 0077) — bề mặt đối tác, có dòng phía chủ xe. */
 export type BookingExtension = Schemas['BookingExtensionDto'];
 export type BookingExtensionQuote = Schemas['BookingExtensionQuoteDto'];
@@ -40,13 +43,17 @@ export type BookingDriverIncident = Schemas['BookingDriverIncidentDto'];
  * `externalDriver` đã bỏ (ADR 0074 điều 4 — server trả 422), nên web không còn dựng được nó.
  */
 /** Gán/bỏ gán tài xế — `wageAmount` (VND chuỗi) bỏ trống = mức mặc định × số ngày (ADR 0075). */
-export type AssignBookingDriverInput = { driverId: string | null; wageAmount?: string };
+/** Gán tài xế LIÊN KẾT (kèm tiền công) / bỏ gán (`driverId: null`), hoặc gán tài xế NỘI BỘ (ADR 0108). */
+export type AssignBookingDriverInput =
+  { driverId: string | null; wageAmount?: string } | { internalDriverId: string };
 /** Tiền công của một lượt gán (ADR 0075) — XePrime chỉ ghi nhận, chủ xe trả trực tiếp. */
 export type DriverWage = Schemas['DriverWageDto'];
 /** Số liệu cho hộp gán: số ngày, gợi ý mặc định × N, khoảng hợp lệ — server tính. */
 export type DriverWageQuote = Schemas['DriverWageQuoteDto'];
 export type UpdateDriverWageInput = Schemas['UpdateDriverWageDto'];
 export type CreateBookingInput = Schemas['CreateBookingDto'];
+/** Đổi nguồn của một đơn tự lập (ADR 0110). */
+export type UpdateBookingSourceInput = Schemas['UpdateBookingSourceDto'];
 export type UpdateBookingInput = Schemas['UpdateBookingDto'];
 export type TransitionInput = Schemas['TransitionBookingDto'];
 export type UpdateDeliveryFeeInput = Schemas['UpdateBookingDeliveryFeeDto'];
@@ -67,6 +74,8 @@ export interface BookingHistoryFilters {
   q?: string;
   serviceType?: string;
   branchId?: string;
+  /** Nguồn đơn (ADR 0110) — mã nguồn hoặc `direct` (mọi đơn ngoài sàn). */
+  source?: string;
   page?: number;
   limit?: number;
 }
@@ -92,6 +101,10 @@ export interface BookingFilters {
   serviceType?: string;
   /** Chi nhánh của XE trong đơn — ô "Chi nhánh" của trang, sống trên URL (ADR 0052). */
   branchId?: string;
+  /** Nguồn đơn (ADR 0110) — mã nguồn hoặc `direct` (mọi đơn ngoài sàn). */
+  source?: string;
+  /** Nhãn nguồn tự nhập, khớp đúng chuỗi — lọc một nền tảng / nguồn cụ thể. */
+  sourceLabel?: string;
   returnFrom?: string;
   returnTo?: string;
   sort?: BookingSort;

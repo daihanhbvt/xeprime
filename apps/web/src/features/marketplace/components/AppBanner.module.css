@@ -277,3 +277,16 @@
 :global([data-theme='dark']) .badge:hover {
   background: rgba(255, 255, 255, 0.12);
 }
+
+/* Logo: mỗi giao diện một bản (chữ "xe" tối ở nền sáng, trắng ở nền tối). */
+.logoDark {
+  display: none;
+}
+
+:global([data-theme='dark']) .logoLight {
+  display: none;
+}
+
+:global([data-theme='dark']) .logoDark {
+  display: block;
+}

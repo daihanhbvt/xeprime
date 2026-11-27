@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { NextIntlClientProvider } from 'next-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  BOOKING_SOURCE,
   BOOKING_STATUS,
   HANDOVER_PREP_ITEM,
   PERMISSION,
@@ -67,6 +68,8 @@ vi.mock('../hooks/use-booking-mutations', async (importOriginal) => ({
   useSetHandoverPrepCheck: () => prepCheck,
 }));
 vi.mock('./BookingDriverSection', () => ({ BookingDriverSection: () => null }));
+// Thẻ Cọc & thế chấp (ADR 0109) có test riêng.
+vi.mock('./detail/CollateralSideCard', () => ({ CollateralSideCard: () => null }));
 vi.mock('./BookingFormDialog', () => ({ BookingFormDialog: () => null }));
 vi.mock('./BookingExtensionsPanel', () => ({ BookingExtensionsPanel: () => null }));
 vi.mock('./BookingInsuranceCertificatesPanel', () => ({
@@ -89,6 +92,8 @@ const BOOKING: BookingDetail = {
   customerPhone: '0123123123',
   status: BOOKING_STATUS.CONFIRMED,
   serviceType: SERVICE_TYPE.SELF_DRIVE,
+  source: BOOKING_SOURCE.XEPRIME,
+  sourceLabel: null,
   longTermPackageMonths: null,
   vehicleType: VEHICLE_TYPE.CAR,
   canMessageOnPlatform: false,
@@ -117,6 +122,8 @@ const BOOKING: BookingDetail = {
   baseAmount: '520000',
   deliveryFee: '0',
   discountAmount: '52000',
+  extraChargesAmount: '0',
+  collaterals: [],
   priceSnapshot: null,
   customerTotalAmount: '477360',
   holdPaidAmount: '102960',
@@ -171,7 +178,8 @@ beforeEach(() => {
 describe('Thẻ "Thanh toán"', () => {
   /*
    * 06/11/2026: thẻ đọc như MỘT phép trừ — Tổng tiền chuyến − phần khách trả trước qua XePrime (`D`,
-   * không phải cả khoản giữ chỗ) − gian hàng đã thu = "Còn phải thu của khách", ô nổi bật.
+   * không phải cả khoản giữ chỗ) − gian hàng đã thu = "Còn lại (phải thu)" - 26/11 theo Figma
+   * `23777:48877`: một dòng sau đường kẻ, câu "thu lúc nào" ở dấu ⓘ.
    */
   it('trừ đúng phần tiền thuê khách đã trả trước (D), và số cuối nổi bật là số còn phải thu', () => {
     renderDetail();
@@ -181,12 +189,11 @@ describe('Thẻ "Thanh toán"', () => {
     expect(card.textContent).toContain('−93.600');
     // Cả khoản giữ chỗ (gồm phí đặt xe + bảo hiểm) không còn là một dòng trừ.
     expect(within(card).queryByText('Giữ chỗ (XePrime đã thu)')).toBeNull();
-    const due = within(card).getByRole('status', { name: /Còn phải thu của khách/ });
+    const due = within(card).getByRole('status', { name: /Còn lại \(phải thu\)/ });
     expect(due.textContent).toContain('374.400');
-    expect(due.textContent).toContain('Thu trực tiếp khi giao xe cho khách.');
   });
 
-  it('đơn lập tay (không trả trước) ⇒ không có dòng trả trước; thu đủ ⇒ ô nói đã thanh toán đủ', () => {
+  it('đơn lập tay (không trả trước) ⇒ không có dòng trả trước; thu đủ ⇒ còn lại 0', () => {
     renderDetail({
       ...BOOKING,
       holdPaidAmount: null,
@@ -197,8 +204,8 @@ describe('Thẻ "Thanh toán"', () => {
     const card = screen.getByRole('region', { name: 'Thanh toán' });
     expect(within(card).queryByText('Khách trả trước qua XePrime')).toBeNull();
     expect(
-      within(card).getByRole('status', { name: /Còn phải thu của khách/ }).textContent,
-    ).toContain('Khách đã thanh toán đủ tiền thuê.');
+      within(card).getByRole('status', { name: /Còn lại \(phải thu\)/ }).textContent,
+    ).toContain('0');
   });
 });
 
@@ -226,7 +233,7 @@ describe('"Lợi nhuận chuyến"', () => {
       },
     });
     expect(screen.getByText('Lợi nhuận chuyến')).toBeTruthy();
-    expect(screen.getByText('Số tiền cộng ví (a − b)')).toBeTruthy();
+    expect(screen.getByText('Số tiền cộng ví (A − B)')).toBeTruthy();
   });
 
   it('đơn lập tay / đơn cũ không có bảng phí ⇒ không có khối', () => {
@@ -241,10 +248,8 @@ describe('"Chuẩn bị bàn giao"', () => {
     expect(screen.getByText('Chuẩn bị bàn giao')).toBeTruthy();
     // Xác nhận đơn (luôn xong) · giấy tờ · tiền thuê · cọc · hợp đồng · ảnh — 1/6.
     expect(screen.getByText('1/6 hoàn tất')).toBeTruthy();
-    expect(screen.getByText('Chưa có GPLX / CCCD để đối chiếu khi giao')).toBeTruthy();
-    expect(
-      screen.getByText(/Bổ sung ảnh của phương tiện trước khi giao khách \(2\/5\)/),
-    ).toBeTruthy();
+    expect(screen.getByText('Chưa có GPLX / CCCD')).toBeTruthy();
+    expect(screen.getByText('Ảnh xe trước khi giao (2/5)')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tạo' })).toBeTruthy();
   });
 
@@ -252,7 +257,7 @@ describe('"Chuẩn bị bàn giao"', () => {
     finance.visible = false;
     renderDetail();
     expect(screen.queryByText('Thu tiền thuê')).toBeNull();
-    expect(screen.queryByText('Thu cọc tài sản')).toBeNull();
+    expect(screen.queryByText('Thu cọc tiền')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Thu tiền' })).toBeNull();
   });
 
@@ -260,7 +265,7 @@ describe('"Chuẩn bị bàn giao"', () => {
     // `useFeature` của mock trả `isVisible: false` cho MỌI cờ, kể cả `contracts`.
     finance.visible = false;
     renderDetail();
-    expect(screen.getByText('Chưa tạo hợp đồng cho chuyến này')).toBeTruthy();
+    expect(screen.getByText('Chưa tạo hợp đồng')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tạo' })).toBeTruthy();
   });
 
@@ -268,13 +273,13 @@ describe('"Chuẩn bị bàn giao"', () => {
     granted.value = new Set([...granted.value, PERMISSION.HANDOVER_MANAGE]);
     prepCheck.mutate.mockClear();
     renderDetail();
-    fireEvent.click(screen.getByLabelText('Đánh dấu “Bổ sung giấy tờ của khách” đã xong'));
+    fireEvent.click(screen.getByLabelText('Đánh dấu “Giấy tờ của khách” đã xong'));
     expect(prepCheck.mutate.mock.calls[0]![0]).toEqual({
       item: HANDOVER_PREP_ITEM.DOCUMENTS,
       checked: true,
     });
     expect(screen.queryByLabelText(/Đánh dấu “Thu tiền thuê”/)).toBeNull();
-    expect(screen.queryByLabelText(/Đánh dấu “Thu cọc tài sản”/)).toBeNull();
+    expect(screen.queryByLabelText(/Đánh dấu “Thu cọc tiền”/)).toBeNull();
   });
 
   it('dấu tay tính vào tiến độ, ghi rõ ai đánh dấu và bỏ được', () => {
@@ -286,7 +291,7 @@ describe('"Chuẩn bị bàn giao"', () => {
         ...BOOKING.handoverPrep!,
         manualChecks: [
           {
-            item: HANDOVER_PREP_ITEM.PHOTOS,
+            item: HANDOVER_PREP_ITEM.DOCUMENTS,
             checkedAt: '2026-09-23T03:20:00.000Z',
             checkedByName: 'Chị Lan',
           },
@@ -295,11 +300,17 @@ describe('"Chuẩn bị bàn giao"', () => {
     });
     expect(screen.getByText('2/6 hoàn tất')).toBeTruthy();
     expect(screen.getByText(/Đánh dấu tay · Chị Lan/)).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Bỏ đánh dấu “Thông tin bàn giao”'));
+    fireEvent.click(screen.getByLabelText('Bỏ đánh dấu “Giấy tờ của khách”'));
     expect(prepCheck.mutate.mock.calls[0]![0]).toEqual({
-      item: HANDOVER_PREP_ITEM.PHOTOS,
+      item: HANDOVER_PREP_ITEM.DOCUMENTS,
       checked: false,
     });
+  });
+
+  it('ảnh bàn giao không đánh dấu tay được - chỉ xong khi đủ ảnh (26/11/2026)', () => {
+    granted.value = new Set([...granted.value, PERMISSION.HANDOVER_MANAGE]);
+    renderDetail();
+    expect(screen.queryByLabelText(/Đánh dấu “Ảnh bàn giao”/)).toBeNull();
   });
 
   it('không có quyền soạn bàn giao ⇒ không bấm được vòng tròn', () => {
@@ -358,7 +369,7 @@ describe('Đơn huỷ / khách không đến: không ghi tiền mới', () => {
       expect(screen.queryByRole('button', { name: 'Thu tiền' })).toBeNull();
       expect(screen.getByRole('button', { name: 'Lịch sử thu tiền' })).toBeTruthy();
       const card = screen.getByRole('region', { name: 'Thanh toán' });
-      expect(within(card).queryByRole('status', { name: /Còn phải thu của khách/ })).toBeNull();
+      expect(within(card).queryByRole('status', { name: /Còn lại \(phải thu\)/ })).toBeNull();
       // Các dòng tiền vẫn là bản ghi của đơn.
       expect(within(card).getByText('Tổng tiền chuyến')).toBeTruthy();
       expect(screen.getByTestId('settlement-card').dataset.moneyClosed).toBe('true');

@@ -1,4 +1,5 @@
 import Animated from 'react-native-reanimated';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { ScrollReveal, ScrollRevealProvider, useScrollRevealList } from '@/components/motion/ScrollReveal';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
@@ -309,7 +310,7 @@ export function TripsScreen({
               suốt. Tham chiếu hàm thì bền.
             */
             ListHeaderComponent={history ? null : UnpaidHoldsReminder}
-            ListFooterComponent={query.isFetchingNextPage ? TripCardSkeleton : null}
+            ListFooterComponent={query.isFetchingNextPage ? ListLoadingFooter : null}
             {...LIST_TUNING}
           />
           </ScrollRevealProvider>

@@ -18,6 +18,7 @@ import { normalizePhone } from '../src/common/phone';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
@@ -49,6 +50,7 @@ const settings = new VehicleSettingsService(
   occupancy,
   new ListingsService(asService),
   makeDriversService(asService),
+    new TenantRentalTermsService(asService, audit),
 );
 const requests = makeBookingRequestsService(asService, { audit, notifications, occupancy, settings });
 

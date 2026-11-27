@@ -225,10 +225,24 @@ export function hasDepositToShow(status: DepositStatus): boolean {
 export const PAYMENT_KIND = {
   RENTAL: 'rental',
   DEPOSIT: 'deposit',
+  /**
+   * Trả lại một phần cọc ĐÃ THU trước quyết toán - lượt "Sửa tiền cọc" hạ số đã thu (thu dư).
+   * Không sửa/xoá khoản `deposit` cũ: sổ chỉ thêm. Cọc ròng = Σ`deposit` − Σ`deposit_return`.
+   * Chỉ `DepositAdjustmentsService` ghi; hộp "Thu tiền" không nhận kind này.
+   */
+  DEPOSIT_RETURN: 'deposit_return',
 } as const;
+
+/** Các kind hộp "Thu tiền" được phép ghi - `deposit_return` chỉ sinh từ lượt điều chỉnh cọc. */
+export const RECORDABLE_PAYMENT_KIND_VALUES: readonly string[] = [
+  PAYMENT_KIND.RENTAL,
+  PAYMENT_KIND.DEPOSIT,
+];
 
 export type PaymentKind = (typeof PAYMENT_KIND)[keyof typeof PAYMENT_KIND];
 export const PAYMENT_KIND_VALUES = Object.values(PAYMENT_KIND) as PaymentKind[];
+/** Kind hộp "Thu tiền" ghi được - xem `RECORDABLE_PAYMENT_KIND_VALUES`. */
+export type RecordablePaymentKind = Exclude<PaymentKind, typeof PAYMENT_KIND.DEPOSIT_RETURN>;
 
 /**
  * Bộ lọc `kind` đọc từ URL có hợp lệ không — mọi bộ lọc sống ở searchParams (ADR 0004), và một
@@ -241,6 +255,7 @@ export function isPaymentKind(value: unknown): value is PaymentKind {
 export const PAYMENT_KIND_LABEL: Readonly<Record<PaymentKind, string>> = {
   [PAYMENT_KIND.RENTAL]: 'Tiền thuê',
   [PAYMENT_KIND.DEPOSIT]: 'Tiền cọc',
+  [PAYMENT_KIND.DEPOSIT_RETURN]: 'Trả lại cọc',
 };
 
 /** Tình trạng xe ghi nhận ở phần nâng cao — hai mức, không phải một thang điểm. */

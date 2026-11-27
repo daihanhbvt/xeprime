@@ -190,3 +190,11 @@
     background: var(--xp-color-bg-container);
   }
 }
+
+/* Cột "Loại dịch vụ": viên dịch vụ + viên nguồn đơn xếp dọc - không thêm cột thứ chín. */
+.serviceCell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+}

@@ -8,6 +8,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { bookingPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { BookingDetailContent } from './BookingDetailContent';
+import { BookingSourceControl } from './BookingSourceControl';
 import { useBooking } from '../hooks/use-booking';
 import styles from './BookingDetailDialog.module.css';
 
@@ -55,6 +56,7 @@ export function BookingDetailDialog({
               group="bookingStatus"
             />
           ) : null}
+          {data ? <BookingSourceControl booking={data} /> : null}
           <Link href={bookingPath.detail(bookingId)} className={styles.pageLink}>
             {t('detail.openPage')}
           </Link>

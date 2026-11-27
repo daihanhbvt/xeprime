@@ -11,12 +11,26 @@ import { Prisma } from '@xeprime/prisma';
  * ký, còn phụ phí phát sinh sau khi ký — đưa chúng vào bản in là làm hợp đồng nói khác lúc ký.
  *
  * Kẹp sàn 0 là có chủ đích: khách trả dư (đặt cọc rồi giảm giá) là 0, không phải số âm.
+ *
+ * `ownerShareOnline` - phần `D` khách đã trả online trong tiền giữ chỗ (đơn qua sàn): khách đã trả
+ * nó, nên nó không còn "phải trả" (cùng luật với `bookingMoney`).
  */
 export function bookingDebt(
   totalAmount: Prisma.Decimal | string | number,
   paidAmount: Prisma.Decimal | string | number,
+  ownerShareOnline: Prisma.Decimal | string | number = 0,
 ): Prisma.Decimal {
-  return Prisma.Decimal.max(0, new Prisma.Decimal(totalAmount).minus(paidAmount));
+  return Prisma.Decimal.max(
+    0,
+    new Prisma.Decimal(totalAmount).minus(paidAmount).minus(ownerShareOnline),
+  );
+}
+
+/** `D` đã trả online của một đơn từ quan hệ `hold` (chỉ khi tiền giữ chỗ đã về đủ). */
+export function onlineShareOf(
+  hold: { depositAmount: Prisma.Decimal; paidAt: Date | null } | null | undefined,
+): Prisma.Decimal {
+  return hold?.paidAt ? hold.depositAmount : new Prisma.Decimal(0);
 }
 
 /**

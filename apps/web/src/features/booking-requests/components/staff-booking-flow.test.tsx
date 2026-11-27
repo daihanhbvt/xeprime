@@ -42,6 +42,7 @@ vi.mock('@/features/calendar/api', () => ({
 }));
 vi.mock('@/features/bookings/api', () => ({
   checkConflict: (...a: unknown[]) => api.conflict(...a),
+  fetchBookingSourceLabels: () => Promise.resolve(['Nền tảng A']),
 }));
 vi.mock('@/features/bookings/hooks/use-booking-mutations', async () => {
   const { useMutation } = await import('@tanstack/react-query');
@@ -79,11 +80,20 @@ function renderFlow() {
   );
 }
 
-async function goToReview() {
+/** Chọn một nguồn trong ô "Nguồn đơn" (ADR 0110) - AntD Select mở bằng mouseDown. */
+function chooseSource(label: string) {
+  fireEvent.mouseDown(screen.getByLabelText(/Nguồn đơn/));
+  fireEvent.click(screen.getByTitle(label));
+}
+
+/** Sang màn Xem lại. Mặc định chọn sẵn nguồn "Khách quen" - nguồn đơn là ô bắt buộc. */
+async function goToReview(options: { source?: string | null } = {}) {
   renderFlow();
   await screen.findByText('1.350.000 ₫', { selector: 'b' });
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
   await screen.findByText('Xem lại và tạo đơn thuê');
+  const source = options.source === undefined ? 'Khách quen' : options.source;
+  if (source) chooseSource(source);
 }
 
 beforeEach(() => {
@@ -91,7 +101,9 @@ beforeEach(() => {
   api.quote.mockReset().mockResolvedValue(QUOTE);
   api.busyDays.mockReset().mockResolvedValue({ days: [], from: '2026-10-25', to: '2027-10-26' });
   api.conflict.mockReset().mockResolvedValue({ hasConflict: false });
-  api.create.mockReset().mockResolvedValue({ id: 'bk-1', code: 'BK-000123' });
+  api.create
+    .mockReset()
+    .mockResolvedValue({ id: 'bk-1', code: 'BK-000123', totalAmount: '1350000' });
 });
 afterEach(cleanup);
 
@@ -168,10 +180,43 @@ describe('StaffBookingFlow - màn Xem lại và tạo đơn', () => {
       deliveryFee: '0',
       depositAmount: '5000000',
       returnAt: '2027-11-05T01:00:00.000Z',
+      // Nguồn chủ xe chọn; nguồn không nhận nhãn thì nhãn là null.
+      source: 'repeat_customer',
+      sourceLabel: null,
     });
 
     expect(await screen.findByText('Đã tạo đơn thuê')).toBeTruthy();
     expect(screen.getByText('BK-000123')).toBeTruthy();
+  });
+
+  it('chưa chọn nguồn đơn thì không tạo đơn', async () => {
+    await goToReview({ source: null });
+    fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'B' } });
+    fireEvent.change(screen.getByPlaceholderText('0901234567'), {
+      target: { value: '0912345678' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    expect(await screen.findByText('Vui lòng chọn nguồn đơn')).toBeTruthy();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('nguồn "Nền tảng khác": bắt nhập tên nền tảng, tên đi vào payload', async () => {
+    await goToReview({ source: 'Nền tảng khác' });
+    fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'B' } });
+    fireEvent.change(screen.getByPlaceholderText('0901234567'), {
+      target: { value: '0912345678' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    expect(await screen.findByText('Vui lòng nhập tên nguồn')).toBeTruthy();
+    expect(api.create).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Tên nền tảng/), { target: { value: ' Nền tảng A ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    expect(api.create.mock.calls[0]![0]).toMatchObject({
+      source: 'other_platform',
+      sourceLabel: 'Nền tảng A',
+    });
   });
 
   it('xe vừa bị đặt mất khung giờ lúc tạo: báo đúng lỗi, không sang màn kết quả', async () => {
@@ -209,6 +254,7 @@ describe('StaffBookingFlow - xe chưa cấu hình giá', () => {
     expect(
       screen.getByText('Xe chưa cấu hình giá ngày - nhập tiền thuê đã thoả thuận với khách.'),
     ).toBeTruthy();
+    chooseSource('Khách quen');
 
     fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'B' } });
     fireEvent.change(screen.getByPlaceholderText('0901234567'), {
@@ -219,5 +265,104 @@ describe('StaffBookingFlow - xe chưa cấu hình giá', () => {
       await screen.findByText('Xe chưa cấu hình giá - nhập tiền thuê trước khi tạo đơn.'),
     ).toBeTruthy();
     expect(api.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('StaffBookingFlow - giá thoả thuận + cọc & thế chấp (ADR 0109)', () => {
+  async function fillCustomer() {
+    fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'Khách C' } });
+    fireEvent.change(screen.getByPlaceholderText('0901234567'), {
+      target: { value: '0912345678' },
+    });
+  }
+
+  it('bật giá thoả thuận: điền sẵn từ báo giá, sửa tiền thuê + phụ phí theo dòng, tổng tính lại', async () => {
+    await goToReview();
+    fireEvent.click(screen.getByRole('switch', { name: 'Giá thoả thuận' }));
+    const base = (await screen.findByLabelText(/Tiền thuê \(cả kỳ\)/)) as HTMLInputElement;
+    expect(base.value).toBe('1.500.000');
+    expect((screen.getByLabelText('Giảm giá') as HTMLInputElement).value).toBe('150.000');
+
+    fireEvent.change(base, { target: { value: '1800000' } });
+    fireEvent.click(screen.getByRole('button', { name: /Thêm phụ phí/ }));
+    fireEvent.change(screen.getByPlaceholderText('Ghế trẻ em'), {
+      target: { value: 'Ghế trẻ em' },
+    });
+    fireEvent.change(screen.getByLabelText('Số tiền'), { target: { value: '100000' } });
+    // 1.800.000 − 150.000 + 100.000
+    // Tổng hiện ở thẻ "Tiền thuê" và ở hàng đáy - hai chỗ cùng một số.
+    expect((await screen.findAllByText('1.750.000 ₫')).length).toBe(2);
+
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    expect(api.create.mock.calls[0]![0]).toMatchObject({
+      baseAmount: '1800000',
+      discountAmount: '150000',
+      deliveryFee: '0',
+      negotiatedPrice: true,
+      extraCharges: [{ label: 'Ghế trẻ em', amount: '100000' }],
+    });
+  });
+
+  it('giảm giá lớn hơn tiền thuê: báo lỗi, không tạo đơn', async () => {
+    await goToReview();
+    fireEvent.click(screen.getByRole('switch', { name: 'Giá thoả thuận' }));
+    fireEvent.change(await screen.findByLabelText('Giảm giá'), { target: { value: '2000000' } });
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    expect(await screen.findByText('Giảm giá không được lớn hơn tiền thuê.')).toBeTruthy();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('không có ô chọn hình thức bảo đảm - chỉ ô tiền cọc và danh sách tài sản', async () => {
+    await goToReview();
+    expect(screen.queryByText('Cả hai')).toBeNull();
+    expect(screen.queryByText('Không cọc')).toBeNull();
+    expect((screen.getByLabelText('Tiền cọc') as HTMLInputElement).value).toBe('5.000.000');
+    expect(screen.getByRole('button', { name: /Thêm tài sản/ })).toBeTruthy();
+  });
+
+  it('cọc cả tiền lẫn tài sản: gửi cọc tiền + danh sách tài sản kèm mô tả', async () => {
+    await goToReview();
+    // Mỗi lượt bấm thêm một dòng (mặc định CCCD).
+    fireEvent.click(screen.getByRole('button', { name: /Thêm tài sản/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Thêm tài sản/ }));
+    const descriptions = screen.getAllByLabelText('Mô tả');
+    fireEvent.change(descriptions[1]!, { target: { value: '59A1-12345' } });
+
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    const body = api.create.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.depositAmount).toBe('5000000');
+    expect(body.collaterals).toEqual([
+      { collateralType: 'citizen_id', description: null },
+      { collateralType: 'citizen_id', description: '59A1-12345' },
+    ]);
+    expect(body).not.toHaveProperty('negotiatedPrice');
+  });
+
+  it('chỉ tài sản: xoá tiền cọc về 0, vẫn gửi danh sách tài sản', async () => {
+    await goToReview();
+    fireEvent.change(screen.getByLabelText('Tiền cọc'), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: /Thêm tài sản/ }));
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    const body = api.create.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.depositAmount).toBe('0');
+    expect(body.collaterals).toEqual([{ collateralType: 'citizen_id', description: null }]);
+  });
+
+  it('không cọc: tiền cọc 0 và không thêm tài sản ⇒ không gửi khoản nào', async () => {
+    await goToReview();
+    fireEvent.change(screen.getByLabelText('Tiền cọc'), { target: { value: '0' } });
+    await fillCustomer();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo đơn thuê' }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    const body = api.create.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.depositAmount).toBe('0');
+    expect(body).not.toHaveProperty('collaterals');
   });
 });

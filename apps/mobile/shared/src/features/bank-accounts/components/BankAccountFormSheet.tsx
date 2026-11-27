@@ -1,30 +1,36 @@
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
-import { VIETNAM_BANKS } from '@xeprime/domain';
+import { findBank, VIETNAM_BANKS } from '@xeprime/domain';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
-import { Callout } from '@/components/ui/Callout';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { useColors } from '@/theme/ThemeProvider';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import {
   BANK_ACCOUNT_SCOPE,
   type BankAccount,
   type BankAccountScope,
 } from '@/api/bank-accounts/api';
-import { useCreateBankAccount } from '../hooks/use-bank-accounts';
+import { useCreateBankAccount, useCreateChangeRequest } from '../hooks/use-bank-accounts';
 import { BankAccountSavedSheet } from './BankAccountSavedSheet';
 import { BankLogo } from './BankLogo';
 
 /** Cỡ logo ở mỗi dòng ngân hàng — vuông 32px như dòng của web. */
 const BANK_OPTION_LOGO = 32;
-import { bankAccountSaveOutcome, bankAccountSummary } from '../current-account';
+/** Figma `24228:102974`: chữ 14/22 của khối cảnh báo. */
+const FIGMA_LH_22 = 22;
+/** Logo tròn trước ngân hàng đã chọn trong ô (Figma 24). */
+const BANK_VALUE_LOGO = 24;
+import { bankAccountSaveOutcome } from '../current-account';
 
 const BANK_CODE_MAX = 20;
 const ACCOUNT_NUMBER_MAX = 40;
@@ -75,10 +81,18 @@ export function BankAccountFormSheet({
   onCreated?: (account: BankAccount) => void;
 }) {
   const t = useTranslations('BankAccounts.form');
+  const colors = useColors();
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const create = useCreateBankAccount(scope);
+  /*
+   * Đã có tài khoản ⇒ tài khoản KHOÁ (biên bản họp 19/11/2026, `BANK_ACCOUNT_LOCKED`): form gửi YÊU
+   * CẦU đổi để XePrime gọi xác minh, không thay thẳng nữa - web `BankAccountForm` `requesting`.
+   */
+  const requesting = replacing != null;
+  const request = useCreateChangeRequest(scope);
+  const pending = create.isPending || request.isPending;
   /*
    * Lọc TẠI CHỖ, khác ô xã/phường.
    *
@@ -104,9 +118,11 @@ export function BankAccountFormSheet({
         bank.fullName.toLowerCase().includes(needle),
     ).map((bank) => ({
       value: bank.code,
-      label: `${bank.shortName} - ${bank.fullName}`,
+      // Figma `24228:102448`: "Tên đầy đủ (Tên ngắn)", logo nhỏ trước giá trị đã chọn.
+      label: `${bank.fullName} (${bank.shortName})`,
       // Logo trước tên — cùng danh sách chọn có logo của web (Figma `19973:52549`).
       leading: <BankLogo code={bank.code} size={BANK_OPTION_LOGO} radius={6} />,
+      valueLeading: <BankLogo code={bank.code} size={BANK_VALUE_LOGO} radius={BANK_VALUE_LOGO / 2} />,
     }));
   }, [bankSearch]);
 
@@ -141,12 +157,35 @@ export function BankAccountFormSheet({
     },
   });
 
+  const replacingLabel = replacing
+    ? `${findBank(replacing.bankCode)?.shortName ?? replacing.bankCode} (***${replacing.accountNumberMasked.replace(/\D/g, '').slice(-4)})`
+    : '';
+
   const close = () => {
     reset();
     onClose();
   };
 
   const onSubmit = handleSubmit((values) => {
+    if (pending) return;
+    if (requesting) {
+      request.mutate(
+        {
+          bankCode: values.bankCode,
+          accountNumber: values.accountNumber,
+          accountName: values.accountName,
+          ...(values.label ? { label: values.label } : {}),
+        },
+        {
+          onSuccess: () => {
+            toast.showSuccess(t('requestSent'));
+            close();
+          },
+          onError: (error) => toast.showError(errorMessage(error)),
+        },
+      );
+      return;
+    }
     create.mutate(
       {
         bankCode: values.bankCode,
@@ -183,12 +222,66 @@ export function BankAccountFormSheet({
 
   return (
     <>
-      <BottomSheet open={open} onClose={close} title={replacing ? t('changeTitle') : t('title')}>
+      {/*
+        Figma "Đổi tài khoản nhận tiền" (`24228:102833`): ô theo thứ tự Ngân hàng - Họ tên người
+        thụ hưởng - Số tài khoản - Tên gợi nhớ, icon nét trong ô, chân tấm cố định hai nút Hủy /
+        Xác nhận chia đôi. Luồng vẫn là YÊU CẦU đổi khi tài khoản đã khoá (giữ ô "Lý do đổi").
+      */}
+      <BottomSheet
+        open={open}
+        onClose={close}
+        title={requesting ? t('requestTitle') : t('title')}
+        footer={
+          <XStack gap={space.sm}>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <Button
+                label={tCommon('cancel')}
+                variant="secondary"
+                disabled={pending}
+                onPress={close}
+              />
+            </YStack>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <Button
+                variant="gradient"
+                label={
+                  requesting
+                    ? t('requestSubmit')
+                    : scope === BANK_ACCOUNT_SCOPE.SHOP
+                      ? t('addSubmit')
+                      : t('submit')
+                }
+                loading={pending}
+                onPress={() => void onSubmit()}
+              />
+            </YStack>
+          </XStack>
+        }
+      >
         <YStack gap={space.md}>
           {replacing ? (
-            <Callout tone="warning">
-              {t('replaces', { account: bankAccountSummary(replacing) })}
-            </Callout>
+            /*
+              Figma: khối nền cam nhạt, không viền/icon, chữ cam 14/20, tên ngân hàng + 4 số cuối in
+              đậm (người dùng chốt 26/11/2026 dùng câu của Figma).
+            */
+            <YStack bg={colors.warningSubtle} br={radius.control} p={toPx(XP_TOKENS['space-12'])}>
+              <Text col={colors.warningVivid} fos={typeScale.body.fontSize} lh={FIGMA_LH_22}>
+                {t.rich('replaceIntro', {
+                  account: replacingLabel,
+                  b: (chunks) => (
+                    <Text
+                      col={colors.warningVivid}
+                      fos={typeScale.body.fontSize}
+                      lh={FIGMA_LH_22}
+                      fow={fontWeight.semibold}
+                      fontFamily={FONT_FAMILY.semibold}
+                    >
+                      {chunks}
+                    </Text>
+                  ),
+                })}
+              </Text>
+            </YStack>
           ) : null}
           {/* Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn, đúng `showSearch` của web. */}
           <SelectField
@@ -204,16 +297,9 @@ export function BankAccountFormSheet({
           />
           <TextField
             control={control}
-            name="accountNumber"
-            label={t('accountNumber')}
-            placeholder={t('accountNumberPlaceholder')}
-            keyboardType="number-pad"
-            required
-          />
-          <TextField
-            control={control}
             name="accountName"
             label={t('accountName')}
+            icon="person-outline"
             hint={t('accountNameHint')}
             placeholder={t('accountNamePlaceholder')}
             autoCapitalize="characters"
@@ -221,30 +307,20 @@ export function BankAccountFormSheet({
           />
           <TextField
             control={control}
+            name="accountNumber"
+            label={t('accountNumber')}
+            icon="scan-outline"
+            placeholder={t('accountNumberPlaceholder')}
+            keyboardType="number-pad"
+            required
+          />
+          <TextField
+            control={control}
             name="label"
             label={t('label')}
+            icon="text-outline"
             placeholder={t('labelPlaceholder')}
           />
-          <YStack gap={space.sm}>
-            <Button
-              icon="checkmark-outline"
-              label={
-                scope === BANK_ACCOUNT_SCOPE.SHOP
-                  ? replacing
-                    ? tCommon('confirm')
-                    : t('addSubmit')
-                  : t('submit')
-              }
-              loading={create.isPending}
-              onPress={() => void onSubmit()}
-            />
-            <Button
-              label={tCommon('cancel')}
-              variant="ghost"
-              disabled={create.isPending}
-              onPress={close}
-            />
-          </YStack>
         </YStack>
       </BottomSheet>
       {/* Hộp đứng NGOÀI tấm form: tấm đã đóng sau khi lưu, hộp vẫn phải còn để báo. */}

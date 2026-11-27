@@ -19,6 +19,9 @@ export interface ProductSeed {
   nameEn: string;
   coverageVi: string;
   coverageEn: string;
+  /** Mô tả một dòng dưới tên sản phẩm - vắng = web ghép từ các mục phạm vi. */
+  summaryVi?: string | null;
+  summaryEn?: string | null;
   deductibleCar: number | null;
   deductibleMotorbike: number | null;
   maxPayoutCar: number | null;
@@ -48,10 +51,19 @@ export const INSURANCE_PRODUCTS: readonly ProductSeed[] = [
     partnerProductCode: 'MIC-VCX',
     nameVi: 'Bảo hiểm vật chất xe MIC',
     nameEn: 'MIC Auto/Moto Damage Protection',
-    coverageVi:
-      'Đâm va, lật đổ, chìm, rơi, hoả hoạn, ngập nước (thuỷ kích), mất cắp bộ phận trong thời gian thuê.',
-    coverageEn:
-      'Collision, overturning, sinking, falling, fire, flooding (hydrolock) and theft of parts during the rental.',
+    // Mỗi dòng một mục (migration 20261127100000) - chờ MIC gửi nội dung chính thức.
+    coverageVi: [
+      'Đâm va, lật đổ, chìm, rơi trong thời gian thuê',
+      'Hoả hoạn, cháy nổ & ngập nước (thuỷ kích)',
+      'Mất cắp bộ phận xe trong thời gian thuê',
+    ].join('\n'),
+    coverageEn: [
+      'Collision, overturning, sinking or falling during the rental',
+      'Fire, explosion & flooding (hydrolock)',
+      'Theft of vehicle parts during the rental',
+    ].join('\n'),
+    summaryVi: 'Đâm va, ngập nước (thuỷ kích), mất cắp bộ phận',
+    summaryEn: 'Collision, flooding (hydrolock), theft of parts',
     deductibleCar: 2_000_000,
     deductibleMotorbike: 500_000,
     maxPayoutCar: null,

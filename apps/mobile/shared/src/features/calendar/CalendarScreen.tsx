@@ -308,8 +308,28 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
     });
   }, []);
 
+  /**
+   * Khoảng [đầu, cuối] (tính cả) của một xe có trống không — native port of web
+   * `calendar-event-model.isRangeFree`: chỉ event CHIẾM lịch (yêu cầu chờ duyệt không tính).
+   */
+  const isCellRangeFree = useCallback(
+    (vehicleId: string, fromKey: string, toKey: string) => {
+      const resource = resources.find((r) => r.vehicleId === vehicleId);
+      const events = resource ? (data.eventsByResource.get(resource.id) ?? []) : [];
+      const startAt = startOfAppDay(fromKey).valueOf();
+      const endAt = startOfAppDay(toKey).add(1, 'day').valueOf();
+      return !events.some(
+        (event) =>
+          event.occupying !== false &&
+          new Date(event.startAt).getTime() < endAt &&
+          new Date(event.endAt).getTime() > startAt,
+      );
+    },
+    [resources, data.eventsByResource],
+  );
+
   const runCellAction = useCallback(
-    (action: CellActionKey) => {
+    (action: CellActionKey, endDate: string) => {
       const target = cellTarget;
       setCellTarget(null);
       if (!target) return;
@@ -326,6 +346,13 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
           .minute(0)
           .second(0)
           .millisecond(0);
+        // N ngày đã chọn = N ngày thuê: nhận 8h ngày đầu, trả 8h sáng hôm sau ngày cuối (web).
+        const returnAt = startOfAppDay(endDate)
+          .add(1, 'day')
+          .hour(DEFAULT_PICKUP_HOUR)
+          .minute(0)
+          .second(0)
+          .millisecond(0);
         navigateOnce(
           ROUTES.manage.bookingCreate({
             vehicleId: target.vehicleId,
@@ -334,7 +361,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
             // Ảnh xe như web `StaffBookingDialog vehicleImageUrl` — xe nội bộ không có tin đăng.
             ...(resource?.mainImageUrl ? { vehicleImageUrl: resource.mainImageUrl } : {}),
             pickupAt: pickupAt.toISOString(),
-            returnAt: pickupAt.add(1, 'day').toISOString(),
+            returnAt: returnAt.toISOString(),
           }),
         );
         return;
@@ -348,6 +375,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
             vehicleId: target.vehicleId,
             vehicleName: target.vehicleName,
             date: target.date,
+            endDate,
           },
         });
         return;
@@ -361,6 +389,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
           weekdayPrice: resource?.weekdayPrice ?? null,
           hourlyPrice: resource?.hourlyPrice ?? null,
           date: target.date,
+          endDate,
         },
       });
     },
@@ -378,8 +407,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
    * Không mất thông tin: mọi thứ thẻ xem nhanh chở (xe, giờ nhận/trả, thời lượng) đều nằm sẵn
    * trong chính màn chi tiết mà cú chạm nay mở ra.
    *
-   * Web phân nhánh đúng bốn loại này; `booking_request` là loại DUY NHẤT web bỏ sót (bấm vào
-   * không ra gì — xem báo cáo), còn ở đây nó dẫn về hộp thư yêu cầu, nơi duy nhất xử lý được nó.
+   * Web phân nhánh đúng bốn loại này (yêu cầu mở hộp chi tiết yêu cầu từ 25/11/2026).
    */
   const openEvent = useCallback(
     (event: CalendarEvent, resource: CalendarResource) => {
@@ -387,8 +415,9 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
       if (event.type === OCCUPANCY_SOURCE_TYPE.BOOKING) {
         navigateOnce(ROUTES.manage.bookingDetail(event.sourceId));
       } else if (event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST) {
-        // Yêu cầu thuê chưa thành đơn — hộp thư yêu cầu là chỗ duy nhất xử lý được nó.
-        navigateOnce(ROUTES.manage.requests());
+        // Yêu cầu (chờ duyệt / đang giữ chỗ) — mở thẳng chi tiết yêu cầu, nơi duyệt / từ chối /
+        // huỷ được (web `CalendarRequestDialog`, 25/11/2026).
+        navigateOnce(ROUTES.manage.requestDetail(event.sourceId));
       } else if (event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE) {
         setSheet({ kind: 'block-detail', blockId: event.sourceId });
       } else if (event.type === OCCUPANCY_SOURCE_TYPE.MAINTENANCE) {
@@ -591,7 +620,6 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
                     resources={resources}
                     eventsByResource={data.eventsByResource}
                     priceMarkers={data.priceMarkers}
-                    availableByDay={data.availableByDay}
                     holidaysByDay={holidaysByDay}
                     days={days}
                     range={data.range}
@@ -616,6 +644,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
       <CellActionsSheet
         target={cellTarget}
         actions={cellActions}
+        isFree={isCellRangeFree}
         onSelect={runCellAction}
         onClose={() => setCellTarget(null)}
       />

@@ -60,6 +60,13 @@ const customerQuery = vi.hoisted(() => ({
   lastFilters: undefined as unknown,
 }));
 
+const sourceQuery = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isFetching: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+
 const vehicleQuery = vi.hoisted(() => ({
   data: undefined as unknown,
   isFetching: false,
@@ -72,6 +79,8 @@ vi.mock('@/features/finance/hooks/use-finance-overview', () => ({
   useFinanceSummaryOverview: () => summaryQuery,
   useFinanceSeries: () => seriesQuery,
   useFinanceByCategory: () => categoryQuery,
+  // Doanh thu theo nguồn đơn (ADR 0110) - ba thẻ chọn nguồn + chi tiết từng nguồn.
+  useFinanceBySource: () => sourceQuery,
   useVehicleProfit: (filters: unknown) => {
     vehicleQuery.lastFilters = filters;
     return vehicleQuery;
@@ -83,9 +92,11 @@ vi.mock('@/features/finance/hooks/use-finance-overview', () => ({
 }));
 
 /** Biểu đồ có test riêng cho ranh giới chuỗi→số; ở đây nó chỉ cần chứng minh mình được dựng. */
-vi.mock('@/components/chart/RevenueTrendChart', () => ({
-  RevenueTrendChart: ({ title }: { title: string }) => <figure aria-label={title} />,
-  RevenueTrendLegend: () => null,
+vi.mock('@/components/chart/SourceRevenueTrendChart', () => ({
+  SourceRevenueTrendChart: ({ title, highlight }: { title: string; highlight: string | null }) => (
+    <figure aria-label={title} data-highlight={highlight ?? 'none'} />
+  ),
+  SourceRevenueTrendLegend: () => null,
 }));
 
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
@@ -201,6 +212,8 @@ beforeEach(() => {
     meta: { page: 1, limit: 10, total: 1, hasNext: false },
   };
   customerQuery.isError = false;
+  sourceQuery.data = undefined;
+  sourceQuery.isError = false;
 });
 
 afterEach(cleanup);
@@ -480,5 +493,80 @@ describe('/manage/finance - doanh thu theo khách', () => {
     const customerFilters = customerQuery.lastFilters as { page?: number; customerPage?: number };
     expect(vehicleFilters.page).toBe(3);
     expect(customerFilters.customerPage).toBe(2);
+  });
+});
+
+describe('/manage/finance - doanh thu theo nguồn đơn (ADR 0110)', () => {
+  const breakdown = {
+    total: '1500000',
+    marketplaceAmount: '500000',
+    directAmount: '700000',
+    unlinkedAmount: '300000',
+    items: [
+      {
+        source: 'xeprime',
+        sourceLabel: null,
+        amount: '500000',
+        sharePercent: 33.3,
+        trips: 2,
+        bookedAmount: '900000',
+      },
+      {
+        source: 'social',
+        sourceLabel: null,
+        amount: '700000',
+        sharePercent: 46.7,
+        trips: 1,
+        bookedAmount: '1000000',
+      },
+      {
+        source: null,
+        sourceLabel: null,
+        amount: '300000',
+        sharePercent: 20,
+        trips: 0,
+        bookedAmount: '0',
+      },
+    ],
+  };
+
+  it('ba thẻ nguồn hiện tổng, qua sàn, nguồn ngoài; chọn thẻ ghi góc nhìn lên URL, giữ trang', () => {
+    sourceQuery.data = breakdown;
+    nav.params = new URLSearchParams('page=3');
+    render(<FinancePage />);
+
+    const cards = screen.getByRole('group', { name: 'Xem theo nguồn doanh thu' });
+    expect(within(cards).getByText('1.500.000 ₫')).toBeTruthy();
+    expect(within(cards).getByText('500.000 ₫')).toBeTruthy();
+    expect(within(cards).getByText('700.000 ₫')).toBeTruthy();
+
+    fireEvent.click(within(cards).getByRole('button', { name: /Nguồn ngoài/ }));
+    const url = lastReplacedUrl();
+    expect(url).toContain('revenueSource=direct');
+    expect(url).toContain('page=3');
+  });
+
+  it('góc nhìn "nguồn ngoài" nhấn phần đó trên biểu đồ và chỉ liệt kê nguồn ngoài', () => {
+    sourceQuery.data = breakdown;
+    nav.params = new URLSearchParams('revenueSource=direct');
+    render(<FinancePage />);
+
+    expect(
+      screen.getByRole('figure', { name: 'Dòng tiền & Lợi nhuận theo thời gian' }).dataset
+        .highlight,
+    ).toBe('direct');
+    const rows = screen.getByRole('region', { name: 'Chi tiết doanh thu từng nguồn' });
+    expect(within(rows).getByText('Tổng: 700.000 ₫')).toBeTruthy();
+    expect(within(rows).queryByText('Thu khác không gắn đơn')).toBeNull();
+    expect(within(rows).getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('không tải được ⇒ báo lỗi kèm nút thử lại, không hiện 0đ', () => {
+    sourceQuery.isError = true;
+    render(<FinancePage />);
+
+    expect(screen.getByText('Không tải được doanh thu theo nguồn')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Thử lại' })[0]!);
+    expect(sourceQuery.refetch).toHaveBeenCalled();
   });
 });

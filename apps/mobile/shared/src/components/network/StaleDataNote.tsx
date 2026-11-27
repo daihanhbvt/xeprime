@@ -5,6 +5,7 @@ import { useIsOnline } from '@/hooks/use-is-online';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, space } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
 
 /**
  * "Đang offline · Dữ liệu cập nhật lúc …" — hiện CHỈ khi máy offline và màn đang có dữ liệu
@@ -37,5 +38,5 @@ export function StaleDataNote({ dataUpdatedAt, money = false }: { dataUpdatedAt:
 const useStyles = makeStyles((colors) => ({
   box: { gap: space.xs, paddingVertical: space.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  text: { fontSize: fontSize.label, color: colors.warning, flexShrink: 1 },
+  text: { fontFamily: FONT_FAMILY.body, fontSize: fontSize.label, color: colors.warning, flexShrink: 1 },
 }));

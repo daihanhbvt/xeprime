@@ -2,10 +2,18 @@ import { useMemo, useState } from 'react';
 import { TextInput, type TextInputProps } from 'react-native';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import {
+  FieldLabel,
+  FieldMessage,
+  FieldShell,
+  inLabelHint,
+  belowHint,
+  useFieldGap,
+  useSingleLineInputMetrics,
+} from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, sizing, space } from '@/theme/tokens';
+import { fieldFontSize, space } from '@/theme/tokens';
 
 /**
  * Ô nhập CHỮ, bản KHÔNG gắn với React Hook Form.
@@ -29,6 +37,7 @@ export function TextControl({
   maxLength,
   multiline = false,
   rows = 3,
+  scrollable = false,
   editable = true,
   autoCapitalize,
   keyboardType,
@@ -43,6 +52,8 @@ export function TextControl({
   maxLength?: number;
   multiline?: boolean;
   rows?: number;
+  /** Cao đúng `rows` dòng, dài hơn thì cuộn trong ô. Cần `multiline`. */
+  scrollable?: boolean;
   editable?: boolean;
   autoCapitalize?: TextInputProps['autoCapitalize'];
   keyboardType?: TextInputProps['keyboardType'];
@@ -53,22 +64,27 @@ export function TextControl({
 
   /** Chiều cao một dòng — cùng nhịp 1.5 mà Tamagui dùng cho chữ trong ô (xem `TextField`). */
   const lineHeight = Math.round(fieldFontSize.value * 1.5);
+  const { fontSize: inputFontSize, minHeight: inputHeight } = useSingleLineInputMetrics();
+  const fieldGap = useFieldGap();
 
   const inputStyle = useMemo(
     () => ({
       flex: 1,
       color: colors.text,
-      fontSize: fieldFontSize.value,
+      fontSize: inputFontSize,
       fontFamily: FONT_FAMILY.body,
-      minHeight: multiline ? rows * lineHeight : sizing.touchTarget,
+      minHeight: multiline ? rows * lineHeight : inputHeight,
       paddingVertical: multiline ? space.sm : 0,
+      // Android tự đệm ~4dp hai bên TextInput: chữ gõ lệch khỏi chữ ô chọn/ngày cùng form.
+      paddingHorizontal: 0,
+      ...(multiline && scrollable ? { maxHeight: rows * lineHeight + space.sm * 2 } : {}),
     }),
-    [colors, multiline, rows, lineHeight],
+    [colors, multiline, rows, scrollable, lineHeight, inputFontSize, inputHeight],
   );
 
   return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+    <YStack gap={fieldGap}>
+      <FieldLabel label={label} required={required} hint={inLabelHint(hint)} />
 
       <FieldShell
         focused={focused}
@@ -89,6 +105,7 @@ export function TextControl({
           placeholderTextColor={colors.placeholder}
           editable={editable}
           multiline={multiline}
+          {...(multiline && scrollable ? { scrollEnabled: true } : {})}
           textAlignVertical={multiline ? 'top' : 'center'}
           {...(maxLength === undefined ? {} : { maxLength })}
           {...(autoCapitalize === undefined ? {} : { autoCapitalize })}
@@ -108,7 +125,7 @@ export function TextControl({
 
       <FieldMessage
         {...(error === undefined ? {} : { error })}
-        {...(hint === undefined ? {} : { hint })}
+        hint={belowHint(hint)}
       />
     </YStack>
   );

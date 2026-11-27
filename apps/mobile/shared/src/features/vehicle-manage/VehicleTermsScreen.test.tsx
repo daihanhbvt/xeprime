@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react-native';
-import viVehicleManage from '@xeprime/domain/messages/vi/vehicle-manage.json';
-import { POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
+import viShop from '@xeprime/domain/messages/vi/shop.json';
+import { SERVICE_TYPE } from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';
 import { TermsBody } from './VehicleTermsScreen';
 
@@ -8,67 +8,31 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
 jest.mock('@/hooks/use-navigate-once', () => ({ useNavigateOnce: () => jest.fn() }));
-jest.mock('@/components/feedback/use-app-toast', () => ({
-  useAppToast: () => ({ showSuccess: jest.fn(), showError: jest.fn(), showInfo: jest.fn() }),
-}));
 
-jest.mock('./hooks/use-vehicle-settings', () => ({
-  useVehicleServiceSettings: () => ({
-    isLoading: false,
-    isError: false,
-    data: [
-      {
-        serviceType: 'self_drive',
-        autoAcceptEnabled: false,
-        minRentalMinutes: null,
-        preferredRouteTypes: [],
-        requiredDocuments: [],
-        identityVerifyMethod: 'in_person',
-        requireTermsAcceptance: false,
-        termsText: null,
-        depositMode: 'none',
-        updatedAt: '2026-10-01T00:00:00.000Z',
-        withDriverAutoAccept: null,
-      },
-    ],
-    refetch: jest.fn(),
-  }),
-  usePatchVehicleServiceSetting: () => ({ mutateAsync: jest.fn(), isPending: false }),
-}));
-
-jest.mock('@/features/vehicle-pricing/hooks/use-vehicle-pricing', () => ({
-  useVehiclePricing: () => ({
-    isLoading: false,
-    isError: false,
-    data: { source: 'shop', policy: null, shopPolicy: null },
-    refetch: jest.fn(),
-  }),
-  useSaveVehiclePricing: () => ({ mutateAsync: jest.fn(), isPending: false }),
-}));
-
-const t = viVehicleManage.terms;
+const conditions = viShop.policies.workspace.conditions;
+const policiesTitle = viShop.policies.workspace.title;
 
 /**
- * Web `TermsSection` (30/09/2026): ở KHU TÀI KHOẢN khối bảo đảm sửa thẳng — không banner "đang
- * kế thừa chính sách gian hàng", không nút "Tuỳ chỉnh". Cổng quản lý giữ cửa mở khoá.
+ * ADR 0112 điều 3: xe không còn giấy tờ / cách đối chiếu / điều khoản riêng. Khối thủ tục của một xe
+ * chỉ hiện luật chuẩn nền tảng (chỉ đọc), cổng quản lý có thêm link sang trang Chính sách thuê.
  */
-describe('TermsBody - khối bảo đảm theo khu', () => {
-  it('khu tài khoản: không banner kế thừa, không nút tuỳ chỉnh', async () => {
-    expect(POLICY_SOURCE.SHOP).toBe('shop');
+describe('TermsBody - luật chuẩn nền tảng, không form theo xe', () => {
+  it('hiện điều kiện chuẩn, không có ô điều khoản theo xe', async () => {
     const view = await render(
       withIntl(
         <TermsBody vehicleId="v1" serviceType={SERVICE_TYPE.SELF_DRIVE} canEdit isManage={false} />,
       ),
     );
-    expect(view.queryByText(t.collateralInherited)).toBeNull();
-    expect(view.queryByText(t.collateralCustomize)).toBeNull();
+    expect(view.getByText(conditions.title)).toBeTruthy();
+    expect(view.getAllByText(conditions.documents).length).toBe(2);
+    expect(view.queryByText(conditions.termsTitle)).toBeNull();
+    expect(view.queryByText(policiesTitle)).toBeNull();
   });
 
-  it('cổng quản lý: xe đang kế thừa ⇒ banner + nút tuỳ chỉnh', async () => {
+  it('cổng quản lý: link sang trang Chính sách thuê của gian hàng', async () => {
     const view = await render(
       withIntl(<TermsBody vehicleId="v1" serviceType={SERVICE_TYPE.SELF_DRIVE} canEdit isManage />),
     );
-    expect(view.getByText(t.collateralInherited)).toBeTruthy();
-    expect(view.getByText(t.collateralCustomize)).toBeTruthy();
+    expect(view.getByText(policiesTitle)).toBeTruthy();
   });
 });

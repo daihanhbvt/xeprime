@@ -1,11 +1,9 @@
 'use client';
 
 import { Alert, App, Button, Skeleton } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
-import { ROUTES } from '@/constants/routes';
 import {
   useSaveVehiclePricing,
   useVehiclePricing,
@@ -20,13 +18,10 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 
 import type { VehicleDetail } from '../../types';
 import { useEditForm } from './edit-actions';
-import styles from './EditPanes.module.css';
 
 export interface PricedFormProps {
   api: VehiclePricingFormApi;
   pricing: VehiclePricing;
-  /** Khối chính sách sửa được không: đang ghi đè (cổng quản lý) hoặc chủ xe sửa thẳng. */
-  policyEditable: boolean;
 }
 
 /**
@@ -116,28 +111,5 @@ function PricedForm({
     reset: api.discard,
   });
 
-  return <>{children({ api, pricing, policyEditable: api.direct || api.editMode }, null)}</>;
-}
-
-/**
- * Dòng nhắc ở khối chính sách khi xe đang theo chính sách gian hàng (design vẽ công tắc ở từng khối;
- * dữ liệu chỉ có MỘT công tắc cho cả xe — nó nằm ở đầu mục "Dịch vụ xe").
- */
-export function InheritedPolicyNote({ onOpenSwitch }: { onOpenSwitch?: () => void }) {
-  const t = useTranslations('Vehicles.editor.policy');
-  return (
-    <p className={styles.inheritNote}>
-      {t.rich(onOpenSwitch ? 'inheritedElsewhere' : 'inherited', {
-        policies: (chunks) => <Link href={ROUTES.MANAGE.SHOP_POLICIES}>{chunks}</Link>,
-        switch: (chunks) =>
-          onOpenSwitch ? (
-            <button type="button" className={styles.linkButton} onClick={onOpenSwitch}>
-              {chunks}
-            </button>
-          ) : (
-            chunks
-          ),
-      })}
-    </p>
-  );
+  return <>{children({ api, pricing }, null)}</>;
 }

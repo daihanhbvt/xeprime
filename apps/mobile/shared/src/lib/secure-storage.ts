@@ -37,6 +37,8 @@ export const SECURE_KEY = {
   MARKETPLACE_VIEW_MODE: 'xp.marketplaceViewMode',
   /** Dấu tick "Checklist nhận xe" theo chuyến — ghi nhớ CÁ NHÂN, không gửi server (web `pickup-checklist-memory`). */
   PICKUP_CHECKLIST: 'xp.pickupChecklist',
+  /** "Ghi nhớ tài khoản" của màn đăng nhập: chỉ ĐỊNH DANH (SĐT/tên đăng nhập), không bao giờ mật khẩu - web `localStorage` `xp.auth.rememberedPhone`. */
+  REMEMBERED_LOGIN: 'xp.auth.rememberedLogin',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];

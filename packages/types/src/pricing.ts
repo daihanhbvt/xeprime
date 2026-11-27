@@ -77,11 +77,14 @@ export function appliesExcessMileage(serviceType: string | null | undefined): bo
   return serviceType === SERVICE_TYPE.SELF_DRIVE;
 }
 
+/**
+ * Chính sách bảo đảm của xe (ADR 0112 điều 2). `required` = có yêu cầu thế chấp, hình thức nằm ở
+ * hai cờ `collateralCashEnabled` (cọc tiền, số tiền ở `depositAmount`) và `collateralAssetEnabled`
+ * (cọc tài sản, loại ở `collateralAssetTypes`), kết hợp theo `collateralCombination`.
+ */
 export const COLLATERAL_MODE = {
-  /** Khách đặt cọc TIỀN — số tiền nằm ở `depositAmount`, chảy vào sổ thu-chi. */
-  CASH: 'cash',
-  /** Khách thế chấp TÀI SẢN/giấy tờ — không có tiền nào chuyển động. */
-  ASSET: 'asset',
+  /** Có yêu cầu thế chấp - ít nhất một hình thức bật. */
+  REQUIRED: 'required',
   /** Miễn thế chấp — nguồn DUY NHẤT của nhãn "Miễn thế chấp" trên sàn. */
   NONE: 'none',
 } as const;
@@ -90,13 +93,164 @@ export type CollateralMode = (typeof COLLATERAL_MODE)[keyof typeof COLLATERAL_MO
 export const COLLATERAL_MODE_VALUES = Object.values(COLLATERAL_MODE) as CollateralMode[];
 
 export const COLLATERAL_MODE_META: Readonly<Record<CollateralMode, StatusMeta>> = {
-  [COLLATERAL_MODE.CASH]: { label: 'Cọc tiền', color: STATUS_COLOR.INFO },
-  [COLLATERAL_MODE.ASSET]: { label: 'Cọc tài sản', color: STATUS_COLOR.WAITING },
+  [COLLATERAL_MODE.REQUIRED]: { label: 'Có yêu cầu thế chấp', color: STATUS_COLOR.INFO },
   [COLLATERAL_MODE.NONE]: { label: 'Miễn thế chấp', color: STATUS_COLOR.SUCCESS },
 };
 
 /**
- * Loại tài sản nhận thế chấp khi `collateralMode = 'asset'` — danh mục ĐÓNG (chốt 20/08).
+ * Hai chế độ CŨ (trước ADR 0112) - CHỈ để API nhận payload của app đã phát hành và quy về
+ * `required` + đúng một cờ. Không dữ liệu nào lưu hai giá trị này nữa (CHECK ở DB).
+ */
+export const LEGACY_COLLATERAL_MODE = {
+  CASH: 'cash',
+  ASSET: 'asset',
+} as const;
+export const COLLATERAL_MODE_INPUT_VALUES = [
+  ...Object.values(COLLATERAL_MODE),
+  ...Object.values(LEGACY_COLLATERAL_MODE),
+] as readonly string[];
+
+/** Cách kết hợp khi bật CẢ cọc tiền lẫn cọc tài sản. */
+export const COLLATERAL_COMBINATION = {
+  /** Khách chọn MỘT trong hai hình thức. */
+  ANY_ONE: 'any_one',
+  /** Khách phải đưa CẢ HAI. Chỉ hợp lệ khi cả hai hình thức bật (CHECK). */
+  ALL: 'all',
+} as const;
+
+export type CollateralCombination =
+  (typeof COLLATERAL_COMBINATION)[keyof typeof COLLATERAL_COMBINATION];
+export const COLLATERAL_COMBINATION_VALUES = Object.values(
+  COLLATERAL_COMBINATION,
+) as CollateralCombination[];
+
+/**
+ * Năm mục chính sách xe chọn được "theo gian hàng / riêng cho xe" (ADR 0112 điều 1). Thời gian
+ * chuẩn bị giữa hai chuyến dùng cơ chế mặc định riêng (`tenant_operation_defaults`).
+ */
+export const POLICY_SECTION = {
+  INSURANCE: 'insurance',
+  COLLATERAL: 'collateral',
+  DELIVERY: 'delivery',
+  /** Hạn mức quãng đường + phụ phí quá giờ. */
+  USAGE_LIMITS: 'usage_limits',
+  LONG_TERM_DISCOUNT: 'long_term_discount',
+} as const;
+
+export type PolicySection = (typeof POLICY_SECTION)[keyof typeof POLICY_SECTION];
+export const POLICY_SECTION_VALUES = Object.values(POLICY_SECTION) as PolicySection[];
+
+/**
+ * Chính sách bảo đảm đã chuẩn hoá - mọi bề mặt (trang xe, yêu cầu, đơn, form) mô tả cọc từ ĐÚNG
+ * hình dạng này, không tự đọc `collateralMode` rồi đoán.
+ */
+export interface CollateralPolicyShape {
+  collateralMode: CollateralMode;
+  collateralCashEnabled: boolean;
+  collateralAssetEnabled: boolean;
+  collateralCombination: CollateralCombination;
+  collateralAssetTypes: readonly string[];
+  /** Chuỗi tiền (ADR 0007). */
+  depositAmount: string;
+}
+
+/** Xe có thu cọc TIỀN không (dùng cho cọc khi nhận xe, sổ thu-chi). */
+export function collateralTakesCash(policy: Pick<
+  CollateralPolicyShape,
+  'collateralMode' | 'collateralCashEnabled'
+>): boolean {
+  return policy.collateralMode === COLLATERAL_MODE.REQUIRED && policy.collateralCashEnabled;
+}
+
+/** Xe có nhận cọc TÀI SẢN không. */
+export function collateralTakesAsset(policy: Pick<
+  CollateralPolicyShape,
+  'collateralMode' | 'collateralAssetEnabled'
+>): boolean {
+  return policy.collateralMode === COLLATERAL_MODE.REQUIRED && policy.collateralAssetEnabled;
+}
+
+/**
+ * Cột (camelCase) của từng mục chính sách (ADR 0112 điều 1) - nguồn DUY NHẤT của phép gộp theo
+ * mục. Thêm một cột chính sách mới ⇒ khai nó vào đúng một mục ở đây.
+ */
+export const POLICY_SECTION_FIELDS = {
+  [POLICY_SECTION.INSURANCE]: ['insuranceMode'],
+  [POLICY_SECTION.COLLATERAL]: [
+    'collateralMode',
+    'collateralCashEnabled',
+    'collateralAssetEnabled',
+    'collateralCombination',
+    'collateralAssetTypes',
+    'depositAmount',
+  ],
+  [POLICY_SECTION.DELIVERY]: ['deliveryEnabled', 'deliveryMaxRadiusKm', 'deliveryTiers'],
+  [POLICY_SECTION.USAGE_LIMITS]: [
+    'includedDistanceKmPerDay',
+    'excessDistanceFeePerKm',
+    'overtimeFeePerHour',
+    'overtimeGraceMinutes',
+    'overtimeRoundingMinutes',
+  ],
+  [POLICY_SECTION.LONG_TERM_DISCOUNT]: ['discountEnabled', 'discountTiers'],
+} as const satisfies Record<PolicySection, readonly string[]>;
+
+/** Dòng ghi đè theo xe có KẾ THỪA mục này không. Không có dòng ⇒ kế thừa mọi mục. */
+export function policySectionInherited(
+  override: { inheritedSections?: readonly string[] | null } | null | undefined,
+  section: PolicySection,
+): boolean {
+  return !override || (override.inheritedSections ?? []).includes(section);
+}
+
+/**
+ * Chọn dòng `rental_policies` cấp giá trị cho MỘT mục của một xe: dòng của xe (nếu mục không kế
+ * thừa) → mặc định theo loại xe → mặc định legacy. Dùng cho các câu đọc chỉ cần vài cột của một mục
+ * (snapshot chợ, danh sách bảo hiểm) - cùng luật với `mergePolicySections`.
+ */
+export function pickPolicyRowFor<
+  T extends {
+    vehicleId: string | null;
+    vehicleType: string | null;
+    inheritedSections?: readonly string[] | null;
+  },
+>(
+  rows: readonly T[],
+  vehicleId: string,
+  vehicleType: string | null | undefined,
+  section: PolicySection,
+): T | undefined {
+  const own = rows.find((r) => r.vehicleId === vehicleId);
+  const shop =
+    (vehicleType != null
+      ? rows.find((r) => r.vehicleId === null && r.vehicleType === vehicleType)
+      : undefined) ?? rows.find((r) => r.vehicleId === null && r.vehicleType === null);
+  if (own && !policySectionInherited(own, section)) return own;
+  // Gian hàng chưa có mặc định ⇒ giữ giá trị của chính dòng xe (không bịa cấu hình).
+  return shop ?? own;
+}
+
+/**
+ * Gộp dòng ghi đè của xe với mặc định gian hàng THEO MỤC (ADR 0112 điều 1): mục kế thừa lấy cột
+ * của `shop`, mục riêng giữ cột của xe. `shop = null` ⇒ giữ nguyên dòng xe.
+ */
+export function mergePolicySections<T extends { inheritedSections?: readonly string[] | null }>(
+  override: T,
+  shop: T | null | undefined,
+): T {
+  if (!shop) return override;
+  const merged: Record<string, unknown> = { ...override };
+  for (const section of POLICY_SECTION_VALUES) {
+    if (!policySectionInherited(override, section)) continue;
+    for (const field of POLICY_SECTION_FIELDS[section]) {
+      if (field in (shop as object)) merged[field] = (shop as Record<string, unknown>)[field];
+    }
+  }
+  return merged as T;
+}
+
+/**
+ * Loại tài sản nhận thế chấp khi bật cọc tài sản (`collateralAssetEnabled`) — danh mục ĐÓNG (chốt 20/08).
  * Không có mục "Khác": một ô tự nhập biến trường có cấu trúc trở lại thành đoạn văn tự do,
  * đúng thứ C-04 sinh ra để dẹp, và làm hỏng khả năng lọc/so sánh trên sàn.
  */
@@ -115,9 +269,10 @@ export const COLLATERAL_ASSET_TYPE_VALUES = Object.values(
 ) as CollateralAssetType[];
 
 export const COLLATERAL_ASSET_TYPE_LABEL: Readonly<Record<CollateralAssetType, string>> = {
-  [COLLATERAL_ASSET_TYPE.VEHICLE_REGISTRATION]: 'Cà vẹt (đăng ký xe máy)',
-  [COLLATERAL_ASSET_TYPE.MOTORBIKE]: 'Xe máy',
-  [COLLATERAL_ASSET_TYPE.PASSPORT]: 'Hộ chiếu',
+  // Nhãn chốt 27/11/2026 (ADR 0112 điều 3) - mã giữ nguyên; không nhận giữ CCCD.
+  [COLLATERAL_ASSET_TYPE.VEHICLE_REGISTRATION]: 'Cà vẹt xe (có giá trị trên 10 triệu đồng)',
+  [COLLATERAL_ASSET_TYPE.MOTORBIKE]: 'Xe máy chính chủ',
+  [COLLATERAL_ASSET_TYPE.PASSPORT]: 'Hộ chiếu còn hiệu lực',
 };
 
 /**
@@ -368,6 +523,11 @@ export interface BookingPriceSnapshot {
   calculatedAt: string;
   /** 'quote' = tính từ PricingService khi duyệt yêu cầu; 'manual' = shop nhập tay khi tạo đơn. */
   source: 'quote' | 'manual';
+  /**
+   * Đơn gian hàng tự lập bật "Giá thoả thuận" (ADR 0109) — chỉ là nhãn: số tiền của đơn tự lập luôn
+   * do gian hàng gửi lên. Vắng = không bật / đơn trước 25/11/2026.
+   */
+  negotiated?: boolean;
   currency: 'VND';
   /** Số ngày tính tiền — chỉ có ở đơn tính theo NGÀY (tự lái / có tài xế). */
   days?: number;
@@ -419,8 +579,12 @@ export interface BookingPriceSnapshot {
      * Đơn chốt TRƯỚC 20/08 không có hai trường này — đọc snapshot cũ phải chịu `undefined`,
      * không được suy ngược từ `depositAmount` (cọc 0 của đơn cũ không đồng nghĩa "miễn cọc").
      */
-    collateralMode?: CollateralMode;
+    collateralMode?: CollateralMode | (typeof LEGACY_COLLATERAL_MODE)[keyof typeof LEGACY_COLLATERAL_MODE];
     collateralAssetTypes?: CollateralAssetType[];
+    /** Ba trường cọc kết hợp (ADR 0112) - vắng ở snapshot chốt trước 27/11/2026. */
+    collateralCashEnabled?: boolean;
+    collateralAssetEnabled?: boolean;
+    collateralCombination?: CollateralCombination;
     deliveryEnabled: boolean;
     deliveryMaxRadiusKm: number | null;
     deliveryTiers: DeliveryTier[];

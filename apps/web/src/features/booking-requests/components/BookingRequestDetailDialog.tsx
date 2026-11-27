@@ -17,6 +17,7 @@ import {
   type TenantCustomerRiskLevel,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusBadge, ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -131,7 +132,11 @@ function DetailBody({
                     ? fmt.packageLabel(request.longTermPackageMonths)
                     : t('schedule.packageMissing')}
                 </Row>
-                <Row label={t('schedule.pickupWish')}>{fmt.pickupWish(request)}</Row>
+                {/* Ghi chú nhỏ thành dấu "i" - rê chuột mới hiện (người dùng 20/11/2026). */}
+                <Row label={t('schedule.pickupWish')}>
+                  {fmt.pickupWish(request)}{' '}
+                  <InfoHint content={t('schedule.pickupWishHint')} label={t('schedule.pickupWish')} />
+                </Row>
               </>
             )}
             {isWithDriver && routeType ? (
@@ -154,18 +159,19 @@ function DetailBody({
             <Row label={t('schedule.handoverHeading')}>
               <span className={styles.strong}>
                 {request.deliveryRequested ? t('card.handoverDelivery') : t('card.handoverSelf')}
+                {/* Phí đã chốt thì nằm ở ô "Thanh toán" - ⓘ chỉ còn khi chưa duyệt. */}
+                {request.deliveryRequested && request.pricing?.deliveryFee == null ? (
+                  <>
+                    {' '}
+                    <InfoHint content={t('schedule.deliveryFeeHint')} label={t('card.handoverDelivery')} />
+                  </>
+                ) : null}
               </span>
               {request.deliveryRequested && request.deliveryAddress ? (
                 <span className={styles.sub}>{request.deliveryAddress}</span>
               ) : null}
             </Row>
           </dl>
-          {isLongTerm && !hasSchedule ? (
-            <p className={styles.hint}>{t('schedule.pickupWishHint')}</p>
-          ) : null}
-          {request.deliveryRequested ? (
-            <p className={styles.hint}>{t('schedule.deliveryFeeHint')}</p>
-          ) : null}
         </div>
 
         <div className={styles.panelActions}>
@@ -207,6 +213,9 @@ function DetailBody({
           <div className={styles.customer}>
             <p className={styles.customerName}>
               <span>{request.customerName}</span>
+              {!request.tenantCustomerId ? (
+                <InfoHint content={t('customer.noProfile')} label={request.customerName} />
+              ) : null}
               {request.customerIsRegular ? (
                 <span className={styles.regular}>{t('detail.regular')}</span>
               ) : null}
@@ -255,9 +264,6 @@ function DetailBody({
                 })}
               </p>
             ) : null}
-            {!request.tenantCustomerId ? (
-              <p className={styles.hint}>{t('customer.noProfile')}</p>
-            ) : null}
           </div>
         </section>
 
@@ -266,15 +272,19 @@ function DetailBody({
             <div className={styles.panelHead}>
               <h3 id={`req-${request.id}-payment`} className={styles.panelTitle}>
                 {t('detail.paymentHeading')}
+                {request.pricing.isEstimate ? (
+                  <>
+                    {' '}
+                    {/* Dấu "i" giải thích số tạm tính cạnh tiêu đề "Thanh toán" (người dùng 20/11/2026). */}
+                    <InfoHint content={t('pricing.estimateHint')} label={t('detail.paymentHeading')} />
+                  </>
+                ) : null}
               </h3>
               {request.pricing.isEstimate ? (
                 <span className={styles.estimateTag}>{t('card.estimate')}</span>
               ) : null}
             </div>
             <RequestPaymentFacts request={request} emphasizeLast />
-            {request.pricing.isEstimate ? (
-              <p className={styles.hint}>{t('pricing.estimateHint')}</p>
-            ) : null}
           </section>
         ) : null}
       </div>
@@ -394,7 +404,10 @@ export function BookingRequestDetailDialog(props: Props) {
   if (!request) return null;
   const isClosed = (BOOKING_REQUEST_CLOSED_STATUSES as readonly string[]).includes(request.status);
 
-  const holdState = requestPaymentRows(request, t).find((row) => row.key === 'hold')?.holdState ?? null;
+  // Chờ duyệt mà chưa có giữ chỗ (dài hạn chưa chốt giá) vẫn nói "Chờ duyệt" như thẻ (20/11/2026).
+  const holdState =
+    requestPaymentRows(request, t).find((row) => row.key === 'hold')?.holdState ??
+    (request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ? 'expected' : null);
   return (
     <ResponsiveDialog
       open

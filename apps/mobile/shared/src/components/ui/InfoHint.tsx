@@ -1,3 +1,4 @@
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { useState, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
@@ -24,12 +25,15 @@ export function InfoHint({
   content,
   label,
   size = fontSize.body,
+  lineIcon,
 }: {
   /** Chuỗi ⇒ một đoạn chữ; ReactNode ⇒ nơi gọi tự dựng (nhiều đoạn, kèm liên kết) như web. */
   content: ReactNode;
   label: string;
   /** Cỡ dấu "i" — BẰNG cỡ chữ của nhãn đứng cạnh (mặc định cỡ chữ thân bài). */
   size?: number;
+  /** Icon nét của bộ `LineIcon` thay dấu "i" Ionicons - khi Figma vẽ đúng glyph đó (màu `text/gray/very-low`). */
+  lineIcon?: 'info-circle-16';
 }) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
@@ -42,7 +46,11 @@ export function InfoHint({
         accessibilityLabel={label}
         hitSlop={12}
       >
-        <Ionicons name="information-circle-outline" size={size} color={colors.textMuted} />
+        {lineIcon ? (
+          <LineIcon name={lineIcon} color={colors.textPlaceholder} />
+        ) : (
+          <Ionicons name="information-circle-outline" size={size} color={colors.textMuted} />
+        )}
       </Pressable>
       {/* Chỉ dựng khi ĐÃ mở: một màn có năm dấu "i" không nên mang theo năm `Modal` ngủ đông. */}
       {open ? (

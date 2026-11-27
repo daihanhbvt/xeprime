@@ -489,6 +489,40 @@ describe('Báo cáo tài chính — /finance/series', () => {
     expect(perWeek.granularity).toBe('month');
   });
 
+  maybe(
+    'bỏ trống `from` = TOÀN BỘ thời gian: trục bắt đầu ở phiếu sớm nhất của phạm vi',
+    async () => {
+      await resetMoney();
+      await seedReceipt({
+        type: RECEIPT_TYPE.INCOME,
+        amount: '200000',
+        vehicleId: vehicleAId,
+        occurredAt: new Date(vnAt('2027-01-20', 9)),
+      });
+      await seedReceipt({
+        type: RECEIPT_TYPE.INCOME,
+        amount: '300000',
+        vehicleId: vehicleAId,
+        occurredAt: new Date(vnAt('2027-03-05', 9)),
+      });
+      // Phiếu của xe KHÁC sớm hơn - không được kéo trục của xe A lùi lại.
+      await seedReceipt({
+        type: RECEIPT_TYPE.INCOME,
+        amount: '999000',
+        vehicleId: vehicleBId,
+        occurredAt: new Date(vnAt('2026-11-02', 9)),
+      });
+
+      const res = await overview.series(
+        tenantId,
+        { to: '2027-03-31', granularity: 'month', vehicleId: vehicleAId },
+        null,
+      );
+      expect(res.buckets.map((b) => b.bucket)).toEqual(['2027-01-01', '2027-02-01', '2027-03-01']);
+      expect(res.buckets.map((b) => b.revenue)).toEqual(['200000', '0', '300000']);
+    },
+  );
+
   maybe('kỳ rộng tới mức không vẽ được ⇒ 400 có lý do, không âm thầm cắt dữ liệu', async () => {
     await expect(
       overview.series(tenantId, { from: '1990-01-01', to: '2030-01-01', granularity: 'day' }, null),

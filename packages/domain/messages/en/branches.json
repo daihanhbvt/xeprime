@@ -8,7 +8,7 @@
     "fixNow": "Fix now"
   },
   "toolbar": {
-    "searchPlaceholder": "Search by name, code or address",
+    "searchPlaceholder": "Search...",
     "searchLabel": "Search branches",
     "summary": "{total, plural, one {# branch} other {# branches}} · {active} active",
     "activeOnly": "Active only",
@@ -35,7 +35,8 @@
   "actions": {
     "setDefault": "Set as default",
     "deactivate": "Deactivate",
-    "activate": "Reactivate"
+    "activate": "Reactivate",
+    "menu": "Actions for branch {name}"
   },
   "blocked": {
     "edit": "You do not have permission to edit branches",

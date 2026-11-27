@@ -12,7 +12,7 @@ import {
 } from '@xeprime/types';
 import { isZeroMoney, LEGAL_DOC } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
+import { SheetConfirmFooter } from '@/components/ui/SheetConfirmFooter';
 import { useIsOnline } from '@/hooks/use-is-online';
 import { OfflineActionHint } from '@/components/network/OfflineActionHint';
 import { Callout } from '@/components/ui/Callout';
@@ -123,26 +123,16 @@ export function CancelTripSheet({
       open={open}
       onClose={close}
       footer={
-        <XStack gap={space.sm}>
-          {/*
-            Hai hành động NGẮN nằm một hàng: lối thoát bên trái, hành động chính bên phải. Ở đây
-            "Quay lại" co vừa chữ, "Xác nhận hủy" lấy phần còn lại.
-          */}
-          <YStack flexShrink={0}>
-            <Button label={t('keep')} variant="ghost" onPress={close} />
-          </YStack>
-          <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-            <Button
-              label={t('confirm')}
-              icon="close-circle-outline"
-              variant="danger"
-              loading={loading}
-              disabled={notAllowed || !online}
-              onPress={confirm}
-            />
-            <OfflineActionHint />
-          </YStack>
-        </XStack>
+        // Khuôn chân tấm chuẩn (tấm Từ chối yêu cầu - người dùng chốt 20/11/2026).
+        <SheetConfirmFooter
+          backLabel={t('keep')}
+          onBack={close}
+          confirmLabel={t('confirm')}
+          onConfirm={confirm}
+          loading={loading}
+          disabled={notAllowed || !online}
+          below={<OfflineActionHint />}
+        />
       }
     >
       <YStack gap={space.md}>
@@ -266,11 +256,23 @@ function CancelMoneyPreview({ preview }: { preview: CustomerTripCancelPreview })
   const t = useTranslations('Trips.cancel.preview');
   const fmt = useAppFormat();
 
+  /*
+   * Khách huỷ (lỗi phía khách): tiền hoàn CHỜ `refundDelayHours` rồi mới vào Ví điểm (biên bản họp
+   * 19/11/2026, web `CancelMoneyPreview`).
+   */
+  const delayed =
+    preview.refundDelayHours > 0 && !isZeroMoney(preview.refundAmount) && !preview.deferred ? (
+      <Text col={colors.text} fos={fontSize.bodySm}>
+        {t('refundDelay', { hours: preview.refundDelayHours })}
+      </Text>
+    ) : null;
   const deferred = preview.deferred ? (
     <Text col={colors.text} fos={fontSize.bodySm}>
       {t('deferred')}
     </Text>
-  ) : null;
+  ) : (
+    delayed
+  );
 
   // Hoàn đủ: đầu tấm đã nói số đã trả + dự kiến hoàn — như web (#233), chỉ còn lời nhắc hoàn CHẬM.
   /*

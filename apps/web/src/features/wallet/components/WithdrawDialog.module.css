@@ -108,6 +108,12 @@
   margin-top: var(--xp-space-md);
 }
 
+.policyLink {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* Hàng nút khu tài khoản khách — "Huỷ" viền xám + nút vàng, dồn phải (cùng dáng `BankAccountForm`). */
 .footer {
   display: flex;

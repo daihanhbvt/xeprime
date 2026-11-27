@@ -1,0 +1,52 @@
+/* Chú giải ngoài vùng vẽ - ô vuông cho cột, vạch ngang cho đường (cùng khuôn `RevenueTrendLegend`). */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  white-space: nowrap;
+}
+
+.swatchMarketplace,
+.swatchDirect,
+.swatchUnlinked,
+.swatchCost {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.swatchMarketplace {
+  background: var(--xp-color-primary);
+}
+
+.swatchDirect {
+  background: var(--xp-color-info-strong);
+}
+
+.swatchUnlinked {
+  background: var(--xp-color-viz-1);
+}
+
+.swatchCost {
+  background: var(--xp-color-viz-cost);
+}
+
+.swatchProfit {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--xp-color-viz-profit);
+}

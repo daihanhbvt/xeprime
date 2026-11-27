@@ -59,6 +59,7 @@
     "confirmingBody": "Việc này thường chỉ mất vài giây. Bạn không cần thanh toán thêm.",
     "completedTitle": "Đã nhận {amount} qua {provider}",
     "completedInvoice": "Khoản tiền đã được ghi vào hoá đơn {code}.",
+    "completedCheckout": "Khoản tiền đã được ghi vào phiếu thanh toán gói {code}.",
     "completedHold": "Khoản tiền đã được ghi vào tiền giữ chỗ {code} của chuyến.",
     "cancelledTitle": "Bạn đã huỷ thanh toán qua {provider}",
     "expiredResultTitle": "Phiên thanh toán qua {provider} đã hết hạn",

@@ -10,20 +10,40 @@ import { fontSize, fontWeight } from '@/theme/tokens';
  * về chữ viết tắt (`bankInitials`), không bao giờ là một ô ảnh vỡ. Trang trí thuần: tên ngân
  * hàng luôn đứng cạnh bằng chữ.
  */
-export function BankLogo({ code, size, radius }: { code: string; size: number; radius: number }) {
+export function BankLogo({
+  code,
+  size,
+  radius,
+  fit = 'zoom',
+  width,
+  plain = false,
+}: {
+  code: string;
+  size: number;
+  /** Bề ngang riêng (ô chữ nhật cho logo ngang) - mặc định bằng `size`. */
+  width?: number;
+  /** Không viền, không nền - logo đứng trơn trên thẻ (kiểu thẻ tài khoản của app ngân hàng). */
+  plain?: boolean;
+  radius: number;
+  /**
+   * `zoom` (mặc định) phóng 1,3 để logo vuông lấp ô nhỏ; `contain` hiện TRỌN logo, chừa lề -
+   * dùng cho ô lớn, nơi logo ngang (Techcombank…) bị `zoom` cắt mép.
+   */
+  fit?: 'zoom' | 'contain';
+}) {
   const colors = useColors();
   const [failed, setFailed] = useState(false);
   const url = bankLogoUrl(code);
 
   return (
     <YStack
-      w={size}
+      w={width ?? size}
       h={size}
       br={radius}
-      bw={1}
+      bw={plain ? 0 : 1}
       bc={colors.borderSubtle}
-      bg={colors.surface}
-      ai="center"
+      bg={plain ? 'transparent' : colors.surface}
+      ai={plain ? 'flex-start' : 'center'}
       jc="center"
       overflow="hidden"
       accessibilityElementsHidden
@@ -32,7 +52,13 @@ export function BankLogo({ code, size, radius }: { code: string; size: number; r
       {url && !failed ? (
         <Image
           source={{ uri: url }}
-          style={{ width: size, height: size, transform: [{ scale: 1.3 }] }}
+          style={
+            fit === 'contain'
+              ? plain
+                ? { width: width ?? size, height: size }
+                : { width: (width ?? size) * 0.9, height: size * 0.9 }
+              : { width: size, height: size, transform: [{ scale: 1.3 }] }
+          }
           resizeMode="contain"
           onError={() => setFailed(true)}
         />

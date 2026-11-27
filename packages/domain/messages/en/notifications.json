@@ -3,5 +3,13 @@
   "bellWithCount": "Notifications, {count, plural, one {# unread} other {# unread}}",
   "markAllRead": "Mark all as read",
   "empty": "No notifications yet",
-  "unreadMark": "Unread"
+  "unreadMark": "Unread",
+  "markAllShort": "Mark all read",
+  "groupToday": "Today",
+  "groupEarlier": "Earlier",
+  "justNow": "Just now",
+  "minutesAgo": "{count} min ago",
+  "hoursAgo": "{count}h ago",
+  "clock": "{hour}:{minute}",
+  "yesterdayAt": "Yesterday {time}"
 }

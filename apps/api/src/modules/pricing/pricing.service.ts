@@ -32,7 +32,14 @@ import {
   toPublicFeeBreakdown,
   type BookingPriceSnapshot,
   type CollateralAssetType,
+  type CollateralCombination,
   type CollateralMode,
+  type PolicySection,
+  COLLATERAL_COMBINATION,
+  LEGACY_COLLATERAL_MODE,
+  POLICY_SECTION,
+  POLICY_SECTION_VALUES,
+  mergePolicySections,
   type DiscountTier,
   type LegacyDiscountTier,
   type PolicySource,
@@ -58,6 +65,7 @@ import {
 } from '@xeprime/types';
 import { deliveryTierFee } from '@xeprime/domain';
 import { AuditService } from '../audit/audit.service';
+import { vehicleInheritsSectionWhere } from '../../common/policy-section-where';
 import { DepositPolicyService } from '../deposit-policy/deposit-policy.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { ListingsService } from '../public-listings/listings.service';
@@ -86,7 +94,11 @@ const POLICY_SELECT = {
   id: true,
   vehicleId: true,
   vehicleType: true,
+  inheritedSections: true,
   collateralMode: true,
+  collateralCashEnabled: true,
+  collateralAssetEnabled: true,
+  collateralCombination: true,
   collateralAssetTypes: true,
   depositAmount: true,
   deliveryEnabled: true,
@@ -170,8 +182,13 @@ export interface PromoQuoteContext {
 }
 
 export interface EffectivePolicy {
+  /** Giá trị HIỆU LỰC (đã gộp theo mục). */
   values: RentalPolicyValuesDto;
   source: PolicySource;
+  /** Mục đang kế thừa gian hàng (ADR 0112 điều 1) - xe không có dòng riêng ⇒ cả năm mục. */
+  inheritedSections: PolicySection[];
+  /** Cột của CHÍNH dòng xe (kể cả mục đang kế thừa) - null khi xe không có dòng riêng. */
+  ownValues: RentalPolicyValuesDto | null;
 }
 
 /**
@@ -712,7 +729,7 @@ export class PricingService {
           tenantId,
           vehicleType,
           deletedAt: null,
-          rentalPolicy: null,
+          ...vehicleInheritsSectionWhere(POLICY_SECTION.DELIVERY),
           deliveryEnabled: { not: row.deliveryEnabled },
         },
         data: { deliveryEnabled: row.deliveryEnabled },
@@ -734,7 +751,7 @@ export class PricingService {
       where: {
         tenantId,
         deletedAt: null,
-        rentalPolicy: null,
+        ...vehicleInheritsSectionWhere(POLICY_SECTION.INSURANCE),
         ...(vehicleType ? { vehicleType } : {}),
       },
       orderBy: { name: 'asc' },
@@ -783,13 +800,34 @@ export class PricingService {
       }),
     ]);
     const override = rows.find((r) => r.vehicleId === vehicleId);
-    if (override) return { values: toValues(override), source: POLICY_SOURCE.VEHICLE };
-    const typed = vehicle
-      ? rows.find((r) => r.vehicleId === null && r.vehicleType === vehicle.vehicleType)
-      : undefined;
-    if (typed) return { values: toValues(typed), source: POLICY_SOURCE.SHOP };
-    const legacy = rows.find((r) => r.vehicleId === null && r.vehicleType === null);
-    if (legacy) return { values: toValues(legacy), source: POLICY_SOURCE.SHOP };
+    const shop =
+      (vehicle
+        ? rows.find((r) => r.vehicleId === null && r.vehicleType === vehicle.vehicleType)
+        : undefined) ?? rows.find((r) => r.vehicleId === null && r.vehicleType === null);
+    /*
+     * Gộp THEO MỤC (ADR 0112 điều 1) - chỗ DUY NHẤT gộp dòng xe với mặc định gian hàng. Mục kế thừa
+     * đọc cột của gian hàng; mục riêng đọc cột của xe. `updatedAt` lấy mốc mới hơn của hai dòng để
+     * báo giá cũ bị phát hiện khi gian hàng sửa một mục xe đang kế thừa.
+     */
+    if (override) {
+      const merged = mergePolicySections(override, shop);
+      const updatedAt =
+        shop && shop.updatedAt > override.updatedAt ? shop.updatedAt : override.updatedAt;
+      return {
+        values: toValues({ ...merged, updatedAt }),
+        source: POLICY_SOURCE.VEHICLE,
+        inheritedSections: ownInheritedSections(override),
+        ownValues: toValues(override),
+      };
+    }
+    if (shop) {
+      return {
+        values: toValues(shop),
+        source: POLICY_SOURCE.SHOP,
+        inheritedSections: [...POLICY_SECTION_VALUES],
+        ownValues: null,
+      };
+    }
     return null;
   }
 
@@ -907,23 +945,37 @@ export class PricingService {
 
   validatePolicy(dto: SaveRentalPolicyDto): void {
     /*
-     * Bảo đảm: ba chế độ LOẠI TRỪ nhau. CHECK ở DB là chốt chặn thật (hai request đua nhau vẫn
-     * không lọt), còn ở đây để người dùng nhận đúng câu lỗi thay vì một lỗi ràng buộc thô.
+     * Bảo đảm kết hợp (ADR 0112 điều 2). CHECK `rental_policies_collateral_scope_check` ở DB là
+     * chốt chặn thật; ở đây để người dùng nhận đúng câu lỗi thay vì một lỗi ràng buộc thô.
      */
-    const deposit = Number(dto.depositAmount);
-    const assets = dto.collateralAssetTypes.length;
-    if (dto.collateralMode === COLLATERAL_MODE.CASH) {
-      if (!(deposit > 0)) throw invalid('Chọn "Cọc tiền" thì phải nhập số tiền cọc lớn hơn 0');
-      if (assets > 0) throw invalid('Chế độ "Cọc tiền" không nhận loại tài sản thế chấp');
-    } else if (dto.collateralMode === COLLATERAL_MODE.ASSET) {
-      if (assets === 0) throw invalid('Chọn "Cọc tài sản" thì phải chọn ít nhất một loại tài sản');
-      if (deposit !== 0) throw invalid('Chế độ "Cọc tài sản" không thu tiền cọc - để số tiền là 0');
-      if (new Set(dto.collateralAssetTypes).size !== assets) {
-        throw invalid('Loại tài sản thế chấp bị trùng');
+    const c = normalizeCollateral(dto);
+    const deposit = Number(c.depositAmount);
+    if (c.collateralMode === COLLATERAL_MODE.NONE) {
+      if (Number(dto.depositAmount) !== 0) {
+        throw invalid('Chế độ "Miễn thế chấp" không được giữ tiền cọc', 'depositAmount');
+      }
+      if (dto.collateralAssetTypes.length > 0) {
+        throw invalid('Chế độ "Miễn thế chấp" không nhận loại tài sản thế chấp', 'collateralAssetTypes');
       }
     } else {
-      if (deposit !== 0) throw invalid('Chế độ "Miễn thế chấp" không được giữ tiền cọc');
-      if (assets > 0) throw invalid('Chế độ "Miễn thế chấp" không nhận loại tài sản thế chấp');
+      if (!c.collateralCashEnabled && !c.collateralAssetEnabled) {
+        throw invalid('Có yêu cầu thế chấp thì phải bật cọc tiền, cọc tài sản hoặc cả hai', 'collateralMode');
+      }
+      if (c.collateralCashEnabled && !(deposit > 0)) {
+        throw invalid('Bật "Cọc tiền" thì phải nhập số tiền cọc lớn hơn 0', 'depositAmount');
+      }
+      if (c.collateralAssetEnabled && c.collateralAssetTypes.length === 0) {
+        throw invalid('Bật "Cọc tài sản" thì phải chọn ít nhất một loại tài sản', 'collateralAssetTypes');
+      }
+      if (new Set(c.collateralAssetTypes).size !== c.collateralAssetTypes.length) {
+        throw invalid('Loại tài sản thế chấp bị trùng', 'collateralAssetTypes');
+      }
+      if (
+        dto.collateralCombination === COLLATERAL_COMBINATION.ALL &&
+        !(c.collateralCashEnabled && c.collateralAssetEnabled)
+      ) {
+        throw invalid('"Bắt buộc cả 2" chỉ chọn được khi bật cả cọc tiền lẫn cọc tài sản', 'collateralCombination');
+      }
     }
 
     if (dto.deliveryEnabled) {
@@ -1586,7 +1638,10 @@ export class PricingService {
             updatedAt: policy.values.updatedAt,
             // Điều kiện bảo đảm lúc chốt: khách đặt khi shop nhận cà vẹt thì về sau shop đổi
             // sang cọc tiền cũng không được viết lại quá khứ của đơn.
-            collateralMode: policy.values.collateralMode as CollateralMode,
+            collateralMode: policy.values.collateralMode,
+            collateralCashEnabled: policy.values.collateralCashEnabled,
+            collateralAssetEnabled: policy.values.collateralAssetEnabled,
+            collateralCombination: policy.values.collateralCombination,
             collateralAssetTypes: policy.values.collateralAssetTypes as CollateralAssetType[],
             depositAmount: policy.values.depositAmount,
             deliveryEnabled: policy.values.deliveryEnabled,
@@ -2031,7 +2086,10 @@ function spreadRentOverDays(
 
 function toValues(row: PolicyRow): RentalPolicyValuesDto {
   return {
-    collateralMode: row.collateralMode,
+    collateralMode: row.collateralMode as CollateralMode,
+    collateralCashEnabled: row.collateralCashEnabled,
+    collateralAssetEnabled: row.collateralAssetEnabled,
+    collateralCombination: row.collateralCombination as CollateralCombination,
     collateralAssetTypes: row.collateralAssetTypes,
     depositAmount: row.depositAmount.toFixed(0),
     deliveryEnabled: row.deliveryEnabled,
@@ -2066,10 +2124,10 @@ function toValues(row: PolicyRow): RentalPolicyValuesDto {
  * Export cho VehiclesService (writer của bản ghi đè theo xe) dùng chung mapping, không chép tay.
  */
 export function policyData(dto: SaveRentalPolicyDto) {
+  const collateral = normalizeCollateral(dto);
   return {
-    collateralMode: dto.collateralMode,
-    collateralAssetTypes: dto.collateralAssetTypes,
-    depositAmount: new Prisma.Decimal(dto.depositAmount),
+    ...collateral,
+    depositAmount: new Prisma.Decimal(collateral.depositAmount),
     deliveryEnabled: dto.deliveryEnabled,
     deliveryMaxRadiusKm: dto.deliveryEnabled ? new Prisma.Decimal(dto.deliveryMaxRadiusKm!) : null,
     // Chuẩn hoá trước khi ghi: mỗi bậc đúng một dạng, không mang khoá rỗng sang jsonb.
@@ -2094,6 +2152,9 @@ export function policyData(dto: SaveRentalPolicyDto) {
 /** Bản ghi audit gọn — Decimal → string để jsonb không mang object lạ. */
 function auditShape(data: {
   collateralMode: string;
+  collateralCashEnabled: boolean;
+  collateralAssetEnabled: boolean;
+  collateralCombination: string;
   collateralAssetTypes: string[];
   depositAmount: Prisma.Decimal;
   deliveryEnabled: boolean;
@@ -2108,6 +2169,9 @@ function auditShape(data: {
 }): Record<string, unknown> {
   return {
     collateralMode: data.collateralMode,
+    collateralCashEnabled: data.collateralCashEnabled,
+    collateralAssetEnabled: data.collateralAssetEnabled,
+    collateralCombination: data.collateralCombination,
     collateralAssetTypes: data.collateralAssetTypes,
     depositAmount: data.depositAmount.toFixed(0),
     deliveryEnabled: data.deliveryEnabled,
@@ -2185,6 +2249,67 @@ function formatKm(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function invalid(message: string): BadRequestException {
-  return new BadRequestException({ code: API_ERROR_CODE.VALIDATION_FAILED, message });
+/**
+ * Chuẩn hoá phần bảo đảm của payload về đúng hình dạng CHECK ở DB đòi (ADR 0112 điều 2):
+ *  - app cũ gửi `cash`/`asset` ⇒ `required` + đúng một cờ;
+ *  - cờ vắng ⇒ suy từ số tiền / mảng tài sản;
+ *  - hình thức đang TẮT ⇒ số tiền về 0 / mảng rỗng (form giữ số đã gõ khi chủ xe tắt công tắc);
+ *  - chỉ một hình thức bật ⇒ `any_one`.
+ * Không ném lỗi - `validatePolicy` soát kết quả.
+ */
+export function normalizeCollateral(dto: SaveRentalPolicyDto): {
+  collateralMode: CollateralMode;
+  collateralCashEnabled: boolean;
+  collateralAssetEnabled: boolean;
+  collateralCombination: CollateralCombination;
+  collateralAssetTypes: string[];
+  depositAmount: string;
+} {
+  const mode = dto.collateralMode as string;
+  if (mode === COLLATERAL_MODE.NONE) {
+    return {
+      collateralMode: COLLATERAL_MODE.NONE,
+      collateralCashEnabled: false,
+      collateralAssetEnabled: false,
+      collateralCombination: COLLATERAL_COMBINATION.ANY_ONE,
+      collateralAssetTypes: [],
+      depositAmount: '0',
+    };
+  }
+  const cash =
+    mode === LEGACY_COLLATERAL_MODE.CASH
+      ? true
+      : mode === LEGACY_COLLATERAL_MODE.ASSET
+        ? false
+        : (dto.collateralCashEnabled ?? Number(dto.depositAmount) > 0);
+  const asset =
+    mode === LEGACY_COLLATERAL_MODE.ASSET
+      ? true
+      : mode === LEGACY_COLLATERAL_MODE.CASH
+        ? false
+        : (dto.collateralAssetEnabled ?? dto.collateralAssetTypes.length > 0);
+  return {
+    collateralMode: COLLATERAL_MODE.REQUIRED,
+    collateralCashEnabled: cash,
+    collateralAssetEnabled: asset,
+    collateralCombination:
+      cash && asset && dto.collateralCombination === COLLATERAL_COMBINATION.ALL
+        ? COLLATERAL_COMBINATION.ALL
+        : COLLATERAL_COMBINATION.ANY_ONE,
+    collateralAssetTypes: asset ? dto.collateralAssetTypes : [],
+    depositAmount: cash ? dto.depositAmount : '0',
+  };
+}
+
+/** Mục kế thừa của một dòng ghi đè, lọc về đúng tập mã hợp lệ (CHECK ở DB giữ tập con). */
+function ownInheritedSections(row: { inheritedSections: string[] }): PolicySection[] {
+  return POLICY_SECTION_VALUES.filter((s) => row.inheritedSections.includes(s));
+}
+
+function invalid(message: string, field?: string): BadRequestException {
+  return new BadRequestException({
+    code: API_ERROR_CODE.VALIDATION_FAILED,
+    message,
+    ...(field ? { details: { field } } : {}),
+  });
 }

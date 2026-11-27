@@ -6,13 +6,13 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   addCalendarMonthsVn,
-  COLLATERAL_MODE,
   PRICE_ROW,
   ROUTE_TYPE,
   DELIVERY_DISTANCE_STATUS,
   INSURANCE_PRODUCT_KIND,
   LOCATION_SOURCE,
   SERVICE_TYPE,
+  BOOKING_LIMIT_VIOLATION,
   type InsuranceProductKind,
   type PublicListingDetail,
   type RouteType,
@@ -67,6 +67,10 @@ import {
 } from '@/features/booking-requests/hooks/use-booking-request-flow';
 import { toQuoteParams } from '@/features/booking-requests/quote-params';
 import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { useListingTripBlock } from '../hooks/use-listing-trip-block';
+import { InsuranceFeeHint } from '@/components/ui/InsuranceFeeHint';
+import { Callout } from '@/components/ui/Callout';
+import type { IncludedInsuranceServiceFee } from '@xeprime/domain';
 import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -226,8 +230,15 @@ export function ListingBookingCard({
   const tDriverPrice = useTranslations('Listings.detail.withDriverPrice');
   // Như web: xe không khai dịch vụ nào coi như chỉ tự lái.
   const services: readonly string[] = listing.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE];
+  // Bảo hiểm bắt buộc chưa đủ dữ liệu / vượt trần đặt xe (ADR 0091) - báo SỚM, server vẫn là cổng.
+  const tripBlock = useListingTripBlock(listing, trip);
   const longTerm = trip.serviceType === SERVICE_TYPE.LONG_TERM;
   const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
+  /*
+   * Chủ xe chưa niêm yết giá có tài xế (20/11/2026): giá báo là giá thuê xe, CHƯA gồm tài xế - chi
+   * phí tài xế khách thoả thuận với chủ xe. Bản native của web `driverPriceExcluded`.
+   */
+  const driverPriceExcluded = withDriver && !listing.withDriverDailyPrice;
   const packages = listing.longTermPackages ?? [];
   const bestPackageMonths = bestDiscountPackageMonths(packages);
 
@@ -719,6 +730,29 @@ export function ListingBookingCard({
           </>
         )}
 
+        {tripBlock.message ? (
+          <Callout tone="warning">
+            <YStack gap={space.xs}>
+              <Text col={colors.text} fos={fontSize.bodySm}>
+                {tripBlock.message}
+              </Text>
+              {!tripBlock.insuranceBlocked &&
+              tripBlock.limitViolation === BOOKING_LIMIT_VIOLATION.SELF_DRIVE_TOO_LONG &&
+              services.includes(SERVICE_TYPE.LONG_TERM) ? (
+                <Text
+                  col={colors.primaryActive}
+                  fos={fontSize.bodySm}
+                  fow={fontWeight.semibold}
+                  accessibilityRole="button"
+                  onPress={() => set({ serviceType: SERVICE_TYPE.LONG_TERM })}
+                >
+                  {t('limits.switchLongTerm')}
+                </Text>
+              ) : null}
+            </YStack>
+          </Callout>
+        ) : null}
+
         {/*
           Có tài xế: phụ phí tài xế chủ xe khai (địa chỉ đón + điểm đến nhập ở bước gửi yêu cầu).
           Còn lại: vị trí nhận xe như web — tự nhận luôn có, giao tận nơi khi chủ xe bật.
@@ -750,12 +784,15 @@ export function ListingBookingCard({
             ) : null}
             {/* Giá có tài xế là giá trọn gói (ADR 0075) — khách chỉ trả thêm phí cầu đường. */}
             <YStack gap={space.xs}>
-              <Label text={tDriverPrice('title')} size={fontSize.bodySm} />
+              <Label
+                text={tDriverPrice(driverPriceExcluded ? 'pendingTitle' : 'title')}
+                size={fontSize.bodySm}
+              />
               <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {`• ${tDriverPrice('included')}`}
+                {`• ${tDriverPrice(driverPriceExcluded ? 'pendingPrice' : 'included')}`}
               </Text>
               <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {`• ${tDriverPrice('excluded')}`}
+                {`• ${tDriverPrice(driverPriceExcluded ? 'pendingNegotiate' : 'excluded')}`}
               </Text>
             </YStack>
           </YStack>
@@ -830,9 +867,12 @@ export function ListingBookingCard({
               }}
               onChange={setInsuranceSelected}
             />
-            <Text col={colors.placeholder} fos={fontSize.bodySm} fontStyle="italic">
-              {t('insurance.note')}
-            </Text>
+            {/* "Tự nguyện" chỉ đúng với ô khách tự tích; dòng bắt buộc (ADR 0088) có câu riêng. */}
+            {insuranceOffer.items.some((item) => !item.mandatory) ? (
+              <Text col={colors.placeholder} fos={fontSize.bodySm} fontStyle="italic">
+                {t('insurance.note')}
+              </Text>
+            ) : null}
             </YStack>
           </YStack>
         ) : null}
@@ -881,6 +921,7 @@ export function ListingBookingCard({
                   label={domainLabel('feeLine', line.key)}
                   sub={feeLineSublabel(line) || null}
                   value={fmt.money(line.amount)}
+                  includedServiceFee={line.includedServiceFee ?? null}
                 />
               ))}
 
@@ -973,11 +1014,8 @@ export function ListingBookingCard({
                 <CostLine
                   label={tPrice('deposit')}
                   hint={{ content: cost.deposit.note, label: tPrice('depositHintLabel') }}
-                  value={
-                    cost.deposit.mode === COLLATERAL_MODE.CASH && cost.deposit.amount
-                      ? fmt.money(cost.deposit.amount)
-                      : domainLabel('collateralMode', cost.deposit.mode)
-                  }
+                  value={cost.deposit.display}
+                  stacked={cost.deposit.textual}
                 />
               ) : null}
 
@@ -1272,8 +1310,14 @@ function CostLine({
   hint,
   value,
   tone,
+  includedServiceFee = null,
+  stacked = false,
 }: {
+  /** Giá trị là một CÂU (mô tả cọc - ADR 0112): nhãn trên, giá trị xuống dòng dưới. */
+  stacked?: boolean;
   label: string;
+  /** Dòng IV đã gộp phí thu hộ - ⓘ tách hai số (ADR 0091 điều 3). */
+  includedServiceFee?: IncludedInsuranceServiceFee | null;
   sub?: string | null;
   /** Ghi chú giải thích — dấu "i" cạnh nhãn, chạm mở tấm trượt (không chiếm dòng). */
   hint?: { content: string; label: string } | null;
@@ -1282,13 +1326,19 @@ function CostLine({
 }) {
   const colors = useColors();
   return (
-    <XStack ai="flex-start" jc="space-between" gap={space.md}>
-      <YStack f={1} gap={2}>
+    <XStack
+      fd={stacked ? 'column' : 'row'}
+      ai={stacked ? 'stretch' : 'flex-start'}
+      jc="space-between"
+      gap={stacked ? 2 : space.md}
+    >
+      <YStack f={stacked ? undefined : 1} gap={2}>
         <XStack ai="center" gap={4}>
           <Text col={colors.text} fos={fontSize.body}>
             {label}
           </Text>
           {hint ? <InfoHint content={hint.content} label={hint.label} /> : null}
+          {includedServiceFee ? <InsuranceFeeHint fee={includedServiceFee} /> : null}
         </XStack>
         {sub ? (
           <Text col={colors.placeholder} fos={fontSize.body}>
@@ -1300,6 +1350,7 @@ function CostLine({
         col={tone === 'discount' ? colors.success : colors.text}
         fos={fontSize.body}
         fow={fontWeight.medium}
+        flexShrink={1}
       >
         {value}
       </Text>

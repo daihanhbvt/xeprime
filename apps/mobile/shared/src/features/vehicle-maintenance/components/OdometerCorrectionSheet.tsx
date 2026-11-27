@@ -7,6 +7,7 @@ import {
   type OdometerCorrectionFormValues,
 } from '@xeprime/validators';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -20,7 +21,9 @@ import { getErrorCode } from '@/lib/api-client';
 import { getErrorMessage } from '@/lib/get-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { FIELD_V2 } from '@/components/ui/Field';
 import { useCorrectOdometer } from '../hooks/use-maintenance';
 
 /** Trần độ dài lý do — khớp `odometerCorrectionFormSchema.reason`. */
@@ -126,12 +129,12 @@ export function OdometerCorrectionSheet({
       open={open}
       onClose={close}
       title={t('correctTitle')}
+      // Ghi chú nhật ký vào dấu (!) sát tiêu đề - không kéo dài thân tấm.
+      titleAdornment={<InfoHint label={t('correctTitle')} content={t('auditNote')} />}
       footer={
         <Button
           variant="gradient"
           label={isDecrease && !canDecrease ? t('submitApproval') : t('submit')}
-          /* Hình đi theo VIỆC: ghi số mới là cập nhật KM, còn thiếu quyền giảm thì là GỬI ĐI. */
-          icon={isDecrease && !canDecrease ? 'send-outline' : 'speedometer-outline'}
           loading={correct.isPending}
           disabled={isDecrease && !canDecrease}
           onPress={submit}
@@ -144,18 +147,17 @@ export function OdometerCorrectionSheet({
           số người dùng phải đối chiếu trước khi gõ số mới, nên nó không được nằm ép vào cột phải
           của một hàng nhãn–giá trị.
         */}
-        <YStack
-          gap={2}
-          p={space.sm}
-          br={radius.md}
-          bg={colors.surfaceMuted}
-          bw={1}
-          bc={colors.borderSubtle}
-        >
-          <Text col={colors.textMuted} fos={fontSize.label}>
+        <YStack gap={2} px={FIELD_V2.padX} py={space.sm} br={radius.control} bg={colors.background}>
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fontFamily={FONT_FAMILY.body}>
             {t('current')}
           </Text>
-          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+          <Text
+            col={colors.text}
+            fos={typeScale.title.fontSize}
+            lh={typeScale.title.lineHeight}
+            fontFamily={FONT_FAMILY.semibold}
+            fow={fontWeight.semibold}
+          >
             {currentOdometerKm == null ? tLabels('notAvailable') : fmt.km(currentOdometerKm)}
           </Text>
         </YStack>
@@ -174,6 +176,7 @@ export function OdometerCorrectionSheet({
           control={control}
           name="reasonCode"
           label={t('reasonCode')}
+          placeholder={t('reasonCodePlaceholder')}
           options={ODOMETER_CORRECTION_REASON_VALUES.map((value) => ({
             value,
             label: domainLabel('odometerCorrectionReason', value),
@@ -199,9 +202,7 @@ export function OdometerCorrectionSheet({
           >
             {canDecrease ? t('decreaseAllowed') : t('decreaseForbidden')}
           </Callout>
-        ) : (
-          <Callout tone="info" title={t('auditNote')} />
-        )}
+        ) : null}
       </YStack>
     </BottomSheet>
   );

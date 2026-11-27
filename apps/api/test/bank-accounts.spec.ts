@@ -1,6 +1,8 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { ACCOUNT_REALM, BANK_ACCOUNT_STATUS, WALLET_OWNER_TYPE } from '@xeprime/types';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
+import { BankAccountChangeRequestsService } from '../src/modules/bank-accounts/bank-account-change-requests.service';
+import { AuditService } from '../src/modules/audit/audit.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
@@ -15,6 +17,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient() as unknown as PrismaService;
 const accounts = new BankAccountsService(prisma);
+const changeRequests = new BankAccountChangeRequestsService(prisma, accounts, new AuditService(prisma));
 
 let dbAvailable = false;
 let userId: string;
@@ -51,6 +54,9 @@ afterAll(async () => {
     await prisma.auditLog.deleteMany({
       where: { targetType: 'bank_account', targetId: { in: ids.map((r) => r.id) } },
     });
+    await prisma.bankAccountChangeRequest.deleteMany({
+      where: { requestedBy: { in: [userId, otherUserId] } },
+    });
     await prisma.bankAccount.deleteMany({ where: { ownerUserId: { in: [userId, otherUserId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
   }
@@ -64,6 +70,19 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 const owner = () => ({ type: WALLET_OWNER_TYPE.USER, userId }) as const;
+
+/**
+ * THAY tài khoản theo ĐƯỜNG DUYỆT yêu cầu đổi (biên bản họp 19/11/2026): chủ ví không tự đổi được nữa,
+ * chỉ lượt admin duyệt sau khi gọi xác minh mới gọi `createWithinTx` với `allowReplace`. Các luật
+ * "đúng MỘT tài khoản, cái cũ LƯU TRỮ" vẫn phải đúng trên đường đó.
+ */
+const replace = (
+  dto: { bankCode: string; accountNumber: string; accountName: string; isDefault?: boolean },
+  actor: string | null = null,
+) =>
+  prisma.$transaction((tx) =>
+    accounts.createWithinTx(tx, owner(), dto, actor, { allowReplace: true }),
+  );
 
 const activeCount = () =>
   prisma.bankAccount.count({ where: { ownerUserId: userId, status: BANK_ACCOUNT_STATUS.ACTIVE } });
@@ -106,9 +125,18 @@ describe('Thêm tài khoản nhận tiền', () => {
 });
 
 describe('Đổi tài khoản nhận tiền — đúng MỘT, luôn có một', () => {
-  maybe('khai tài khoản khác ⇒ nó THAY cái cũ; cái cũ LƯU TRỮ chứ không xoá', async () => {
+  /** Biên bản họp 19/11/2026: tài khoản KHOÁ từ lần khai đầu — chủ ví không tự đổi được. */
+  maybe('chủ ví tự khai tài khoản khác ⇒ BANK_ACCOUNT_LOCKED, tài khoản giữ nguyên', async () => {
     const [before] = await accounts.list(owner());
-    const replaced = await accounts.create(owner(), OTHER);
+    await expect(accounts.create(owner(), OTHER)).rejects.toMatchObject({
+      response: { code: 'BANK_ACCOUNT_LOCKED' },
+    });
+    expect((await accounts.list(owner())).map((a) => a.id)).toEqual([before!.id]);
+  });
+
+  maybe('đường duyệt: tài khoản khác THAY cái cũ; cái cũ LƯU TRỮ chứ không xoá', async () => {
+    const [before] = await accounts.list(owner());
+    const replaced = await replace(OTHER);
 
     const after = await accounts.list(owner());
     expect(after).toHaveLength(1);
@@ -127,7 +155,7 @@ describe('Đổi tài khoản nhận tiền — đúng MỘT, luôn có một', 
   maybe('`isDefault: false` khi đã có tài khoản ⇒ 409, tài khoản đang dùng giữ nguyên', async () => {
     const [before] = await accounts.list(owner());
     await expect(
-      accounts.create(owner(), { ...ACCOUNT, accountNumber: '5555666677', isDefault: false }),
+      replace({ ...ACCOUNT, accountNumber: '5555666677', isDefault: false }),
     ).rejects.toMatchObject({ response: { code: 'BANK_ACCOUNT_REPLACE_NOT_CONFIRMED' } });
 
     expect((await accounts.list(owner())).map((a) => a.id)).toEqual([before!.id]);
@@ -136,8 +164,7 @@ describe('Đổi tài khoản nhận tiền — đúng MỘT, luôn có một', 
   /** Đổi chỗ tiền về là việc đầu tiên kẻ chiếm tài khoản làm — phải trả lời được ai, khi nào. */
   maybe('đổi tài khoản ghi audit: ai đổi, từ đâu sang đâu — số tài khoản CHE', async () => {
     const [before] = await accounts.list(owner());
-    const replaced = await accounts.create(
-      owner(),
+    const replaced = await replace(
       { bankCode: 'VPB', accountNumber: '1234500099', accountName: 'Nguyen Van A' },
       userId,
     );
@@ -154,7 +181,7 @@ describe('Đổi tài khoản nhận tiền — đúng MỘT, luôn có một', 
   /** Ngân hàng đối chiếu TÊN — sửa tên thụ hưởng là một đích mới, dấu đối chiếu cũ hết giá trị. */
   maybe('cùng số nhưng đổi tên thụ hưởng ⇒ một tài khoản mới', async () => {
     const [before] = await accounts.list(owner());
-    const renamed = await accounts.create(owner(), { ...OTHER, accountName: 'NGUYEN VAN A' });
+    const renamed = await replace({ ...OTHER, accountName: 'NGUYEN VAN A' });
 
     expect(renamed.id).not.toBe(before!.id);
     expect(await activeCount()).toBe(1);
@@ -166,8 +193,8 @@ describe('Đổi tài khoản nhận tiền — đúng MỘT, luôn có một', 
    */
   maybe('hai lượt đổi SONG SONG ⇒ cả hai thành công, còn đúng một tài khoản', async () => {
     const results = await Promise.allSettled([
-      accounts.create(owner(), { bankCode: 'TCB', accountNumber: '1903000111', accountName: 'A' }),
-      accounts.create(owner(), { bankCode: 'MB', accountNumber: '0909000222', accountName: 'A' }),
+      replace({ bankCode: 'TCB', accountNumber: '1903000111', accountName: 'A' }),
+      replace({ bankCode: 'MB', accountNumber: '0909000222', accountName: 'A' }),
     ]);
 
     expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
@@ -255,19 +282,64 @@ describe('Đọc tài khoản để ghi lệnh chi', () => {
   });
 });
 
-describe('Bỏ dùng', () => {
-  maybe('bỏ dùng ⇒ LƯU TRỮ, chưa còn tài khoản nhận tiền nào; khai lại được ngay', async () => {
+describe('Bỏ dùng — đã KHOÁ (biên bản họp 19/11/2026)', () => {
+  maybe('chủ ví tự bỏ dùng ⇒ BANK_ACCOUNT_LOCKED, tài khoản vẫn nhận tiền', async () => {
     const [current] = await accounts.list(owner());
-    await accounts.archive(owner(), current!.id);
-
-    expect(await accounts.list(owner())).toEqual([]);
-    expect(await accounts.resolveForPayout(owner())).toBeNull();
-
-    const archived = await prisma.bankAccount.findUniqueOrThrow({ where: { id: current!.id } });
-    expect(archived.status).toBe(BANK_ACCOUNT_STATUS.ARCHIVED);
-
-    const fresh = await accounts.create(owner(), ACCOUNT);
-    expect(fresh.isDefault).toBe(true);
+    await expect(accounts.archive(owner(), current!.id)).rejects.toMatchObject({
+      response: { code: 'BANK_ACCOUNT_LOCKED' },
+    });
+    expect((await accounts.list(owner())).map((a) => a.id)).toEqual([current!.id]);
     expect(await activeCount()).toBe(1);
+  });
+});
+
+/**
+ * Yêu cầu ĐỔI tài khoản (biên bản họp 19/11/2026): gửi ⇒ chưa đổi gì; admin gọi xác minh rồi duyệt ⇒
+ * tài khoản mới thay cái cũ; từ chối ⇒ giữ nguyên. Mỗi chủ một yêu cầu đang chờ.
+ */
+describe('Yêu cầu đổi tài khoản', () => {
+  const NEW = { bankCode: 'tcb', accountNumber: '1903 7777 888', accountName: 'Nguyen Van A' };
+
+  maybe('gửi yêu cầu ⇒ chưa đổi gì; yêu cầu thứ hai khi đang chờ ⇒ 409', async () => {
+    const [before] = await accounts.list(owner());
+    const request = await changeRequests.create(owner(), userId, { ...NEW, note: 'Đổi ngân hàng' });
+    expect(request.status).toBe('pending');
+    expect(request.accountNumberMasked).not.toContain('19037777888');
+    expect((await accounts.list(owner())).map((a) => a.id)).toEqual([before!.id]);
+    expect((await changeRequests.current(owner()))?.id).toBe(request.id);
+
+    await expect(changeRequests.create(owner(), userId, NEW)).rejects.toMatchObject({
+      response: { code: 'BANK_ACCOUNT_CHANGE_PENDING' },
+    });
+  });
+
+  maybe('admin từ chối ⇒ tài khoản giữ nguyên, không còn yêu cầu chờ', async () => {
+    const [before] = await accounts.list(owner());
+    const pending = await changeRequests.current(owner());
+    await changeRequests.reject(pending!.id, otherUserId, 'Gọi không phải chính chủ');
+    expect(await changeRequests.current(owner())).toBeNull();
+    expect((await accounts.list(owner())).map((a) => a.id)).toEqual([before!.id]);
+  });
+
+  maybe('admin duyệt sau khi gọi xác minh ⇒ tài khoản mới thay cái cũ; duyệt lại ⇒ 409', async () => {
+    const request = await changeRequests.create(owner(), userId, NEW);
+    const queue = await changeRequests.listPending();
+    const row = queue.find((r) => r.id === request.id)!;
+    // Màn duyệt đọc số MỚI đầy đủ cho chủ ví xác nhận qua điện thoại.
+    expect(row.accountNumber).toBe('19037777888');
+
+    await changeRequests.approve(request.id, otherUserId, 'Đã gọi số đăng ký, khớp CCCD');
+    const [after] = await accounts.list(owner());
+    expect(after!.bankCode).toBe('TCB');
+    expect(await activeCount()).toBe(1);
+    await expect(changeRequests.approve(request.id, otherUserId, null)).rejects.toMatchObject({
+      response: { code: 'CONFLICT' },
+    });
+  });
+
+  maybe('đổi sang đúng tài khoản đang dùng ⇒ 409 không có gì để đổi', async () => {
+    await expect(changeRequests.create(owner(), userId, NEW)).rejects.toMatchObject({
+      response: { code: 'BANK_ACCOUNT_CHANGE_UNCHANGED' },
+    });
   });
 });

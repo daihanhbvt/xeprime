@@ -36,6 +36,8 @@ export async function ensureInsuranceProducts(prisma: PrismaService): Promise<vo
       nameEn: p.nameEn,
       coverageVi: p.coverageVi,
       coverageEn: p.coverageEn,
+      summaryVi: p.summaryVi ?? null,
+      summaryEn: p.summaryEn ?? null,
       deductibleCar: money(p.deductibleCar),
       deductibleMotorbike: money(p.deductibleMotorbike),
       maxPayoutCar: money(p.maxPayoutCar),

@@ -21,6 +21,9 @@ export interface PartnerAccountFieldValues extends FieldValues {
  * native của web `PartnerAccountFields`, cùng luồng XÁC THỰC TRƯỚC, ĐĂNG KÝ SAU: ô SĐT là
  * `VerifiedPhoneField` (mã `register`). Chưa xác thực mà bấm đăng ký thì sheet nhập mã mở ra, đúng
  * mã là form tự gửi tiếp; server đối chiếu lại chính mã đó trong lượt đăng ký (ADR 0060).
+ *
+ * Chữ hiển thị (placeholder, "Xác nhận mật khẩu") là khoá RIÊNG của app `signup.partnerApp.*`, đúng
+ * nguyên văn Figma "Signup - Personal" (`24464:24953`) - web giữ khoá chung (người dùng chốt 20/11/2026).
  */
 export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
   control,
@@ -52,7 +55,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
           name={name('displayName')}
           required
           label={t('signup.fields.displayName.label')}
-          placeholder={t('signup.fields.displayName.placeholder')}
+          placeholder={t('signup.partnerApp.displayNamePlaceholder')}
           icon="person-outline"
           autoComplete="name"
         />
@@ -62,7 +65,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
         name={name('email')}
         required
         label={t('signup.fields.email.label')}
-        placeholder={t('signup.fields.email.placeholder')}
+        placeholder={t('signup.partnerApp.emailPlaceholder')}
         icon="mail-outline"
         keyboardType="email-address"
         autoCapitalize="none"
@@ -75,7 +78,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
         verifiedName="phoneVerified"
         purpose={PHONE_VERIFICATION_PURPOSE.REGISTER}
         label={t('signup.fields.phone.label')}
-        placeholder={t('signup.fields.phone.placeholder')}
+        placeholder={t('signup.partnerApp.phonePlaceholder')}
         hint={t('signup.fields.phone.help')}
         verifyRef={verifyRef}
         onVerified={onVerified}
@@ -100,7 +103,7 @@ export function PartnerAccountFields<T extends PartnerAccountFieldValues>({
             control={control}
             name={name('confirmPassword')}
             required
-            label={t('signup.fields.confirmPassword.label')}
+            label={t('signup.partnerApp.confirmPasswordLabel')}
             placeholder={t('signup.fields.confirmPassword.placeholder')}
             icon="lock-closed-outline"
             secureTextEntry

@@ -1,20 +1,33 @@
-import type { ComponentProps } from 'react';
 import { useState, type ReactNode } from 'react';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
-import { Pressable } from 'react-native';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { Linking, Pressable } from 'react-native';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { CheckMark } from '@/components/ui/CheckMark';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
 import {
+  isNegativeMoney,
+  isZeroMoney,
+  normalizeCollateral,
+  subtractMoney,
+  telHref,
+  type NormalizedCollateral,
+} from '@xeprime/domain';
+import {
+  BOOKING_COLLATERAL_MAX_ITEMS,
+  COLLATERAL_COMBINATION,
   HANDOVER_PREP_ITEM,
+  PERMISSION,
+  isBookingCollateralEditable,
   handoverPhotoSlotsFor,
   PAYMENT_KIND,
-  PERMISSION,
   type HandoverPhotoSlot,
   type HandoverPrepItem,
 } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { policyCollateral } from '@/features/rental-policies/collateral-text';
+import { useDomainLabel } from '@/i18n/domain';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -26,14 +39,61 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useSetHandoverPrepCheck } from '../hooks/use-booking-extensions';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useStartBookingRequestConversation } from '@/features/booking-requests/hooks/use-booking-requests';
-import { RentalContactButtons } from './rental-card/RentalCard';
 import type { BookingDetail, BookingHandoverPrep } from '../api';
 
-type PrepKey = 'confirm' | 'documents' | 'rent' | 'deposit' | 'contract' | 'photos' | 'driver';
+export type PrepKey =
+  | 'confirm'
+  | 'documents'
+  | 'rent'
+  | 'deposit'
+  | 'asset'
+  | 'collateralEither'
+  | 'contract'
+  | 'photos'
+  | 'driver';
+
+/** Khoá chữ `Bookings.detailPage.prep.*` của từng dòng (`collateralEither` => `either`). */
+export function prepTitleKey(key: PrepKey) {
+  return key === 'collateralEither' ? 'either' : key;
+}
+
+/**
+ * Cọc của đơn cho khối chuẩn bị bàn giao - web `prepCollateralOf`: chính sách ĐÓNG BĂNG lúc tạo đơn
+ * (`priceSnapshot.policy`, ADR 0112 điều 2, chịu cả mã cũ `cash` / `asset`) + số món tài sản đã ghi
+ * (ADR 0109). Số tiền cọc KHÔNG đọc từ snapshot - đọc `depositRequired` của server.
+ */
+export interface PrepCollateral {
+  policy: NormalizedCollateral | null;
+  recorded: number;
+}
+
+export function prepCollateralOf(booking: {
+  priceSnapshot?: { policy?: Parameters<typeof policyCollateral>[0] } | null;
+  collaterals?: readonly unknown[] | null;
+}): PrepCollateral {
+  return {
+    policy: normalizeCollateral(policyCollateral(booking.priceSnapshot?.policy ?? null)),
+    recorded: booking.collaterals?.length ?? 0,
+  };
+}
+
+/** Việc cọc lúc giao xe - web `collateralPrepPlan` (miễn => none; cả hai => either / both). */
+export type CollateralPrepPlan = 'none' | 'cash' | 'asset' | 'either' | 'both';
+
+export function collateralPrepPlan(
+  prep: Pick<BookingHandoverPrep, 'depositRequired'>,
+  collateral: PrepCollateral | undefined,
+): CollateralPrepPlan {
+  const cash = !isZeroMoney(prep.depositRequired);
+  const asset = collateral?.policy?.asset === true;
+  if (cash && asset) {
+    return collateral?.policy?.combination === COLLATERAL_COMBINATION.ALL ? 'both' : 'either';
+  }
+  if (asset) return 'asset';
+  return cash ? 'cash' : 'none';
+}
 type ManualCheck = BookingHandoverPrep['manualChecks'][number];
 
 interface PrepRowState {
@@ -57,6 +117,7 @@ function depositOutstanding(prep: Pick<BookingHandoverPrep, 'depositRequired' | 
 export function prepRowStates(
   prep: BookingHandoverPrep,
   can: { collect: boolean; contract: boolean },
+  collateral?: PrepCollateral,
 ): PrepRowState[] {
   const manualOf = (item: HandoverPrepItem) =>
     prep.manualChecks.find((check) => check.item === item) ?? null;
@@ -64,13 +125,21 @@ export function prepRowStates(
     const manual = manualItem && !autoDone ? manualOf(manualItem) : null;
     return { key, autoDone, manualItem, manual, done: autoDone || manual !== null };
   };
+  const plan = collateralPrepPlan(prep, collateral);
+  const cashDone = isZeroMoney(depositOutstanding(prep));
+  const assetDone = (collateral?.recorded ?? 0) > 0;
+  const collateralRows: PrepRowState[] = [];
+  if ((plan === 'cash' || plan === 'both') && can.collect) {
+    collateralRows.push(row('deposit', cashDone));
+  }
+  if (plan === 'asset' || plan === 'both') collateralRows.push(row('asset', assetDone));
+  // Một trong hai: tài sản xong được cả khi không ghi sổ thu, nên dòng luôn có.
+  if (plan === 'either') collateralRows.push(row('collateralEither', cashDone || assetDone));
   return [
     row('confirm', true),
     row('documents', prep.documentsReady, HANDOVER_PREP_ITEM.DOCUMENTS),
     ...(can.collect ? [row('rent', isZeroMoney(prep.rentDueAmount))] : []),
-    ...(can.collect && !isZeroMoney(prep.depositRequired)
-      ? [row('deposit', isZeroMoney(depositOutstanding(prep)))]
-      : []),
+    ...collateralRows,
     ...(can.contract
       ? [row('contract', prep.contractId != null, HANDOVER_PREP_ITEM.CONTRACT)]
       : []),
@@ -104,6 +173,8 @@ export function HandoverPrepCard({
   can,
   onDocuments,
   onPhotos,
+  onAddCollateral,
+  onEditCash,
   embedded = false,
 }: {
   booking: BookingDetail;
@@ -114,38 +185,54 @@ export function HandoverPrepCard({
   onDocuments: () => void;
   /** Cuộn tới khối ảnh bàn giao trong trang - khối đó tự tạo nháp biên bản khi chụp (web). */
   onPhotos: () => void;
+  /** Mở ô "Thêm tài sản thế chấp" của thẻ Cọc & thế chấp (web `openAddCollateral`). */
+  onAddCollateral?: () => void;
+  /** "Chỉnh sửa" ở dòng cọc tiền đã xong ⇒ mở hộp Sửa tiền cọc của thẻ Cọc & thế chấp (web). */
+  onEditCash?: () => void;
+
 }) {
   const t = useTranslations('Bookings.detailPage.prep');
   const colors = useColors();
   const fmt = useAppFormat();
   const toast = useAppToast();
-  const permissions = usePermissions();
-  const tRequestActions = useTranslations('BookingRequests.actions');
-  const startConversation = useStartBookingRequestConversation();
+  const tApp = useTranslations('Bookings.detailPage.prep.partnerApp');
+  const tCall = useTranslations('BookingRequests.actions');
   /*
-   * Web `ContactButtons`: nhắn tin = hội thoại của yêu cầu gốc (cần `booking_requests.view` và đơn
-   * có yêu cầu gốc); gọi · Zalo khi có SĐT. Chưa được nhắn (ADR 0073) ⇒ nút mờ, chạm thì báo lý do.
+   * App: dòng xác nhận chỉ còn nút GỌI như Figma (người dùng chốt 20/11/2026); nhắn tin / Zalo vẫn có
+   * ở thẻ đơn ngoài danh sách. Không SĐT thì không nút.
    */
-  const requestId = booking.bookingRequestId;
-  const canMessage = permissions.has(PERMISSION.BOOKING_REQUEST_VIEW) && Boolean(requestId);
-  const message = () => {
-    if (!requestId) return;
-    if (!booking.canMessageOnPlatform) {
-      toast.showInfo(tRequestActions('messageUnavailable'));
-      return;
-    }
-    startConversation.mutate(requestId, {
-      onSuccess: (conversation) => navigateOnce(ROUTES.manage.chatThread(conversation.id, requestId)),
-      onError: (err) => toast.showError(errorMessage(err)),
-    });
-  };
+  const tel = telHref(booking.customerPhone);
   const errorMessage = useErrorMessage();
   const setCheck = useSetHandoverPrepCheck(booking.id);
   const navigateOnce = useNavigateOnce();
   const createContract = useCreateContract();
   const [collecting, setCollecting] = useState<'rent' | 'deposit' | null>(null);
+  const dl = useDomainLabel();
+  const { has } = usePermissions();
   const prep = booking.handoverPrep;
   if (!prep) return null;
+
+  // Cọc theo chính sách ĐÓNG BĂNG của đơn (ADR 0112 điều 2) + món tài sản đã ghi (ADR 0109).
+  const collateral = prepCollateralOf(booking);
+  const collateralPlan = collateralPrepPlan(prep, collateral);
+  const assetTypes = collateral.policy?.assetTypes ?? [];
+  const assetList = assetTypes.map((code) => dl('collateralAssetType', code)).join(', ');
+  const cashDone = isZeroMoney(depositOutstanding(prep));
+  const canAddAsset =
+    onAddCollateral != null &&
+    has(PERMISSION.BOOKING_UPDATE) &&
+    isBookingCollateralEditable(booking.status) &&
+    (booking.collaterals?.length ?? 0) < BOOKING_COLLATERAL_MAX_ITEMS;
+  const addAssetAction =
+    canAddAsset && onAddCollateral ? (
+      <RowAction label={t('assetAction')} icon="plus" onPress={onAddCollateral} />
+    ) : null;
+
+  // "Chỉnh sửa" ở dòng cọc ĐÃ XONG mở lại đúng chỗ sửa sẵn có (web `HandoverPrepCard`).
+  const editCashAction =
+    onEditCash && has(PERMISSION.BOOKING_UPDATE) ? (
+      <RowAction label={t('editAction')} icon="edit" onPress={onEditCash} />
+    ) : null;
 
   /*
    * Nút cuối dòng mở ĐÚNG lối đã có trên màn đơn (web `HandoverPrepCard`): giấy tờ → sổ khách,
@@ -159,40 +246,48 @@ export function HandoverPrepCard({
   const actionOf = (key: PrepKey): ReactNode => {
     switch (key) {
       case 'confirm':
-        return (
-          <RentalContactButtons
-            name={booking.customerName}
-            phone={booking.customerPhone}
-            {...(canMessage ? { onMessage: message } : {})}
-            messageUnavailable={!booking.canMessageOnPlatform}
-            messageLoading={startConversation.isPending}
-            disabled={startConversation.isPending}
+        return tel ? (
+          <RowAction
+            label={tCall('callAria', { name: booking.customerName, phone: booking.customerPhone ?? '' })}
+            icon="calling"
+            onPress={() => void Linking.openURL(tel)}
           />
-        );
+        ) : null;
       case 'documents':
         return can.documents && booking.tenantCustomerId ? (
-          <RowAction label={t('documentsAction')} icon="create-outline" onPress={onDocuments} />
+          <RowAction label={t('documentsAction')} icon="edit" onPress={onDocuments} />
         ) : null;
       case 'rent':
         return isZeroMoney(prep.rentDueAmount) ? null : (
-          <RowAction label={t('collectAction')} icon="checkmark" onPress={() => setCollecting('rent')} />
+          <RowAction label={t('collectAction')} icon="tick" onPress={() => setCollecting('rent')} />
         );
       case 'deposit':
-        return isZeroMoney(depositOutstanding(prep)) ? null : (
-          <RowAction label={t('collectAction')} icon="checkmark" onPress={() => setCollecting('deposit')} />
+        return isZeroMoney(depositOutstanding(prep)) ? editCashAction : (
+          <RowAction label={t('collectAction')} icon="tick" onPress={() => setCollecting('deposit')} />
+        );
+      case 'asset':
+        return collateral.recorded > 0 ? null : addAssetAction;
+      case 'collateralEither':
+        return collateral.recorded > 0 ? null : cashDone ? editCashAction : (
+          <XStack gap={space.xs}>
+            {can.collect ? (
+              <RowAction label={t('deposit')} icon="tick" onPress={() => setCollecting('deposit')} />
+            ) : null}
+            {addAssetAction}
+          </XStack>
         );
       case 'contract':
         return (
           <RowAction
             label={prep.contractId ? t('contractView') : t('contractCreate')}
-            icon={prep.contractId ? 'eye-outline' : 'add'}
+            icon={prep.contractId ? 'eye' : 'plus'}
             loading={createContract.isPending}
             onPress={openContract}
           />
         );
       case 'photos':
         return can.managePhotos ? (
-          <RowAction label={t('photosAction')} icon="share-outline" onPress={onPhotos} />
+          <RowAction label={t('photosAction')} icon="upload" onPress={onPhotos} />
         ) : null;
       default:
         return null;
@@ -207,7 +302,8 @@ export function HandoverPrepCard({
     },
     documents: {
       title: t('documents'),
-      body: prep.documentsReady ? t('documentsDone') : t('documentsPending'),
+      // App: câu ngắn như Figma ("Chưa có GPLX / CCCD"); web giữ câu dài.
+      body: prep.documentsReady ? t('documentsDone') : tApp('documentsPending'),
     },
     rent: {
       title: t('rent'),
@@ -227,6 +323,35 @@ export function HandoverPrepCard({
               b: bold,
             }),
     },
+    asset: {
+      title: t('asset'),
+      body:
+        collateral.recorded > 0
+          ? t('assetDone', { count: collateral.recorded })
+          : assetTypes.length > 1
+            ? t('assetPendingMany', { assets: assetList })
+            : assetTypes.length === 1
+              ? t('assetPendingOne', { assets: assetList })
+              : t('assetPendingAny'),
+    },
+    collateralEither: {
+      title: t('either'),
+      body:
+        collateral.recorded > 0
+          ? t('eitherDoneAsset')
+          : cashDone
+            ? t('eitherDoneCash', { amount: fmt.money(prep.depositReceived) })
+            : t.rich('eitherPending', {
+                amount: fmt.money(prep.depositRequired),
+                assets:
+                  assetTypes.length > 1
+                    ? t('eitherAssetsMany', { assets: assetList })
+                    : assetTypes.length === 1
+                      ? t('eitherAssetsOne', { assets: assetList })
+                      : t('eitherAssetsAny'),
+                b: bold,
+              }),
+    },
     contract: {
       title: t('contract'),
       body: prep.contractSigned
@@ -240,7 +365,7 @@ export function HandoverPrepCard({
       body:
         prep.pickupPhotoCount >= prep.pickupPhotoRequired
           ? t('photosDone')
-          : t('photosPending', { count: prep.pickupPhotoCount, total: prep.pickupPhotoRequired }),
+          : tApp('photosPending'),
     },
     driver: {
       title: t('driver'),
@@ -248,7 +373,7 @@ export function HandoverPrepCard({
     },
   };
 
-  const rows = prepRowStates(prep, can);
+  const rows = prepRowStates(prep, can, collateral);
   const done = rows.filter((row) => row.done).length;
 
   const toggle = (item: HandoverPrepItem, checked: boolean) => {
@@ -259,32 +384,22 @@ export function HandoverPrepCard({
   const content = (
       <YStack gap={embedded ? 0 : space.sm}>
         {embedded ? null : <SectionHeader icon="document-text-outline">{t('title')}</SectionHeader>}
-        <XStack ai="center" gap={space.sm}>
-          <YStack f={1}>
-            <ProgressBar percent={rows.length === 0 ? 0 : (done / rows.length) * 100} size="sm" />
-          </YStack>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('progress', { done, total: rows.length })}
-          </Text>
-        </XStack>
+        {/* Figma (tab "Chuẩn bị") không có dòng tiến độ - chỉ thẻ đứng riêng mới vẽ (người dùng 20/11/2026). */}
+        {embedded ? null : (
+          <XStack ai="center" gap={space.sm}>
+            <YStack f={1}>
+              <ProgressBar percent={rows.length === 0 ? 0 : (done / rows.length) * 100} size="sm" />
+            </YStack>
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {t('progress', { done, total: rows.length })}
+            </Text>
+          </XStack>
+        )}
         {rows.map((row, index) => {
           const { title, body } = bodies[row.key];
           const togglable = row.manualItem != null && (row.manual || !row.done) && can.markPrep;
-          const mark = (
-            <YStack
-              w={20}
-              h={20}
-              br={radius.pill}
-              ai="center"
-              jc="center"
-              bw={row.done ? 0 : 1}
-              bc={colors.borderInput}
-              // Figma "_Checkbox base": đã xong = tròn vàng thương hiệu, dấu tích trắng.
-              bg={row.done ? colors.primary : 'transparent'}
-            >
-              {row.done ? <Ionicons name="checkmark" size={13} color={colors.onPrimary} /> : null}
-            </YStack>
-          );
+          // Figma "_Checkbox base" (check circle): đã xong = tròn vàng, dấu tích trắng - `CheckMark` chung.
+          const mark = <CheckMark checked={row.done} shape="circle" />;
           return (
             <XStack
               key={row.key}
@@ -313,7 +428,7 @@ export function HandoverPrepCard({
                 <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={2}>
                   {title}
                 </Text>
-                <Text col={colors.textMuted} fos={fontSize.body}>
+                <Text col={colors.placeholder} fos={fontSize.body}>
                   {body}
                 </Text>
                 {row.manual ? (
@@ -331,6 +446,11 @@ export function HandoverPrepCard({
             </XStack>
           );
         })}
+        {collateralPlan === 'none' && collateral.policy?.none ? (
+          <Text col={colors.placeholder} fos={fontSize.label} pt={space.xs}>
+            {t('collateralNone')}
+          </Text>
+        ) : null}
       </YStack>
   );
   const sheet = collecting ? (
@@ -340,7 +460,8 @@ export function HandoverPrepCard({
           bookingId={booking.id}
           {...(collecting === 'deposit'
             ? { kind: PAYMENT_KIND.DEPOSIT, debtAmount: depositOutstanding(prep) }
-            : { debtAmount: booking.debtAmount })}
+            : // Phần khách còn đưa TẬN TAY (web `openPay`): `D` trả trước qua XePrime không đòi lại ở quầy.
+              { debtAmount: booking.counterDueAmount, counterDue: true })}
         />
       ) : null;
   return embedded ? (
@@ -364,14 +485,15 @@ function RowAction({
   loading = false,
 }: {
   label: string;
-  icon: ComponentProps<typeof Ionicons>['name'];
+  /** Nét icon Figma (bộ `LineIcon`): gọi · bút · tick · con mắt · cộng · tải lên. */
+  icon: LineIconName;
   onPress: () => void;
   loading?: boolean;
 }) {
   const colors = useColors();
   return (
     <IconSquareButton label={label} size="md" disabled={loading} onPress={onPress}>
-      <Ionicons name={icon} size={16} color={colors.textMuted} />
+      <LineIcon name={icon} size={20} color={colors.textMuted} />
     </IconSquareButton>
   );
 }

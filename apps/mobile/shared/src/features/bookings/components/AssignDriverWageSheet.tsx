@@ -2,7 +2,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PERMISSION } from '@xeprime/types';
+import { DRIVER_LICENCE_STATE, PERMISSION, driverResponseWindowMinutes } from '@xeprime/types';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -37,7 +38,10 @@ export function AssignDriverWageSheet({
   onAssigned,
 }: {
   bookingId: string;
-  driver: { id: string; name: string };
+  /** Người vừa chọn ở bộ chọn — `licenceState` để cảnh báo bằng chưa xác thực (web `ChangeDriverDialog`). */
+  driver: { id: string; name: string; licenceState?: string | null };
+  /** Giờ nhận của đơn — tính hạn tài xế nhận chuyến (`driverResponseWindowMinutes`, ADR 0066). */
+  pickupAt: string;
   onClose: () => void;
   onAssigned: () => void;
 }) {
@@ -63,6 +67,10 @@ export function AssignDriverWageSheet({
         <AssignDriverWageForm
           bookingId={bookingId}
           driverId={driver.id}
+          licenceUnverified={
+            driver.licenceState != null && driver.licenceState !== DRIVER_LICENCE_STATE.VERIFIED
+          }
+          pickupAt={pickupAt}
           quote={quote.data}
           onClose={onClose}
           onAssigned={onAssigned}
@@ -75,12 +83,16 @@ export function AssignDriverWageSheet({
 function AssignDriverWageForm({
   bookingId,
   driverId,
+  licenceUnverified,
+  pickupAt,
   quote,
   onClose,
   onAssigned,
 }: {
   bookingId: string;
   driverId: string;
+  licenceUnverified: boolean;
+  pickupAt: string;
   quote: DriverWageQuote;
   onClose: () => void;
   onAssigned: () => void;
@@ -89,6 +101,8 @@ function AssignDriverWageForm({
   const t = useTranslations('Drivers.wage.assign');
   const tForm = useTranslations('Drivers.wage.form');
   const tAssign = useTranslations('Drivers.booking');
+  const tPicker = useTranslations('Drivers.booking.picker');
+  const fmt = useAppFormat();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const permissions = usePermissions();
@@ -126,7 +140,19 @@ function AssignDriverWageForm({
 
   return (
     <YStack gap={space.md}>
-      <DriverDailyWageFields control={control} quote={quote} canSetDefault={canSetDefault} />
+      {licenceUnverified ? <Callout tone="warning" title={tPicker('unverifiedWarning')} /> : null}
+      <DriverDailyWageFields
+        control={control}
+        quote={quote}
+        canSetDefault={canSetDefault}
+        label={tPicker('wageField')}
+      />
+      {/* Hạn tài xế nhận chuyến (ADR 0066) — web `LinkedWageForm.respondWindow`. */}
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {tPicker('respondWindow', {
+          duration: fmt.minutesDuration(driverResponseWindowMinutes(new Date(), new Date(pickupAt))),
+        })}
+      </Text>
       <Text col={colors.textMuted} fos={fontSize.label}>
         {t('paidDirect')}
       </Text>

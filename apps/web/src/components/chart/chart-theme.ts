@@ -15,6 +15,19 @@ export const CHART_COLOR = {
 
 export type ChartRole = keyof typeof CHART_COLOR;
 
+/**
+ * Ba phần của doanh thu theo NGUỒN ĐƠN (ADR 0110) - cùng màu với khối "Doanh thu theo nguồn đơn"
+ * (`RevenueSource`, `SourceRevenueTrendChart`): sàn mang sắc thương hiệu, kênh tự khai thác mang
+ * sắc xanh của chiều thu.
+ */
+export const CHART_SOURCE_COLOR = {
+  marketplace: 'var(--xp-color-primary)',
+  direct: 'var(--xp-color-info-strong)',
+  unlinked: 'var(--xp-color-viz-1)',
+} as const;
+
+export type ChartSourceRole = keyof typeof CHART_SOURCE_COLOR;
+
 /** Dải màu định danh cho các nhóm KHÔNG có vai cố định. Dùng theo thứ tự, không xoay vòng. */
 export const CHART_SERIES_COLORS = [
   'var(--xp-color-viz-1)',

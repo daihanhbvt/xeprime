@@ -40,10 +40,28 @@
     "emptySearch": "Không có xe nào khớp từ khoá",
     "emptyBranch": "Chi nhánh này chưa có xe nào",
     "empty": "Gian hàng chưa có xe nào",
-    "perDay": "{amount}/ngày",
     "loadingMore": "Đang tải thêm xe…",
     "appendFailed": "Không tải được thêm xe.",
-    "allShown": "Đã hiện hết {count, plural, other {# xe}}"
+    "allShown": "Đã hiện hết {count, plural, other {# xe}}",
+    "title": "Tạo đơn thuê xe cho khách",
+    "subtitle": "Chọn phương tiện còn trống để tiến hành các bước tạo đơn",
+    "branchLabel": "Chi nhánh",
+    "typeLabel": "Loại",
+    "searchLabel": "Tìm kiếm",
+    "timeLabel": "Thời gian nhận/trả xe",
+    "timePlaceholder": "Chọn giờ nhận và trả xe",
+    "timeRequired": "Chọn thời gian nhận/trả xe để xem xe còn trống",
+    "gridLabel": "Danh sách xe",
+    "busy": "Đã có lịch",
+    "busyHint": "{name} đã có lịch trong khung giờ này",
+    "emptyType": "{type, select, car {Gian hàng chưa có ô tô nào} motorbike {Gian hàng chưa có xe máy nào} other {Gian hàng chưa có xe nào}}",
+    "estimateDays": "Tạm tính {days, plural, other {# ngày}} · <amount>{value}</amount>",
+    "estimate": "Tạm tính · <amount>{value}</amount>",
+    "estimateLoading": "Đang tính giá…",
+    "estimateUnavailable": "Xe chưa cấu hình giá, nhập tiền ở bước sau",
+    "pickHint": "Chọn một xe để xem tạm tính",
+    "plateLabel": "Biển số xe",
+    "codeLabel": "Mã xe"
   },
   "customer": {
     "heading": "Khách hàng",
@@ -97,6 +115,21 @@
     "viewBookingFor": "Xem chi tiết đơn thuê của {vehicle}"
   },
   "detail": {
+    "partnerApp": {
+      "statusShort": {
+        "pending_host_approval": "Chờ duyệt",
+        "approved_by_host": "Đã duyệt",
+        "rejected_by_host": "Bạn từ chối",
+        "cancelled_by_customer": "Khách huỷ",
+        "expired": "Quá hạn",
+        "converted_to_booking": "Đã tạo đơn",
+        "awaiting_hold": "Chờ thanh toán",
+        "hold_paid": "Đã thanh toán",
+        "hold_expired": "Hết hạn TT",
+        "slot_taken": "Xe đã có khách",
+        "cancelled_by_host": "Bạn huỷ"
+      }
+    },
     "title": "Chi tiết yêu cầu thuê",
     "openVehicle": "Xem hồ sơ xe",
     "openCustomer": "Xem hồ sơ khách",
@@ -185,6 +218,9 @@
     "wishLegacy": "Yêu cầu cũ - khách chưa nêu nguyện vọng theo mẫu mới"
   },
   "reject": {
+    "partnerApp": {
+      "title": "Từ chối yêu cầu"
+    },
     "title": "Từ chối yêu cầu thuê xe",
     "context": "{customer} · {vehicle}",
     "reasonLabel": "Ghi chú cho khách",
@@ -515,7 +551,8 @@
         "documents": "Giấy tờ chủ xe yêu cầu: {documents}",
         "hostTerms": "Điều khoản thuê của chủ xe",
         "reminder": "Việc xác minh và yêu cầu giấy tờ cụ thể được hướng dẫn theo chính sách hiện hành trước khi nhận xe.",
-        "licenceRequiredToSubmit": "Thêm bằng lái hợp lệ để gửi yêu cầu thuê xe."
+        "licenceRequiredToSubmit": "Thêm bằng lái hợp lệ để gửi yêu cầu thuê xe.",
+        "identity": "Giấy tờ khi nhận xe: {documents} - {verify}"
       },
       "costs": {
         "title": "Chi phí thuê xe",
@@ -644,6 +681,9 @@
     "differentPhone": "Khách để lại số liên hệ khác số đăng ký tài khoản. Số tài khoản {phone} đã xác thực; số liên hệ thì chưa."
   },
   "approvalPreview": {
+    "partnerApp": {
+      "paymentWindow": "Khách hàng có <b>{duration}</b> (đến {time}) để thanh toán giữ chỗ, quá hạn yêu cầu sẽ tự động hủy."
+    },
     "title": "Nếu duyệt ngay",
     "estimate": "Ước tính",
     "noHold": "Chuyến này không thu tiền giữ chỗ online - đơn thuê được tạo ngay khi bạn duyệt, không có mã QR.",
@@ -722,6 +762,35 @@
       "next": {
         "title": "Sau khi tạo đơn",
         "body": "Xe được khoá lịch ngay cho khách. Gian hàng thu tiền thuê và tiền cọc trực tiếp từ khách khi giao xe."
+      },
+      "negotiated": {
+        "toggle": "Giá thoả thuận",
+        "lead": "Giá hệ thống chỉ là gợi ý. Sửa theo số đã thoả thuận với khách, tổng tính lại ngay.",
+        "discount": "Giảm giá",
+        "deliveryFee": "Phí giao xe",
+        "deliveryFeeHint": "Khách trả trực tiếp khi nhận xe.",
+        "extrasTitle": "Phụ phí theo dòng",
+        "extrasHint": "Ví dụ ghế trẻ em, bộ sạc. Mỗi dòng in riêng trên đơn và hợp đồng.",
+        "extraLabel": "Tên khoản",
+        "extraLabelPlaceholder": "Ghế trẻ em",
+        "extraAmount": "Số tiền",
+        "addExtra": "Thêm phụ phí",
+        "removeExtra": "Gỡ phụ phí"
+      },
+      "collateral": {
+        "title": "Cọc & thế chấp",
+        "lead": "Nhập khoản nào thì đơn ghi khoản đó. Không cọc thì để tiền cọc bằng 0 và không thêm tài sản.",
+        "cash": "Tiền cọc",
+        "cashHint": "Khách nộp cho gian hàng khi nhận xe, trả lại khi trả xe.",
+        "assetsTitle": "Tài sản thế chấp",
+        "assetsHint": "Chưa ghi tài sản nào. Bấm \"Thêm tài sản\" nếu khách để lại CCCD, bằng lái, xe máy…",
+        "type": "Loại",
+        "description": "Mô tả",
+        "descriptionPlaceholder": "Số giấy tờ (không bắt buộc)",
+        "descriptionMotorbike": "Biển số, ví dụ 59A1-12345",
+        "descriptionOther": "Món gì, ví dụ laptop Dell",
+        "add": "Thêm tài sản",
+        "remove": "Gỡ tài sản"
       }
     },
     "validation": {
@@ -738,7 +807,13 @@
       "addressMax": "Địa chỉ tối đa {max} ký tự",
       "noteMax": "Ghi chú tối đa {max} ký tự",
       "amountMin": "Số tiền không được âm",
-      "baseAmountRequired": "Xe chưa cấu hình giá - nhập tiền thuê trước khi tạo đơn."
+      "baseAmountRequired": "Xe chưa cấu hình giá - nhập tiền thuê trước khi tạo đơn.",
+      "extraLabelRequired": "Nhập tên khoản phụ phí",
+      "extraLabelMax": "Tên khoản tối đa {max} ký tự",
+      "extraAmountPositive": "Số tiền phải lớn hơn 0",
+      "collateralDescriptionRequired": "Mô tả món tài sản",
+      "collateralDescriptionMax": "Mô tả tối đa {max} ký tự",
+      "discountExceedsBase": "Giảm giá không được lớn hơn tiền thuê."
     },
     "scheduleConflict": "Xe vừa được đặt vào khung giờ này. Bấm “Chỉnh sửa” để chọn khoảng khác.",
     "deliveryNoteLine": "Giao xe tận nơi: {address}",
@@ -773,6 +848,8 @@
     "paymentHeading": "Chi tiết thanh toán",
     "rentalTotal": "Tiền thuê:",
     "customerTotal": "Khách trả:",
+    "deliveryFee": "Phí giao xe tận nơi:",
+    "deliveryFeeFree": "Miễn phí",
     "holdExpected": "Tiền giữ chỗ (dự kiến):",
     "holdAwaiting": "Tiền giữ chỗ (chờ khách trả):",
     "holdPaid": "Đã giữ chỗ:",

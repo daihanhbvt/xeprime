@@ -88,7 +88,7 @@ async function renderScreen(
   }: { isPlanPromotionEnabled?: boolean; track?: RegistrationTrack; permissions?: Permission[] } = {},
 ) {
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(customerUser(tenant, permissions));
-  jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1 });
+  jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1, supportHotline: null });
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

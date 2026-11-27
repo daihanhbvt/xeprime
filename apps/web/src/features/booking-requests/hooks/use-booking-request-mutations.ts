@@ -50,6 +50,8 @@ export function useRejectBookingRequest() {
         queryClient.invalidateQueries({ queryKey: queryKeys.trips.all }),
         // Yêu cầu vừa đóng sang ngăn "Không thành đơn" của màn "Đơn đã kết thúc".
         queryClient.invalidateQueries({ queryKey: queryKeys.bookings.historyAll }),
+        // Lịch vẽ yêu cầu chờ duyệt (25/11/2026) — từ chối xong thẻ "Cần xử lý" phải biến mất.
+        queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all }),
       ]),
   });
 }

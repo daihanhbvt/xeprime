@@ -57,8 +57,8 @@
     "cancel": "Cancel booking",
     "noShow": "Mark as no-show",
     "dialog": {
-      "cancelTitle": "Cancel booking {code}",
-      "noShowTitle": "Mark as no-show - booking {code}",
+      "cancelTitle": "Cancel booking #{code}",
+      "noShowTitle": "Mark as no-show - booking #{code}",
       "cancelLead": "A cancelled booking cannot be reopened. The vehicle is freed immediately, so someone else may take this slot. Any reservation payment the customer made through XePrime is refunded 100% to their Points wallet.",
       "noShowLead": "Marking a no-show closes the booking for good. The vehicle is freed immediately, so someone else may take this slot. Any insurance is refunded to the customer; you receive the whole owner's share of the reservation payment, while the booking fee and the owner service fee go to XePrime.",
       "cancelOk": "Cancel booking",
@@ -191,7 +191,8 @@
     "routeDestination": "→ {address}",
     "searchLabel": "Search drivers",
     "searchPlaceholder": "Name or phone number",
-    "searchEmpty": "No driver matches “{query}”"
+    "searchEmpty": "No driver matches “{query}”",
+    "internal": "In-house driver"
   },
   "deliveryFee": {
     "title": "Delivery fee",
@@ -236,6 +237,7 @@
       "title": "Condition photos",
       "camera": "Take photo",
       "library": "Choose from library",
+      "replace": "Replace photo",
       "remove": "Remove photo",
       "uploading": "Uploading…",
       "removeConfirm": "Remove this photo from the record? Condition photos are evidence - removing means shooting it again.",
@@ -348,7 +350,6 @@
       "odoCurrent": "Mileage on record: {km}.",
       "odoOptional": "Optional - leave it blank and the vehicle's mileage stays as is.",
       "detailsTitle": "Condition, photos & notes",
-      "optional": "Optional",
       "photoCount": "{done}/{total} photos",
       "conditionNormal": "Normal, no signs of damage",
       "photosLabel": "Condition & odometer photos",
@@ -378,7 +379,12 @@
       "collectChanged": "The amount still to collect has changed to {amount}. Check it, then confirm again.",
       "suspicious": "{delta} over {days, plural, one {# day} other {# days}} is unusually low (under {threshold}/day). Please double-check the odometer.",
       "suspiciousConfirm": "The reading is right, confirm anyway",
-      "confirm": "Confirm vehicle returned"
+      "confirm": "Confirm vehicle returned",
+      "encouraged": "Recommended",
+      "photosWarningTitle": "Vehicle condition photos are missing",
+      "photosWarningBody": "Missing photos: {slots}. Photos taken at return are your evidence if damage needs to be checked with the customer - take them all before completing the trip.",
+      "photosWarningAdd": "Add photos",
+      "photosWarningContinue": "Confirm anyway"
     }
   },
   "settlement": {
@@ -512,10 +518,23 @@
     "debtLead": "Outstanding",
     "counterLead": "Still to collect from the customer",
     "depositLead": "Deposit still due",
-    "depositNoticeTitle": "A deposit does not reduce the balance due",
-    "depositNoticeBody": "A deposit is the customer’s property held in trust and returned at the end of the trip - it appears in the cash book but does not reduce what the customer still owes in rent.",
+    "depositNoticeTitle": "The deposit is held on the customer's behalf and returned when the trip ends",
+    "depositNoticeBody": "It is recorded in Income-Expense but does not reduce the rent the customer still owes.",
     "descriptionLabel": "Note (optional)",
     "recordDepositSuccess": "Deposit recorded",
+    "partnerApp": {
+      "title": "Collect payment for booking #{code}",
+      "debtLine": "{label} {amount}",
+      "fillFull": "Collect in full {amount}",
+      "fillHalf": "Collect half {amount}",
+      "referenceLabel": "Transaction code",
+      "referencePlaceholder": "E.g. FT212001...",
+      "descriptionLabel": "Note",
+      "descriptionPlaceholder": "Enter a note",
+      "remainingAfter": "Still owed after this payment: <b>{amount}</b>",
+      "cancel": "Cancel",
+      "submitAmount": "Record {amount}"
+    },
     "validation": {
       "amountRequired": "Enter an amount",
       "amountPositive": "The amount must be greater than 0",
@@ -753,14 +772,16 @@
     "commissionHintBody": "Shops on a plan: 0đ. It funds running the marketplace, customer care, refunds and cancellations, dispute support and insurance.",
     "tax": "Tax withheld",
     "taxSplit": "Tax withheld (VAT {vat}% + PIT {pit}%)",
+    "taxRates": "VAT {vat}% + PIT {pit}%",
+    "taxBreakdown": "VAT {vat}% ({vatAmount}) + PIT {pit}% ({pitAmount})",
     "taxCombined": "Tax withheld ({percent}%)",
     "taxExempt": "Not withheld (company)",
     "taxHint": "Under Decree 117/2025 and Decree 68/2026, XePrime withholds, declares and pays tax on behalf of owners who are individuals or household businesses. The rate depends on the service type (self-drive, long-term, with driver) and applies to the rental, under the tax policy in force for the trip. Companies are not withheld.",
     "taxPolicyLink": "Tax policy",
-    "ownerNet": "Owner income (a)",
-    "payAtPickup": "Paid by the customer directly (b)",
+    "ownerNet": "Owner income (A)",
+    "payAtPickup": "Paid by the customer directly (B)",
     "payAtPickupHint": "The part of the rental the customer hands you at pick-up; it does not pass through XePrime. Excludes the delivery fee.",
-    "walletCredit": "Credited to your wallet (a − b)",
+    "walletCredit": "Credited to your wallet (A − B)",
     "walletCreditHint": "XePrime credits your Points wallet when the trip is completed.",
     "hintLabel": "Explain: {item}"
   },
@@ -777,6 +798,7 @@
     "overdueReturn": "Return overdue by {duration}",
     "pickupToday": "Pickup today · {time}",
     "pickupOverdue": "Pickup overdue · {time}",
+    "pickupOverdueFor": "Pickup overdue: {elapsed}",
     "pickupNeverConfirmed": "Past the return time ({date}) - pickup never confirmed",
     "pickupUpcoming": "Pickup {date}{sep}{time}",
     "returnedOnTime": "Returned on time",
@@ -881,6 +903,14 @@
         "collected": "Collected",
         "debt": "Outstanding"
       },
+      "partnerApp": {
+        "searchPlaceholder": "Code, customer, vehicle,...",
+        "pickup": "Pickup",
+        "place": "Pickup address",
+        "payAtPickup": "Pay at pickup",
+        "dayClock": "{days}d {clock}",
+        "returnOverdueFor": "Return overdue: {elapsed}"
+      },
       "schedule": {
         "period": "Time",
         "placeDelivery": "Deliver to",
@@ -959,6 +989,11 @@
     }
   },
   "detailPage": {
+    "partnerApp": {
+      "titleLoading": "Booking details",
+      "title": "Booking #{code}",
+      "returnBranch": "Return at the branch"
+    },
     "tabs": {
       "prep": "Preparation",
       "trip": "Trip & time",
@@ -989,30 +1024,35 @@
       "morePhotos": "Add photos"
     },
     "prep": {
+      "partnerApp": {
+        "documentsPending": "No licence / ID yet",
+        "photosPending": "Add vehicle photos"
+      },
       "title": "Handover preparation",
       "progress": "{done}/{total} done",
-      "confirm": "Booking & customer details confirmed",
+      "confirm": "Booking & customer confirmed",
       "documents": "Customer documents",
-      "documentsPending": "No driving licence / ID on file to check at handover",
+      "documentsPending": "No licence / ID yet",
       "documentsDone": "Documents checked",
-      "documentsAction": "Add details",
+      "documentsAction": "Add",
       "rent": "Collect rental",
-      "rentPending": "Collect at pickup: <b>{amount}</b>",
+      "rentPending": "Due at pickup: <b>{amount}</b>",
       "rentDone": "Rental fully collected",
-      "deposit": "Collect security deposit",
-      "depositPending": "Deposit for this booking: <b>{amount}</b>",
+      "deposit": "Collect cash deposit",
+      "depositPending": "Booking deposit: <b>{amount}</b>",
       "depositDone": "Deposit received {amount}",
-      "collectAction": "Mark as collected",
+      "depositOver": "Deposit received {received} - over-collected <b>{amount}</b>",
+      "collectAction": "Confirm",
       "contract": "Rental contract",
-      "contractNone": "No contract created for this trip yet",
-      "contractDraft": "Contract created, to be signed at handover",
+      "contractNone": "No contract yet",
+      "contractDraft": "Created, sign at handover",
       "contractSigned": "Contract signed",
       "contractCreate": "Create",
       "contractView": "View",
-      "photos": "Handover details",
-      "photosPending": "Add vehicle photos before handing it over ({count}/{total})",
+      "photos": "Handover photos",
+      "photosPending": "Photos before handover ({count}/{total})",
       "photosDone": "Pre-handover photos complete",
-      "photosAction": "Upload photos",
+      "photosAction": "Upload",
       "driver": "Assign a driver",
       "driverPending": "No driver has accepted this trip yet",
       "driverDone": "A driver is assigned to this trip",
@@ -1020,7 +1060,23 @@
       "markDone": "Mark “{item}” as done",
       "unmark": "Unmark “{item}”",
       "manualBy": "Marked manually · {name} · {time}",
-      "manualByUnknown": "Marked manually · {time}"
+      "manualByUnknown": "Marked manually · {time}",
+      "asset": "Take asset collateral",
+      "assetPendingOne": "Customer hands over: {assets}",
+      "assetPendingMany": "Customer hands over one of: {assets}",
+      "assetPendingAny": "Customer hands over one collateral item",
+      "assetDone": "{count, plural, one {# item} other {# items}} received",
+      "either": "Take deposit (cash or asset)",
+      "eitherPending": "Customer picks ONE: cash deposit <b>{amount}</b> or {assets}",
+      "eitherAssetsOne": "{assets}",
+      "eitherAssetsMany": "one of: {assets}",
+      "eitherAssetsAny": "one collateral item",
+      "eitherDoneCash": "Cash deposit {amount} received",
+      "eitherDoneCashOver": "Cash deposit {received} received - over-collected <b>{amount}</b>",
+      "eitherDoneAsset": "Asset collateral received",
+      "assetAction": "Add item",
+      "collateralNone": "No collateral required for this vehicle.",
+      "editAction": "Edit"
     },
     "trip": {
       "title": "Trip & rental period",
@@ -1051,6 +1107,9 @@
       "title": "Trip earnings"
     },
     "side": {
+      "partnerApp": {
+        "due": "Remaining (to collect)"
+      },
       "schedule": "Vehicle schedule",
       "serviceType": "Service",
       "pickup": "Pickup",
@@ -1091,7 +1150,63 @@
       "dueAfterPickup": "Collect in person before you take the vehicle back.",
       "dueSettled": "The customer has paid the rental in full.",
       "depositNote": "Excludes the {amount} security deposit - held and returned to the customer when you take the vehicle back.",
-      "returningCustomer": "Returning customer"
+      "returningCustomer": "Returning customer",
+      "collateral": {
+        "title": "Deposit & collateral",
+        "heldCount": "Holding {held}/{total}",
+        "cash": "Cash deposit",
+        "noCash": "No cash deposit",
+        "cashNotReceived": "Not collected",
+        "cashReceived": "Fully received",
+        "cashPartial": "Received {received}, {amount} still due",
+        "cashOver": "Received {received} - over-collected {amount}",
+        "takeDeposit": "Mark as collected",
+        "empty": "No collateral recorded yet.",
+        "returnedTag": "Returned",
+        "returnedBy": "Returned by {name} at {time}",
+        "returnedAt": "Returned at {time}",
+        "markReturned": "Mark returned",
+        "returnedToast": "Item marked as returned to the customer",
+        "remove": "Remove",
+        "removeConfirm": "Remove this item recorded by mistake?",
+        "add": "Add collateral",
+        "added": "Collateral recorded",
+        "type": "Item type",
+        "description": "Item description",
+        "descriptionPlaceholder": "Document number (optional)",
+        "descriptionMotorbike": "Plate, e.g. 59A1-12345",
+        "descriptionOther": "What it is, e.g. Dell laptop",
+        "descriptionRequired": "Describe the item before adding it",
+        "edit": "Edit item",
+        "updated": "Collateral item updated",
+        "editCash": "Edit cash deposit",
+        "cashDialog": {
+          "title": "Edit cash deposit",
+          "current": "On this booking",
+          "none": "No cash deposit",
+          "field": "Cash deposit",
+          "hint": "Enter 0 if this booking takes no cash deposit.",
+          "requiredLabel": "Deposit required",
+          "collected": "Collected",
+          "collectedHint": "Change this when you over-collected or recorded the wrong amount. An adjustment is added (extra collection or return to the customer); earlier entries are never deleted.",
+          "collectedRequired": "Enter the amount collected (0 if none)",
+          "collectedLocked": "Collected {amount} - the deposit refund is already recorded, so it cannot be changed here.",
+          "summaryOver": "Over-collected {amount}",
+          "summaryShort": "{amount} still due",
+          "summaryEven": "Fully collected",
+          "summaryNone": "Not collected",
+          "adjustUp": "An extra deposit collection of {amount} will be recorded",
+          "adjustDown": "A return of {amount} to the customer will be recorded",
+          "requiredSavedAdjustFailed": "Deposit required saved, but the collected amount was not changed: {error}",
+          "invalid": "Enter a valid amount",
+          "negative": "The deposit cannot be negative",
+          "required": "Enter the deposit (0 for none)",
+          "saved": "Cash deposit updated"
+        },
+        "acceptedOne": "Policy accepts asset collateral: {assets}",
+        "acceptedMany": "Policy accepts asset collateral - customer hands over one of: {assets}",
+        "undoReturn": "Undo return"
+      }
     },
     "stepAt": {
       "confirmed": "Confirmed at {time}",
@@ -1118,7 +1233,8 @@
       "confirmBody": "The customer’s return report will be withdrawn and XePrime will open a dispute to verify with both sides. The trip’s money stays on hold until the case is closed.",
       "confirmOk": "Report not returned",
       "rejected": "Reported as not returned - XePrime will get in touch to verify"
-    }
+    },
+    "breadcrumb": "Booking details"
   },
   "documentsDialog": {
     "title": "{name}'s documents",
@@ -1137,6 +1253,24 @@
     "noteMax": "At most 500 characters"
   },
   "history": {
+    "partnerApp": {
+      "searchPlaceholder": "Code, customer,...",
+      "groupLabel": "Group",
+      "groupAll": "All groups",
+      "outcomeShort": {
+        "completed": "Completed",
+        "cancelled_by_customer": "Customer cancelled",
+        "cancelled_by_host": "You cancelled",
+        "cancelled_other": "Cancelled",
+        "no_show": "No-show",
+        "request_rejected": "You declined",
+        "request_expired": "Expired",
+        "request_withdrawn": "Withdrawn",
+        "request_hold_expired": "Payment expired",
+        "request_slot_taken": "Slot taken",
+        "request_cancelled_by_host": "You cancelled"
+      }
+    },
     "title": "Ended rentals",
     "subtitle": "Rentals that were completed or cancelled, and requests that never became a rental.",
     "tabsLabel": "Filter by outcome",
@@ -1188,5 +1322,93 @@
     "noResultsTitle": "No trips match these filters",
     "noResultsBody": "Try another keyword or clear some filters.",
     "totalLabel": "{count, plural, one {# trip} other {# trips}}"
+  },
+  "contractDocument": {
+    "title": "Vehicle rental contract",
+    "number": "No.: {value}",
+    "createdAt": "Date: {date}",
+    "shop": {
+      "taxCode": "Tax ID: {value}",
+      "businessLicense": "Business licence: {value}"
+    },
+    "parties": {
+      "lessor": "Lessor (Party A)",
+      "lessee": "Lessee (Party B)",
+      "phone": "Phone: {value}",
+      "bankAccount": "Account: {value}"
+    },
+    "vehicle": {
+      "title": "Vehicle",
+      "name": "Vehicle",
+      "plate": "Plate",
+      "type": "Vehicle type",
+      "service": "Service",
+      "brandModel": "Make / model",
+      "year": "Year",
+      "color": "Colour",
+      "seats": "Seats",
+      "seatsValue": "{count, plural, one {# seat} other {# seats}}"
+    },
+    "rental": {
+      "title": "Rental period",
+      "pickup": "Pickup",
+      "return": "Return",
+      "term": "Rental term",
+      "days": "Days",
+      "daysValue": "{count, plural, one {# day} other {# days}}",
+      "bookingCode": "Booking code",
+      "route": "Route",
+      "pickupAddress": "Pickup address",
+      "destination": "Destination"
+    },
+    "pricing": {
+      "title": "Rental charges",
+      "base": "Rental",
+      "delivery": "Delivery fee",
+      "discount": "Discount",
+      "total": "Total",
+      "deposit": "Deposit",
+      "paid": "Paid",
+      "remaining": "Remaining"
+    },
+    "collateral": {
+      "title": "Collateral",
+      "note": "Party A holds the items above during the rental and returns them when Party B returns the vehicle."
+    },
+    "terms": {
+      "title": "Terms",
+      "handover": "Party B collects and returns the vehicle at the agreed times and places. Possession and use of the vehicle pass to Party B from handover until Party A takes the vehicle back, as recorded in the handover records.",
+      "liability": "While in possession of the vehicle, Party B is responsible for traffic violations (including camera fines notified after return), damage, loss and harm caused by the vehicle, except what insurance pays.",
+      "deposit": "The deposit and security are returned as soon as the vehicle is returned, after deducting amounts both parties have confirmed.",
+      "idDocs": "Party A only checks, and does not keep, the original ID card, citizen ID card or passport of Party B.",
+      "platform": "XePrime is the platform recording the transaction and is not a party to this contract.",
+      "general": "For anything not stated in this contract, both parties apply the General Terms of the Rental Contract published at {url}."
+    },
+    "note": "Notes",
+    "signHint": "(Sign and print full name)"
+  },
+  "source": {
+    "label": "Booking source",
+    "placeholder": "Select a source",
+    "nameLabel": "Source name",
+    "namePlaceholder": "Example: hotel partner",
+    "platformLabel": "Platform name",
+    "platformPlaceholder": "Enter the platform name",
+    "validation": {
+      "required": "Please select a booking source",
+      "nameRequired": "Please enter the source name",
+      "nameMax": "The source name can be at most {max} characters"
+    },
+    "filter": {
+      "label": "Booking source",
+      "all": "All sources",
+      "direct": "Own channels (outside XePrime)"
+    },
+    "edit": {
+      "action": "Change source",
+      "title": "Change source of booking {code}",
+      "save": "Save source",
+      "success": "Booking source updated"
+    }
   }
 }

@@ -38,10 +38,11 @@ export class AccountBankAccountsController {
 
   @Post()
   @ApiOperation({
-    summary: 'Thêm hoặc ĐỔI tài khoản nhận tiền',
+    summary: 'Thêm tài khoản nhận tiền',
     description:
-      'Mỗi chủ một tài khoản: đã có thì tài khoản mới THAY cái cũ (cái cũ lưu trữ, lệnh rút đang ' +
-      'chờ giữ đích đã chụp). Khai lại đúng tài khoản đang dùng thì không tạo dòng mới.',
+      'Khai LẦN ĐẦU. Đã có tài khoản thì KHOÁ (biên bản họp 19/11/2026): khai tài khoản khác trả ' +
+      '409 BANK_ACCOUNT_LOCKED - đổi phải gửi yêu cầu (change-requests) để XePrime gọi xác minh. ' +
+      'Khai lại đúng tài khoản đang dùng (đổi tên gợi nhớ) vẫn được.',
   })
   @ApiOkResponse({ type: BankAccountDto })
   create(
@@ -68,13 +69,12 @@ export class AccountBankAccountsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Bỏ dùng tài khoản nhận tiền',
+    summary: 'Bỏ dùng tài khoản nhận tiền - ĐÃ KHOÁ',
     description:
-      'LƯU TRỮ chứ không xoá: lệnh chuyển tiền cũ còn trỏ về nó. Sau đó chưa có tài khoản nhận ' +
-      'tiền cho tới khi khai cái mới.',
+      'Luôn trả 409 BANK_ACCOUNT_LOCKED (biên bản họp 19/11/2026) - đổi tài khoản phải qua yêu cầu có xác minh.',
   })
   @ApiNoContentResponse()
   archive(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
-    return this.accounts.archive({ type: WALLET_OWNER_TYPE.USER, userId: user.id }, id, user.id);
+    return this.accounts.archive({ type: WALLET_OWNER_TYPE.USER, userId: user.id }, id);
   }
 }

@@ -335,8 +335,8 @@
     }
   },
   "shopPlan": {
-    "title": "Gói dịch vụ",
-    "hint": "Thông tin gói dịch vụ và mức sử dụng xe của gian hàng.",
+    "title": "Gói & hạn mức",
+    "hint": "Quản lý gói dịch vụ và hạn mức gian hàng",
     "change": "Nâng cấp / Đổi gói",
     "buy": "Mua gói",
     "upgradeNow": "Nâng cấp ngay",

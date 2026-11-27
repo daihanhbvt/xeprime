@@ -97,7 +97,7 @@ export function VehicleSourceScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage icon="lock-closed-outline" title={title} description={t('noPermission')} />
         </Screen>
       </>
@@ -108,7 +108,7 @@ export function VehicleSourceScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']}>
           <SkeletonText lines={10} />
         </Screen>
       </>
@@ -119,7 +119,7 @@ export function VehicleSourceScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={source.error ?? vehicle.error}
             title={t('loadError')}
@@ -262,19 +262,33 @@ function SourceForm({
         onBack={onBack}
       />
       <Screen
-        scrollReveal
+        scrollReveal={false}
+        motion={false}
         edges={['left', 'right', 'bottom']}
         {...refresh}
         footer={
           canEdit ? (
-            <Button
-              variant="gradient"
-              label={tActions('saveChanges')}
-              icon="checkmark-outline"
-              loading={save.isPending}
-              disabled={!isDirty}
-              onPress={submit}
-            />
+            /* Figma "Footer cố định": Hoàn tác (viền) · Lưu thay đổi - như mọi tab sửa xe. */
+            <XStack gap={space.sm}>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+                <Button
+                  label={tEditTab('revert')}
+                  variant="outline"
+                  disabled={!isDirty || save.isPending}
+                  onPress={() => reset(initialValues)}
+                />
+              </YStack>
+              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+                <Button
+                  variant="gradient"
+                  label={tActions('saveChanges')}
+                  lineIcon="tick"
+                  loading={save.isPending}
+                  disabled={!isDirty}
+                  onPress={submit}
+                />
+              </YStack>
+            </XStack>
           ) : undefined
         }
       >
@@ -427,8 +441,8 @@ function SourceForm({
                 name="notes"
                 label={t('contract.notes')}
                 placeholder={t('contract.notesPlaceholder')}
-                multiline
-                rows={4}
+                multiline scrollable
+                rows={3}
                 maxLength={4000}
                 editable={canEdit}
               />

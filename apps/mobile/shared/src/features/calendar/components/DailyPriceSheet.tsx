@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQuery } from '@tanstack/react-query';
 import * as yup from 'yup';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { queryKeys } from '@xeprime/api-client';
 import { DAY_PARAM_FORMAT, dayjs, nowInAppTz, startOfAppDay } from '@xeprime/domain';
@@ -18,7 +18,8 @@ import { MoneyField } from '@/components/ui/MoneyField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontSize, space } from '@/theme/tokens';
 import { calendarApi } from '../api';
 import { useDeleteDailyPrices, useSaveDailyPrices } from '../hooks/use-calendar-mutations';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -37,6 +38,8 @@ export interface DailyPriceSheetState {
   /** Xe có cho thuê giờ không — quyết định ô "giá giờ" có hiện hay không. */
   hourlyPrice: string | null;
   date: string;
+  /** Ngày CUỐI (tính cả) khi chọn nhiều ngày ở ô lịch — web `DailyPriceDialogState.endDate`. */
+  endDate?: string;
 }
 
 interface PriceValues {
@@ -64,7 +67,13 @@ export function DailyPriceSheet({
 }) {
   // Đóng thì không dựng form — bộ khởi tạo của nó đọc `state.date`; xem `VehicleBlockSheet`.
   if (state === null) return null;
-  return <PriceForm key={`${state.vehicleId}-${state.date}`} state={state} onClose={onClose} />;
+  return (
+    <PriceForm
+      key={`${state.vehicleId}-${state.date}-${state.endDate ?? state.date}`}
+      state={state}
+      onClose={onClose}
+    />
+  );
 }
 
 function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: () => void }) {
@@ -75,7 +84,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
 
   const anchor = state.date;
   const [from, setFrom] = useState(anchor);
-  const [to, setTo] = useState(anchor);
+  const [to, setTo] = useState(state.endDate ?? anchor);
   const [picking, setPicking] = useState<'from' | 'to' | null>(null);
   const [confirmingRestore, setConfirmingRestore] = useState(false);
 
@@ -137,6 +146,10 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
      */
     resetOptions: { keepDirtyValues: true },
   });
+  const colors = useColors();
+  const dailyPrice = useWatch({ control, name: 'dailyPrice' });
+  const base = state.weekdayPrice ? Number(state.weekdayPrice) : null;
+  const delta = base && base > 0 && dailyPrice != null ? dailyPrice - base : null;
 
   /**
    * "Ít nhất một giá" kiểm ở đây chứ không trong schema.
@@ -226,7 +239,6 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
             {hasOverrides ? (
               <Button
                 label={t('dailyPrice.restore')}
-                icon="refresh-outline"
                 variant="danger"
                 onPress={() => setConfirmingRestore(true)}
                 loading={remove.isPending}
@@ -290,13 +302,26 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
             label={t('dailyPrice.daily')}
             hint={t('dailyPrice.dailyTooltip')}
           />
+          {/*
+            Chênh so với giá ngày thường (web 25/11/2026, "+200.000 đ (+25%)") — chỉ là phép SO SÁNH
+            hiển thị, không vào dòng tiền nào.
+          */}
+          {delta != null && delta !== 0 && base ? (
+            <Text col={delta > 0 ? colors.success : colors.danger} fos={fontSize.bodySm}>
+              {t('dailyPrice.delta', {
+                sign: delta > 0 ? '+' : '-',
+                amount: fmt.money(String(Math.abs(delta))),
+                percent: Math.round((Math.abs(delta) / base) * 100),
+              })}
+            </Text>
+          ) : null}
 
           {/* Ô giá GIỜ chỉ hiện khi xe có cho thuê giờ — y như web. */}
           {state.hourlyPrice != null ? (
             <MoneyField control={control} name="hourlyPrice" label={t('dailyPrice.hourly')} />
           ) : null}
 
-          <TextField
+          <TextField multiline scrollable rows={3}
             control={control}
             name="note"
             label={t('dailyPrice.note')}

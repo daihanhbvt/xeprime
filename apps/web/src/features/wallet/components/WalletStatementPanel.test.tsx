@@ -183,7 +183,8 @@ describe('WalletStatementPanel', () => {
     });
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
 
-    expect(screen.getByText('Chưa có đánh giá')).toBeTruthy();
+    // Nhãn đổi 26/11/2026 (đồng bộ Figma mobile): luôn "Đánh giá (n lượt)"; con số vẫn là dấu gạch.
+    expect(screen.getByText('Đánh giá (0 lượt)')).toBeTruthy();
     expect(screen.queryByText('0%')).toBeNull();
     expect(screen.getByText('Tháng này chưa có chuyến nào hoàn thành')).toBeTruthy();
   });
@@ -262,14 +263,14 @@ describe('WalletStatementPanel', () => {
       <WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />,
     );
 
-    expect(screen.queryByText('Số tiền cộng ví (a − b)')).toBeNull();
+    expect(screen.queryByText('Số tiền cộng ví (A − B)')).toBeNull();
     const toggle = container.querySelector('button.ant-table-row-expand-icon-collapsed');
     expect(toggle).toBeTruthy();
     fireEvent.click(toggle!);
 
-    expect(screen.getByText('Thu nhập chủ xe (a)')).toBeTruthy();
-    expect(screen.getByText('Khách thanh toán trực tiếp (b)')).toBeTruthy();
-    expect(screen.getByText('Số tiền cộng ví (a − b)')).toBeTruthy();
+    expect(screen.getByText('Thu nhập chủ xe (A)')).toBeTruthy();
+    expect(screen.getByText('Khách thanh toán trực tiếp (B)')).toBeTruthy();
+    expect(screen.getByText('Số tiền cộng ví (A − B)')).toBeTruthy();
     expect(screen.getAllByText(money('62.400')).length).toBeGreaterThan(0);
     expect(container.querySelector('[aria-label="Bảng cộng ví chuyến XP3948"]')).toBeTruthy();
   });

@@ -11,6 +11,7 @@ import {
   INSURANCE_PREMIUM_BASIS,
   INSURANCE_PREMIUM_SYNC_STATUS,
   INSURANCE_PRODUCT_KIND,
+  INSURANCE_PRODUCT_LIMITS,
   insurancePremiumTiersProblem,
   insurancePremiumYearBandsProblem,
   readInsurancePremiumTiers,
@@ -23,6 +24,7 @@ import {
   type InsuranceProvider,
   type VehicleType,
 } from '@xeprime/types';
+import { insuranceCoverageItems, joinInsuranceCoverageItems } from '@xeprime/domain';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InsuranceOfferService } from './insurance-offer.service';
@@ -105,6 +107,8 @@ export class InsuranceProductsService {
       nameEn: r.nameEn,
       coverageVi: r.coverageVi,
       coverageEn: r.coverageEn,
+      summaryVi: r.summaryVi,
+      summaryEn: r.summaryEn,
       deductibleAmount: money(isMoto ? r.deductibleMotorbike : r.deductibleCar),
       maxPayoutAmount: money(isMoto ? r.maxPayoutMotorbike : r.maxPayoutCar),
       maxPayoutNoteVi: r.maxPayoutNoteVi,
@@ -241,6 +245,8 @@ export class InsuranceProductsService {
           'nameEn',
           'coverageVi',
           'coverageEn',
+          'summaryVi',
+          'summaryEn',
           'maxPayoutNoteVi',
           'maxPayoutNoteEn',
           'certificateUrlTemplate',
@@ -255,6 +261,14 @@ export class InsuranceProductsService {
       // Ghi chú rỗng là "không có ghi chú", không phải một chuỗi rỗng hiện cho khách.
       if (data.maxPayoutNoteVi === '') data.maxPayoutNoteVi = null;
       if (data.maxPayoutNoteEn === '') data.maxPayoutNoteEn = null;
+      // Mô tả ngắn rỗng = web ghép từ các mục phạm vi, không phải một dòng trống hiện cho khách.
+      if (typeof data.summaryVi === 'string') data.summaryVi = data.summaryVi.trim() || null;
+      if (typeof data.summaryEn === 'string') data.summaryEn = data.summaryEn.trim() || null;
+      // Phạm vi bảo vệ lưu dạng chuẩn: mỗi dòng một mục, không dòng trống.
+      if (dto.coverageVi !== undefined)
+        data.coverageVi = normalizeCoverage(dto.coverageVi, 'coverageVi');
+      if (dto.coverageEn !== undefined)
+        data.coverageEn = normalizeCoverage(dto.coverageEn, 'coverageEn');
 
       const after = await tx.insuranceProduct.update({ where: { id }, data });
       await this.audit.record(
@@ -416,6 +430,23 @@ function invalidProduct(message: string, field?: string): BadRequestException {
   });
 }
 
+/**
+ * Phạm vi bảo vệ - mỗi dòng một mục (`insuranceCoverageItems`, cùng phép tách web/app dùng). Trần số
+ * mục và độ dài một mục kiểm ở đây vì DTO chỉ thấy cả chuỗi.
+ */
+function normalizeCoverage(value: string, field: 'coverageVi' | 'coverageEn'): string {
+  const items = insuranceCoverageItems(value);
+  const { coverageItems, coverageItem } = INSURANCE_PRODUCT_LIMITS;
+  if (items.length === 0) throw invalidProduct('Phạm vi bảo vệ cần ít nhất một mục', field);
+  if (items.length > coverageItems.max) {
+    throw invalidProduct(`Phạm vi bảo vệ tối đa ${coverageItems.max} mục`, field);
+  }
+  if (items.some((item) => item.length > coverageItem.max)) {
+    throw invalidProduct(`Mỗi mục phạm vi bảo vệ tối đa ${coverageItem.max} ký tự`, field);
+  }
+  return joinInsuranceCoverageItems(items);
+}
+
 function money(value: Prisma.Decimal | null): string | null {
   return value === null ? null : value.toFixed(0);
 }
@@ -430,6 +461,8 @@ function toAdminDto(r: ProductRow): InsuranceProductDto {
     nameEn: r.nameEn,
     coverageVi: r.coverageVi,
     coverageEn: r.coverageEn,
+    summaryVi: r.summaryVi,
+    summaryEn: r.summaryEn,
     deductibleCar: money(r.deductibleCar),
     deductibleMotorbike: money(r.deductibleMotorbike),
     maxPayoutCar: money(r.maxPayoutCar),

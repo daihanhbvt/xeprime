@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
+import type { ScrollView } from 'react-native';
 import { DataRow } from '@/components/ui/DataRow';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
-import { Ionicons } from '@/components/icons/Ionicons';
 import { VehicleThumb } from '@/components/ui/VehicleThumb';
 import { useQueryClient } from '@tanstack/react-query';
 import { Text, XStack, YStack } from 'tamagui';
@@ -19,7 +19,10 @@ import {
   SURCHARGE_CATEGORY,
   SURCHARGE_CATEGORY_LABEL,
   SURCHARGE_CATEGORY_VALUES,
+  HANDOVER_PHOTO_SLOT_LABEL,
+  handoverExteriorSlotsFor,
   handoverPhotoSlotsFor,
+  isEarlyReturn,
   isSingleEntrySurchargeCategory,
   surchargeCategoryBlock,
   type HandoverCondition,
@@ -31,6 +34,7 @@ import {
   appWallClockToIso,
   isPositiveMoney,
   isZeroMoney,
+  LIST_SEPARATOR,
   nowInAppTz,
   toAppTz,
   type Dayjs,
@@ -42,6 +46,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { CheckMark } from '@/components/ui/CheckMark';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { IconButton } from '@/components/ui/IconButton';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { MomentPickerSheet } from '@/components/ui/MomentPickerSheet';
@@ -66,7 +71,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type {
   ConfirmHandoverInput,
   Handover,
@@ -160,7 +165,12 @@ export function ReturnHandoverForm({
   const [notes, setNotes] = useState(handover?.notes ?? '');
   const [rows, setRows] = useState<SurchargeRow[]>([]);
   const [rowsInvalid, setRowsInvalid] = useState(false);
-  const [expandedChoice, setExpandedChoice] = useState<boolean | null>(null);
+  /** Popup "chưa đủ ảnh" đang mở · các góc vừa bị cảnh báo (viền đỏ trên lưới ảnh) — web 25/11. */
+  const [photoWarningOpen, setPhotoWarningOpen] = useState(false);
+  const [flaggedSlots, setFlaggedSlots] = useState<ReadonlySet<string> | undefined>(undefined);
+  const scrollRef = useRef<ScrollView | null>(null);
+  /** Toạ độ khối "Tình trạng, ảnh" trong nội dung cuộn — "Thêm ảnh" cuộn tới đó. */
+  const detailsY = useRef(0);
   const [collect, setCollect] = useState(true);
   const [method, setMethod] = useState<PaymentMethod>(PAYMENT_METHOD.CASH);
   const [error, setError] = useState<string | null>(null);
@@ -252,18 +262,14 @@ export function ReturnHandoverForm({
     !hasCategory(SURCHARGE_CATEGORY.EXCESS_MILEAGE)
       ? mileage
       : null;
-  const expanded =
-    expandedChoice ?? Boolean(overtimeSuggestion || mileageSuggestion || rows.length > 0);
 
   function addRow(row: Omit<SurchargeRow, 'key'>) {
     rowSeq.current += 1;
     const key = rowSeq.current;
     setRows((current) => [...current, { ...row, key }]);
     setRowsInvalid(false);
-    setExpandedChoice(true);
   }
   function pickTime(next: Dayjs) {
-    setExpandedChoice((choice) => choice ?? expanded);
     setPickedAt(next);
   }
   function addEmptyRow() {
@@ -285,7 +291,21 @@ export function ReturnHandoverForm({
     scheduled.isValid() && scheduled.isBefore(openedAt) && !occurredAt.isSame(scheduled, 'minute')
       ? scheduled
       : null;
-  const timeliness = late ? t('late', { duration: fmt.roughDuration(lateMinutes) }) : t('onTime');
+  /*
+   * Trả SỚM (ADR 0105, web `ConfirmReturnDialog`): đo bằng lúc MỞ màn - mốc bấm xác nhận server dùng -
+   * không bằng giờ trả thực tế ở ô dưới (chủ xe được lùi ô đó). Cùng ngưỡng với "Tôi chưa trả xe".
+   */
+  const earlyMinutes =
+    scheduled.isValid() && isEarlyReturn(scheduled.toDate(), openedAt.toDate())
+      ? scheduled.diff(openedAt, 'minute')
+      : 0;
+  const earlyDuration = earlyMinutes > 0 ? fmt.roughDuration(earlyMinutes) : null;
+  const offSchedule = late || earlyDuration !== null;
+  const timeliness = late
+    ? t('late', { duration: fmt.roughDuration(lateMinutes) })
+    : earlyDuration
+      ? t('early', { duration: earlyDuration })
+      : t('onTime');
   const lateDetail =
     lateMinutes < 24 * 60 ? fmt.minutesDuration(lateMinutes) : fmt.roughDuration(lateMinutes);
 
@@ -293,6 +313,16 @@ export function ReturnHandoverForm({
   const photosDone = (handover?.photos ?? []).filter((photo) =>
     (slots as readonly string[]).includes(photo.slot),
   ).length;
+  /*
+   * Góc NGOẠI THẤT còn trống (ô tô: trước · sau · trái · phải; xe máy: trước · sau) — Odo không
+   * tính. Thiếu thì bấm xác nhận hiện popup CẢNH BÁO, chủ xe vẫn đi tiếp được (web
+   * `ConfirmReturnDialog`, chốt 25/11/2026): ảnh vẫn tuỳ chọn, popup chỉ để không bỏ quên bằng chứng.
+   */
+  const filledSlots = new Set((handover?.photos ?? []).map((photo) => photo.slot));
+  const missingExterior = handoverExteriorSlotsFor(context.vehicleType).filter(
+    (slot) => !filledSlots.has(slot),
+  );
+  const isAttention = condition === HANDOVER_CONDITION.ATTENTION;
 
   const pickupKm = context.pickupOdometerKm ?? null;
   const odoBelow = pickupKm != null && odometerKm != null && odometerKm < pickupKm;
@@ -320,7 +350,6 @@ export function ReturnHandoverForm({
     }
     if (rows.some((row) => !isPositiveMoney(row.amount))) {
       setRowsInvalid(true);
-      setExpandedChoice(true);
       return;
     }
     setError(null);
@@ -331,7 +360,8 @@ export function ReturnHandoverForm({
       occurredAt: appWallClockToIso(occurredAt),
       ...(odometerKm != null ? { odometerKm } : draftOdometer != null ? { odometerKm: null } : {}),
       ...(condition ? { condition } : {}),
-      ...(notes.trim() ? { notes: notes.trim() } : {}),
+      // Ô ghi chú chỉ hiện khi "Có điểm cần lưu ý" — đổi về "Bình thường" thì chữ đã gõ không đi theo.
+      ...(isAttention && notes.trim() ? { notes: notes.trim() } : {}),
       ...(handover?.rowVersion ? { expectedRowVersion: handover.rowVersion } : {}),
       ...(acknowledgeSuspicious ? { acknowledgeSuspicious: true } : {}),
       ...(canRecord && drafts.length > 0 ? { surcharges: drafts } : {}),
@@ -401,6 +431,7 @@ export function ReturnHandoverForm({
         edges={['left', 'right', 'bottom']}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        scrollRef={scrollRef}
         // Nút xác nhận DÍNH ĐÁY như thanh CTA của app khách - form dài, không bắt cuộn xuống cuối mới bấm được.
         {...(canConfirm
           ? {
@@ -413,7 +444,10 @@ export function ReturnHandoverForm({
                       size="lg"
                       loading={confirm.isPending}
                       disabled={waitingForMoney}
-                      onPress={() => submit()}
+                      onPress={() => {
+                        if (missingExterior.length > 0) setPhotoWarningOpen(true);
+                        else submit();
+                      }}
                     />
                   }
                 />
@@ -445,15 +479,21 @@ export function ReturnHandoverForm({
                 py={2}
                 br={radius.pill}
                 bw={1}
-                bc={late ? colors.danger : colors.success}
-                bg={late ? colors.dangerSurface : colors.successSurface}
+                bc={offSchedule ? colors.danger : colors.success}
+                bg={offSchedule ? colors.dangerSurface : colors.successSurface}
               >
-                <Text col={late ? colors.danger : colors.success} fos={fontSize.label} fow={fontWeight.medium}>
+                <Text col={offSchedule ? colors.danger : colors.success} fos={fontSize.label} fow={fontWeight.medium}>
                   {timeliness}
                 </Text>
               </XStack>
             </XStack>
           </Card>
+
+          {earlyDuration ? (
+            <Callout tone="warning" title={t('earlyTitle', { duration: earlyDuration })}>
+              {t('earlyBody')}
+            </Callout>
+          ) : null}
 
           <Card>
             <YStack gap={space.md}>
@@ -514,26 +554,18 @@ export function ReturnHandoverForm({
             </YStack>
           </Card>
 
-          {/* Tình trạng, ảnh & ghi chú — THU GỌN sẵn; không bắt buộc. */}
+          {/*
+            Tình trạng, ảnh & ghi chú — LUÔN mở (web 25/11/2026, thay khối thu gọn): mục này để
+            KHUYẾN KHÍCH chủ xe đánh giá xe và chụp ảnh lúc nhận lại, gập sẵn là giấu nó đi.
+          */}
+          <YStack onLayout={(event) => (detailsY.current = event.nativeEvent.layout.y)}>
           <Card>
             <YStack gap={space.md}>
-              <XStack
-                ai="center"
-                gap={space.xs}
-                onPress={() => setExpandedChoice(!expanded)}
-                accessibilityRole="button"
-                accessibilityState={{ expanded }}
-                accessibilityLabel={t('detailsTitle')}
-              >
-                <Ionicons
-                  name={expanded ? 'chevron-down' : 'chevron-forward'}
-                  size={iconSize.sm}
-                  color={colors.text}
-                />
+              <XStack ai="center" gap={space.xs} accessibilityRole="header">
                 <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
                   {t('detailsTitle')}{' '}
                   <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.regular}>
-                    {t('optional')}
+                    {t('encouraged')}
                   </Text>
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.label}>
@@ -541,8 +573,7 @@ export function ReturnHandoverForm({
                 </Text>
               </XStack>
 
-              {/* Giữ trong cây (ẩn bằng display) để ảnh đang tải dở không mất khi thu gọn. */}
-              <YStack gap={space.md} display={expanded ? 'flex' : 'none'}>
+              <YStack gap={space.md}>
                 <YStack gap={space.xs}>
                   {sectionTitle(tHandover('condition.label'))}
                   <RadioOption
@@ -575,6 +606,7 @@ export function ReturnHandoverForm({
                     type={HANDOVER_TYPE.RETURN}
                     vehicleType={context.vehicleType}
                     handover={handover}
+                    highlightSlots={flaggedSlots}
                     {...(canManagePhotos
                       ? {
                           ensureHandover: async () => {
@@ -586,15 +618,18 @@ export function ReturnHandoverForm({
                   />
                 </YStack>
 
-                <TextControl
-                  label={tHandover('notes.label')}
-                  value={notes}
-                  onChangeText={setNotes}
-                  placeholder={t('notesPlaceholder')}
-                  multiline
-                  rows={3}
-                  maxLength={NOTE_MAX}
-                />
+                {/* Ghi chú chỉ cần khi xe CÓ điểm cần lưu ý — xe bình thường thì không có gì để ghi. */}
+                {isAttention ? (
+                  <TextControl
+                    label={tHandover('notes.label')}
+                    value={notes}
+                    onChangeText={setNotes}
+                    placeholder={t('notesPlaceholder')}
+                    multiline
+                    rows={3}
+                    maxLength={NOTE_MAX}
+                  />
+                ) : null}
 
                 {canRecord ? (
                   <YStack gap={space.sm}>
@@ -715,6 +750,7 @@ export function ReturnHandoverForm({
               </YStack>
             </YStack>
           </Card>
+          </YStack>
 
           {/* Khối tiền — số của server; ô "Đã thu" ghi phiếu thu cùng lượt xác nhận. */}
           {settled ? (
@@ -825,6 +861,31 @@ export function ReturnHandoverForm({
           title={t('timeLabel')}
         />
       ) : null}
+
+      {/* Popup CẢNH BÁO thiếu ảnh ngoại thất — chỉ nhắc, "Vẫn xác nhận" đi tiếp như thường. */}
+      <ConfirmSheet
+        open={photoWarningOpen}
+        title={t('photosWarningTitle')}
+        message={t('photosWarningBody', {
+          slots: missingExterior
+            .map((slot) => domainLabel('handoverPhotoSlot', slot, HANDOVER_PHOTO_SLOT_LABEL[slot]))
+            .join(LIST_SEPARATOR),
+        })}
+        tone="primary"
+        cancelLabel={t('photosWarningAdd')}
+        onCancel={() => {
+          setPhotoWarningOpen(false);
+          // Đưa lưới ảnh vào tầm mắt và tô đỏ đúng các góc còn thiếu.
+          setFlaggedSlots(new Set(missingExterior));
+          scrollRef.current?.scrollTo({ y: Math.max(0, detailsY.current - space.md), animated: true });
+        }}
+        confirmLabel={t('photosWarningContinue')}
+        onConfirm={() => {
+          setPhotoWarningOpen(false);
+          submit();
+        }}
+        onClose={() => setPhotoWarningOpen(false)}
+      />
     </>
   );
 }

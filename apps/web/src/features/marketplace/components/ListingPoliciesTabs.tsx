@@ -3,20 +3,19 @@
 import { useTranslations } from 'next-intl';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
-  COLLATERAL_MODE,
   HOLD_DYNAMIC_WINDOW,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_PAYMENT_WINDOW_MINUTES,
-  IDENTITY_VERIFY_METHOD,
   SERVICE_TYPE,
   appliesExcessMileage,
-  requiredIdentityDocuments,
   serviceRequiresDriverLicence,
 } from '@xeprime/types';
+import { LEGAL_DOC } from '@/constants/legal';
+import { LegalDocLink } from '@/features/legal/components/LegalDocLink';
+import { useDescribeCollateral } from '@/features/rental-policies/collateral-text';
+import { useRentalConditionsText } from '@/features/rental-policies/rental-conditions';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
-import { isZeroMoney } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import styles from './ListingPoliciesTabs.module.css';
 
@@ -48,7 +47,7 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
   const [activeTab, setActiveTab] = useState<PolicyTab>('general');
   const tabRefs = useRef<Partial<Record<PolicyTab, HTMLButtonElement | null>>>({});
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
+  const describeCollateral = useDescribeCollateral();
 
   const tabId = (tab: PolicyTab) => `${baseId}-tab-${tab}`;
   const panelId = (tab: PolicyTab) => `${baseId}-panel-${tab}`;
@@ -78,22 +77,20 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
 
-  const requiredDocs =
-    activeTerms?.requiredDocuments && activeTerms.requiredDocuments.length > 0
-      ? activeTerms.requiredDocuments
-      : requiredIdentityDocuments(activeService);
+  // Giấy tờ + cách đối chiếu: luật chuẩn nền tảng (ADR 0112 điều 3), listing trả kèm.
+  const rules = useRentalConditionsText(listing.rentalConditions);
 
-  const collateralMode = (() => {
-    const collateral = listing.collateral;
-    if (!collateral) return null;
-    if (collateral.mode === COLLATERAL_MODE.CASH) return tp('collateral.modeCash');
-    const types = (collateral.assetTypes ?? []).map((type) =>
-      domainLabel('collateralAssetType', type),
-    );
-    return types.length > 0
-      ? tp('collateral.modeAssetTypes', { types: types.join(', ') })
-      : tp('collateral.modeAsset');
-  })();
+  // "Cọc tiền X hoặc Cọc tài sản (…)" - một câu chung mọi bề mặt (ADR 0112 điều 2).
+  const collateralMode = listing.collateral
+    ? describeCollateral({
+        mode: listing.collateral.mode,
+        cashEnabled: listing.collateral.cashEnabled,
+        assetEnabled: listing.collateral.assetEnabled,
+        combination: listing.collateral.combination,
+        assetTypes: listing.collateral.assetTypes,
+        depositAmount: listing.collateral.depositAmount,
+      })
+    : null;
 
   const strong = (chunks: ReactNode) => <strong>{chunks}</strong>;
 
@@ -233,26 +230,13 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
                 <span>
-                  {t('terms.documents', {
-                    documents: requiredDocs
-                      .map((doc) => domainLabel('customerDocumentType', doc))
-                      .join(', '),
-                  })}
+                  {t('terms.documents', { documents: rules.documents })}
                 </span>
               </div>
 
-              {/*
-                Nhãn `identityVerifyMethod` đã là cả câu ("Đối chiếu qua VNeID") — không ghép thêm
-                "Đối chiếu:" phía trước. Chưa khai thì là đối chiếu bản gốc tại chỗ.
-              */}
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
-                <span>
-                  {domainLabel(
-                    'identityVerifyMethod',
-                    activeTerms.identityVerifyMethod ?? IDENTITY_VERIFY_METHOD.IN_PERSON,
-                  )}
-                </span>
+                <span>{rules.verify}</span>
               </div>
 
               {activeTerms.termsText ? (
@@ -297,18 +281,6 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
                 <span className={styles.bullet} />
                 <span>{tp.rich('collateral.mode', { strong, mode: collateralMode ?? '' })}</span>
               </div>
-              {listing.collateral.depositAmount &&
-              !isZeroMoney(listing.collateral.depositAmount) ? (
-                <div className={styles.ruleItem}>
-                  <span className={styles.bullet} />
-                  <span>
-                    {tp.rich('collateral.amount', {
-                      strong,
-                      amount: fmt.money(listing.collateral.depositAmount),
-                    })}
-                  </span>
-                </div>
-              ) : null}
             </>
           ) : (
             <div className={styles.ruleItem}>
@@ -352,10 +324,22 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
             <span className={styles.bullet} />
             <span>{tp('cancellation.release')}</span>
           </div>
+          {/*
+            Hậu quả khi huỷ muộn phải nằm NGAY ở đây, trước khi khách gửi yêu cầu (thông tin bắt
+            buộc trước giao kết) — không chỉ nằm trong văn bản đầy đủ.
+          */}
+          <div className={styles.ruleItem}>
+            <span className={styles.bullet} />
+            <span>{tp.rich('cancellation.late', { strong })}</span>
+          </div>
           <div className={styles.noteBox}>
             <span aria-hidden="true">🛡️ </span>
             {tp('cancellation.protection')}
           </div>
+          {/* Toàn văn mở trong hộp xem nhanh — khách đang ở trang xe, không đẩy họ sang trang khác. */}
+          <LegalDocLink doc={LEGAL_DOC.CANCELLATION} className={styles.policyLink}>
+            {tp('cancellation.viewFull')}
+          </LegalDocLink>
         </div>
       </div>
     </section>

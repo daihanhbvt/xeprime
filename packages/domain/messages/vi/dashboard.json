@@ -1,5 +1,21 @@
 {
   "title": "Tổng quan",
+  "partnerApp": {
+    "greeting": {
+      "morning": "Chào buổi sáng,",
+      "afternoon": "Chào buổi chiều,",
+      "evening": "Chào buổi tối,"
+    },
+    "nextPickup": "Giao gần nhất {time}",
+    "nextReturn": "Nhận lại sớm nhất {time}",
+    "awaitingPaymentNone": "Không có chuyến chờ",
+    "monthTitle": "Tháng {month} vs tháng trước",
+    "report": "Báo cáo",
+    "vsPrevious": "vs tháng trước ({value})",
+    "vsPreviousBare": "vs tháng trước",
+    "utilization": "Tỷ lệ lấp đầy",
+    "acceptKeepLow": "Tỷ lệ thấp, hạn chế hủy chuyến đã nhận để tăng tỷ lệ"
+  },
   "stats": {
     "available": "Xe sẵn sàng",
     "renting": "Đang cho thuê",
@@ -177,6 +193,14 @@
     "cost": "Chi phí",
     "profit": "Lợi nhuận",
     "revenueSummaryTitle": "Thu chi {days} ngày gần nhất",
+    "sources": {
+      "title": "Doanh thu theo nguồn",
+      "detail": "Xem chi tiết",
+      "trips": "{count, plural, other {# chuyến}}",
+      "share": "{percent, number}%",
+      "error": "Chưa tải được doanh thu theo nguồn.",
+      "legend": "Chú giải nguồn doanh thu"
+    },
     "legendTotal": "{label}: {count}"
   },
   "market": {

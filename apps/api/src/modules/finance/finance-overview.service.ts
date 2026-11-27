@@ -3,6 +3,7 @@ import { resolveBranchIdList } from '../../common/dto/branch-scope';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_SOURCE,
   CUSTOMER_REVENUE_SORT,
   DEBT_FILTER,
   DEBT_SORT,
@@ -13,6 +14,7 @@ import {
   PAYMENT_STATUS,
   RECEIPT_TYPE,
   VEHICLE_PROFIT_SORT,
+  isMarketplaceBooking,
   type FinanceGranularity,
   type PaginationMeta,
 } from '@xeprime/types';
@@ -24,6 +26,7 @@ import {
   SQL_BOOKING_SCOPE,
   SQL_DEBT_SCOPE,
   SQL_HAS_DEBT,
+  SQL_NET_DEPOSIT_SUM,
 } from '../../common/booking-money';
 import { dayRangeFilter } from '../../common/day-range';
 import {
@@ -49,6 +52,7 @@ import {
   FinanceCategoryBreakdownQueryDto,
   FinanceSeriesDto,
   FinanceSeriesQueryDto,
+  FinanceSourceBreakdownDto,
   FinanceSummaryDto,
   FinanceSummaryQueryDto,
   RECEIPT_DEFAULT_LIMIT,
@@ -97,6 +101,9 @@ interface MoneyRow {
 interface SeriesRow {
   bucket: string;
   revenue: string;
+  marketplace_revenue: string;
+  direct_revenue: string;
+  unlinked_revenue: string;
   cost: string;
   cash_in: string;
   cash_out: string;
@@ -108,6 +115,19 @@ interface CategoryRow {
   system_key: string | null;
   amount: string;
   cnt: bigint;
+}
+
+interface SourceRevenueRow {
+  source: string | null;
+  source_label: string | null;
+  amount: string;
+}
+
+interface SourceTripRow {
+  source: string;
+  source_label: string | null;
+  trips: bigint;
+  booked: string;
 }
 
 interface CustomerRevenueRow {
@@ -424,10 +444,10 @@ export class FinanceOverviewService {
         SELECT GREATEST(dep.total - COALESCE(s.refund_amount, 0), 0) AS held
         FROM bookings b
         LEFT JOIN LATERAL (
-          SELECT COALESCE(SUM(p.amount), 0) AS total
+          SELECT ${SQL_NET_DEPOSIT_SUM} AS total
           FROM payments p
           WHERE p.booking_id = b.id
-            AND p.kind = ${PAYMENT_KIND.DEPOSIT}
+            AND p.kind IN (${PAYMENT_KIND.DEPOSIT}, ${PAYMENT_KIND.DEPOSIT_RETURN})
             AND p.status = ${PAYMENT_STATUS.SUCCEEDED}
         ) dep ON TRUE
         LEFT JOIN booking_deposit_settlements s ON s.booking_id = b.id
@@ -454,7 +474,13 @@ export class FinanceOverviewService {
     /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
     allowedBranchIds: readonly string[] | null,
   ): Promise<FinanceSeriesDto> {
-    const { fromAt, toAt } = resolvePeriodBounds(query.from, query.to);
+    /*
+     * Không gửi `from` = TOÀN BỘ thời gian (cùng nghĩa với `summary` / `by-source` / `by-category`,
+     * vốn bỏ điều kiện ngày khi thiếu): trục bắt đầu ở phiếu SỚM NHẤT trong phạm vi. Phạm vi chưa có
+     * phiếu nào ⇒ rơi về mặc định (đầu tháng này) - biểu đồ rỗng, không phải lỗi.
+     */
+    const from = query.from ?? (await this.firstOccurredDay(tenantId, query, allowedBranchIds));
+    const { fromAt, toAt } = resolvePeriodBounds(from, query.to);
     const requested = (query.granularity ?? FINANCE_GRANULARITY.DAY) as FinanceGranularity;
     const granularity = resolveGranularity(requested, fromAt, toAt, FINANCE_MAX_BUCKETS);
 
@@ -476,12 +502,27 @@ export class FinanceOverviewService {
                COALESCE(SUM(r.amount)
                  FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME} AND ${SQL_BUSINESS_ONLY}), 0)
                  AS revenue,
+               -- Ba phần của doanh thu theo nguồn đơn (ADR 0110), CÙNG phép phân loại với bySource:
+               -- đơn qua sàn là source = xeprime, phiếu không gắn đơn là phần riêng.
+               COALESCE(SUM(r.amount)
+                 FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME} AND ${SQL_BUSINESS_ONLY}
+                           AND b.source = ${BOOKING_SOURCE.XEPRIME}), 0)
+                 AS marketplace_revenue,
+               COALESCE(SUM(r.amount)
+                 FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME} AND ${SQL_BUSINESS_ONLY}
+                           AND b.source IS NOT NULL AND b.source <> ${BOOKING_SOURCE.XEPRIME}), 0)
+                 AS direct_revenue,
+               COALESCE(SUM(r.amount)
+                 FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME} AND ${SQL_BUSINESS_ONLY}
+                           AND b.source IS NULL), 0)
+                 AS unlinked_revenue,
                COALESCE(SUM(r.amount)
                  FILTER (WHERE r.type = ${RECEIPT_TYPE.EXPENSE} AND ${SQL_BUSINESS_ONLY}), 0)
                  AS cost,
                COALESCE(SUM(r.amount) FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME}), 0) AS cash_in,
                COALESCE(SUM(r.amount) FILTER (WHERE r.type = ${RECEIPT_TYPE.EXPENSE}), 0) AS cash_out
         FROM receipts r
+        LEFT JOIN bookings b ON b.id = r.booking_id
         WHERE r.tenant_id = ${tenantId} AND ${SQL_REAL_MONEY}
           AND r.occurred_at >= ${fromAt} AND r.occurred_at <= ${toAt}
           ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
@@ -489,6 +530,9 @@ export class FinanceOverviewService {
       )
       SELECT to_char(s.bucket, 'YYYY-MM-DD') AS bucket,
              trim_scale(COALESCE(a.revenue, 0))::text AS revenue,
+             trim_scale(COALESCE(a.marketplace_revenue, 0))::text AS marketplace_revenue,
+             trim_scale(COALESCE(a.direct_revenue, 0))::text AS direct_revenue,
+             trim_scale(COALESCE(a.unlinked_revenue, 0))::text AS unlinked_revenue,
              trim_scale(COALESCE(a.cost, 0))::text AS cost,
              trim_scale(COALESCE(a.cash_in, 0))::text AS cash_in,
              trim_scale(COALESCE(a.cash_out, 0))::text AS cash_out
@@ -501,12 +545,30 @@ export class FinanceOverviewService {
       buckets: rows.map((r) => ({
         bucket: r.bucket,
         revenue: r.revenue,
+        marketplaceRevenue: r.marketplace_revenue,
+        directRevenue: r.direct_revenue,
+        unlinkedRevenue: r.unlinked_revenue,
         cost: r.cost,
         profit: new Prisma.Decimal(r.revenue).minus(r.cost).toString(),
         cashIn: r.cash_in,
         cashOut: r.cash_out,
       })),
     };
+  }
+
+  /** Ngày lịch VN (`YYYY-MM-DD`) của phiếu thật sớm nhất trong phạm vi; `undefined` khi chưa có. */
+  private async firstOccurredDay(
+    tenantId: string,
+    query: FinanceSeriesQueryDto,
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<string | undefined> {
+    const rows = await this.prisma.$queryRaw<{ day: string | null }[]>(Prisma.sql`
+      SELECT to_char(MIN(r.occurred_at) AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD') AS day
+      FROM receipts r
+      WHERE r.tenant_id = ${tenantId} AND ${SQL_REAL_MONEY}
+        ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
+    `);
+    return rows[0]?.day ?? undefined;
   }
 
   /**
@@ -555,6 +617,99 @@ export class FinanceOverviewService {
           ? 0
           : Number(new Prisma.Decimal(r.amount).dividedBy(total).times(100).toDecimalPlaces(1)),
         count: Number(r.cnt),
+      })),
+    };
+  }
+
+  /**
+   * Doanh thu theo NGUỒN ĐƠN (ADR 0110).
+   *
+   * Doanh thu là CÙNG định nghĩa với `summary` (phiếu thu thật, đã loại khoản không phải kinh
+   * doanh) nên tổng các dòng luôn bằng thẻ doanh thu ngay phía trên. Phiếu không gắn đơn không bị
+   * bỏ đi - nó thành một dòng `source: null`, nếu không tổng sẽ hụt mà không ai giải thích được.
+   *
+   * Số chuyến đếm theo giờ NHẬN XE trong kỳ, trên cùng phạm vi đơn với thẻ "số chuyến" của summary.
+   * Hai câu gộp theo (nguồn, nhãn) rồi ghép ở Node: một nguồn có chuyến mà tiền chưa lên sổ vẫn phải
+   * hiện, và ngược lại.
+   */
+  async bySource(
+    tenantId: string,
+    query: FinanceSummaryQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<FinanceSourceBreakdownDto> {
+    const fromAt = dayStartOf(query.from);
+    const toAt = dayEndOf(query.to);
+    const scope = scopeOf(query, allowedBranchIds);
+
+    const [revenueRows, tripRows] = await Promise.all([
+      this.prisma.$queryRaw<SourceRevenueRow[]>(Prisma.sql`
+        SELECT b.source, b.source_label, trim_scale(SUM(r.amount))::text AS amount
+        FROM receipts r
+        LEFT JOIN bookings b ON b.id = r.booking_id
+        WHERE r.tenant_id = ${tenantId} AND ${SQL_REAL_MONEY} AND ${SQL_BUSINESS_ONLY}
+          AND r.type = ${RECEIPT_TYPE.INCOME}
+          ${sqlOccurredRange(fromAt, toAt)}
+          ${sqlReceiptScope(scope)}
+        GROUP BY b.source, b.source_label
+      `),
+      this.prisma.$queryRaw<SourceTripRow[]>(Prisma.sql`
+        SELECT b.source, b.source_label, COUNT(*)::bigint AS trips,
+               trim_scale(COALESCE(SUM(b.total_amount), 0))::text AS booked
+        FROM bookings b
+        WHERE b.tenant_id = ${tenantId} AND ${SQL_BOOKING_SCOPE}
+          ${sqlBookingScope(scope)}
+          ${fromAt ? Prisma.sql`AND b.pickup_at >= ${fromAt}` : Prisma.empty}
+          ${toAt ? Prisma.sql`AND b.pickup_at <= ${toAt}` : Prisma.empty}
+        GROUP BY b.source, b.source_label
+      `),
+    ]);
+
+    const zero = new Prisma.Decimal(0);
+    const byKey = new Map<
+      string,
+      { source: string | null; sourceLabel: string | null; amount: Prisma.Decimal; trips: number; booked: Prisma.Decimal }
+    >();
+    const slot = (source: string | null, sourceLabel: string | null) => {
+      const key = `${source ?? ''}\u0000${sourceLabel ?? ''}`;
+      let entry = byKey.get(key);
+      if (!entry) {
+        entry = { source, sourceLabel, amount: zero, trips: 0, booked: zero };
+        byKey.set(key, entry);
+      }
+      return entry;
+    };
+    for (const r of revenueRows) slot(r.source, r.source_label).amount = new Prisma.Decimal(r.amount);
+    for (const t of tripRows) {
+      const entry = slot(t.source, t.source_label);
+      entry.trips = Number(t.trips);
+      entry.booked = new Prisma.Decimal(t.booked);
+    }
+
+    const entries = [...byKey.values()];
+    const sum = (pick: (e: (typeof entries)[number]) => boolean) =>
+      entries.filter(pick).reduce((acc, e) => acc.plus(e.amount), zero);
+    const total = sum(() => true);
+
+    // Sàn đứng đầu, rồi các kênh tự khai thác theo doanh thu giảm dần, khoản không gắn đơn ở cuối.
+    const rank = (e: (typeof entries)[number]) =>
+      e.source == null ? 2 : isMarketplaceBooking(e.source) ? 0 : 1;
+    entries.sort((a, b) => rank(a) - rank(b) || b.amount.comparedTo(a.amount) || b.trips - a.trips);
+
+    return {
+      total: total.toString(),
+      marketplaceAmount: sum((e) => isMarketplaceBooking(e.source)).toString(),
+      directAmount: sum((e) => e.source != null && !isMarketplaceBooking(e.source)).toString(),
+      unlinkedAmount: sum((e) => e.source == null).toString(),
+      items: entries.map((e) => ({
+        source: e.source,
+        sourceLabel: e.sourceLabel,
+        amount: e.amount.toString(),
+        sharePercent: total.isZero()
+          ? 0
+          : Number(e.amount.dividedBy(total).times(100).toDecimalPlaces(1)),
+        trips: e.trips,
+        bookedAmount: e.booked.toString(),
       })),
     };
   }

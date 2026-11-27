@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable } from 'react-native';
 import { BarChart, CurveType } from 'react-native-gifted-charts';
+import { HorizontalScroller } from '@/components/ui/HorizontalScroller';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -307,10 +308,8 @@ export function RevenueTrendChart({
         xử chạm-hay-vuốt như với mọi nút nằm trong danh sách, dải trôi theo nội dung ở tầng native,
         và trong suốt cú vuốt không có một dòng JS nào chạy.
       */}
-      <ScrollView
+      <HorizontalScroller
         testID={SCROLL_TEST_ID}
-        horizontal
-        showsHorizontalScrollIndicator={false}
         /* Trải vừa khung thì không còn gì để cuộn — khoá lại để không vuốt trượt vô nghĩa. */
         scrollEnabled={!layout.fitted}
         contentContainerStyle={{ width: Y_AXIS_WIDTH + layout.contentWidth }}
@@ -432,7 +431,7 @@ export function RevenueTrendChart({
             ))}
           </YStack>
         </YStack>
-      </ScrollView>
+      </HorizontalScroller>
 
       {/*
         Thẻ chi tiết — bản native của `ChartTooltip`: tiêu đề mốc, rồi ba dòng "chấm màu · nhãn ·

@@ -1,5 +1,13 @@
 import { Prisma } from '@xeprime/prisma';
-import { BOOKING_STATUS, PAYMENT_KIND, PAYMENT_STATUS, RECEIPT_SOURCE, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
+import {
+  BOOKING_STATUS,
+  PAYMENT_KIND,
+  PAYMENT_STATUS,
+  RECEIPT_SOURCE,
+  RECEIPT_STATUS,
+  RECEIPT_TYPE,
+  bookingPaidPercent,
+} from '@xeprime/types';
 
 /**
  * MỘT con số phải-thu cho một đơn thuê — định nghĩa duy nhất của "khách còn nợ bao nhiêu".
@@ -20,9 +28,15 @@ import { BOOKING_STATUS, PAYMENT_KIND, PAYMENT_STATUS, RECEIPT_SOURCE, RECEIPT_S
  * ```
  * phảiThu   = total_amount + tổng phụ phí còn hiệu lực
  * cọcGánh   = min(tổng phụ phí, cọc ĐÃ THU)
- * đãThu     = paid_amount + phiếu thu TAY đã duyệt gắn đơn + cọcGánh
+ * đãThu     = paid_amount + phiếu thu TAY đã duyệt gắn đơn + cọcGánh + D đã trả online
  * cònNợ     = max(0, phảiThu − đãThu)
  * ```
+ *
+ * **`D` đã trả online** (đơn qua sàn - ADR 0064): phần tiền thuê của chủ xe nằm trong tiền giữ chỗ
+ * khách chuyển cho XePrime (`booking_holds.deposit_amount`, khi `paid_at` có giá trị). Khách đã trả
+ * phần đó, nên nó là "đã thu" của đơn ngay từ lúc tiền giữ chỗ về đủ - trước đây nó bị bỏ ngoài, và
+ * mọi đơn qua sàn hiện ra "còn nợ" đúng bằng `D` ở /manage/debts, thẻ công nợ, sổ khách. Vì thế
+ * "còn nợ" cũng CHÍNH LÀ số khách còn phải đưa tận tay (`counterDueAmount` trên DTO).
  *
  * **`cọcGánh` là mấu chốt chống ĐẾM HAI LẦN.** Quyết toán cọc đã trừ phụ phí vào tiền hoàn
  * (`proposedRefund = cọc đã thu − phụ phí`), tức phần phụ phí nằm trong tầm cọc coi như đã thu
@@ -50,6 +64,8 @@ export interface BookingMoneyInput {
   otherCollected?: Prisma.Decimal | string | number | null;
   /** Cọc ĐÃ THU (`payments.kind = 'deposit'`), dùng để tính phần cọc gánh phụ phí. */
   depositReceived?: Prisma.Decimal | string | number | null;
+  /** Phần `D` khách đã trả online trong tiền giữ chỗ (đơn qua sàn); đơn tự lập là 0. */
+  ownerShareOnline?: Prisma.Decimal | string | number | null;
 }
 
 export interface BookingMoney {
@@ -66,10 +82,11 @@ export function bookingMoney(input: BookingMoneyInput): BookingMoney {
   const paid = new Prisma.Decimal(input.paidAmount);
   const other = new Prisma.Decimal(input.otherCollected ?? 0);
   const deposit = new Prisma.Decimal(input.depositReceived ?? 0);
+  const online = new Prisma.Decimal(input.ownerShareOnline ?? 0);
 
   const amountDue = total.plus(surcharge);
   const coveredByDeposit = Prisma.Decimal.min(surcharge, deposit);
-  const collectedAmount = paid.plus(other).plus(coveredByDeposit);
+  const collectedAmount = paid.plus(other).plus(coveredByDeposit).plus(online);
 
   return {
     amountDue,
@@ -95,17 +112,27 @@ export function ownerShareHeldOnline(input: {
 }
 
 /**
- * Số khách còn phải đưa TẬN TAY gian hàng — công nợ của đơn trừ `D`.
+ * Phần trăm ĐÃ THU của một đơn (0-100, làm tròn xuống) — biểu tượng thanh toán trên lịch (ADR 0110).
  *
- * Công nợ (`bookingMoney`) vẫn tính `D` vì đó là sổ chung với /debts, nhưng `D` đã ở XePrime: đòi
- * khách lần nữa ở quầy là thu hai lần. Dùng cho dòng "Thu tiền thuê" của Chuẩn bị bàn giao và cho
- * phiếu thu tự ghi lúc nhận lại xe — hai chỗ phải nói cùng một số.
+ * Cùng phép với ô "Còn phải thu" của trang đơn: phải thu = tiền thuê + phụ phí; còn thiếu = công nợ
+ * trừ phần `D` khách đã trả trong tiền giữ chỗ (đơn qua sàn). Hai màn vì thế không thể nói hai số.
  */
-export function counterDueAmount(
-  debtAmount: Prisma.Decimal | string | number,
-  ownerShareOnline: Prisma.Decimal,
-): Prisma.Decimal {
-  return Prisma.Decimal.max(0, new Prisma.Decimal(debtAmount).minus(ownerShareOnline));
+export function bookingPaidPercentOf(
+  booking: {
+    totalAmount: Prisma.Decimal | string | number;
+    paidAmount: Prisma.Decimal | string | number;
+    priceSnapshot: unknown;
+    hold: { paidAmount: unknown } | null;
+  },
+  sides: BookingMoneySides,
+): number {
+  // `sides` đã mang phần `D` trả online - "còn nợ" chính là số khách còn đưa tận tay.
+  const money = bookingMoney({
+    totalAmount: booking.totalAmount,
+    paidAmount: booking.paidAmount,
+    ...sides,
+  });
+  return bookingPaidPercent(money.amountDue.toNumber(), money.debtAmount.toNumber());
 }
 
 /**
@@ -115,6 +142,48 @@ export function counterDueAmount(
  *
  * Dùng kèm `BOOKING_MONEY_JOINS`; cả hai giả định bảng `bookings` mang bí danh `b`.
  */
+/**
+ * Cọc RÒNG đã thu trên các dòng `payments p` (đã lọc kind cọc + succeeded): Σ`deposit` −
+ * Σ`deposit_return`. `deposit_return` là phần chủ xe trả lại trước quyết toán qua lượt sửa tiền cọc
+ * - sổ chỉ thêm, nên "đã thu" luôn là phép trừ này, không bao giờ là sửa khoản cũ.
+ */
+export const SQL_NET_DEPOSIT_SUM = Prisma.sql`COALESCE(SUM(CASE p.kind WHEN ${PAYMENT_KIND.DEPOSIT_RETURN} THEN -p.amount ELSE p.amount END), 0)`;
+
+/** Điều kiện Prisma cho các dòng `payments` góp vào cọc ròng - dùng kèm `netDepositOf`. */
+export const NET_DEPOSIT_PAYMENT_WHERE = {
+  kind: { in: [PAYMENT_KIND.DEPOSIT, PAYMENT_KIND.DEPOSIT_RETURN] },
+  status: PAYMENT_STATUS.SUCCEEDED,
+} satisfies Prisma.PaymentWhereInput;
+
+/**
+ * Cọc ròng từ kết quả `groupBy(['kind'])` (hoặc `['bookingId','kind']` đã lọc theo đơn) trên
+ * `NET_DEPOSIT_PAYMENT_WHERE`. Kẹp sàn 0 - trả lại không bao giờ vượt số đã thu (writer chặn).
+ */
+export function netDepositOf(
+  groups: readonly { kind: string; _sum: { amount: Prisma.Decimal | null } }[],
+): Prisma.Decimal {
+  let net = new Prisma.Decimal(0);
+  for (const g of groups) {
+    const amount = g._sum.amount ?? new Prisma.Decimal(0);
+    net = g.kind === PAYMENT_KIND.DEPOSIT_RETURN ? net.minus(amount) : net.plus(amount);
+  }
+  return Prisma.Decimal.max(0, net);
+}
+
+/** Cọc ròng đã thu của MỘT đơn - đọc trong transaction của người gọi khi cần khoá. */
+export async function loadNetDepositReceived(
+  db: Pick<Prisma.TransactionClient, 'payment'>,
+  tenantId: string,
+  bookingId: string,
+): Promise<Prisma.Decimal> {
+  const groups = await db.payment.groupBy({
+    by: ['kind'],
+    where: { tenantId, bookingId, ...NET_DEPOSIT_PAYMENT_WHERE },
+    _sum: { amount: true },
+  });
+  return netDepositOf(groups);
+}
+
 export const BOOKING_MONEY_JOINS = Prisma.sql`
   LEFT JOIN LATERAL (
     SELECT COALESCE(SUM(s.amount), 0) AS total
@@ -131,19 +200,22 @@ export const BOOKING_MONEY_JOINS = Prisma.sql`
       AND r.deleted_at IS NULL
   ) man ON TRUE
   LEFT JOIN LATERAL (
-    SELECT COALESCE(SUM(p.amount), 0) AS total
+    SELECT ${SQL_NET_DEPOSIT_SUM} AS total
     FROM payments p
     WHERE p.booking_id = b.id
-      AND p.kind = ${PAYMENT_KIND.DEPOSIT}
+      AND p.kind IN (${PAYMENT_KIND.DEPOSIT}, ${PAYMENT_KIND.DEPOSIT_RETURN})
       AND p.status = ${PAYMENT_STATUS.SUCCEEDED}
   ) dep ON TRUE
+  -- Phần D khách đã trả online (đơn qua sàn). booking_id là unique trên booking_holds nên
+  -- không nhân dòng.
+  LEFT JOIN booking_holds xh ON xh.booking_id = b.id AND xh.paid_at IS NOT NULL
 `;
 
 /** `phải thu` — tiền thuê + phụ phí còn hiệu lực. */
 export const SQL_AMOUNT_DUE = Prisma.sql`(b.total_amount + sur.total)`;
 
-/** `đã thu` — tiền thuê + phiếu tay đã duyệt + phần phụ phí mà cọc đã gánh. */
-export const SQL_COLLECTED = Prisma.sql`(b.paid_amount + man.total + LEAST(sur.total, dep.total))`;
+/** `đã thu` — tiền thuê + phiếu tay đã duyệt + phần phụ phí mà cọc đã gánh + `D` đã trả online. */
+export const SQL_COLLECTED = Prisma.sql`(b.paid_amount + man.total + LEAST(sur.total, dep.total) + COALESCE(xh.deposit_amount, 0))`;
 
 /** `còn nợ` — kẹp sàn 0, khớp từng ký tự với `bookingMoney()`. */
 export const SQL_DEBT = Prisma.sql`GREATEST(${SQL_AMOUNT_DUE} - ${SQL_COLLECTED}, 0)`;
@@ -166,23 +238,27 @@ export const SQL_DEBT_SCOPE = Prisma.sql`b.deleted_at IS NULL AND b.status NOT I
  */
 export const SQL_BOOKING_SCOPE = Prisma.sql`b.deleted_at IS NULL AND b.status <> ${BOOKING_STATUS.CANCELLED}`;
 
-/** Ba tổng phụ của một đơn — thứ `bookings` không tự mang trong cột nào. */
+/** Bốn tổng phụ của một đơn — thứ `bookings` không tự mang trong cột nào. */
 export interface BookingMoneySides {
   surchargeTotal: Prisma.Decimal;
   otherCollected: Prisma.Decimal;
   depositReceived: Prisma.Decimal;
+  /** `D` khách đã trả online trong tiền giữ chỗ (đơn qua sàn) — cùng cột với `SQL_COLLECTED`. */
+  ownerShareOnline: Prisma.Decimal;
 }
 
 const ZERO_SIDES: BookingMoneySides = {
   surchargeTotal: new Prisma.Decimal(0),
   otherCollected: new Prisma.Decimal(0),
   depositReceived: new Prisma.Decimal(0),
+  ownerShareOnline: new Prisma.Decimal(0),
 };
 
 export const emptyMoneySides = (): BookingMoneySides => ZERO_SIDES;
 
 /**
- * Nạp ba tổng phụ cho một TRANG đơn — ba `groupBy` trên tập id đã biết, không phải N+1.
+ * Nạp bốn tổng phụ cho một TRANG đơn — ba `groupBy` + một `findMany` trên tập id đã biết, không
+ * phải N+1.
  *
  * Dùng cho danh sách và chi tiết đơn (Prisma không cộng được quan hệ trong `findMany`). Cùng
  * khuôn với `VehiclesService.stats`: gộp ở DB, trả về vài chục dòng.
@@ -191,13 +267,13 @@ export const emptyMoneySides = (): BookingMoneySides => ZERO_SIDES;
  * đang ở trong transaction không phải nhảy ra ngoài.
  */
 export async function loadBookingMoneySides(
-  db: Pick<Prisma.TransactionClient, 'bookingSurcharge' | 'receipt' | 'payment'>,
+  db: Pick<Prisma.TransactionClient, 'bookingSurcharge' | 'receipt' | 'payment' | 'bookingHold'>,
   bookingIds: string[],
 ): Promise<Map<string, BookingMoneySides>> {
   const result = new Map<string, BookingMoneySides>();
   if (bookingIds.length === 0) return result;
 
-  const [surcharges, manualReceipts, deposits] = await Promise.all([
+  const [surcharges, manualReceipts, deposits, holds] = await Promise.all([
     db.bookingSurcharge.groupBy({
       by: ['bookingId'],
       where: { bookingId: { in: bookingIds }, voidedAt: null },
@@ -217,13 +293,14 @@ export async function loadBookingMoneySides(
       _sum: { amount: true },
     }),
     db.payment.groupBy({
-      by: ['bookingId'],
-      where: {
-        bookingId: { in: bookingIds },
-        kind: PAYMENT_KIND.DEPOSIT,
-        status: PAYMENT_STATUS.SUCCEEDED,
-      },
+      by: ['bookingId', 'kind'],
+      where: { bookingId: { in: bookingIds }, ...NET_DEPOSIT_PAYMENT_WHERE },
       _sum: { amount: true },
+    }),
+    // `D` đã trả online: cùng điều kiện với `BOOKING_MONEY_JOINS` (`paid_at` có giá trị).
+    db.bookingHold.findMany({
+      where: { bookingId: { in: bookingIds }, paidAt: { not: null } },
+      select: { bookingId: true, depositAmount: true },
     }),
   ]);
 
@@ -236,7 +313,9 @@ export async function loadBookingMoneySides(
     result.set(id, {
       surchargeTotal: sumOf(surcharges, id),
       otherCollected: sumOf(manualReceipts, id),
-      depositReceived: sumOf(deposits, id),
+      depositReceived: netDepositOf(deposits.filter((g) => g.bookingId === id)),
+      ownerShareOnline:
+        holds.find((h) => h.bookingId === id)?.depositAmount ?? new Prisma.Decimal(0),
     });
   }
   return result;
@@ -244,7 +323,7 @@ export async function loadBookingMoneySides(
 
 /**
  * "Còn phải thu của khách" (`counterDueAmount`) của MỘT đơn, đọc thẳng từ DB — `null` khi không
- * có đơn trong gian hàng.
+ * có đơn trong gian hàng. Chính là công nợ của đơn: `D` đã trả online nằm sẵn trong "đã thu".
  *
  * Nguồn duy nhất cho ba chỗ phải nói cùng một số: ô "Còn phải thu" của trang đơn (qua
  * `BookingsService`), lượt nhận lại xe (`SettlementService.collectableAmount`) và TRẦN của hộp
@@ -254,19 +333,17 @@ export async function loadBookingMoneySides(
  * dòng đơn để hai lượt thu song song không cùng đọc một mức trần cũ.
  */
 export async function loadCounterDueAmount(
-  db: Pick<Prisma.TransactionClient, 'booking' | 'bookingSurcharge' | 'receipt' | 'payment'>,
+  db: Pick<
+    Prisma.TransactionClient,
+    'booking' | 'bookingSurcharge' | 'receipt' | 'payment' | 'bookingHold'
+  >,
   tenantId: string,
   bookingId: string,
   extraSurcharge: Prisma.Decimal = new Prisma.Decimal(0),
 ): Promise<Prisma.Decimal | null> {
   const booking = await db.booking.findFirst({
     where: { id: bookingId, tenantId, deletedAt: null },
-    select: {
-      totalAmount: true,
-      paidAmount: true,
-      priceSnapshot: true,
-      hold: { select: { paidAmount: true } },
-    },
+    select: { totalAmount: true, paidAmount: true },
   });
   if (!booking) return null;
   const sides = (await loadBookingMoneySides(db, [bookingId])).get(bookingId) ?? ZERO_SIDES;
@@ -276,13 +353,5 @@ export async function loadCounterDueAmount(
     ...sides,
     surchargeTotal: sides.surchargeTotal.plus(extraSurcharge),
   });
-  return counterDueAmount(
-    money.debtAmount,
-    ownerShareHeldOnline({
-      holdPaid: booking.hold?.paidAmount != null,
-      priceSnapshot: booking.priceSnapshot as Parameters<
-        typeof ownerShareHeldOnline
-      >[0]['priceSnapshot'],
-    }),
-  );
+  return money.debtAmount;
 }

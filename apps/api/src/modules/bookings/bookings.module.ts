@@ -14,6 +14,7 @@ import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { BookingsController } from './bookings.controller';
+import { BookingCollateralsService } from './booking-collaterals.service';
 import { BookingsService } from './bookings.service';
 import { BookingHandoversController } from './handovers/booking-handovers.controller';
 import { HandoverQueueController } from './handovers/handover-queue.controller';
@@ -79,6 +80,7 @@ import { SettlementService } from './settlement/settlement.service';
   // `HandoversService`, xuất ra cho trang chuyến của khách.
   providers: [
     BookingsService,
+    BookingCollateralsService,
     HandoversService,
     SettlementService,
     CustomerHandoverService,

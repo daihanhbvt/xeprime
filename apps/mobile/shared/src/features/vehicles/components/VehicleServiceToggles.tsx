@@ -121,7 +121,7 @@ export function VehicleServiceToggles({
         <ToggleRow
           label={t(`toggle.${active}.title` as 'toggle.self_drive.title')}
           // Hiện bật cả lúc hộp nhập giá có tài xế đang mở; huỷ hộp thì về tắt (web `ServicesPane`).
-          checked={on || toggle.showsOn(active)}
+          checked={on}
           disabled={!canEdit || toggle.pending}
           onToggle={() => {
             if (reason) toast.showInfo(reason);

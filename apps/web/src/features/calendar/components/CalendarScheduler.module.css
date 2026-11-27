@@ -1,53 +1,101 @@
 /**
- * Resource timeline (bản thiết kế lại): MỘT vùng cuộn sở hữu cả hai chiều; cột xe sticky trái,
- * header ngày sticky trên, hàng "Xe còn trống" sticky đáy. Hàng ảo hoá đặt bằng translateY
- * trong spacer đúng tổng chiều cao. Kích thước lưới do JS bơm qua custom property (ADR 0003).
+ * Lịch thuê xe — thiết kế lại 25/11/2026 (Figma Partner-XePrime `24200:99389`).
+ *
+ * MỘT thẻ trắng bo 16 chứa dải chú thích + lưới. Lưới: MỘT vùng cuộn sở hữu cả hai chiều; cột xe
+ * sticky trái, header ngày sticky trên. Hàng ảo hoá đặt bằng translateY trong spacer đúng tổng chiều
+ * cao; chiều cao TỪNG hàng theo số tầng thẻ của nó. Kích thước do JS bơm qua custom property
+ * (ADR 0003 — ngoại lệ duy nhất của "không inline style").
  */
 
 .wrapper {
   display: flex;
   flex-direction: column;
   flex: 1;
+  gap: var(--xp-space-20);
   height: 100%;
   min-height: 0;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  overflow: hidden;
+  /* Khoảng tiêu đề → thanh công cụ do `gap` lo - bỏ margin riêng của ManagePageHeader. */
+  --xp-page-header-gap: 0;
 
   /* Giá trị DẪN XUẤT từ token — không hex tự chế (ADR 0003). */
   --xp-cal-line: var(--xp-color-border);
-  --xp-cal-weekend-bg: color-mix(
-    in srgb,
-    var(--xp-color-bg-muted) 60%,
-    var(--xp-color-bg-container)
-  );
+  /* Nền cột ngày lễ ở thân lưới: đỏ pha RẤT nhạt — chỉ là ngữ cảnh, không được nuốt thẻ đơn. */
+  --xp-cal-holiday-bg: color-mix(in srgb, var(--xp-color-error) 5%, var(--xp-color-bg-container));
+}
 
-  /*
-   * Nền cột ngày lễ. Đỏ ngữ nghĩa vì lịch Việt Nam đọc ngày nghỉ bằng màu đỏ — nhưng PHA RẤT
-   * NHẠT (8%) có chủ đích: lớp này phải yếu hơn cả nền hôm nay lẫn thanh event, vì nó chỉ là
-   * ngữ cảnh. Một nền đậm ở đây sẽ nuốt mất thứ người dùng thật sự vào lịch để đọc — xe nào
-   * đang bận. Vì thế ngày lễ còn có thêm một CỜ nhìn thấy được ở header: khi nền phải nhạt tới
-   * mức này thì màu không còn là một tín hiệu đủ.
-   */
-  --xp-cal-holiday-bg: color-mix(in srgb, var(--xp-color-error) 8%, var(--xp-color-bg-container));
+.card {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-ambient);
+  overflow: hidden;
 }
 
 .inlineAlert {
-  margin: var(--xp-space-sm) var(--xp-space-md) 0;
+  margin: var(--xp-space-12) var(--xp-space-md) 0;
 }
 
-/* Thông báo "khoảng này chưa có lịch" — một dòng, KHÔNG chặn lưới bên dưới. */
-.emptyHint {
-  padding: 6px var(--xp-space-md);
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
-  background: var(--xp-cal-weekend-bg);
+/* "Khoảng này chưa có lịch" — một dòng, KHÔNG chặn lưới bên dưới. */
+.loadingBlock {
+  padding: var(--xp-space-lg);
+}
+
+/* ── Dải chú thích ─────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12) var(--xp-space-20);
+  padding: var(--xp-space-12) var(--xp-space-md);
   border-bottom: 1px solid var(--xp-cal-line);
 }
 
-.loadingBlock {
-  padding: var(--xp-space-lg);
+/* Ô tiêu đề rộng bằng cột xe ở design (186 + đệm) để các mục chú thích bắt đầu ngay trên lưới ngày. */
+.legendTitle {
+  min-width: 186px;
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+  text-transform: uppercase;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+}
+
+.legendSwatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--tone, var(--xp-color-text-placeholder));
+}
+
+.legendSwatchOff {
+  background: var(--xp-color-text-placeholder);
+}
+
+.legendSwatchPrice {
+  background: var(--xp-color-primary-light);
+  border: 1px solid var(--xp-color-primary-border);
+}
+
+.legendSwatchHoliday {
+  background: var(--xp-color-error-border);
+  border: 1px solid var(--xp-color-error);
 }
 
 /* ── Vùng cuộn ─────────────────────────────────────────────────────────── */
@@ -57,13 +105,19 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  /* Cuộn dừng ở biên lịch — không kéo cả trang cuộn theo (yêu cầu scroll ownership). */
+  /* Cuộn dừng ở biên lịch — không kéo cả trang cuộn theo. */
   overscroll-behavior: contain;
 }
 
 .viewport:focus-visible {
   outline: 2px solid var(--xp-color-primary);
   outline-offset: -2px;
+}
+
+/* Đang kéo chọn ngày: không bôi đen chữ, con trỏ là ô chọn. */
+.selecting {
+  user-select: none;
+  cursor: cell;
 }
 
 /* Refetch nền: giữ nguyên dữ liệu, chỉ mờ nhẹ để biết đang cập nhật. */
@@ -86,8 +140,6 @@
   z-index: var(--xp-z-calendar-header);
   display: flex;
   height: var(--xp-calendar-header-h);
-  background: var(--xp-color-bg-elevated);
-  border-bottom: 1px solid var(--xp-color-border);
 }
 
 .cornerCell {
@@ -100,36 +152,56 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-xs);
-  padding: 0 var(--xp-space-sm);
-  background: var(--xp-color-bg-elevated);
-  border-right: 1px solid var(--xp-color-border);
-  font-size: var(--xp-font-size-sm);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  padding: var(--xp-space-12) var(--xp-space-md);
+  background: var(--xp-color-bg);
+  border-right: 1px solid var(--xp-cal-line);
+  border-bottom: 1px solid var(--xp-cal-line);
+}
+
+.cornerCellCollapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+.cornerTexts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.cornerTitle {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
   text-transform: uppercase;
-  color: var(--xp-color-text-secondary);
   white-space: nowrap;
 }
 
-.cornerLabel {
+.cornerSub {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Nút thu gọn/mở rộng cột xe — luôn trong tầm với ở góc sticky. */
+/* Nút thu gọn/mở rộng cột xe (ngoài design, giữ theo chốt 25/11) — nhỏ, nằm gọn ở góc. */
 .collapseToggle {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-sm);
   background: var(--xp-color-bg-container);
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text-tertiary);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .collapseToggle:hover,
@@ -154,42 +226,27 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--xp-space-xs);
+  background: var(--xp-color-bg-muted);
   border-right: 1px solid var(--xp-cal-line);
-  font-size: var(--xp-font-size-sm);
-  line-height: 1.2;
+  border-bottom: 1px solid var(--xp-cal-line);
+  color: var(--xp-color-text-secondary);
 }
 
-.dayHeaderCell.weekend {
-  background: var(--xp-cal-weekend-bg);
-}
-
-/* Ngày lễ: thắng nền cuối tuần, THUA nền hôm nay (khai báo trước `.today` — cùng độ đặc hiệu
-   nên thứ tự nguồn quyết định). Hôm nay là mốc điều hướng; ngày lễ chỉ là ngữ cảnh. */
+/* Cuối tuần và ngày lễ: nền đỏ nhạt, chữ đỏ (design T7/CN). Ngày lễ có thêm lá cờ. */
+.dayHeaderCell.weekend,
 .dayHeaderCell.holiday {
-  background: var(--xp-cal-holiday-bg);
-  /* Chữ đỏ theo đúng cách lịch Việt Nam in ngày nghỉ — cùng với lá cờ, đây là tín hiệu KHÔNG
-     phụ thuộc nền (nền cố ý rất nhạt để không nuốt thanh event). */
+  background: var(--xp-color-error-bg);
   color: var(--xp-color-error);
 }
 
-/* Nhãn thứ có màu xám riêng — phải kế thừa sắc đỏ, nếu không cột lễ chỉ đỏ một nửa. */
-.dayHeaderCell.holiday .weekdayLabel {
-  color: inherit;
-}
-
-.dayHeaderCell.holiday .dayNumber {
-  font-weight: 700;
-}
-
-/* Nút mở thẻ ngày lễ: phủ trọn ô để vùng bấm bằng cả cột, không phải một chấm nhỏ. */
-.holidayTrigger {
+.dayTrigger {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--xp-space-xs);
   width: 100%;
   height: 100%;
   padding: 0;
@@ -200,75 +257,68 @@
   cursor: pointer;
 }
 
-.holidayTrigger:focus-visible {
+.dayTrigger:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.dayTrigger:focus-visible {
   outline: 2px solid var(--xp-color-primary);
   outline-offset: -2px;
 }
 
-/* Dấu hiệu KHÔNG-CHỈ-MÀU: nền ngày lễ cố ý rất nhạt, nên cờ này mới là thứ nhìn thấy được —
-   kể cả với người không phân biệt được sắc đỏ. */
-.holidayFlag {
-  position: absolute;
-  top: 2px;
-  right: 3px;
-  font-size: 9px;
-  line-height: 1;
-  color: var(--xp-color-error);
-}
-
-/* Cột hôm nay: nhấn gold ngữ nghĩa (token primary), thắng nền cuối tuần. */
-.dayHeaderCell.today {
-  background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary);
-}
-
-.dayHeaderCell.today .dayNumber {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: var(--xp-color-primary);
-  color: var(--xp-color-bg-container);
-  font-weight: 700;
-}
-
 .weekdayLabel {
-  color: var(--xp-color-text-tertiary);
-  font-size: 11px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .dayNumber {
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
 }
 
-/* ── Thân lưới ảo hoá ──────────────────────────────────────────────────── */
+.dayHeaderCell.weekend .dayNumber,
+.dayHeaderCell.holiday .dayNumber {
+  color: inherit;
+}
 
-/* Spacer giữ ĐÚNG tổng chiều cao ảo — scrollbar thật, hàng đặt tuyệt đối bên trong. */
+/* Hôm nay: số ngày trong viên tròn vàng (design T4 "11"). */
+.dayHeaderCell.today .dayNumber {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-text-on-dark);
+}
+
+.holidayFlag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 10px;
+  color: var(--xp-color-error);
+}
+
+/* ── Thân lưới ─────────────────────────────────────────────────────────── */
+
 .bodySpacer {
   position: relative;
+  width: 100%;
 }
 
-/*
- * Mọi hàng CÙNG một nền — cố ý không có zebra.
- *
- * Sọc xám của bản trước trùng đúng tông với nền cuối tuần, nên hai thông tin khác hẳn nhau
- * ("hàng thứ chẵn" và "Thứ 7/CN") nói bằng cùng một màu, và mắt không đọc được cái nào ra cái
- * nào. Lưới đã có đường kẻ đủ cả hàng lẫn cột để dò theo, nên nền được để trống cho thứ thật
- * sự cần màu: thanh event, cột hôm nay, cột ngày lễ.
- */
 .row {
   position: absolute;
   top: 0;
   left: 0;
   display: flex;
-  width: var(--xp-canvas-width);
+  width: 100%;
   border-bottom: 1px solid var(--xp-cal-line);
-  background: var(--xp-color-bg-container);
 }
-
-/* ── Cột xe (sticky trái) ──────────────────────────────────────────────── */
 
 .resourceCell {
   position: sticky;
@@ -277,98 +327,137 @@
   flex: 0 0 var(--xp-resource-col-width);
   width: var(--xp-resource-col-width);
   display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  padding: 0 var(--xp-space-sm);
-  /* Sticky phải ĐỤC — kế thừa từ nền hàng bằng inherit thì thành trong suốt khi cuộn. */
+  align-items: flex-start;
   background: var(--xp-color-bg-container);
-  border-right: 1px solid var(--xp-color-border);
+  border-right: 1px solid var(--xp-cal-line);
 }
 
-/* Thu gọn: chỉ còn ảnh, canh giữa — thông tin đầy đủ nằm ở popover của chính ô. */
 .resourceCellCollapsed {
+  align-items: center;
   justify-content: center;
-  padding: 0 2px;
 }
 
-/* Cả ô xe là MỘT nút mở thẻ thông tin — reset vỏ button, giữ nguyên bố cục bên trong. */
 .resourceInfoTrigger {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--xp-space-sm);
   width: 100%;
   min-width: 0;
-  padding: 0;
+  padding: var(--xp-space-12) var(--xp-space-md);
   border: 0;
   background: transparent;
-  cursor: pointer;
+  font: inherit;
   text-align: left;
+  cursor: default;
+}
+
+.resourceCellCollapsed .resourceInfoTrigger {
+  align-items: center;
+  padding: var(--xp-space-sm);
 }
 
 .resourceInfoTrigger:focus-visible {
   outline: 2px solid var(--xp-color-primary);
-  outline-offset: 2px;
-  border-radius: var(--xp-border-radius-sm);
+  outline-offset: -2px;
+}
+
+.resourceImage,
+.resourceImageFallback {
+  flex: none;
+  width: 63px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-chip);
 }
 
 .resourceImage {
-  flex: none;
-  width: 56px;
-  height: 40px;
   object-fit: cover;
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
 }
 
 .resourceImageFallback {
-  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 40px;
-  border-radius: var(--xp-border-radius-sm);
   background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text-placeholder);
   font-size: 18px;
+}
+
+.resourceCellCollapsed .resourceImage,
+.resourceCellCollapsed .resourceImageFallback {
+  width: 40px;
+  height: 40px;
 }
 
 .resourceTexts {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
+  width: 100%;
   min-width: 0;
 }
 
 .resourceName {
-  font-weight: 600;
-  font-size: var(--xp-font-size-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--xp-color-text);
 }
 
 .resourceMeta {
-  font-size: 11px;
-  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .resourceStatus {
-  color: var(--xp-color-warning);
+  color: var(--xp-color-warning-strong);
 }
 
 .resourcePrice {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--xp-gold-deep);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-placeholder);
   white-space: nowrap;
 }
 
-/* ── Ô ngày ────────────────────────────────────────────────────────────── */
+/*
+ * Đội xe > 4 xe: "biển số · giá gọn" trên CÙNG một dòng, giá đứng sát biển số (không dồn về phải -
+ * người dùng chốt 26/11/2026), ngăn bằng `LIST_SEPARATOR`. Biển số dài thì biển số co (…), giá giữ.
+ */
+.resourceMetaRow {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.resourceMetaRow .resourceMeta {
+  min-width: 0;
+}
+
+.resourceSeparator {
+  white-space: pre;
+}
+
+.resourcePriceInline {
+  flex: none;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-placeholder);
+  white-space: nowrap;
+}
+
+.resourcePriceValue {
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-primary);
+}
 
 .rowTrack {
   position: relative;
@@ -377,7 +466,6 @@
 }
 
 .cell {
-  position: relative;
   flex: 0 0 var(--xp-day-width);
   width: var(--xp-day-width);
   height: 100%;
@@ -387,471 +475,605 @@
   background: transparent;
 }
 
-.cell.weekend {
-  background: var(--xp-cal-weekend-bg);
-}
-
-/* Thứ tự khai báo LÀ luật ưu tiên ở đây (cùng độ đặc hiệu): cuối tuần < ngày lễ < hôm nay. */
 .cell.holidayColumn {
   background: var(--xp-cal-holiday-bg);
 }
 
-.cell.today {
-  background: var(--xp-color-primary-light);
+/* Giá riêng: cả ô tô vàng rất nhạt (design `Giá riêng`) — thắng nền ngày lễ. */
+.cell.priceCell {
+  background: var(--xp-color-primary-subtle);
 }
 
 .cellInteractive {
   cursor: pointer;
 }
 
-/* Hover chỉ trên Ô THAO TÁC ĐƯỢC — không tô cả hàng. */
 .cellInteractive:hover {
   background: var(--xp-color-bg-hover);
-  box-shadow: inset 0 0 0 1px var(--xp-color-border-focus);
 }
 
 .cellInteractive:focus-visible {
   outline: 2px solid var(--xp-color-primary);
   outline-offset: -2px;
-  z-index: 1;
 }
 
-/* Chấm giá riêng — gold ngữ nghĩa, góc dưới phải ô. */
-.priceMarker {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--xp-color-primary);
-  box-shadow: 0 0 0 2px var(--xp-color-primary-light);
-  pointer-events: none;
+/* Ô đang chọn (kéo chuột hoặc bảng thao tác đang mở): vàng nhạt + viền vàng (design). */
+.cell.cellSelected {
+  background: var(--xp-color-primary-light);
+  box-shadow: inset 0 0 0 1px var(--xp-color-primary);
 }
 
-/* ── Thanh event ───────────────────────────────────────────────────────── */
+/* ── Thẻ event ─────────────────────────────────────────────────────────── */
 
 .eventBar {
   position: absolute;
-  left: var(--xp-bar-left);
   top: var(--xp-bar-top);
-  width: var(--xp-bar-width);
-  height: var(--xp-calendar-bar-height, 26px);
+  left: var(--xp-bar-left);
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-sm);
-  font-size: var(--xp-font-size-sm);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
+  gap: var(--xp-space-sm);
+  width: var(--xp-bar-width);
+  height: var(--xp-card-height);
+  padding: var(--xp-space-sm) var(--xp-space-12) var(--xp-space-sm) 0;
   border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--tone-bg);
+  font: inherit;
   text-align: left;
-  transition: filter 0.15s ease;
-}
+  cursor: pointer;
+  overflow: hidden;
+  container-type: inline-size;
 
-/*
- * Tông màu theo trạng thái/loại — GIÁ TRỊ từ token ngữ nghĩa của XePrime; component chỉ chọn
- * class theo META của @xeprime/types. Nền nhạt trộn bằng color-mix từ chính màu trạng thái để
- * đổi token là cả bộ đổi theo (cùng kỹ thuật với sidebar tối ở tokens.css).
- */
-.toneBlue {
-  background: var(--xp-color-info-bg);
-  color: var(--xp-color-info);
-  border-color: color-mix(in srgb, var(--xp-color-info) 35%, var(--xp-color-info-bg));
-}
-
-/*
- * `STATUS_COLOR.PROCESSING` — đơn ĐANG THUÊ. Phải khác hẳn `.toneBlue` (đã xác nhận): trên một
- * màn điều phối, "xe đang ở ngoài đường" và "xe đã nhận đơn nhưng còn ở bãi" là hai việc khác
- * nhau, tô cùng màu là xoá mất khác biệt đó.
- */
-.toneCyan {
-  background: var(--xp-color-processing-bg);
-  color: var(--xp-color-processing);
-  border-color: color-mix(in srgb, var(--xp-color-processing) 35%, var(--xp-color-processing-bg));
-}
-
-.toneGreen {
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
-  border-color: color-mix(in srgb, var(--xp-color-success) 35%, var(--xp-color-success-bg));
-}
-
-.toneGold {
-  background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary-active);
-  border-color: color-mix(in srgb, var(--xp-color-primary) 45%, var(--xp-color-primary-light));
-}
-
-.toneOrange {
-  background: var(--xp-color-warning-bg);
-  color: var(--xp-color-warning);
-  border-color: color-mix(in srgb, var(--xp-color-warning) 35%, var(--xp-color-warning-bg));
-}
-
-.toneRed {
-  background: var(--xp-color-error-bg);
-  color: var(--xp-color-error);
-  border-color: color-mix(in srgb, var(--xp-color-error) 35%, var(--xp-color-error-bg));
-}
-
-.toneMaintenance {
-  background: color-mix(
-    in srgb,
-    var(--xp-color-event-maintenance) 10%,
-    var(--xp-color-bg-container)
-  );
-  color: var(--xp-color-event-maintenance);
-  border-color: color-mix(
-    in srgb,
-    var(--xp-color-event-maintenance) 35%,
-    var(--xp-color-bg-container)
-  );
-}
-
-.toneBlocked {
-  background: color-mix(in srgb, var(--xp-color-event-blocked) 12%, var(--xp-color-bg-container));
-  color: var(--xp-color-event-blocked);
-  border-color: color-mix(in srgb, var(--xp-color-event-blocked) 45%, var(--xp-color-bg-container));
-}
-
-.toneNeutral {
-  background: var(--xp-color-neutral-bg);
-  color: var(--xp-color-neutral);
-  border-color: var(--xp-color-border-strong);
+  --tone: var(--xp-color-text-tertiary);
+  --tone-bg: var(--xp-color-bg-muted);
 }
 
 .eventBar:hover {
-  filter: brightness(0.95);
+  box-shadow: var(--xp-elevation-sm);
 }
 
 .eventBar:focus-visible {
   outline: 2px solid var(--xp-color-primary);
   outline-offset: 1px;
-  z-index: 2;
+}
+
+.toneSelfDrive {
+  --tone: var(--xp-color-info-strong);
+  --tone-bg: var(--xp-color-info-bg);
+}
+
+.toneWithDriver {
+  --tone: var(--xp-color-event-with-driver);
+  --tone-bg: var(--xp-color-event-with-driver-bg);
+}
+
+.toneLongTerm {
+  --tone: var(--xp-color-purple);
+  --tone-bg: var(--xp-color-purple-bg);
+}
+
+.toneNeutral {
+  --tone: var(--xp-color-text-tertiary);
+  --tone-bg: var(--xp-color-bg-muted);
 }
 
 /*
- * Nét đứt = chỗ bị giữ mà chưa phải chuyến đang chạy (xe bị khoá, khoản giữ chỗ chờ tiền).
- * Loại event không chỉ phân biệt bằng màu — chú giải dùng lại đúng nét này (`.legendDashed`).
+ * Yêu cầu CHỜ DUYỆT không giữ chỗ (ADR 0044 điều 1): nền trắng + viền đứt cùng sắc dịch vụ — nhìn
+ * là biết "có người hỏi" chứ chưa phải "xe đã bận".
  */
-.eventDashed {
-  border-style: dashed;
+.eventPending {
+  background: var(--xp-color-bg-container);
+  border: 1px dashed var(--tone);
 }
 
-.eventIcon {
-  flex: none;
-  font-size: 12px;
+/* Khoá xe / bảo dưỡng: thẻ xám nét đứt (design "Đã khoá"). */
+.eventOff {
+  padding-left: var(--xp-space-12);
+  border: 1px dashed var(--xp-color-border-strong);
+  background: var(--xp-color-bg);
 }
 
-.eventLabel {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Bo góc phẳng ở đầu bị cắt để người dùng thấy event còn kéo dài ra ngoài khoảng. */
 .clippedStart {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  border-left-style: dashed;
 }
 
 .clippedEnd {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  border-right-style: dashed;
 }
 
-/* ── Hàng "Xe còn trống" (sticky đáy) ─────────────────────────────────── */
+.indicator {
+  flex: none;
+  align-self: center;
+  width: 4px;
+  height: 32px;
+  border-radius: 0 var(--xp-border-radius-control) var(--xp-border-radius-control) 0;
+  background: var(--tone);
+}
 
-.summaryRow {
-  position: sticky;
-  bottom: 0;
-  z-index: var(--xp-z-calendar-header);
+.eventBody {
   display: flex;
-  height: 40px;
-  background: var(--xp-color-bg-elevated);
-  border-top: 1px solid var(--xp-color-border);
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.summaryLabel {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  flex: 0 0 var(--xp-resource-col-width);
-  width: var(--xp-resource-col-width);
+.eventHead {
   display: flex;
   align-items: center;
-  padding: 0 var(--xp-space-sm);
-  background: var(--xp-color-bg-elevated);
-  border-right: 1px solid var(--xp-color-border);
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.eventHeadStart {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.stageChip {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 2px var(--xp-space-xs);
+  border-radius: var(--xp-space-xs);
+  background: var(--chip, var(--xp-color-text-tertiary));
+  color: var(--xp-color-text-on-dark);
+  font-size: var(--xp-font-size-caption);
+  line-height: var(--xp-line-height-caption);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chipDanger {
+  --chip: var(--xp-color-error);
+}
+
+.chipWarning {
+  --chip: var(--xp-color-warning-strong);
+}
+
+.chipInfo {
+  --chip: var(--xp-color-info-strong);
+}
+
+.chipSuccess {
+  --chip: var(--xp-color-success);
+}
+
+.eventCode,
+.eventSpan {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--tone);
+  white-space: nowrap;
+}
+
+.eventCode {
+  font-weight: var(--xp-font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventSpan {
+  flex: none;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.eventRemaining {
+  flex: none;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+}
+
+.eventRemaining strong {
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+}
+
+.eventMain {
+  display: flex;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+.eventAmount {
+  flex: none;
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+}
+
+.amountCompact {
+  display: none;
+}
+
+.eventCustomer {
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventTime {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.summaryTrack {
-  display: flex;
+.offIcon {
+  font-size: 16px;
+  color: var(--xp-color-text-placeholder);
 }
 
-.summaryCell {
-  flex: 0 0 var(--xp-day-width);
-  width: var(--xp-day-width);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-right: 1px solid var(--xp-cal-line);
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--xp-color-success);
+.offLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
 }
 
-.summaryCell.holidayColumn {
-  background: var(--xp-cal-holiday-bg);
+.offReason {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-placeholder);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.summaryCell.today {
-  background: var(--xp-color-primary-light);
+/* Thẻ hẹp (14/30 ngày, chuyến ngắn): rút gọn dần như design - bỏ thời lượng, rồi tiền gọn "800k" + bỏ mã. */
+@container (max-width: 200px) {
+  .eventSpan,
+  .eventRemaining {
+    display: none;
+  }
 }
 
-/* Hết xe: cảnh báo bằng màu lỗi + vẫn có SỐ 0 (không chỉ màu). */
-.summaryNone {
-  color: var(--xp-color-error);
+@container (max-width: 150px) {
+  .eventCode,
+  .amountFull {
+    display: none;
+  }
+
+  .amountCompact {
+    display: inline;
+  }
 }
 
-/* ── Thẻ xem nhanh (hover/focus một thanh event) ──────────────────────────
- * Render trong PORTAL của Popover — nằm ngoài `.wrapper`, nên chỉ dùng token :root,
- * không dùng biến --xp-cal-* cục bộ. */
+@container (max-width: 100px) {
+  .eventCustomer {
+    display: none;
+  }
+}
+
+/* Điện thoại: thẻ thấp hai dòng — bỏ dòng giờ. */
+.eventCompact .eventTime {
+  display: none;
+}
+
+/* ── Thẻ xem nhanh (rê chuột / focus một thẻ) ──────────────────────────── */
 
 .quickCard {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 240px;
-  max-width: 300px;
+  gap: 10px;
+  width: 276px;
+  max-width: calc(100vw - 48px);
 }
 
 .quickHead {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--xp-space-sm);
+  padding-bottom: var(--xp-space-12);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
 }
 
-/* X đóng tường minh — trên cảm ứng không có "rời chuột" để thẻ tự tắt. */
-.quickClose {
-  flex: none;
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: var(--xp-border-radius-sm);
-  background: transparent;
-  color: var(--xp-color-text-tertiary);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.quickClose:hover,
-.quickClose:focus-visible {
-  background: var(--xp-color-bg-hover);
+.quickHeading {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
 }
 
-.quickType {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--xp-color-text-tertiary);
-  white-space: nowrap;
+.quickWho {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.quickTitle {
-  font-size: var(--xp-font-size-body-lg);
-  font-weight: 700;
+.quickWhoTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.quickName {
+  min-width: 0;
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
   overflow-wrap: anywhere;
 }
 
+.quickWhoSub {
+  display: flex;
+  gap: 10px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+}
+
 .quickCode {
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  color: var(--xp-color-primary-active);
+  font-style: italic;
+  color: var(--xp-color-text-tertiary);
 }
 
 .quickRows {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin: 2px 0 0;
-  padding-top: 6px;
+  align-items: flex-end;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding-top: 10px;
   border-top: 1px solid var(--xp-color-border);
 }
 
 .quickRow {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-12);
+  width: 100%;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .quickRow dt {
   flex: none;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
 }
 
 .quickRow dd {
   margin: 0;
-  font-weight: 600;
+  min-width: 0;
+  font-weight: var(--xp-font-weight-medium);
   color: var(--xp-color-text);
   text-align: right;
-  overflow-wrap: anywhere;
 }
 
-.quickHint {
-  padding-top: 6px;
-  border-top: 1px dashed var(--xp-color-border);
-  font-size: var(--xp-font-size-sm);
+.quickPlate {
   color: var(--xp-color-text-tertiary);
 }
 
-/* ── Chú giải ──────────────────────────────────────────────────────────── */
+.quickPlateSep {
+  color: var(--xp-color-text-disabled);
+}
 
-.legend {
+.quickPaid {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.quickActions {
+  display: flex;
+  gap: var(--xp-space-12);
+}
+
+.quickActions > :last-child {
+  flex: 1;
+}
+
+.contactPopover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+/* ── Bảng thao tác của một NGÀY (bấm header ngày) ──────────────────────── */
+
+.dayPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  width: 290px;
+  max-width: calc(100vw - 48px);
+}
+
+.dayPanelHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding-bottom: var(--xp-space-12);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.dayPanelDate {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.dayPanelHoliday {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--xp-space-md);
-  padding: 6px var(--xp-space-md);
-  border-bottom: 1px solid var(--xp-cal-line);
-  font-size: var(--xp-font-size-sm);
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-tertiary);
+}
+
+.dayPanelHolidayName {
+  min-width: 0;
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Một mục hành động — cùng khuôn "Filter Categories" của bảng thao tác ô (design `24200:99430`). */
+.actionItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.actionItem:hover,
+button.actionItem:focus-visible {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+}
+
+button.actionItem:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+.actionIcon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: 18px;
+}
+
+.actionTexts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.actionLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.actionHint {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
   color: var(--xp-color-text-secondary);
 }
 
-.legendItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.actionLink {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-link);
+  cursor: pointer;
 }
 
-/*
- * Ô màu mẫu KHÔNG có bảng màu riêng: nó nhận đúng class `.tone*` mà thanh event dùng (xem
- * `statusColorToneClass`). Bản trước có bộ `.legendBooking/.legendActive` chép tay và đã trôi
- * khỏi lưới — chú giải nói "Đang thuê màu xanh lá" trong khi thanh thật màu xanh dương.
- *
- * Vì vậy chỉ khai `border-width`/`border-style`, KHÔNG khai `border` rút gọn: quy tắc này nằm
- * SAU các `.tone*` trong file, một shorthand ở đây sẽ ghi đè `border-color` của tone.
- */
-.legendSwatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  border-width: 1px;
-  border-style: solid;
-  border-color: transparent;
+.actionLink:hover {
+  text-decoration: underline;
 }
 
-/* Nét đứt, giống hệt thanh event (`.eventDashed`) — màu không phải tín hiệu duy nhất. */
-.legendDashed {
-  border-style: dashed;
+.actionLink:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
 }
 
-/* Chấm giá riêng — cùng hình tròn gold với `.priceMarker` trong ô. */
-.legendPrice {
-  border-radius: 50%;
-  background: var(--xp-color-primary);
-  border-color: var(--xp-color-primary);
+.actionChevron {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 12px;
 }
-
-/* Cùng nền với cột thật + viền đỏ để ô mẫu 12px không biến mất trên nền trắng. */
-.legendHoliday {
-  background: var(--xp-cal-holiday-bg);
-  border-color: color-mix(in srgb, var(--xp-color-error) 40%, var(--xp-color-bg-container));
-}
-
-/* ── Mobile ────────────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
-  /* MỘT dòng cuộn ngang — chú giải không được ăn thêm chiều cao của lưới trên màn nhỏ. */
+  .wrapper {
+    gap: var(--xp-space-12);
+  }
+
   .legend {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: var(--xp-space-sm);
-    padding: 4px var(--xp-space-sm);
-    font-size: 11px;
+    gap: var(--xp-space-sm) var(--xp-space-12);
+    padding: var(--xp-space-sm) var(--xp-space-12);
+  }
+
+  .legendTitle {
+    width: 100%;
   }
 
   .legendItem {
-    flex: none;
-    white-space: nowrap;
+    font-size: var(--xp-font-size-body-sm);
   }
 
-  .cornerCell,
-  .summaryLabel {
-    padding: 0 var(--xp-space-sm);
-    font-size: 11px;
+  .cornerCell {
+    padding: var(--xp-space-sm);
+  }
+
+  .cornerTitle {
+    font-size: var(--xp-font-size-body-sm);
+  }
+
+  .resourceInfoTrigger {
+    padding: var(--xp-space-sm);
+    gap: var(--xp-space-xs);
   }
 
   .resourceImage,
   .resourceImageFallback {
     width: 40px;
-    height: 30px;
+    height: 28px;
   }
 
-  /* Giá ẩn ở cột hẹp 104px — tên + mã là tối thiểu để nhận ra xe. */
-  .resourcePrice {
+  .resourcePrice,
+  .resourcePriceInline {
     display: none;
   }
 
-  .eventBar {
-    padding: 0 4px;
-    font-size: 11px;
+  .weekdayLabel {
+    font-size: var(--xp-font-size-body-sm);
   }
 }
 
-/* ── Bảng hành động của một ngày ──────────────────────────────────────────
- * Mở bằng CLICK từ header; Popover neo vào CHÍNH nút của cột nên nó bám đúng ngày kể cả khi
- * người dùng cuộn ngang. Bố cục theo bản thiết kế: tiêu đề ngày · tên lễ + thẻ loại · hành động.
- */
-
-.dayPanel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  min-width: 300px;
-  max-width: 360px;
-}
-
-.dayPanelHead {
+.dayPanelTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--xp-space-sm);
-}
-
-.dayPanelHeadIcon {
-  flex: none;
-  color: var(--xp-color-text-tertiary);
-}
-
-.dayPanelDate {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  color: var(--xp-color-text-secondary);
 }
 
 .dayPanelClose {
@@ -879,156 +1101,79 @@
   outline-offset: 1px;
 }
 
-.dayPanelHoliday {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.holidayFlagInline {
+  color: var(--xp-color-error);
 }
 
-/* Tên lễ và thẻ loại nằm cùng hàng, thẻ dính mép phải và không bị bóp. */
-.dayPanelHolidayTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-}
-
-.dayPanelHolidayName {
-  margin: 0;
-  /* h4 chứ không h3: popover chỉ rộng 360px, và tên lễ là NHÃN của thẻ chứ không phải tiêu đề
-     của một trang — 20px làm nó át cả hai hành động bên dưới. */
-  font-size: var(--xp-font-size-h4);
-  line-height: 1.35;
-  font-weight: 700;
-}
-
-.dayPanelTag {
-  flex: none;
-  margin: 0;
-}
-
-.dayPanelHolidayType {
-  margin: 0;
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-tertiary);
-}
-
-/* ── Hành động ───────────────────────────────────────────────────────────
- * Thẻ khoá xe có VIỀN vì nó chứa hai đích bấm chồng nhau — viền là thứ nói cho người dùng biết
- * cả khối này là một đơn vị, còn công tắc bên trong là một thao tác riêng. */
-
-.dayCard {
-  position: relative;
-  display: flex;
+.quickHeadEnd {
+  display: inline-flex;
   align-items: center;
   gap: var(--xp-space-sm);
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
 }
 
-/*
- * Đường vào hộp nhiều ngày là một LIÊN KẾT CHỮ, không phải cả thẻ.
- *
- * Bản trước cho cả thẻ bấm được (mẫu "stretched link") và đặt công tắc chồng lên — chạy được,
- * nhưng người dùng không đoán nổi ranh giới giữa "gạt để khoá ngay" và "bấm để mở hộp". Một
- * chữ xanh gạch chân tự nói ra đích của nó, và phần còn lại của thẻ trở về đúng vai trò: nhãn.
- */
-.dayCardLink {
-  align-self: flex-start;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-
-.dayCardLink:hover {
-  color: var(--xp-color-link-hover);
-}
-
-.dayCardLink:focus-visible {
-  outline: 2px solid var(--xp-color-primary);
-  outline-offset: 2px;
-  border-radius: var(--xp-border-radius-sm);
-}
-
-.dayCardSwitch {
-  flex: none;
-}
-
-/* Hàng hành động thường (giá riêng): không viền, chỉ một đích bấm. */
-.dayRow {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  width: 100%;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 0;
-  border-radius: var(--xp-border-radius);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.dayRow:hover {
-  background: var(--xp-color-bg-hover);
-}
-
-.dayRow:focus-visible {
-  outline: 2px solid var(--xp-color-primary);
-  outline-offset: -2px;
-}
-
-/* Chip icon — vuông bo tròn, phân biệt hai hành động bằng cả HÌNH lẫn màu. */
-.dayChip {
+.quickClose {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--xp-border-radius);
-  font-size: 15px;
-}
-
-.dayChipNeutral {
-  background: var(--xp-color-neutral-bg);
-  color: var(--xp-color-neutral);
-}
-
-.dayChipGold {
-  border-radius: 50%;
-  background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary);
-}
-
-.dayActionTexts {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  gap: 1px;
-}
-
-.dayActionLabel {
-  font-weight: 600;
-}
-
-.dayActionHint {
-  font-size: var(--xp-font-size-sm);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--xp-border-radius-sm);
+  background: transparent;
   color: var(--xp-color-text-tertiary);
-}
-
-.dayActionChevron {
-  flex: none;
   font-size: 12px;
-  color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+}
+
+.quickClose:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.quickClose:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+/* ── Dấu trên thẻ đơn (ADR 0110) ───────────────────────────────────────── */
+
+/* Dấu NGUỒN ĐƠN tự khai thác: chữ cái đầu của nguồn trong ô tròn, màu theo nguồn (`bookingSourceToneClass`). */
+.sourceMark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 50%;
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: normal;
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 1;
+}
+
+/* Dấu THANH TOÁN: thu đủ = dấu tích xanh, thu một phần = số phần trăm. */
+.paidFull {
+  flex: none;
+  align-self: center;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body);
+}
+
+.paidPartial {
+  flex: none;
+  align-self: center;
+  padding: 0 var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
 }

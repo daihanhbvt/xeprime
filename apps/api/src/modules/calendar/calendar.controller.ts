@@ -12,6 +12,9 @@ import { Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BOOKING_REQUEST_STATUS,
+  addCalendarMonthsVn,
+  vnDayStart,
   OCCUPANCY_SOURCE_TYPE,
   OCCUPANCY_SOURCE_TYPE_META,
   PERMISSION,
@@ -35,6 +38,7 @@ import {
   CalendarAvailabilityDto,
   CalendarDailyPriceDto,
   CalendarEventDto,
+  CalendarEventsQueryDto,
   CalendarQuoteQueryDto,
   CalendarRangeQueryDto,
   CalendarResourceDto,
@@ -43,6 +47,12 @@ import {
 } from './dto/calendar.dto';
 import { VehicleBusyDaysDto, VehicleBusyDaysQueryDto } from './dto/busy-days.dto';
 import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
+import { fromDateOnly } from '../../common/date-only';
+import {
+  bookingPaidPercentOf,
+  emptyMoneySides,
+  loadBookingMoneySides,
+} from '../../common/booking-money';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** Asia/Ho_Chi_Minh = UTC+7 cố định (không DST) — đủ để gán nhãn ngày local. */
@@ -415,8 +425,16 @@ export class CalendarController {
   @ApiOkResponse({ type: CalendarEventDto, isArray: true })
   async events(
     @CurrentTenant() tenant: TenantContext,
-    @Query() query: CalendarRangeQueryDto,
+    @Query() query: CalendarEventsQueryDto,
   ): Promise<CalendarEventDto[]> {
+    /*
+     * Tên khách, dịch vụ, số tiền của một YÊU CẦU là dữ liệu của hộp thư yêu cầu — người chỉ có
+     * quyền xem lịch vẫn thấy chỗ bị giữ, nhưng không thấy của ai. `permissions` có thể vắng ở
+     * lời gọi nội bộ (spec) — vắng thì coi như không có quyền.
+     */
+    const canSeeRequests = Boolean(tenant.permissions?.includes(PERMISSION.BOOKING_REQUEST_VIEW));
+    const branchScope = resolveBranchScope(query.branchId, tenant.allowedBranchIds);
+
     const occupancies = await this.prisma.vehicleOccupancy.findMany({
       where: {
         tenantId: tenant.tenantId,
@@ -426,7 +444,7 @@ export class CalendarController {
         startAt: { lt: query.endAt },
         endAt: { gt: query.startAt },
         // Thu hẹp theo chi nhánh; `tenantId` ở trên vẫn là ranh giới thật.
-        ...vehicleBranchWhere(resolveBranchScope(query.branchId, tenant.allowedBranchIds)),
+        ...vehicleBranchWhere(branchScope),
       },
       select: {
         id: true,
@@ -440,18 +458,30 @@ export class CalendarController {
     });
 
     // Batch-load phần tóm tắt theo TỪNG loại nguồn — một query mỗi loại, không N+1 theo event.
-    const bookingIds = occupancies
-      .filter((o) => o.sourceType === OCCUPANCY_SOURCE_TYPE.BOOKING)
-      .map((o) => o.sourceId);
-    const blockIds = occupancies
-      .filter((o) => o.sourceType === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE)
-      .map((o) => o.sourceId);
+    const idsOf = (type: OccupancySourceType) =>
+      occupancies.filter((o) => o.sourceType === type).map((o) => o.sourceId);
+    const bookingIds = idsOf(OCCUPANCY_SOURCE_TYPE.BOOKING);
+    const blockIds = idsOf(OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE);
+    const holdRequestIds = idsOf(OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST);
 
-    const [bookings, blocks] = await Promise.all([
+    const [bookings, blocks, holdRequests, pendingRequests] = await Promise.all([
       bookingIds.length
         ? this.prisma.booking.findMany({
             where: { id: { in: bookingIds }, tenantId: tenant.tenantId },
-            select: { id: true, code: true, customerName: true, status: true },
+            select: {
+              id: true,
+              code: true,
+              customerName: true,
+              status: true,
+              serviceType: true,
+              totalAmount: true,
+              // Nguồn đơn + phần đã thu (ADR 0110) — biểu tượng nguồn và thanh toán trên thanh đơn.
+              source: true,
+              sourceLabel: true,
+              paidAmount: true,
+              priceSnapshot: true,
+              hold: { select: { paidAmount: true } },
+            },
           })
         : [],
       blockIds.length
@@ -460,27 +490,154 @@ export class CalendarController {
             select: { id: true, reason: true },
           })
         : [],
+      holdRequestIds.length
+        ? this.prisma.bookingRequest.findMany({
+            where: { id: { in: holdRequestIds }, tenantId: tenant.tenantId },
+            select: {
+              id: true,
+              status: true,
+              customerName: true,
+              serviceType: true,
+              hold: { select: { priceSnapshotJson: true } },
+            },
+          })
+        : [],
+      query.includePendingRequests && canSeeRequests
+        ? this.pendingRequestEvents(tenant.tenantId, query, branchScope)
+        : [],
     ]);
 
     const bookingById = new Map(bookings.map((b) => [b.id, b]));
+    // Một lượt nạp ba tổng phụ (phụ phí, phiếu tay, cọc) cho mọi đơn của khung nhìn — không N+1.
+    const moneySides = await loadBookingMoneySides(this.prisma, bookingIds);
     const blockById = new Map(blocks.map((b) => [b.id, b]));
+    const holdById = new Map(holdRequests.map((r) => [r.id, r]));
 
-    return occupancies.map((o) => {
-      const booking = bookingById.get(o.sourceId);
-      return {
+    const occupied = occupancies.map((o): CalendarEventDto => {
+      const base = {
         id: o.id,
         resourceId: o.vehicleId,
         type: o.sourceType,
-        title: booking
-          ? `${booking.code} · ${booking.customerName}`
-          : nonBookingTitle(o.sourceType),
-        customerName: booking?.customerName ?? null,
         startAt: o.startAt.toISOString(),
         endAt: o.endAt.toISOString(),
-        status: booking?.status ?? blockById.get(o.sourceId)?.reason ?? null,
         sourceId: o.sourceId,
+        occupying: true,
+      };
+      const booking = bookingById.get(o.sourceId);
+      if (booking) {
+        return {
+          ...base,
+          title: `${booking.code} · ${booking.customerName}`,
+          customerName: booking.customerName,
+          status: booking.status,
+          code: booking.code,
+          serviceType: booking.serviceType,
+          amount: booking.totalAmount.toFixed(0),
+          bookingSource: booking.source,
+          bookingSourceLabel: booking.sourceLabel,
+          paidPercent: bookingPaidPercentOf(
+            booking,
+            moneySides.get(booking.id) ?? emptyMoneySides(),
+          ),
+        };
+      }
+      const hold = holdById.get(o.sourceId);
+      if (hold) {
+        return {
+          ...base,
+          title: nonBookingTitle(o.sourceType),
+          customerName: canSeeRequests ? hold.customerName : null,
+          status: hold.status,
+          code: null,
+          serviceType: canSeeRequests ? hold.serviceType : null,
+          amount: canSeeRequests ? holdRentalTotal(hold.hold?.priceSnapshotJson) : null,
+        };
+      }
+      return {
+        ...base,
+        title: nonBookingTitle(o.sourceType),
+        customerName: null,
+        status: blockById.get(o.sourceId)?.reason ?? null,
+        code: null,
+        serviceType: null,
+        amount: null,
       };
     });
+
+    return [...occupied, ...pendingRequests];
+  }
+
+  /**
+   * Yêu cầu CHỜ DUYỆT giao với khoảng xem — lớp HIỂN THỊ, không phải lịch bận.
+   *
+   * Không đọc `vehicle_occupancies` vì chúng không có ở đó: gửi yêu cầu KHÔNG chiếm lịch (ADR 0044
+   * điều 1) và nhiều khách được hỏi cùng một khung giờ. `occupying = false` để client vẽ khác đi
+   * và không đếm chúng là "ngày bận".
+   *
+   * Dài hạn mô hình gói chưa có lịch chính xác (`pickup_at` NULL — gian hàng chốt khi duyệt): vẽ
+   * NGUYỆN VỌNG của khách — từ ngày muốn nhận (hoặc đầu khoảng linh hoạt) cộng đúng số THÁNG LỊCH
+   * của gói (ADR 0011). Bản ghi dài hạn legacy không có gói thì vẽ một tháng.
+   */
+  private async pendingRequestEvents(
+    tenantId: string,
+    query: CalendarEventsQueryDto,
+    branchScope: ReturnType<typeof resolveBranchScope>,
+  ): Promise<CalendarEventDto[]> {
+    const rows = await this.prisma.bookingRequest.findMany({
+      where: {
+        tenantId,
+        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+        vehicle: {
+          deletedAt: null,
+          ...(branchScope === undefined ? {} : { branchId: branchScope }),
+        },
+        OR: [
+          { pickupAt: { lt: query.endAt }, returnAt: { gt: query.startAt } },
+          {
+            pickupAt: null,
+            OR: [
+              { requestedPickupDate: { lt: query.endAt } },
+              { pickupWindowStartDate: { lt: query.endAt } },
+            ],
+          },
+        ],
+      },
+      select: {
+        id: true,
+        vehicleId: true,
+        customerName: true,
+        serviceType: true,
+        pickupAt: true,
+        returnAt: true,
+        requestedPickupDate: true,
+        pickupWindowStartDate: true,
+        longTermPackageMonths: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const events: CalendarEventDto[] = [];
+    for (const r of rows) {
+      const span = pendingRequestSpan(r);
+      // Vế dài hạn của câu truy vấn chỉ chặn được đầu khoảng; đuôi nguyện vọng lọc ở đây.
+      if (!span || span.endAt <= query.startAt || span.startAt >= query.endAt) continue;
+      events.push({
+        id: r.id,
+        resourceId: r.vehicleId,
+        type: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST,
+        title: r.customerName,
+        customerName: r.customerName,
+        startAt: span.startAt.toISOString(),
+        endAt: span.endAt.toISOString(),
+        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+        sourceId: r.id,
+        occupying: false,
+        code: null,
+        serviceType: r.serviceType,
+        amount: null,
+      });
+    }
+    return events;
   }
 
   /**
@@ -523,6 +680,34 @@ export class CalendarController {
  * yêu cầu ở tuyến hoa hồng) hiện lên lịch như một lệnh khoá xe, trong khi thẻ xem nhanh của
  * chính nó lại ghi "Chờ giữ chỗ".
  */
+/**
+ * Tiền thuê đã chốt của một khoản giữ chỗ — đọc từ snapshot đóng băng lúc duyệt (ADR 0024), không
+ * tính lại theo chính sách hôm nay. Snapshot hỏng/thiếu thì `null`: thẻ lịch không đoán số.
+ */
+function holdRentalTotal(snapshot: Prisma.JsonValue | undefined): string | null {
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return null;
+  const total = (snapshot as { totalAmount?: unknown }).totalAmount;
+  return typeof total === 'string' ? total : null;
+}
+
+/**
+ * Khoảng VẼ của một yêu cầu chờ duyệt. Có lịch thì dùng lịch; dài hạn mô hình gói thì từ ngày
+ * nguyện vọng (`requested_pickup_date`, hoặc đầu khoảng linh hoạt) cộng số THÁNG LỊCH của gói.
+ */
+function pendingRequestSpan(r: {
+  pickupAt: Date | null;
+  returnAt: Date | null;
+  requestedPickupDate: Date | null;
+  pickupWindowStartDate: Date | null;
+  longTermPackageMonths: number | null;
+}): { startAt: Date; endAt: Date } | null {
+  if (r.pickupAt && r.returnAt) return { startAt: r.pickupAt, endAt: r.returnAt };
+  const wishDay = fromDateOnly(r.requestedPickupDate ?? r.pickupWindowStartDate);
+  if (!wishDay) return null;
+  const startAt = vnDayStart(wishDay);
+  return { startAt, endAt: addCalendarMonthsVn(startAt, r.longTermPackageMonths ?? 1) };
+}
+
 function nonBookingTitle(sourceType: string): string {
   return (
     OCCUPANCY_SOURCE_TYPE_META[sourceType as OccupancySourceType]?.label ??

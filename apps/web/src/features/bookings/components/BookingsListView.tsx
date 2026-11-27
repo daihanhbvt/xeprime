@@ -8,10 +8,14 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
+  BOOKING_DIRECT_SOURCE_VALUES,
   BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
+  BOOKING_SOURCE,
+  BOOKING_SOURCE_FILTER_DIRECT,
   BOOKING_STATUS,
   isBookingRequestPastDue,
+  isMarketplaceBooking,
   PERMISSION,
   SERVICE_TYPE_VALUES,
   type BookingListPreset,
@@ -53,6 +57,7 @@ import {
   useBookingRequestsInfinite,
 } from '@/features/booking-requests/hooks/use-booking-requests';
 import type { BookingRequestItem } from '@/features/booking-requests/types';
+import { useBookingSourceLabels } from '@/features/bookings/hooks/use-booking-source-labels';
 import { useCanCreateBooking } from '@/features/bookings/hooks/use-can-create-booking';
 import { useBookings, useBookingsInfinite } from '@/features/bookings/hooks/use-bookings';
 import { usePaymentArrivalToast } from '@/features/bookings/hooks/use-payment-arrival-toast';
@@ -111,6 +116,9 @@ const DEFAULT_BOOKING_SORT: Readonly<Record<BookingStage, BookingSort>> = {
 type RequestsQuery = ReturnType<typeof useBookingRequests>;
 type BookingsQuery = ReturnType<typeof useBookings>;
 
+/** Tiền tố giá trị của một NHÃN nguồn tự nhập trong ô lọc "Nguồn đơn" — phân biệt với mã nguồn. */
+const SOURCE_LABEL_OPTION_PREFIX = 'label:';
+
 /** Một nhóm trên màn — dữ liệu đã chuẩn hoá về MỘT hình (thẻ + tổng + trạng thái tải). */
 interface StageData {
   stage: RentalStage;
@@ -136,6 +144,21 @@ function fromRequests(stage: RequestStage, query: RequestsQuery): StageData {
     stale: query.isPlaceholderData,
     error: query.isError && !query.data,
     refetch: () => void query.refetch(),
+  };
+}
+
+/** Nhóm yêu cầu khi bộ lọc nguồn đơn loại hẳn yêu cầu ra ngoài — rỗng, không tải, không lỗi. */
+function emptyStage(stage: RentalStage): StageData {
+  return {
+    stage,
+    items: [],
+    total: 0,
+    page: 1,
+    limit: ALL_VIEW_GROUP_LIMIT,
+    loading: false,
+    stale: false,
+    error: false,
+    refetch: () => undefined,
   };
 }
 
@@ -209,6 +232,7 @@ export function BookingsListView() {
   const t = useTranslations('Bookings');
   const tBoard = useTranslations('Bookings.board');
   const tRequests = useTranslations('BookingRequests');
+  const tSource = useTranslations('Bookings.source');
   const label = useDomainLabel();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
@@ -216,7 +240,8 @@ export function BookingsListView() {
   const { has } = usePermissions();
   const { isManage: isManageWorkspace } = useWorkspace();
   const { data: user } = useCurrentUser();
-  // Tuyến hoa hồng không lập đơn tay (`useCanCreateBooking`) — chuyến chỉ đến từ chợ.
+  // Chủ xe tuyến hoa hồng: màn trống mời xem lại xe khi họ không có quyền lập đơn (ADR 0110 mở lập
+  // đơn tay cho cả hai tuyến — `useCanCreateBooking` chỉ còn xét quyền).
   const marketOnly = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
   const { filters, setFilters } = useRentalsFilters();
   // Kanban / List — `null` trong lượt hydrate đầu (chưa đọc được lựa chọn đã nhớ của trình duyệt).
@@ -228,6 +253,8 @@ export function BookingsListView() {
   const isCompactList = useMediaQuery(`(max-width: ${XP_BREAKPOINTS.tablet}px)`);
   /** Đang cầm một thẻ trên Kanban — tạm dừng làm mới nền để thẻ không biến mất dưới tay. */
   const [dragging, setDragging] = useState(false);
+  // Nhãn nguồn gian hàng đã nhập — thành lựa chọn của ô lọc "Nguồn đơn" (ADR 0110).
+  const sourceLabels = useBookingSourceLabels({ enabled: has(PERMISSION.BOOKING_VIEW) });
   const branch = useBranchFilter({
     value: filters.branchId,
     onChange: (branchId) => setFilters({ branchId }),
@@ -273,7 +300,19 @@ export function BookingsListView() {
     serviceType: filters.serviceType,
     vehicleId: filters.vehicleId,
   };
-  const bookingScope = { ...requestScope, ...(filters.sort ? { sort: filters.sort } : {}) };
+  /*
+   * NGUỒN ĐƠN (ADR 0110) là thuộc tính của ĐƠN. Yêu cầu (hai nhóm đầu) luôn đến từ sàn, nên khi lọc
+   * một nguồn ngoài sàn thì hai nhóm đó RỖNG — không gọi API, và không vẽ lại dữ liệu cũ còn trong
+   * cache (khoá truy vấn của yêu cầu không mang nguồn).
+   */
+  const sourceScope = {
+    ...(filters.source ? { source: filters.source } : {}),
+    ...(filters.sourceLabel ? { sourceLabel: filters.sourceLabel } : {}),
+  };
+  const requestsInScope =
+    !filters.sourceLabel && (!filters.source || isMarketplaceBooking(filters.source));
+  const bookingBase = { ...requestScope, ...sourceScope };
+  const bookingScope = { ...bookingBase, ...(filters.sort ? { sort: filters.sort } : {}) };
   const singlePage = { page: filters.page, limit: filters.limit };
   const previewPage = { page: 1, limit: ALL_VIEW_GROUP_LIMIT };
 
@@ -291,11 +330,16 @@ export function BookingsListView() {
   });
 
   const needsAction = useBookingRequests(requestQuery(RENTAL_STAGE.NEEDS_ACTION), {
-    enabled: isList && canViewRequests && (isAll || rail === RENTAL_STAGE.NEEDS_ACTION),
+    enabled:
+      isList && canViewRequests && requestsInScope && (isAll || rail === RENTAL_STAGE.NEEDS_ACTION),
     live: true,
   });
   const awaitingPayment = useBookingRequests(requestQuery(RENTAL_STAGE.AWAITING_PAYMENT), {
-    enabled: isList && canViewRequests && (isAll || rail === RENTAL_STAGE.AWAITING_PAYMENT),
+    enabled:
+      isList &&
+      canViewRequests &&
+      requestsInScope &&
+      (isAll || rail === RENTAL_STAGE.AWAITING_PAYMENT),
     live: true,
   });
   const awaitingPickup = useBookings(bookingQuery(RENTAL_STAGE.AWAITING_PICKUP), {
@@ -313,7 +357,7 @@ export function BookingsListView() {
    * trạng thái/ngăn trả CÙNG phạm vi lọc).
    */
   const requestMetaNeeded =
-    isList && canViewRequests && !isAll && !isRequestStage(rail as RentalStage);
+    isList && canViewRequests && requestsInScope && !isAll && !isRequestStage(rail as RentalStage);
   const bookingMetaNeeded =
     isList && canViewBookings && !isAll && isRequestStage(rail as RentalStage);
   const requestMeta = useBookingRequests(
@@ -338,17 +382,17 @@ export function BookingsListView() {
     limit: BOARD_PAGE_SIZE,
   });
   const boardBookings = (stage: BookingStage) => ({
-    ...requestScope,
+    ...bookingBase,
     preset: stage as BookingListPreset,
     limit: BOARD_PAGE_SIZE,
   });
   const boardNeedsAction = useBookingRequestsInfinite(boardRequests(RENTAL_STAGE.NEEDS_ACTION), {
-    enabled: isBoard && canViewRequests,
+    enabled: isBoard && canViewRequests && requestsInScope,
     live: boardLive,
   });
   const boardAwaitingPayment = useBookingRequestsInfinite(
     boardRequests(RENTAL_STAGE.AWAITING_PAYMENT),
-    { enabled: isBoard && canViewRequests, live: boardLive },
+    { enabled: isBoard && canViewRequests && requestsInScope, live: boardLive },
   );
   const boardAwaitingPickup = useBookingsInfinite(boardBookings(RENTAL_STAGE.AWAITING_PICKUP), {
     enabled: isBoard && canViewBookings,
@@ -360,8 +404,12 @@ export function BookingsListView() {
   });
 
   const stageData: Record<RentalStage, StageData> = {
-    [RENTAL_STAGE.NEEDS_ACTION]: fromRequests(RENTAL_STAGE.NEEDS_ACTION, needsAction),
-    [RENTAL_STAGE.AWAITING_PAYMENT]: fromRequests(RENTAL_STAGE.AWAITING_PAYMENT, awaitingPayment),
+    [RENTAL_STAGE.NEEDS_ACTION]: requestsInScope
+      ? fromRequests(RENTAL_STAGE.NEEDS_ACTION, needsAction)
+      : emptyStage(RENTAL_STAGE.NEEDS_ACTION),
+    [RENTAL_STAGE.AWAITING_PAYMENT]: requestsInScope
+      ? fromRequests(RENTAL_STAGE.AWAITING_PAYMENT, awaitingPayment)
+      : emptyStage(RENTAL_STAGE.AWAITING_PAYMENT),
     [RENTAL_STAGE.AWAITING_PICKUP]: fromBookings(RENTAL_STAGE.AWAITING_PICKUP, awaitingPickup),
     [RENTAL_STAGE.RENTING]: fromBookings(RENTAL_STAGE.RENTING, renting),
   };
@@ -381,7 +429,9 @@ export function BookingsListView() {
     boardRenting.data?.pages[0]
   )?.meta.presetCounts;
   const requestCount = (statuses: readonly string[]) =>
-    statusCounts
+    !requestsInScope
+      ? 0
+      : statusCounts
       ? statusCounts
           .filter((entry) => statuses.includes(entry.status))
           .reduce((sum, entry) => sum + entry.count, 0)
@@ -568,8 +618,23 @@ export function BookingsListView() {
     [RENTAL_STAGE.AWAITING_PICKUP]: boardAwaitingPickup,
     [RENTAL_STAGE.RENTING]: boardRenting,
   };
-  const boardColumns = visibleStages.map((stage) =>
-    boardColumnOf(stage, boardQueries[stage], countOf(stage)),
+  const boardColumns = visibleStages.map((stage): BoardColumn =>
+    // Lọc một nguồn ngoài sàn ⇒ hai cột yêu cầu rỗng (không vẽ dữ liệu cũ còn trong cache).
+    isRequestStage(stage) && !requestsInScope
+      ? {
+          stage,
+          items: [],
+          count: 0,
+          loading: false,
+          error: false,
+          stale: false,
+          hasNext: false,
+          loadingMore: false,
+          loadMoreError: false,
+          loadMore: () => undefined,
+          refetch: () => undefined,
+        }
+      : boardColumnOf(stage, boardQueries[stage], countOf(stage)),
   );
 
   /**
@@ -654,6 +719,30 @@ export function BookingsListView() {
         ...SERVICE_TYPE_VALUES.map((value) => ({ value, label: label('serviceType', value) })),
       ],
     },
+    // Nguồn đơn (ADR 0110): sàn XePrime, mọi kênh tự khai thác, từng kênh, và từng nhãn đã nhập.
+    ...(canViewBookings
+      ? [
+          {
+            kind: 'select' as const,
+            key: 'source',
+            label: tSource('filter.label'),
+            allowClear: false,
+            options: [
+              { value: ALL_FILTER, label: tSource('filter.all') },
+              { value: BOOKING_SOURCE.XEPRIME, label: label('bookingSource', BOOKING_SOURCE.XEPRIME) },
+              { value: BOOKING_SOURCE_FILTER_DIRECT, label: tSource('filter.direct') },
+              ...BOOKING_DIRECT_SOURCE_VALUES.map((value) => ({
+                value,
+                label: label('bookingSource', value),
+              })),
+              ...(sourceLabels.data ?? []).map((value) => ({
+                value: `${SOURCE_LABEL_OPTION_PREFIX}${value}`,
+                label: value,
+              })),
+            ],
+          },
+        ]
+      : []),
     /*
      * Sắp xếp chỉ ở hai nhóm ĐƠN khi xem một nhóm: hai nhóm yêu cầu luôn xếp theo hạn đang chạy
      * (ca trực), và ô "Tất cả" là bản xem trước của từng nhóm theo thứ tự tự nhiên của nó.
@@ -680,14 +769,33 @@ export function BookingsListView() {
     if ('serviceType' in patch) {
       next.serviceType = patch.serviceType === ALL_FILTER ? undefined : patch.serviceType;
     }
+    if ('source' in patch) {
+      // Một ô chọn, hai tham số URL loại trừ nhau: mã nguồn (`source`) hoặc một nhãn (`sourceLabel`).
+      const value = patch.source;
+      const isLabel = value?.startsWith(SOURCE_LABEL_OPTION_PREFIX) ?? false;
+      next.source = !value || value === ALL_FILTER || isLabel ? undefined : value;
+      next.sourceLabel = isLabel ? value!.slice(SOURCE_LABEL_OPTION_PREFIX.length) : undefined;
+    }
     setFilters(next);
   }
 
   const filtered = Boolean(
-    filters.q || filters.branchId || filters.serviceType || filters.vehicleId,
+    filters.q ||
+      filters.branchId ||
+      filters.serviceType ||
+      filters.vehicleId ||
+      filters.source ||
+      filters.sourceLabel,
   );
   function clearFilters() {
-    setFilters({ q: undefined, branchId: undefined, serviceType: undefined, vehicleId: undefined });
+    setFilters({
+      q: undefined,
+      branchId: undefined,
+      serviceType: undefined,
+      vehicleId: undefined,
+      source: undefined,
+      sourceLabel: undefined,
+    });
   }
 
   const railItem = (stage: RentalStage): StatusRailItem<RailValue> => ({
@@ -703,6 +811,7 @@ export function BookingsListView() {
     if (filters.q) params.set('q', filters.q);
     if (filters.branchId) params.set('branchId', filters.branchId);
     if (filters.serviceType) params.set('serviceType', filters.serviceType);
+    if (filters.source) params.set('source', filters.source);
     const qs = params.toString();
     const base = bookingHistoryPath();
     return qs ? `${base}?${qs}` : base;
@@ -749,6 +858,9 @@ export function BookingsListView() {
           q: filters.q,
           branchId: filters.branchId ?? ALL_FILTER,
           serviceType: filters.serviceType ?? ALL_FILTER,
+          source: filters.sourceLabel
+            ? `${SOURCE_LABEL_OPTION_PREFIX}${filters.sourceLabel}`
+            : (filters.source ?? ALL_FILTER),
           sort: bookingStageView
             ? (filters.sort ?? DEFAULT_BOOKING_SORT[rail as BookingStage])
             : undefined,

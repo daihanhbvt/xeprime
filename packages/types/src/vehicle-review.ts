@@ -142,6 +142,10 @@ export interface VehicleReviewPolicySnapshot {
   source: string;
   /** @xeprime/types → CollateralMode */
   collateralMode: string;
+  /** Ba trường cọc kết hợp (ADR 0112) - vắng ở phiếu duyệt chụp trước 27/11/2026. */
+  collateralCashEnabled?: boolean;
+  collateralAssetEnabled?: boolean;
+  collateralCombination?: string;
   collateralAssetTypes: string[];
   depositAmount: string;
   deliveryEnabled: boolean;

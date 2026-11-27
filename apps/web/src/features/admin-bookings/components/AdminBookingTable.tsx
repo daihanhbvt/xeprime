@@ -11,6 +11,7 @@ import {
   type PaginationMeta,
   type TenantStatus,
 } from '@xeprime/types';
+import { BookingSourceChip } from '@/components/data-display/BookingSourceChip';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -128,11 +129,15 @@ export function AdminBookingTable({
       key: 'status',
       width: 130,
       render: (_, r) => (
-        <StatusTag
-          value={r.status as BookingStatus}
-          meta={BOOKING_STATUS_META}
-          group="bookingStatus"
-        />
+        <span className={styles.statusCell}>
+          <StatusTag
+            value={r.status as BookingStatus}
+            meta={BOOKING_STATUS_META}
+            group="bookingStatus"
+          />
+          {/* Nguồn đơn (ADR 0110): qua sàn hay chủ xe tự lập - xếp dưới trạng thái, không thêm cột. */}
+          <BookingSourceChip source={r.source} sourceLabel={r.sourceLabel} size="sm" />
+        </span>
       ),
     },
     {

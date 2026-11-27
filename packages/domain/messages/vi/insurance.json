@@ -5,7 +5,41 @@
     "mandatory": "Bắt buộc",
     "tripRate": "+{price}",
     "mandatoryNote": "Chủ xe yêu cầu mua bảo hiểm vật chất xe MIC cho cả chuyến - phí đã cộng vào giá.",
-    "benefitsPage": "Xem quyền lợi và người chịu khấu trừ"
+    "benefitsPage": "Xem quyền lợi và người chịu khấu trừ",
+    "perTrip": "/ chuyến",
+    "perDay": "/ ngày",
+    "showBenefits": "Xem quyền lợi",
+    "hideBenefits": "Thu gọn",
+    "deductiblePill": "Khấu trừ {amount}/vụ",
+    "noDeductiblePill": "Không khấu trừ",
+    "hotlinePill": "Hotline 24/7",
+    "hotlineLine": "Hotline báo sự cố {provider} 24/7: <b>{number}</b>"
+  },
+  "offer": {
+    "title": "Bảo hiểm chuyến đi",
+    "note": "Bảo hiểm tự nguyện giúp bảo vệ xe trong suốt chuyến đi."
+  },
+  "provider": {
+    "mic": {
+      "short": "MIC",
+      "full": "Bảo hiểm Quân đội"
+    }
+  },
+  "dialog": {
+    "priceCaption": "cho chuyến đi này",
+    "priceCaptionDaily": "mỗi ngày thuê",
+    "deductibleCaption": "Mức tối đa người thuê chịu cho mỗi vụ tổn thất",
+    "noDeductibleCaption": "Người thuê không phải chịu phần khấu trừ",
+    "scopeTitle": "Phạm vi bảo vệ",
+    "noticeTitle": "Quyền lợi & người chịu khấu trừ",
+    "noticeBody": "Người thuê chịu mức khấu trừ tối đa {amount}/vụ đối với các tổn thất thuộc phạm vi bảo hiểm. Khi xảy ra sự cố, vui lòng giữ nguyên hiện trường và liên hệ ngay hotline {provider} để được giám định nhanh.",
+    "noticeBodyNoDeductible": "Sản phẩm này không áp dụng khấu trừ. Khi xảy ra sự cố, vui lòng giữ nguyên hiện trường và liên hệ ngay hotline {provider} để được giám định nhanh.",
+    "hotlineTitle": "Hotline báo sự cố {provider} 24/7",
+    "hotlineDesc": "Tiếp nhận & hỗ trợ giám định toàn quốc",
+    "callHotline": "Gọi hotline {number}",
+    "rulesLink": "Xem đầy đủ quy tắc bảo hiểm",
+    "select": "Chọn bảo hiểm {provider} (+{price})",
+    "deselect": "Bỏ chọn bảo hiểm"
   },
   "benefits": {
     "coverage": "Phạm vi bảo vệ",

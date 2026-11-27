@@ -162,7 +162,7 @@ export function PlanPickerPanel({
         Quy chế sàn là văn bản quy định phí dịch vụ và thứ tự hiển thị mà gian hàng đang mua —
         đây là khoảnh khắc nó bắt đầu ràng buộc họ (ADR 0028 điều 9).
       */}
-      <LegalConsentNote place="subscription" className={styles.consent} />
+      <LegalConsentNote place="packagePurchase" className={styles.consent} />
 
       {showSubmit ? (
         <>

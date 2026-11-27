@@ -602,9 +602,26 @@ export const ROUTES = {
      * `noShow` mở thẳng tấm "Khách không đến" — nút trên THẺ đơn của web mở hộp ngay tại chỗ
      * (`BookingsListView` `setNoShowFor`); tấm native cần `BookingDetail` nên đi qua màn chi tiết.
      */
-    bookingDetail: (bookingId: string, options?: { noShow?: boolean }): Href => ({
+    bookingDetail: (
+      bookingId: string,
+      options?: {
+        noShow?: boolean;
+        /**
+         * Dữ liệu ĐÃ CÓ ở nơi bấm (thẻ danh sách) - màn chi tiết dựng ngay header đầy đủ (mã, ngày
+         * tạo, chặng) trong lúc chờ API thay vì header tạm rồi mới nhảy (người dùng 20/11/2026).
+         * Chỉ để hiển thị trước; dữ liệu thật vẫn đọc từ API.
+         */
+        preview?: { code?: string | null; status?: string; createdAt?: string };
+      },
+    ): Href => ({
       pathname: '/manage/bookings/[id]',
-      params: options?.noShow ? { id: bookingId, action: 'no_show' } : { id: bookingId },
+      params: {
+        id: bookingId,
+        ...(options?.noShow ? { action: 'no_show' } : {}),
+        ...(options?.preview?.code ? { code: options.preview.code } : {}),
+        ...(options?.preview?.status ? { status: options.preview.status } : {}),
+        ...(options?.preview?.createdAt ? { createdAt: options.preview.createdAt } : {}),
+      },
     }),
     /** `type` là `HANDOVER_TYPE.PICKUP` / `.RETURN` — không truyền chuỗi trần (ADR 0005). */
     handover: (bookingId: string, type: string): Href => ({
@@ -845,6 +862,14 @@ export const ROUTES = {
         ...(opts?.month ? { month: opts.month } : {}),
         ...(opts?.tab ? { tab: opts.tab } : {}),
       },
+    }),
+    /**
+     * Chi tiết một tài xế NỘI BỘ (ADR 0108, web `/manage/drivers/internal/[id]`) — hồ sơ, đơn đang
+     * gán, các chuyến theo tháng.
+     */
+    internalDriverDetail: (driverId: string, opts?: { month?: string }): Href => ({
+      pathname: '/manage/drivers/internal/[id]',
+      params: { id: driverId, ...(opts?.month ? { month: opts.month } : {}) },
     }),
 
     /**

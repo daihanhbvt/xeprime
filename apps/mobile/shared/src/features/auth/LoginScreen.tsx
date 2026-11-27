@@ -70,8 +70,8 @@ export function LoginScreen({
    * App Partner - Figma Partner-XePrime "Login" (`24464:24574`): dải ảnh đường hầm + logo "xe prime
    * PARTNER" + linh vật, tấm trắng mép lượn chứa tiêu đề "ĐĂNG NHẬP" 24/32, form, nút gradient +
    * "Đăng ký ngay!", vạch "hoặc đăng nhập bằng", Google/Facebook nằm ngang và câu điều khoản. Không
-   * có thanh trên (màn gốc của app, không có chỗ lùi). "Ghi nhớ tài khoản" của bản vẽ KHÔNG có trên
-   * app; số phiên bản app giữ ở cuối (người kẹt ở màn này là người cần báo lỗi nhất).
+   * có thanh trên (màn gốc của app, không có chỗ lùi). Không có số phiên bản (người dùng bỏ 20/11/2026
+   * cho đúng bản vẽ - số phiên bản vẫn xem được ở trang Tài khoản).
    */
   if (APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER) {
     return (
@@ -100,7 +100,6 @@ export function LoginScreen({
             <SocialButtons onSuccess={onSuccess} layout="row" dividerLabel={t('market.divider')} />
             <LegalConsentNote place="marketAuth" align="center" linkTone="underline" />
           </YStack>
-          <AppVersion />
         </PartnerLoginHero>
       </Screen>
     );
@@ -125,16 +124,8 @@ export function LoginScreen({
             <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
               {t('modal.loginTitle')} <Text col={colors.primaryActive}>{APP_NAME}</Text>
             </Text>
-            {/*
-              Lời dẫn theo APP: XePrime nói về đặt xe và chuyến đi; XePrime Partner dùng đúng
-              câu của site partner (`portal.subtitle` — chủ xe cá nhân, gian hàng, nhân viên).
-            */}
             <Text col={colors.textMuted} fos={fontSize.body}>
-              {t(
-                APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER
-                  ? 'portal.subtitle'
-                  : 'modal.loginSub',
-              )}
+              {t('modal.loginSub')}
             </Text>
           </YStack>
 
@@ -152,12 +143,7 @@ export function LoginScreen({
           {onSwitchToRegister ? (
             <AuthSwitchLink
               prompt={t('switchMode.noAccount')}
-              actionLabel={
-                // App Partner nói như site partner ("Đăng ký"); app khách giữ "Tạo tài khoản".
-                APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER
-                  ? t('portal.becomeOwner')
-                  : t('switchMode.toRegister')
-              }
+              actionLabel={t('switchMode.toRegister')}
               onPress={onSwitchToRegister}
             />
           ) : null}

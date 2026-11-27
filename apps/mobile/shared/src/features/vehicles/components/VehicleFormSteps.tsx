@@ -14,12 +14,14 @@ import {
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
   type VehicleSourceType,
+  type VehicleRegistrationReading,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { SectionHeader } from '@/components/ui/CardTitle';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { FieldLabel } from '@/components/ui/Field';
+import { LockedValueField } from '@/components/ui/LockedValueField';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { NumberField } from '@/components/ui/NumberField';
 import { RadioOption } from '@/components/ui/RadioOption';
@@ -32,6 +34,8 @@ import { useCatalog } from '@/features/catalog/use-catalog';
 import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
+import { RegistrationTextField } from './RegistrationTextField';
+import { useCatalogSpecLock, useSpecFieldLock } from '../hooks/use-vehicle-data';
 import { TypedMediaFields } from './TypedMediaFields';
 import {
   CatalogRentHint,
@@ -117,10 +121,12 @@ export function BasicStep({
   control,
   branchOptions,
   branchLoading,
-  codeReadOnly = false,
   lockedNotice,
   hideServiceTypes = false,
+  hideBranch = false,
 }: Pick<StepProps, 'control'> & {
+  /** Tuyến hoa hồng chỉ có MỘT chi nhánh: ẩn ô (đã chọn sẵn) như web `branchHidden`. */
+  hideBranch?: boolean;
   /**
    * Wizard tạo xe (17/11/2026) hỏi dịch vụ bằng công tắc trên từng thẻ ở bước "Dịch vụ & giá" —
    * ẩn chip ở đây để không có hai đường ghi cho cùng một trường.
@@ -128,13 +134,6 @@ export function BasicStep({
   hideServiceTypes?: boolean;
   branchOptions: readonly { value: string; label: string }[];
   branchLoading: boolean;
-  /**
-   * Mã xe chỉ ĐỌC — màn sửa bật, wizard tạo thì không, đúng `codeReadOnly` của web.
-   *
-   * Mã là định danh nội bộ đã đi vào phiếu thu chi, đơn thuê và hợp đồng của xe; đổi nó ở một
-   * form thông tin là đổi thứ mà mọi chứng từ cũ đang trỏ tới.
-   */
-  codeReadOnly?: boolean;
   /**
    * Xe đang CÔNG KHAI: backend từ chối đổi `vehicleType`/`plateNumber`/`transmission`/
    * `fuelType`/`manufactureYear` (409 `VEHICLE_FIELD_LOCKED` — `assertNoLockedFieldChange`).
@@ -154,33 +153,23 @@ export function BasicStep({
     <YStack gap={space.md}>
       <GroupTitle>{t('sections.basic')}</GroupTitle>
 
-      <TextField
-        control={control}
-        name="name"
-        label={t('basic.name')}
-        placeholder={t('basic.namePlaceholder')}
-        required
-      />
-      <TextField
-        control={control}
-        name="code"
-        label={t('basic.code')}
-        placeholder={t('basic.codePlaceholder')}
-        editable={!codeReadOnly}
-      />
+      {/* Không có ô tên xe: server ghép "Hãng Dòng Phiên bản Năm" (ADR 0102); tấm xác nhận hiện tên đó. */}
+      {/* Thêm xe (Figma, như web): không hỏi Mã xe - server tự sinh; sửa ở màn chỉnh sửa xe. */}
       {/*
         Chi nhánh = VỊ TRÍ CÔNG KHAI của xe. Ngay cả khi gian hàng chỉ có một chi nhánh, ô này vẫn
         hiện (đã chọn sẵn) để người dùng biết xe sẽ hiển thị ở tỉnh nào — một trường bị ẩn là một
         quyết định không ai nhìn thấy.
       */}
-      <SelectField
-        control={control}
-        name="branchId"
-        label={t('basic.branch')}
-        options={branchOptions}
-        hint={branchLoading ? undefined : t('basic.branchHelp')}
-        required
-      />
+      {hideBranch ? null : (
+        <SelectField
+          control={control}
+          name="branchId"
+          label={t('basic.branch')}
+          options={branchOptions}
+          hint={branchLoading ? undefined : t('basic.branchHelp')}
+          required
+        />
+      )}
       <SelectField
         control={control}
         name="vehicleType"
@@ -214,7 +203,10 @@ export function SpecsSection({
   isCar,
   lockedNotice,
   setValue,
+  registrationReading,
 }: StepProps & {
+  /** Lượt đọc cà vẹt mới nhất - biển số/màu khớp nó thì khoá (ADR 0102 điều 6). */
+  registrationReading?: VehicleRegistrationReading | null;
   /** Xem docblock của `BasicStep` — cùng cơ chế khoá `plateNumber`/`manufactureYear`/`fuelType`. */
   lockedNotice?: string;
   /**
@@ -230,9 +222,11 @@ export function SpecsSection({
 
   return (
     <YStack gap={space.md}>
-      <TextField
+      <RegistrationTextField
         control={control}
         name="plateNumber"
+        reading={registrationReading}
+        disabled={Boolean(lockedNotice)}
         label={t('specs.plateNumber')}
         publishRequired
         placeholder={t('specs.platePlaceholder')}
@@ -266,9 +260,10 @@ export function SpecsSection({
         {...(lockedNotice ? { hint: lockedNotice } : {})}
         editable={!lockedNotice}
       />
-      <TextField
+      <RegistrationTextField
         control={control}
         name="color"
+        reading={registrationReading}
         label={t('specs.color')}
         placeholder={t('specs.colorPlaceholder')}
       />
@@ -367,8 +362,26 @@ function InsuredValueSuggestion({
 export function BodyTypePicker({ control }: { control: Control<VehicleFormValues> }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.form.specs');
+  const tCatalog = useTranslations('Vehicles.form.catalog');
   const { catalog } = useCatalog();
   const items = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
+  // Kiểu dáng theo xe chuẩn đang chọn - khoá + bút như mọi ô tự điền (ADR 0102). Lưới thẻ ảnh không
+  // có trạng thái chỉ đọc nên đang khoá thì thay bằng ô khoá (web `SpecLockedField`).
+  const vehicleType = useWatch({ control, name: 'vehicleType' }) ?? VEHICLE_TYPE.CAR;
+  const lock = useCatalogSpecLock(control, vehicleType, 'bodyType');
+  const toFieldLock = useSpecFieldLock();
+  const bodyType = useWatch({ control, name: 'bodyType' });
+  const lockedLabel = items.find((item) => item.key === bodyType)?.label;
+  if (lock.locked && lockedLabel) {
+    return (
+      <LockedValueField
+        label={t('bodyType')}
+        value={lockedLabel}
+        lock={toFieldLock(lock, t('bodyType'))}
+        hint={tCatalog('specLocked')}
+      />
+    );
+  }
 
   return (
     <YStack gap={space.xs}>
@@ -861,6 +874,19 @@ export function FeaturesField({
 
 /** Thông số kỹ thuật nâng cao — chỉ có ở màn SỬA, luồng tạo không hỏi (đúng như web). */
 export function AdvancedSpecsSection({ control }: { control: Control<VehicleFormValues> }) {
+  // Kích thước, trọng lượng, công suất theo xe chuẩn đang chọn - khoá + bút (ADR 0102).
+  const tCatalog = useTranslations('Vehicles.form.catalog');
+  const vehicleType = useWatch({ control, name: 'vehicleType' }) ?? VEHICLE_TYPE.CAR;
+  const toFieldLock = useSpecFieldLock();
+  const locks = {
+    lengthMm: useCatalogSpecLock(control, vehicleType, 'lengthMm'),
+    widthMm: useCatalogSpecLock(control, vehicleType, 'widthMm'),
+    heightMm: useCatalogSpecLock(control, vehicleType, 'heightMm'),
+    curbWeightKg: useCatalogSpecLock(control, vehicleType, 'curbWeightKg'),
+    engineDisplacementCc: useCatalogSpecLock(control, vehicleType, 'engineDisplacementCc'),
+    horsepowerHp: useCatalogSpecLock(control, vehicleType, 'horsepowerHp'),
+  };
+  const specLocked = tCatalog('specLocked');
   /*
    * KHÔNG nhận `lockedNotice` nữa: khối này chỉ còn kích thước, dung tích và công suất — không
    * trường nào bị khoá khi xe lên chợ. Căn cước bị khoá (biển số, nhiên liệu, hộp số, năm SX)
@@ -875,6 +901,8 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
         control={control}
         name="lengthMm"
         label={t('lengthMm')}
+        lock={toFieldLock(locks.lengthMm, t('lengthMm'))}
+        {...(locks.lengthMm.locked ? { hint: specLocked } : {})}
         suffix="mm"
         placeholder={t('lengthPlaceholder')}
       />
@@ -882,6 +910,8 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
         control={control}
         name="widthMm"
         label={t('widthMm')}
+        lock={toFieldLock(locks.widthMm, t('widthMm'))}
+        {...(locks.widthMm.locked ? { hint: specLocked } : {})}
         suffix="mm"
         placeholder={t('widthPlaceholder')}
       />
@@ -889,6 +919,8 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
         control={control}
         name="heightMm"
         label={t('heightMm')}
+        lock={toFieldLock(locks.heightMm, t('heightMm'))}
+        {...(locks.heightMm.locked ? { hint: specLocked } : {})}
         suffix="mm"
         placeholder={t('heightPlaceholder')}
       />
@@ -896,6 +928,8 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
         control={control}
         name="curbWeightKg"
         label={t('curbWeightKg')}
+        lock={toFieldLock(locks.curbWeightKg, t('curbWeightKg'))}
+        {...(locks.curbWeightKg.locked ? { hint: specLocked } : {})}
         suffix="kg"
         placeholder={t('curbWeightPlaceholder')}
       />
@@ -905,6 +939,8 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
         control={control}
         name="engineDisplacementCc"
         label={t('engineDisplacementCc')}
+        lock={toFieldLock(locks.engineDisplacementCc, t('engineDisplacementCc'))}
+        {...(locks.engineDisplacementCc.locked ? { hint: specLocked } : {})}
         placeholder={t('enginePlaceholder')}
         suffix="cc"
       />
@@ -912,6 +948,8 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
         control={control}
         name="horsepowerHp"
         label={t('horsepowerHp')}
+        lock={toFieldLock(locks.horsepowerHp, t('horsepowerHp'))}
+        {...(locks.horsepowerHp.locked ? { hint: specLocked } : {})}
         suffix="HP"
         placeholder={t('horsepowerPlaceholder')}
       />

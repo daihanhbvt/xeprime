@@ -1,10 +1,12 @@
-import { Children, useCallback, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { ActionSheetButtons, type SheetAction } from '@/components/ui/ActionSheetButtons';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { CardTitle } from '@/components/ui/CardTitle';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Linking, Pressable, type ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
@@ -18,6 +20,8 @@ import {
   DRIVER_ASSIGNMENT_STATUS_META,
   DRIVER_INCIDENT_LEVEL,
   DRIVER_MISSING_ALERT_LEAD_MINUTES,
+  DRIVER_LICENCE_STATE,
+  DRIVER_ROSTER_KIND,
   DRIVER_SOURCE,
   isDriverMissingAlertDue,
   isDriverReassignable,
@@ -46,6 +50,7 @@ import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { TOAST_PRESET } from '@/components/feedback/AppToast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
@@ -64,8 +69,10 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useNow } from '@/hooks/use-now';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
-import { AssignDriverSheet } from './components/AssignDriverSheet';
+import { fontSize, fontWeight, space, typeScale } from '@/theme/tokens';
+import { AssignDriverSheet, type DriverCandidate } from './components/AssignDriverSheet';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
+import { Avatar } from '@/components/ui/Avatar';
 import { BookingDriverHistory } from './components/BookingDriverHistory';
 import { CustomerReturnReport } from './components/CustomerReturnReport';
 import {
@@ -73,6 +80,7 @@ import {
   PaymentSideCard,
   VehicleSideCard,
 } from './components/BookingDetailSide';
+import { CollateralSideCard } from './components/CollateralSideCard';
 import { HandoverPhotosCard } from './components/HandoverPhotosCard';
 import { OwnerPayoutTable } from './components/OwnerPayoutTable';
 import { SectionCard } from '@/components/ui/SectionCard';
@@ -80,7 +88,13 @@ import { BookingStatusSheet, type Decision } from './components/BookingStatusShe
 import { BookingSettlementCard } from './components/BookingSettlementCard';
 import { BookingInsurancePanel } from './components/BookingInsurancePanel';
 import { BookingExtensionsPanel } from './components/BookingExtensionsPanel';
-import { HandoverPrepCard, missingPhotoSlots, prepRowStates } from './components/HandoverPrepCard';
+import {
+  HandoverPrepCard,
+  missingPhotoSlots,
+  prepCollateralOf,
+  prepRowStates,
+  prepTitleKey,
+} from './components/HandoverPrepCard';
 import {
   BookingOutcomeBanner,
   BookingStageChip,
@@ -123,8 +137,11 @@ const UNASSIGNED_ROW_GAP = 10;
 export function BookingDetailScreen({
   bookingId,
   openNoShow = false,
+  preview,
 }: {
   bookingId: string;
+  /** Mã/chặng/ngày tạo truyền qua điều hướng - dựng header đầy đủ ngay khi đang tải. */
+  preview?: { code: string; status?: string; createdAt?: string } | undefined;
   /** Mở sẵn tấm "Khách không đến" — từ nút trên thẻ đơn (web mở hộp ngay trên thẻ). */
   openNoShow?: boolean;
 }) {
@@ -154,7 +171,8 @@ export function BookingDetailScreen({
   if (query.isPending) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        {/* LUÔN cùng khung header thật - có/không dữ liệu truyền sang (20/11/2026). */}
+        <PreviewHeader preview={preview} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']}>
           <YStack gap={layout.section}>
             <Skeleton height={90} />
@@ -261,16 +279,27 @@ function BookingDetailBody({
       : null,
   );
   const [assigningDriver, setAssigningDriver] = useState(false);
+  /** Tài xế NỘI BỘ vừa chọn — chờ xác nhận rồi gán thẳng (ADR 0108, không tiền công). */
+  const [pickedInternal, setPickedInternal] = useState<DriverCandidate | null>(null);
   const [editingFee, setEditingFee] = useState(false);
   const [editing, setEditing] = useState(false);
   const [detailTab, setDetailTab] = useState<'prep' | 'trip' | 'extra'>('prep');
   const [docsOpen, setDocsOpen] = useState(false);
+  /* Dòng "Nhận tài sản thế chấp" mở ô thêm món của thẻ Cọc & thế chấp rồi cuộn tới thẻ (web). */
+  const [collateralAddRequest, setCollateralAddRequest] = useState(0);
+  const [collateralCashRequest, setCollateralCashRequest] = useState(0);
+  const collateralY = useRef(0);
   /* Nút "Ảnh" của Chuẩn bị bàn giao cuộn tới khối ảnh TRONG trang (web `BookingDetailSections`). */
   const scrollRef = useRef<ScrollView | null>(null);
   const photosY = useRef(0);
   const scrollToPhotos = useCallback(() => {
     scrollRef.current?.scrollTo({ y: Math.max(0, photosY.current - space.md), animated: true });
   }, []);
+  const openAddCollateral = useCallback(() => {
+    setCollateralAddRequest((n) => n + 1);
+    scrollRef.current?.scrollTo({ y: Math.max(0, collateralY.current - space.md), animated: true });
+  }, []);
+  const openEditCash = useCallback(() => setCollateralCashRequest((n) => n + 1), []);
 
   const transition = useTransitionBooking(booking.id);
   const assignDriver = useAssignDriver(booking.id);
@@ -279,7 +308,11 @@ function BookingDetailBody({
   const tWage = useTranslations('Drivers.wage');
   const [confirmingUnassign, setConfirmingUnassign] = useState(false);
   // Tài xế vừa chọn ở bộ chọn — chờ nhập tiền công trong tấm gán (ADR 0075).
-  const [pickedDriver, setPickedDriver] = useState<{ id: string; name: string } | null>(null);
+  const [pickedDriver, setPickedDriver] = useState<{
+    id: string;
+    name: string;
+    licenceState: string | null;
+  } | null>(null);
   const [editingWage, setEditingWage] = useState<BookingDriverHistoryItem | null>(null);
   // Lối "Huỷ chuyến do thiếu tài xế" (ADR 0074) mở tấm huỷ với nhóm lý do chọn sẵn.
   const [cancelPreset, setCancelPreset] = useState<CancellationReasonCategory | undefined>();
@@ -309,10 +342,10 @@ function BookingDetailBody({
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
   // Cổng của khối "Chuẩn bị bàn giao" — cùng `can` của web (BookingDetailActions).
   const prepFinance = useFeature(PLAN_FEATURE.FINANCE);
-  const prepContracts = useFeature(PLAN_FEATURE.CONTRACTS);
+  // Hợp đồng của đơn thuộc bộ CƠ BẢN từ 20/11/2026 (ADR 0027 sửa điều 1, SR-245) - chỉ xét quyền.
   const prepCan = {
     collect: permissions.has(PERMISSION.PAYMENT_RECORD) && prepFinance.isVisible && !moneyClosed,
-    contract: permissions.has(PERMISSION.CONTRACT_MANAGE) && prepContracts.isVisible,
+    contract: permissions.has(PERMISSION.CONTRACT_MANAGE),
     markPrep: permissions.has(PERMISSION.HANDOVER_MANAGE) && !closed,
     documents:
       Boolean(booking.tenantCustomerId) && permissions.has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE),
@@ -338,6 +371,8 @@ function BookingDetailBody({
   const canAssignDriver = canWriteDriver && permissions.has(PERMISSION.DRIVER_VIEW);
   const driver = booking.driver ?? null;
   const isExternalDriver = driver?.source === DRIVER_SOURCE.EXTERNAL;
+  // Tài xế nội bộ (ADR 0108): đã nhận ngay như tài xế ngoài hệ thống, nhưng chọn từ danh bạ.
+  const isInternalDriver = driver?.source === DRIVER_SOURCE.INTERNAL;
   const driverIncident = booking.driverIncident ?? null;
   const canCancelBooking = canUpdate && canTransitionBooking(status, BOOKING_STATUS.CANCELLED);
   // Thẻ sự cố đã nói việc cần làm — không chồng thêm cảnh báo "sắp tới giờ chưa có tài xế".
@@ -416,7 +451,8 @@ function BookingDetailBody({
       {/* Web `ManagePageHeader` của trang chi tiết: "Chi tiết đơn · #mã" + nút quay lại. */}
       {/* Figma "Page Header" `24145:102197`: ← tiêu đề, "Tạo lúc" + viên chặng, thanh 4 bước. */}
       <ManagePageHeader
-        title={t('detailPage.title', { code: booking.code })}
+        // App: "Chi tiết đơn #mã" như Figma (không dấu ·); web giữ `detailPage.title`.
+        title={t('detailPage.partnerApp.title', { code: booking.code })}
         onBack={onBack}
         subtitle={
           <XStack ai="center" jc="space-between" gap={space.sm}>
@@ -526,23 +562,41 @@ function BookingDetailBody({
                 ) : null}
                 {booking.driver ? (
                   <XStack ai="center" gap={space.sm} flexWrap="wrap">
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={iconSize.lg}
-                      color={colors.textMuted}
-                    />
+                    {/* Ảnh tài khoản (liên kết) / ảnh danh bạ (nội bộ) — web `BookingDriverSection`. */}
+                    <Avatar name={booking.driver.name} url={booking.driver.avatarUrl ?? null} size={36} />
                     <YStack f={1} gap={2} minWidth={0}>
                       <XStack ai="center" gap={space.xs} flexWrap="wrap">
                         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
                           {booking.driver.name}
                         </Text>
-                        {isExternalDriver ? (
+                        {isInternalDriver || isExternalDriver ? (
                           <StatusBadge
-                            label={tDriver('externalTag')}
+                            label={tDriver(isInternalDriver ? 'internalTag' : 'externalTag')}
                             color={STATUS_COLOR.NEUTRAL}
                             size="sm"
                           />
                         ) : (
+                          <>
+                          {/* Bằng lái của tài xế liên kết (web `SourceBadge`) — đối chiếu lúc giao xe. */}
+                          {booking.driver.licence ? (
+                            <StatusBadge
+                              size="sm"
+                              color={
+                                booking.driver.licence.state === DRIVER_LICENCE_STATE.VERIFIED
+                                  ? STATUS_COLOR.SUCCESS
+                                  : STATUS_COLOR.DANGER
+                              }
+                              label={
+                                booking.driver.licence.state === DRIVER_LICENCE_STATE.VERIFIED
+                                  ? booking.driver.licence.classes.length > 0
+                                    ? tDriver('card.licence', {
+                                        classes: booking.driver.licence.classes.join(', '),
+                                      })
+                                    : tDriver('card.licenceVerified')
+                                  : tDriver('card.licenceUnverified')
+                              }
+                            />
+                          ) : null}
                           <StatusBadge
                             label={domainLabel(
                               'driverAssignmentStatus',
@@ -554,6 +608,7 @@ function BookingDetailBody({
                             }
                             size="sm"
                           />
+                          </>
                         )}
                       </XStack>
                       {booking.driver.phone ? (
@@ -571,7 +626,7 @@ function BookingDetailBody({
                         </Pressable>
                       ) : null}
                       <Text col={colors.textMuted} fos={fontSize.label}>
-                        {isExternalDriver
+                        {isExternalDriver || isInternalDriver
                           ? tDriver('externalSetAt', {
                               time: fmt.dateTime(booking.driver.assignedAt),
                             })
@@ -594,7 +649,11 @@ function BookingDetailBody({
                           {tDriver('externalLegacy')}
                         </Text>
                       ) : null}
-                      {openAssignment ? (
+                      {isInternalDriver ? (
+                        <Text col={colors.textMuted} fos={fontSize.label}>
+                          {tDriver('card.internalNoWage')}
+                        </Text>
+                      ) : openAssignment ? (
                         <DriverWageInfo
                           wage={openAssignment.wage}
                           canEdit={canUpdate}
@@ -670,7 +729,10 @@ function BookingDetailBody({
             </Card>
           ) : null}
 
-          {/* Thẻ KHÁCH — web `CustomerSideCard`: "Chỉnh sửa" = form Sửa đơn; hồ sơ khách + giấy tờ. */}
+          {/*
+            Thẻ KHÁCH như Figma: tên (bấm mở hồ sơ khách khi có quyền) · "Khách quen" · SĐT · bút Sửa
+            đơn. Giấy tờ khách vào từ dòng "Bổ sung giấy tờ của khách" ở tab Chuẩn bị (20/11/2026).
+          */}
           <CustomerSideCard
             booking={booking}
             onEdit={canUpdate && !closed ? () => setEditing(true) : undefined}
@@ -679,10 +741,20 @@ function BookingDetailBody({
                 ? () => navigateOnce(ROUTES.manage.customerDetail(booking.tenantCustomerId as string))
                 : undefined
             }
-            onDocuments={
-              booking.tenantCustomerId && prepCan.documents ? () => setDocsOpen(true) : undefined
-            }
           />
+
+          {/* Cọc tiền + tài sản thế chấp theo đơn (ADR 0109) — tự ẩn khi không có gì để giữ. */}
+          <YStack
+            onLayout={(event) => {
+              collateralY.current = event.nativeEvent.layout.y;
+            }}
+          >
+            <CollateralSideCard
+              booking={booking}
+              addRequest={collateralAddRequest}
+              cashRequest={collateralCashRequest}
+            />
+          </YStack>
 
           <PaymentSideCard
             booking={booking}
@@ -690,20 +762,33 @@ function BookingDetailBody({
           />
           {/* Lợi nhuận chuyến đứng riêng ngay sau Thanh toán như cột phải của web (16/11/2026). */}
             {booking.ownerPayout ? (
-              <SectionCard title={t('detailPage.profit.title')}>
-                <OwnerPayoutTable payout={booking.ownerPayout} label={t('detailPage.profit.title')} />
-                <Text col={colors.placeholder} fos={fontSize.label}>
-                  {t('money.ownerEconomics.note')}
-                </Text>
+              <SectionCard
+                title={t('detailPage.profit.title')}
+                // "Số đã chốt lúc đặt…" thành dấu "i" cạnh tiêu đề (người dùng 20/11/2026).
+                extra={
+                  <InfoHint
+                    content={t('money.ownerEconomics.note')}
+                    label={t('detailPage.profit.title')}
+                    size={fontSize.body}
+                  />
+                }
+              >
+                <OwnerPayoutTable
+                  payout={booking.ownerPayout}
+                  label={t('detailPage.profit.title')}
+                  // Figma "Lợi nhuận chuyến" `24512:131124` (người dùng chốt 20/11/2026): đủ dòng, style v2.
+                  variant="v2"
+                />
               </SectionCard>
             ) : null}
-
+          {/* Figma: "Bảo hiểm chuyến đi" đứng ngay sau Lợi nhuận chuyến, ngoài các tab (20/11/2026). */}
+          <BookingInsurancePanel bookingId={booking.id} />
 
           <BookingOutcomeBanner booking={booking} />
-          {/* Dòng thời gian đầy đủ (chấm + mốc giờ từng bước) ngay trước thẻ tab - header chỉ giữ thanh gọn (16/11/2026). */}
-          <Card>
-            <BookingStepper booking={booking} />
-          </Card>
+          {/*
+            Thẻ các bước có chấm đã gỡ (người dùng chốt 20/11/2026): trùng thanh 4 bước ở đầu màn,
+            Figma không vẽ. Mốc giờ giao/nhận vẫn ở tab "Chuyến & thời gian".
+          */}
           {/*
             Figma thẻ 3 tab `24158:102976`: Chuẩn bị (việc bàn giao) · Chuyến & thời gian (lịch,
             gia hạn) · Phát sinh (quyết toán, bảo hiểm, lợi nhuận). Mọi khối cũ vẫn còn, chỉ xếp lại.
@@ -728,6 +813,8 @@ function BookingDetailBody({
                   can={prepCan}
                   onDocuments={() => setDocsOpen(true)}
                   onPhotos={scrollToPhotos}
+                  onAddCollateral={openAddCollateral}
+                  onEditCash={openEditCash}
                 />
               ) : detailTab === 'trip' ? (
                 <YStack gap={space.md}>
@@ -737,7 +824,6 @@ function BookingDetailBody({
               ) : (
                 <YStack gap={space.md}>
                   <BookingSettlementCard bookingId={booking.id} moneyClosed={moneyClosed} />
-                  <BookingInsurancePanel bookingId={booking.id} />
                 </YStack>
               )}
             </YStack>
@@ -784,10 +870,46 @@ function BookingDetailBody({
         onClose={() => setAssigningDriver(false)}
         booking={booking}
         pending={assignDriver.isPending}
-        onSelect={(driverId, name) => {
-          // Gán ai cũng qua tấm gán KÈM tiền công (ADR 0075) — như hộp gán của web.
+        onSelect={(candidate) => {
           setAssigningDriver(false);
-          setPickedDriver({ id: driverId, name });
+          if (candidate.kind === DRIVER_ROSTER_KIND.INTERNAL) {
+            setPickedInternal(candidate);
+            return;
+          }
+          // Tài xế liên kết qua tấm gán KÈM tiền công (ADR 0075) — như hộp gán của web.
+          setPickedDriver({
+            id: candidate.id,
+            name: candidate.name,
+            licenceState: candidate.licenceState,
+          });
+        }}
+      />
+
+      {/* Tài xế nội bộ: gán thẳng, coi như đã nhận, không tiền công (web `ChangeDriverDialog`). */}
+      <ConfirmSheet
+        open={pickedInternal !== null}
+        title={booking.driver ? tDriver('picker.confirmChange') : tDriver('picker.confirmAssign')}
+        {...(pickedInternal
+          ? { subtitle: `${pickedInternal.name}${LIST_SEPARATOR}${pickedInternal.phone}` }
+          : {})}
+        message={tDriver('picker.internalNote')}
+        confirmLabel={booking.driver ? tDriver('picker.confirmChange') : tDriver('picker.confirmAssign')}
+        tone="primary"
+        loading={assignDriver.isPending}
+        onClose={() => setPickedInternal(null)}
+        onConfirm={() => {
+          const chosen = pickedInternal;
+          if (!chosen || assignDriver.isPending) return;
+          assignDriver.mutate(
+            { internalDriverId: chosen.id },
+            {
+              onSuccess: () => {
+                toast.showSuccess(tDriver('internalAssigned'));
+                setPickedInternal(null);
+              },
+              onError: (err) => toast.showError(errorMessage(err)),
+            },
+          );
         }}
       />
 
@@ -796,6 +918,7 @@ function BookingDetailBody({
         <AssignDriverWageSheet
           bookingId={booking.id}
           driver={pickedDriver}
+          pickupAt={booking.pickupAt}
           onClose={() => setPickedDriver(null)}
           onAssigned={() => setPickedDriver(null)}
         />
@@ -937,6 +1060,8 @@ function useHandoverCta(
   const tAlert = useTranslations('Bookings.detailPage.handoverAlert');
   const tPrep = useTranslations('Bookings.detailPage.prep');
   const slotLabel = useDomainLabel();
+  const toast = useAppToast();
+  const fmt = useAppFormat();
   /** Lượt cảnh báo: chiều bàn giao + ĐÚNG những việc còn thiếu (web tô đỏ từng dòng/góc ảnh). */
   const [handoverAlert, setHandoverAlert] = useState<{ type: HandoverType; missing: string[] } | null>(
     null,
@@ -951,10 +1076,22 @@ function useHandoverCta(
       navigateOnce(ROUTES.manage.handover(booking.id, type));
       return;
     }
+    /*
+     * Giao xe chỉ mở từ 60′ trước giờ nhận (ADR 0104 điều 1 - web `requestHandover`). Nói giờ mở NGAY
+     * ở cú bấm thay vì mở luồng rồi để server từ chối sau khi chủ xe đã điền xong. Server vẫn là cửa chặn thật.
+     */
+    const opensAt = context?.pickupConfirmOpensAt;
+    if (opensAt && Date.now() < new Date(opensAt).getTime()) {
+      toast.showNotice({
+        title: t('pickupNotOpen', { time: fmt.dateTime(opensAt) }),
+        tone: TOAST_PRESET.WARNING,
+      });
+      return;
+    }
     const prepMissing = booking.handoverPrep
-      ? prepRowStates(booking.handoverPrep, prepCan)
+      ? prepRowStates(booking.handoverPrep, prepCan, prepCollateralOf(booking))
           .filter((row) => !row.done)
-          .map((row) => tPrep(row.key))
+          .map((row) => tPrep(prepTitleKey(row.key)))
       : [];
     const slots = missingPhotoSlots(context?.pickup?.photos, booking.vehicleType);
     if (prepMissing.length === 0 && slots.length === 0) {
@@ -1021,12 +1158,9 @@ function useHandoverCta(
  */
 function BookingHeaderActions({
   booking,
-  stacked = false,
   onDone,
 }: {
   booking: BookingDetail;
-  /** Trong tấm "Thao tác": nút xếp dọc, trải hết bề ngang. */
-  stacked?: boolean;
   onDone?: () => void;
 }) {
   const t = useTranslations('Bookings.detailPage.actions');
@@ -1036,70 +1170,78 @@ function BookingHeaderActions({
   const toast = useAppToast();
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
-  const contractsFeature = useFeature(PLAN_FEATURE.CONTRACTS);
   const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
   const moneyClosed = isBookingClosedWithoutTrip(booking.status as BookingStatus);
 
   const can = {
-    contract: permissions.has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible,
+    contract: permissions.has(PERMISSION.CONTRACT_MANAGE),
     history: financeFeature.isVisible,
     collect: permissions.has(PERMISSION.PAYMENT_RECORD) && financeFeature.isVisible && !moneyClosed,
   };
   if (!can.contract && !can.history && !can.collect) return null;
-  const hasDebt = !isZeroMoney(booking.debtAmount);
+  // Cùng số với tấm Thu tiền và ô "Còn phải thu của khách" (web, ADR 0101): phần `D` khách đã trả
+  // trước qua XePrime không còn là việc phải thu ở quầy.
+  const hasDebt = !isZeroMoney(booking.counterDueAmount);
   const contractKnown = booking.handoverPrep ? booking.handoverPrep.contractId !== null : true;
+
+  // Figma "Thao tác" `24273:89851`: hợp đồng + lịch sử thu tiền là nút phụ, "Thu tiền" là nút chính.
+  const actions: SheetAction[] = [
+    ...(can.contract
+      ? [
+          {
+            key: 'contract',
+            icon: 'doc-align-left-6' as const,
+            label: contractKnown ? t('viewContract') : t('createContract'),
+            loading: createContract.isPending,
+            onPress: () =>
+              createContract.mutate(booking.id, {
+                onSuccess: (contract) => {
+                  onDone?.();
+                  navigateOnce(ROUTES.manage.contract(contract.id));
+                },
+                onError: (error) => toast.showError(errorMessage(error)),
+              }),
+          },
+        ]
+      : []),
+    ...(can.history
+      ? [
+          {
+            key: 'history',
+            icon: 'doc-align-right-10' as const,
+            label: t('moneyHistory'),
+            onPress: () => {
+              onDone?.();
+              navigateOnce(ROUTES.manage.payments(booking.id));
+            },
+          },
+        ]
+      : []),
+    ...(can.collect
+      ? [
+          {
+            key: 'collect',
+            icon: 'dollar-circle' as const,
+            label: hasDebt ? t('collect') : t('collected'),
+            primary: true,
+            disabled: !hasDebt,
+            onPress: () => setCollecting(true),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
-    <ActionsWrap stacked={stacked}>
-      {can.contract ? (
-        <Button
-          label={contractKnown ? t('viewContract') : t('createContract')}
-          icon={contractKnown ? 'document-text-outline' : 'add-circle-outline'}
-          variant="gradient"
-          block={stacked}
-          loading={createContract.isPending}
-          onPress={() =>
-            createContract.mutate(booking.id, {
-              onSuccess: (contract) => {
-                onDone?.();
-                navigateOnce(ROUTES.manage.contract(contract.id));
-              },
-              onError: (error) => toast.showError(errorMessage(error)),
-            })
-          }
-        />
-      ) : null}
-      {can.history ? (
-        <Button
-          label={t('moneyHistory')}
-          icon="receipt-outline"
-          variant="gradient"
-          block={stacked}
-          onPress={() => {
-            onDone?.();
-            navigateOnce(ROUTES.manage.payments(booking.id));
-          }}
-        />
-      ) : null}
-      {can.collect ? (
-        <Button
-          label={hasDebt ? t('collect') : t('collected')}
-          icon={hasDebt ? 'wallet-outline' : 'checkmark-circle-outline'}
-          variant="gradient"
-          block={stacked}
-          disabled={!hasDebt}
-          onPress={() => setCollecting(true)}
-        />
-      ) : null}
-    </ActionsWrap>
+    <ActionSheetButtons actions={actions} />
     {/* Gắn/tháo theo cờ mở: số điền sẵn chỉ đọc lúc dựng. */}
     {collecting ? (
       <RecordPaymentSheet
         open
         onClose={() => setCollecting(false)}
         bookingId={booking.id}
-        debtAmount={booking.debtAmount}
+        debtAmount={booking.counterDueAmount}
+        counterDue
       />
     ) : null}
     </>
@@ -1155,29 +1297,53 @@ function BookingActionsMenu({ booking }: { booking: BookingDetail }) {
     <>
       {/* Figma: dấu ⋮ trơn, không viền/nền. */}
       <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={t('menuTitle')} hitSlop={12}>
-        <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+        <LineIcon name="menu-kebab" size={20} color={colors.textMuted} />
       </Pressable>
       <BottomSheet open={open} onClose={() => setOpen(false)} title={t('menuTitle')} chrome="v2" headerDivider>
-        <BookingHeaderActions booking={booking} stacked onDone={() => setOpen(false)} />
+        <BookingHeaderActions booking={booking} onDone={() => setOpen(false)} />
       </BottomSheet>
     </>
   );
 }
 
-/** Tấm "Thao tác": mỗi nút một hàng trải hết bề ngang; ngoài tấm thì xếp ngang tự xuống dòng. */
-function ActionsWrap({ stacked, children }: { stacked: boolean; children: ReactNode }) {
-  return stacked ? (
-    // Hai nút một hàng, cùng màu vàng (chuẩn tấm "Thao tác" của hồ sơ khách, 16/11/2026).
-    <XStack flexWrap="wrap" gap={space.sm} alignSelf="stretch">
-      {Children.toArray(children).map((child, index) => (
-        <YStack key={index} f={1} minWidth="45%">
-          {child}
+/**
+ * Header ĐẦY ĐỦ dựng từ dữ liệu truyền qua điều hướng trong lúc chi tiết đơn đang tải - cùng khung
+ * với header thật (tiêu đề "Chi tiết đơn #mã", "Tạo lúc" + viên chặng, chỗ thanh bước), nên khi dữ
+ * liệu về màn không nhảy từ header nhỏ sang header to (người dùng 20/11/2026).
+ */
+function PreviewHeader({
+  preview,
+  onBack,
+}: {
+  preview: { code: string; status?: string; createdAt?: string } | undefined;
+  onBack: () => void;
+}) {
+  const t = useTranslations('Bookings');
+  const colors = useColors();
+  const fmt = useAppFormat();
+  return (
+    <ManagePageHeader
+      title={
+        preview ? t('detailPage.partnerApp.title', { code: preview.code }) : t('detailPage.partnerApp.titleLoading')
+      }
+      onBack={onBack}
+      subtitle={
+        <XStack ai="center" jc="space-between" gap={space.sm} minHeight={typeScale.body.lineHeight}>
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1} flexShrink={1}>
+            {preview?.createdAt ? t('detailPage.createdAt', { date: fmt.date(preview.createdAt) }) : ''}
+          </Text>
+          {preview?.status ? <BookingStageChip status={preview.status} /> : null}
+        </XStack>
+      }
+      below={
+        // Cùng chiều cao thanh bước thật (vạch 4 + cách 6 + nhãn 14) - không nhảy khi dữ liệu về.
+        <YStack h={PREVIEW_STEPPER_H}>
+          <Skeleton height={4} />
         </YStack>
-      ))}
-    </XStack>
-  ) : (
-    <XStack flexWrap="wrap" gap={space.sm}>
-      {children}
-    </XStack>
+      }
+    />
   );
 }
+
+/** Chỗ của thanh 4 bước khi đang tải. */
+const PREVIEW_STEPPER_H = 24;

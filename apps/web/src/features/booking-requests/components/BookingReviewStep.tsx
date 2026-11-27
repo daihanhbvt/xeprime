@@ -40,7 +40,7 @@ interface BookingReviewStepProps {
   /** Cổng bằng lái cho chuyến này - chưa `ready` thì thẻ giấy tờ mời tải bằng và nút gửi bị khoá. */
   licenceGate?: { ready: boolean; loading: boolean; uploader: ReactNode };
   /** Điều kiện chủ xe công bố cho đúng dịch vụ đang chọn (giấy tờ, điều khoản). */
-  hostTerms: { text: string | null; documents: string[] } | null;
+  hostTerms: { text: string | null } | null;
   /** Cọc thế chấp khi nhận xe — vẽ trong thẻ giấy tờ & điều kiện, không ở thẻ tiền. */
   deposit: CustomerDepositView | null;
   /**
@@ -159,7 +159,7 @@ export function BookingReviewStep({
             <CheckboxField control={control} name="acceptedTerms">
               <LegalConsentNote
                 as="span"
-                place={agreementCoversHostTerms ? 'bookingCheckHost' : 'bookingCheck'}
+                place={agreementCoversHostTerms ? 'bookingAgreeHost' : 'bookingAgree'}
                 className={styles.agreement}
               />
             </CheckboxField>

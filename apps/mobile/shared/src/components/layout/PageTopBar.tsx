@@ -3,8 +3,10 @@ import { Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { elevation } from '@/theme/elevation';
+import { HEADER_SHADOW, IS_PARTNER_APP } from '@/lib/app-kind';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
 
@@ -21,12 +23,18 @@ import { fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
  */
 export const PageTopBar = memo(function PageTopBar({
   title,
+  titleSuffix,
   onBack,
   actions,
-  subtitle,
+  subtitle: subtitleProp,
   below,
 }: {
   title: string;
+  /**
+   * Mẩu phụ NỐI SAU tiêu đề, cùng dòng: chữ 16/24 nghiêng màu `text/gray/very-low` (Figma chi tiết
+   * yêu cầu hỗ trợ `24232:118901`: "Tranh chấp chuyến đi #SC10VG1E").
+   */
+  titleSuffix?: string;
   /** Dòng phụ dưới tiêu đề (Figma "Chi tiết đơn": "Tạo lúc …" + viên chặng). */
   subtitle?: ReactNode;
   /** Khối nằm trong thanh, dưới hàng tiêu đề (vd. thanh bước của đơn). */
@@ -38,8 +46,14 @@ export const PageTopBar = memo(function PageTopBar({
   const colors = useColors();
   const t = useTranslations('Common.actions');
   const insets = useSafeAreaInsets();
+  /*
+   * Feedback thiết kế 20/11/2026 (bảng feedback dòng 2 "All Page"), CHỈ app Partner: bỏ câu mô tả
+   * dạng CHỮ dưới tiêu đề - chỉ giữ dòng phụ có DỮ LIỆU (ReactNode: "Tạo lúc" + viên trạng thái…);
+   * thanh không vạch kẻ đáy, bóng mảnh Figma "Shadow/xs".
+   */
+  const subtitle = IS_PARTNER_APP && typeof subtitleProp === 'string' ? undefined : subtitleProp;
   return (
-    <YStack bg={colors.surface} pt={insets.top} zi={1} style={elevation.xs}>
+    <YStack bg={colors.surface} pt={insets.top} zi={1} style={IS_PARTNER_APP ? HEADER_SHADOW : elevation.xs}>
       <XStack
         ai="center"
         jc="space-between"
@@ -47,7 +61,7 @@ export const PageTopBar = memo(function PageTopBar({
         minHeight={BAR_MIN_HEIGHT}
         px={BAR_PAD_X}
         py={BAR_PAD_Y}
-        borderBottomWidth={below ? 0 : 1}
+        borderBottomWidth={below || IS_PARTNER_APP ? 0 : 1}
         borderBottomColor={colors.borderSubtle}
       >
         <XStack f={1} minWidth={0} ai="center" gap={BACK_GAP}>
@@ -78,6 +92,18 @@ export const PageTopBar = memo(function PageTopBar({
               accessibilityRole="header"
             >
               {title}
+              {titleSuffix ? (
+                <Text
+                  col={colors.textPlaceholder}
+                  fos={typeScale.title.fontSize}
+                  lh={typeScale.title.lineHeight}
+                  fow={fontWeight.regular}
+                  fontFamily={FONT_FAMILY.body}
+                  fontStyle="italic"
+                >
+                  {` ${titleSuffix}`}
+                </Text>
+              ) : null}
             </Text>
             {subtitle && actions ? (
               <XStack ai="center" gap={ACTIONS_GAP} flexShrink={0}>

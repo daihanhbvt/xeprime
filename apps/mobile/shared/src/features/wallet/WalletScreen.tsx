@@ -1,33 +1,39 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { nowInAppTz } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
-import { BottomSheet } from '@/components/ui/BottomSheet';
 import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { BANK_ACCOUNT_SCOPE } from '@/api/bank-accounts/api';
 import { PayoutNotes } from '@/features/account-payments/components/PayoutNotes';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
-import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { XP_TOKENS, toPx } from '@xeprime/ui';
 import { WALLET_SCOPE, type WalletScope, type WalletStatementFilters } from '@/api/wallet/api';
 import { WalletActivityPanel } from './components/WalletActivityPanel';
-import { WalletMonthSummary, WalletStatementPanel } from './components/WalletStatementPanel';
+import {
+  WalletMonthSummary,
+  WalletStatementPanel,
+  WalletStatsCard,
+} from './components/WalletStatementPanel';
 import { WalletSummaryCard } from './components/WalletSummaryCard';
 import { WithdrawSheet } from './components/WithdrawSheet';
 import { useWalletSummary } from './hooks/use-wallet';
 
 /** Kỳ mặc định của bảng tổng hợp: tháng đang chạy, theo giờ Việt Nam - đúng như web. */
 const STATEMENT_PERIOD_FORMAT = 'YYYY-MM';
+
+/** `num/12` của Figma - khe/đệm của thẻ ví. */
+const SPACE_12 = toPx(XP_TOKENS['space-12']);
 
 /**
  * Ví điểm - bản native của `WalletView`. Dùng chung khu cá nhân và khu gian hàng, khác nhau đúng ở
@@ -68,7 +74,6 @@ export function WalletScreen({
   const colors = useColors();
   const t = useTranslations('Wallet');
   const tBank = useTranslations('BankAccounts');
-  const tTax = useTranslations('Finance.taxWithheld');
   /*
    * Cuộn tới khối payout MỘT lần, khi đã đo được vị trí - cùng cách `ShopProfileScreen` cuộn tới
    * `?section=`. Toạ độ khối là tương đối với cột nội dung, nên cộng thêm vị trí của cột.
@@ -110,7 +115,6 @@ export function WalletScreen({
     [scrollToPayout],
   );
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [taxOpen, setTaxOpen] = useState(false);
   /*
    * Kỳ + trang của bảng tổng hợp sống ở state MÀN, không dùng chung `page` với sổ ví: hai danh
    * sách phân trang cùng một biến sẽ kéo nhau mỗi lần một bên lật trang.
@@ -161,6 +165,14 @@ export function WalletScreen({
   }, [walletSummary.isSuccess, scrollToPayout]);
 
   const isShop = scope === WALLET_SCOPE.SHOP;
+  /*
+   * Kỳ của thẻ chỉ số + Tổng hợp tháng: trang 1 của kỳ đang xem. Ở tab tổng hợp dùng đúng bộ lọc
+   * của bảng (trùng khoá cache, không thêm request).
+   */
+  // Luôn TRANG 1 - danh sách cuộn vô hạn đổi `page` liên tục, thẻ tổng hợp không được tải lại theo.
+  const monthFilters: WalletStatementFilters = { period: statementFilters.period, page: 1 };
+  /** Tab đang mở đăng ký "tải trang kế" vào đây; `Screen onNearEnd` gọi nó (cuộn vô hạn). */
+  const loadMoreRef = useRef<(() => void) | null>(null);
   // Trang gian hàng là "Quản lý ví" của web (ledger 09 §3.10); ví tài khoản khách giữ tên cũ.
   const title = isShop ? t('manage.title') : t('title.user');
 
@@ -185,13 +197,15 @@ export function WalletScreen({
         scrollRef={scrollRef}
         refreshing={pull.refreshing}
         onRefresh={pull.onRefresh}
+        onNearEnd={() => loadMoreRef.current?.()}
       >
         {/*
           Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) - cùng
           khe `subtitle` mà `/manage/balance` bên web dùng. Nó thay cho dòng "1 điểm = 1đ" đã bị gỡ
           khi ví đổi tên từ "Ví điểm" sang "Số dư".
         */}
-        {manageShell ? (
+        {/* Trang gian hàng: Figma `24228:102177` không có câu mô tả dưới tiêu đề (người dùng chốt bỏ 25/11/2026). */}
+        {manageShell && !isShop ? (
           <YStack pb={space.sm}>
             {/* Nút "Rút về ngân hàng" nằm TRONG thẻ số dư như web — hàng tiêu đề không lặp nó. */}
             {/*
@@ -200,7 +214,7 @@ export function WalletScreen({
               biến hai dòng thành bốn dòng trên máy 360dp.
             */}
             <Text px={layout.screenX} col={colors.textMuted} fos={fontSize.label}>
-              {isShop ? t('manage.subtitle') : t('page.subtitle')}
+              {t('page.subtitle')}
             </Text>
           </YStack>
         ) : null}
@@ -213,13 +227,23 @@ export function WalletScreen({
         <YStack
           gap={layout.section}
           px={manageShell ? layout.screenX : 0}
+          // Figma "Container" đệm 16 cả bốn phía - trang gian hàng không còn câu mô tả đứng trên.
+          pt={manageShell && isShop ? space.md : 0}
           pb={manageShell ? layout.section : 0}
           onLayout={onColumnLayout}
         >
           {isShop ? (
             <ScrollReveal index={0}>
-              <Card lift="flat">
-                <YStack gap={space.sm}>
+              {/* Figma "Wallet Card" `24228:102180`: thẻ trắng bo 16, đệm 8 (đáy 12), khe 12. */}
+              <YStack
+                bg={colors.surface}
+                br={radius.card}
+                pt={space.sm}
+                px={space.sm}
+                pb={SPACE_12}
+                gap={SPACE_12}
+                overflow="hidden"
+              >
                   <WalletSummaryCard
                     scope={scope}
                     onWithdraw={() => setWithdrawOpen(true)}
@@ -231,10 +255,10 @@ export function WalletScreen({
                       scope={BANK_ACCOUNT_SCOPE.SHOP}
                       title={tBank('title')}
                       hint={t('payout.hint')}
+                      appearance="wallet"
                     />
                   </YStack>
-                </YStack>
-              </Card>
+              </YStack>
             </ScrollReveal>
           ) : (
             <>
@@ -267,59 +291,41 @@ export function WalletScreen({
 
           {isShop ? (
             <>
-              {/* Thẻ Tổng hợp tháng - hiện ở CẢ HAI tab, như cột bên của web. */}
-              <SectionCard>
-                <WalletMonthSummary
-                  filters={
-                    tab === BALANCE_TAB.STATEMENT
-                      ? statementFilters
-                      : { period: statementFilters.period, page: 1 }
-                  }
-                />
-              </SectionCard>
+              {/*
+                Thẻ ba chỉ số (Figma "Vehicle Summary" `24228:102201`) rồi thẻ Tổng hợp tháng - cả
+                hai hiện ở CẢ HAI tab, đọc chung một kỳ.
+              */}
+              <WalletStatsCard filters={monthFilters} />
+              <WalletMonthSummary filters={monthFilters} />
 
               {/*
-                Ô ghi chú thuế (web `TaxNote`, design `23948:94510`): ô nền xanh thông tin, "Chi tiết"
-                mở bảng thuế đã khấu trừ trong tấm trượt.
+                Figma `24612:145584`: MỘT thẻ trắng viền bo 16, đệm 16, khe 12 - hàng tab chia đôi
+                (16/24, gạch vàng 2px), ô tháng trải ngang, rồi nội dung của tab (người dùng chốt
+                cùng một khung cho cả hai tab, 25/11/2026).
               */}
               <YStack
-                p={space.sm}
-                br={radius.lg}
-                bg={colors.infoSurface}
+                bg={colors.surface}
                 bw={1}
-                bc={colors.infoBorder}
+                bc={colors.border}
+                br={radius.card}
+                p={space.md}
+                gap={SPACE_12}
               >
-                <Text col={colors.infoStrong} fos={fontSize.body} fow={fontWeight.medium}>
-                  {t('taxNote.body')}{' '}
-                  <Text
-                    col={colors.infoStrong}
-                    fos={fontSize.body}
-                    fow={fontWeight.semibold}
-                    textDecorationLine="underline"
-                    accessibilityRole="button"
-                    onPress={() => setTaxOpen(true)}
-                  >
-                    {t('taxNote.detail')}
-                  </Text>
-                </Text>
-              </YStack>
-
-              {/* Hàng tab có khung viền (`segmented.module.css` của web) đứng ngay trên nội dung. */}
-              <XStack accessibilityLabel={t('tabs.label')}>
-                <UnderlineTabs
-                  items={BALANCE_TABS.map((value) => ({ key: value, label: t(`tabs.${value}`) }))}
-                  value={tab}
-                  onChange={(value) => {
-                    setTab(value);
-                    setStatementFilters((prev) => ({ ...prev, page: 1 }));
-                  }}
-                />
-              </XStack>
-
-              <SectionCard>
+                <YStack accessibilityLabel={t('tabs.label')}>
+                  <UnderlineTabs
+                    stretch
+                    items={BALANCE_TABS.map((value) => ({ key: value, label: t(`tabs.${value}`) }))}
+                    value={tab}
+                    onChange={(value) => {
+                      setTab(value);
+                      setStatementFilters((prev) => ({ ...prev, page: 1 }));
+                    }}
+                  />
+                </YStack>
                 {tab === BALANCE_TAB.ACTIVITY ? (
                   <WalletActivityPanel
                     filters={statementFilters}
+                    loadMoreRef={loadMoreRef}
                     onFiltersChange={(patch) =>
                       setStatementFilters((prev) => ({ ...prev, ...patch }))
                     }
@@ -327,28 +333,19 @@ export function WalletScreen({
                 ) : (
                   <WalletStatementPanel
                     filters={statementFilters}
+                    loadMoreRef={loadMoreRef}
                     onFiltersChange={(patch) =>
                       setStatementFilters((prev) => ({ ...prev, ...patch }))
                     }
                   />
                 )}
-              </SectionCard>
+              </YStack>
             </>
           ) : null}
         </YStack>
       </Screen>
 
       <WithdrawSheet scope={scope} open={withdrawOpen} onClose={() => setWithdrawOpen(false)} />
-      {isShop ? (
-        <BottomSheet open={taxOpen} onClose={() => setTaxOpen(false)} title={tTax('title')}>
-          {/* Mở đúng tháng đang xem ở trang ví, như web. */}
-          <ShopTaxWithheldCard
-            embedded
-            key={statementFilters.period}
-            initialPeriod={statementFilters.period}
-          />
-        </BottomSheet>
-      ) : null}
     </>
   );
 }

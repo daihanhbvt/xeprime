@@ -70,7 +70,11 @@ export const SERVICE_TABS: ReadonlyArray<{
 export const FOOTER_COLUMNS: ReadonlyArray<{
   key: string;
   titleKey: FooterKey;
-  links: ReadonlyArray<{ key: FooterKey; href: string }>;
+  /**
+   * `exact`: chỉ sáng "đang xem" khi đứng ĐÚNG địa chỉ — mục trỏ trang mục lục `/legal` không được
+   * sáng cùng mục văn bản con đang đọc.
+   */
+  links: ReadonlyArray<{ key: FooterKey; href: string; exact?: boolean }>;
 }> = [
   {
     key: 'company',
@@ -89,20 +93,23 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
   {
     key: 'legal',
     titleKey: 'columns.legal.title',
+    /*
+     * Các văn bản CỐT LÕI + lối tới cả bộ: Điều khoản, Quy chế (luật TMĐT buộc dẫn từ trang chủ),
+     * Bảo vệ dữ liệu cá nhân, Huỷ & hoàn tiền (người thuê hỏi nhiều nhất) và Giải quyết khiếu nại
+     * (Luật BVQLNTD buộc công khai). Bốn văn bản còn lại (thanh toán, hợp đồng thuê, thuế chủ xe,
+     * điều kiện gói) đi qua "Tất cả văn bản" — chín liên kết trong một cột hẹp không còn đọc được.
+     */
     links: [
       { key: 'columns.legal.terms', href: legalPath.doc(LEGAL_DOC.TERMS) },
-      { key: 'columns.legal.privacy', href: legalPath.doc(LEGAL_DOC.PRIVACY) },
       {
         key: 'columns.legal.marketplaceRules',
         href: legalPath.doc(LEGAL_DOC.MARKETPLACE_RULES),
       },
+      { key: 'columns.legal.privacy', href: legalPath.doc(LEGAL_DOC.PRIVACY) },
       // Nhãn ngắn của design v2 ("Chính sách huỷ & hoàn tiền") — cột hẹp, không xuống dòng.
       { key: 'columns.legal.cancellationShort', href: legalPath.doc(LEGAL_DOC.CANCELLATION) },
-      /*
-       * Văn bản cho CHỦ XE nhưng vẫn ở chân trang công khai: Luật TMĐT buộc sàn công khai chính
-       * sách, và người đang cân nhắc đăng xe cần đọc được nó trước khi có tài khoản đối tác.
-       */
-      { key: 'columns.legal.ownerTax', href: legalPath.doc(LEGAL_DOC.OWNER_TAX) },
+      { key: 'columns.legal.complaints', href: legalPath.doc(LEGAL_DOC.COMPLAINTS) },
+      { key: 'columns.legal.allDocs', href: legalPath.index, exact: true },
     ],
   },
 ];

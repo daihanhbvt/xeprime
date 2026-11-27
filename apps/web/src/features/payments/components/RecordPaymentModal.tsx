@@ -1,22 +1,26 @@
 'use client';
 
-import { Alert, App } from 'antd';
+import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
-import { PAYMENT_KIND, type PaymentKind } from '@xeprime/types';
+import { PAYMENT_KIND, type RecordablePaymentKind } from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { TextField } from '@/components/form/TextField';
+import { trailingRequiredMark } from '@/components/form/required-mark';
+import decision from '@/features/booking-requests/components/DecisionReasonDialog.module.css';
 import { useFinanceOptions } from '@/features/finance/hooks/use-finance-options';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useRecordPayment } from '../hooks/use-payments';
 import { recordPaymentSchema, type RecordPaymentValues } from '../schema';
 import type { RecordPaymentInput } from '../types';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
 import styles from './RecordPaymentModal.module.css';
 
 const DEFAULTS: RecordPaymentValues = {
@@ -49,7 +53,7 @@ interface RecordPaymentModalProps {
    * Đây không phải một nhãn: cọc **không** cộng vào `paidAmount` và **không** làm giảm công nợ
    * (nó là tài sản giữ hộ, sẽ trả lại khách). Chọn nhầm là ghi sai sổ ở hai chỗ cùng lúc.
    */
-  kind?: PaymentKind;
+  kind?: RecordablePaymentKind;
   /**
    * `debtAmount` là phần khách còn đưa TẬN TAY (`counterDueAmount` = công nợ − `D` đã nằm ở XePrime)
    * chứ không phải cả công nợ. Chỉ đổi nhãn dòng dẫn cho khớp khung "Còn phải thu của khách" của
@@ -58,7 +62,13 @@ interface RecordPaymentModalProps {
   counterDue?: boolean;
 }
 
-/** Modal ghi nhận một lần thu tiền cho đơn — tiền thuê hoặc tiền cọc. */
+/**
+ * Modal ghi nhận một lần thu tiền cho đơn — tiền thuê hoặc tiền cọc.
+ *
+ * Khuôn hộp thoại chung của site partner (26/11/2026, cùng `DecisionReasonDialog.module.css` của
+ * hộp huỷ / từ chối): tiêu đề + dòng phụ, viên tóm tắt nền xám mang số còn phải thu, nhãn nằm TRÊN
+ * ô nhập (số tiền · hình thức chung một hàng), hai nút lớn ở chân.
+ */
 export function RecordPaymentModal({
   bookingId,
   debtAmount,
@@ -68,6 +78,7 @@ export function RecordPaymentModal({
   counterDue = false,
 }: RecordPaymentModalProps) {
   const t = useTranslations('Bookings.payments');
+  const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const isDeposit = kind === PAYMENT_KIND.DEPOSIT;
 
@@ -115,40 +126,76 @@ export function RecordPaymentModal({
     });
   });
 
+  const leadLabel = isDeposit ? t('depositLead') : counterDue ? t('counterLead') : t('debtLead');
+
   return (
     <ResponsiveDialog
-      title={isDeposit ? t('recordDepositTitle') : t('recordTitle')}
+      title={
+        <span className={decision.titleBlock}>
+          <span>{isDeposit ? t('recordDepositTitle') : t('recordTitle')}</span>
+          {isDeposit ? (
+            // Nói TRƯỚC khi ghi: chủ xe nhìn công nợ không đổi sau khi thu 5 triệu sẽ tưởng hệ thống
+            // nuốt mất tiền. Một dòng phụ + ⓘ thay cho khối cảnh báo to.
+            <span className={decision.subtitle}>
+              {t('depositNoticeTitle')}
+              <InfoHint
+                className={decision.infoHint}
+                label={t('depositNoticeTitle')}
+                content={t('depositNoticeBody')}
+              />
+            </span>
+          ) : null}
+        </span>
+      }
       open={open}
       onClose={onClose}
       size="sm"
-      okText={t('recordOk')}
-      onOk={() => void submit()}
+      mobileMode="fullscreen"
       confirmLoading={record.isPending}
+      footer={
+        <div className={decision.footer}>
+          <Button size="large" onClick={onClose} disabled={record.isPending}>
+            {tCommon('cancel')}
+          </Button>
+          <Button
+            size="large"
+            type="primary"
+            loading={record.isPending}
+            onClick={() => void submit()}
+          >
+            {t('recordOk')}
+          </Button>
+        </div>
+      }
     >
-      <p className={styles.lead}>
-        {isDeposit ? t('depositLead') : counterDue ? t('counterLead') : t('debtLead')}:{' '}
-        <b>{fmt.money(debtAmount)}</b>
-      </p>
-      {isDeposit ? (
-        // Nói TRƯỚC khi ghi, không phải sau: chủ xe nhìn công nợ không đổi sau khi thu 5 triệu
-        // sẽ tưởng hệ thống nuốt mất tiền.
-        <Alert
-          className={styles.note}
-          type="info"
-          showIcon
-          title={t('depositNoticeTitle')}
-          description={t('depositNoticeBody')}
-        />
-      ) : null}
-      <DialogForm onSubmit={submit} labelWidth="md">
-        {/* Không đặt `max` cho ô: AntD kẹp số âm thầm, người dùng không biết khoản dư đi đâu. */}
-        <NumberField control={control} name="amount" label={t('amountLabel')} money min={0} />
-        <SelectField
-          control={control}
-          name="method"
-          label={t('methodLabel')}
-          options={financeOptions.paymentMethod}
-        />
+      <DialogForm
+        className={styles.form}
+        labelPosition="top"
+        requiredMark={trailingRequiredMark}
+        onSubmit={submit}
+      >
+        <div className={cx(decision.summary, styles.summary)}>
+          <span className={styles.summaryLabel}>{leadLabel}</span>
+          <b className={styles.summaryAmount}>{fmt.money(debtAmount)}</b>
+        </div>
+        <div className={styles.pair}>
+          {/* Không đặt `max` cho ô: AntD kẹp số âm thầm, người dùng không biết khoản dư đi đâu. */}
+          <NumberField
+            control={control}
+            name="amount"
+            label={t('amountLabel')}
+            money
+            min={0}
+            required
+          />
+          <SelectField
+            control={control}
+            name="method"
+            label={t('methodLabel')}
+            options={financeOptions.paymentMethod}
+            required
+          />
+        </div>
         <TextField
           control={control}
           name="referenceCode"

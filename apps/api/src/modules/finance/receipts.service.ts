@@ -26,7 +26,7 @@ import {
   vehicleBranchWhere,
 } from '../../common/dto/branch-scope';
 import { dayRangeFilter } from '../../common/day-range';
-import { bookingDebt } from '../../common/money';
+import { bookingDebt, onlineShareOf } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -325,6 +325,7 @@ export class ReceiptsService {
         vehicleId: true,
         totalAmount: true,
         paidAmount: true,
+        hold: { select: { depositAmount: true, paidAt: true } },
         vehicle: { select: { name: true, plateNumber: true, mainImageUrl: true } },
       },
     });
@@ -343,7 +344,7 @@ export class ReceiptsService {
         vehicleImageUrl: r.vehicle?.mainImageUrl ?? null,
         totalAmount: r.totalAmount.toString(),
         paidAmount: r.paidAmount.toString(),
-        debtAmount: bookingDebt(r.totalAmount, r.paidAmount).toString(),
+        debtAmount: bookingDebt(r.totalAmount, r.paidAmount, onlineShareOf(r.hold)).toString(),
       }))
       .sort((a, b) => Number(b.debtAmount) - Number(a.debtAmount));
   }
@@ -424,7 +425,9 @@ export class ReceiptsService {
         currentBookingId: booking?.id ?? null,
         currentBookingCode: booking?.code ?? null,
         currentCustomerName: booking?.customerName ?? null,
-        currentDebtAmount: booking ? bookingDebt(booking.totalAmount, booking.paidAmount).toString() : null,
+        currentDebtAmount: booking
+          ? bookingDebt(booking.totalAmount, booking.paidAmount, onlineShareOf(booking.hold)).toString()
+          : null,
       };
     });
   }
@@ -454,6 +457,7 @@ export class ReceiptsService {
         customerName: true,
         totalAmount: true,
         paidAmount: true,
+        hold: { select: { depositAmount: true, paidAt: true } },
       },
     });
     const byVehicle = new Map<string, CurrentBookingRow>();
@@ -717,7 +721,8 @@ export class ReceiptsService {
   async createApprovedWithinTx(
     tx: Prisma.TransactionClient,
     tenantId: string,
-    userId: string,
+    /** `null` khi lượt ghi không do người nào bấm (worker quyết toán, lượt chuyển trạng thái tự động). */
+    userId: string | null,
     input: ApprovedReceiptInput,
   ): Promise<{ id: string; receiptNo: string }> {
     const id = newId();
@@ -862,6 +867,7 @@ type CurrentBookingRow = {
   customerName: string;
   totalAmount: Prisma.Decimal;
   paidAmount: Prisma.Decimal;
+  hold: { depositAmount: Prisma.Decimal; paidAt: Date | null } | null;
 };
 
 /** Cùng trần với ô chọn đơn — một danh sách dài hơn thì phải gõ tìm chứ không cuộn. */

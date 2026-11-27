@@ -2,6 +2,7 @@ import {
   BOOKING_HISTORY_TAB,
   BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
+  BOOKING_STATUS,
   type BookingHistoryTab,
 } from '@xeprime/types';
 
@@ -68,6 +69,34 @@ export const RENTAL_VIEW_VALUES: readonly RentalView[] = [RENTAL_VIEW.BOARD, REN
 
 export function isRentalView(value: unknown): value is RentalView {
   return typeof value === 'string' && (RENTAL_VIEW_VALUES as readonly string[]).includes(value);
+}
+
+/**
+ * Nhóm của một ĐƠN theo trạng thái của nó — `reserved` (và `confirmed` của dữ liệu cũ) là "Chờ giao
+ * xe", `active` là "Đang thuê". Trạng thái đã kết thúc không thuộc nhóm nào (`null`).
+ */
+export function rentalStageOfBookingStatus(status: string | null | undefined): BookingStage | null {
+  switch (status) {
+    case BOOKING_STATUS.RESERVED:
+    case BOOKING_STATUS.CONFIRMED:
+      return RENTAL_STAGE.AWAITING_PICKUP;
+    case BOOKING_STATUS.ACTIVE:
+      return RENTAL_STAGE.RENTING;
+    default:
+      return null;
+  }
+}
+
+/** Nhóm của một YÊU CẦU còn mở theo trạng thái của nó; yêu cầu đã khép không thuộc nhóm nào. */
+export function rentalStageOfRequestStatus(status: string | null | undefined): RequestStage | null {
+  switch (status) {
+    case BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL:
+      return RENTAL_STAGE.NEEDS_ACTION;
+    case BOOKING_REQUEST_STATUS.AWAITING_HOLD:
+      return RENTAL_STAGE.AWAITING_PAYMENT;
+    default:
+      return null;
+  }
 }
 
 /** Trạng thái yêu cầu của mỗi nhóm yêu cầu — một trạng thái, không gộp. */

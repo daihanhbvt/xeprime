@@ -2,7 +2,7 @@
 
 import { ArrowRightOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
-import Link from 'next/link';
+import { LegalDocLink } from '@/features/legal/components/LegalDocLink';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useId, useState, type ReactNode } from 'react';
@@ -12,7 +12,7 @@ import {
   serviceRequiresDriverLicence,
 } from '@xeprime/types';
 import { SUPPORT_HOTLINE } from '@/constants/contact';
-import { LEGAL_DOC, legalPath } from '@/constants/legal';
+import { LEGAL_DOC } from '@/constants/legal';
 import { shopPath } from '@/constants/routes';
 import { BookingRenterCard } from '@/features/booking-requests/components/BookingRenterCard';
 import { BookingRequirementsCard } from '@/features/booking-requests/components/BookingRequirementsCard';
@@ -349,7 +349,7 @@ export function TripRequestLayout({
           <BookingRequirementsCard
             licence={{ required: licenceRequired, current: licenceQ.data?.verified ?? null }}
             hostTerms={
-              terms ? { text: terms.termsText ?? null, documents: terms.requiredDocuments } : null
+              terms ? { text: terms.termsText ?? null } : null
             }
             headingLevel={2}
           />
@@ -394,10 +394,11 @@ export function TripPlanChangeCard({
       </div>
       {actions}
       {/* Figma `21768:22478`: lối xem chính sách là liên kết chữ có mũi tên, không phải nút khung. */}
-      <Link href={legalPath.doc(LEGAL_DOC.CANCELLATION)} className={styles.policyLink}>
+      {/* Toàn văn mở trong hộp xem nhanh: khách đang theo dõi chuyến, không đẩy họ sang trang khác. */}
+      <LegalDocLink doc={LEGAL_DOC.CANCELLATION} className={styles.policyLink}>
         {t('view')}
         <ArrowRightOutlined className={styles.policyLinkIcon} aria-hidden="true" />
-      </Link>
+      </LegalDocLink>
       {canCancel ? (
         <CtaButton variant="danger" size="form" block onClick={() => setCancelOpen(true)}>
           {t('cancel')}

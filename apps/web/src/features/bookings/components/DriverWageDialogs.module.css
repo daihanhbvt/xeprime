@@ -92,3 +92,93 @@
   font-weight: var(--xp-font-weight-medium, 500);
   white-space: nowrap;
 }
+
+/* Chip chọn nhanh tiền công/ngày (Figma `24145:47780`) — viền mảnh, chip đang chọn tô vàng nhạt. */
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.quickChip {
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.quickChip:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.quickChipActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-pale);
+}
+
+/* Khung tổng: "Tiền công (xN ngày)" / "Tổng thu nhập" bên trái, số đậm bên phải. */
+.totalBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-12) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  gap: var(--xp-space-md);
+}
+
+.totalValue {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+  white-space: nowrap;
+}
+
+.totalValue b {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.diffUp {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.diffDown {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* "Hiện tại: 800.000 đ" ngay dưới ô số mới của hộp sửa. */
+.current {
+  margin: calc(var(--xp-space-sm) * -1) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.current b {
+  color: var(--xp-color-text);
+}
+
+/* Phụ đề hộp: "Tên - SĐT" / "Đơn hàng #…, khung giờ". */
+.subtitle {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.titleRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}

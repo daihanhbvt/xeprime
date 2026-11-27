@@ -351,6 +351,26 @@ export function requestTripPhotoUrl(
 }
 
 /**
+ * Khách báo "Tôi chưa trả xe" — ADR 0105, web `useReportTripNotReturned`: ghi thẳng chuyến server trả
+ * về vào cache; bị từ chối (cửa sổ vừa đóng) thì kéo lại chuyến để nút tự biến mất.
+ */
+export function useReportTripNotReturned(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => tripsApi.reportNotReturned(id),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trips.detail(id), trip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+    onError: (error) => {
+      if (getErrorCode(error) === API_ERROR_CODE.TRIP_NOT_RETURNED_NOT_ALLOWED) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(id) });
+      }
+    },
+  });
+}
+
+/**
  * "Đã nhận xe" / "Đã trả xe" (ADR 0081) — cùng khuôn với `useReportTripNotReceived`: server trả về
  * chính chuyến nên ghi thẳng vào cache; bị từ chối vì chuyến đã đổi (chủ xe vừa xác nhận) thì đọc lại.
  */

@@ -18,7 +18,7 @@ import { StyleSheet } from 'react-native';
 import { images } from '@/assets';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { XP_TOKENS, toPx } from '@xeprime/ui';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import { WALLET_SCOPE, type WalletScope } from '@/api/wallet/api';
 import { canWithdraw } from '../can-withdraw';
 import { useWalletSummary } from '../hooks/use-wallet';
@@ -94,10 +94,10 @@ export function WalletSummaryCard({
   }
 
   /*
-   * Trang "Quản lý ví" của gian hàng = `variant="hero"` của web (Figma `23948:94510`, ledger 09
-   * §3.10 #1-2): MỘT con số "Rút được ngay" trên nền vàng nhạt, huy hiệu "Đã xác minh" dưới số,
-   * dòng "… đang được chuyển về ngân hàng" chỉ khi khác 0, nút "Rút về ngân hàng" trong thẻ, dòng
-   * tối thiểu dưới nút khi khoá. Ô "Tổng XePrime phải trả" cũ đã bỏ — nó chỉ là tổng hai ô kia.
+   * Trang "Quản lý ví" của gian hàng (Figma Partner-XePrime `24228:102181`): "Rút được ngay" trên
+   * nền vàng nhạt, hàng hai chỉ số "Đang chờ" · "Tổng XePrime phải trả", nút "Rút về ngân hàng"
+   * trong thẻ. Huy hiệu "Đã xác minh" và dòng "đang chuyển về ngân hàng" đã bỏ theo Figma (người
+   * dùng chốt 25/11/2026) - lời giải thích tiền đang chuyển nằm ở ⓘ cạnh "Đang chờ".
    */
   if (scope === WALLET_SCOPE.SHOP && pageVariant) {
     return (
@@ -189,8 +189,8 @@ export function WalletSummaryCard({
   );
 }
 
-/** Web `.hero { gap: var(--xp-space-20) }`. */
-const HERO_GAP = 20;
+/** Figma `24228:102181` "Wallet balance card": đệm 12, bo 12, khe 12; hàng chỉ số khe 20. */
+const HERO_GAP = toPx(XP_TOKENS['space-12']);
 
 function HeroSummary({
   data,
@@ -198,7 +198,7 @@ function HeroSummary({
   withdrawable,
   onWithdraw,
 }: {
-  data: { available: string; pending: string; minWithdrawAmount: string };
+  data: { available: string; pending: string; total: string; minWithdrawAmount: string };
   frozen: boolean;
   withdrawable: boolean;
   onWithdraw?: () => void;
@@ -207,21 +207,13 @@ function HeroSummary({
   const { scheme } = useAppScheme();
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
-  const inTransit = !isZeroMoney(data.pending);
 
   return (
     /*
-      Nền = web `.hero`: ảnh loang vàng `balance-glow` phủ kín (cover) trên `primary-light`, KHÔNG
-      viền, khe 20 giữa các khối. Chế độ tối web bỏ ảnh, chỉ giữ `primary-light`.
+      Nền = ảnh loang vàng `balance-glow` phủ kín trên `primary-light` (Figma hai lớp ảnh nền).
+      Chế độ tối bỏ ảnh, chỉ giữ `primary-light`.
     */
-    <YStack
-      ai="center"
-      gap={HERO_GAP}
-      p={space.md}
-      br={radius.lg}
-      bg={colors.primaryLight}
-      overflow="hidden"
-    >
+    <YStack gap={HERO_GAP} p={HERO_GAP} br={radius.control} bg={colors.primaryLight} overflow="hidden">
       {scheme === 'dark' ? null : (
         <Image
           source={images.walletBalanceGlow}
@@ -230,17 +222,15 @@ function HeroSummary({
           accessible={false}
         />
       )}
-      {frozen ? (
-        <YStack alignSelf="stretch">
-          <Callout tone="warning">{t('balance.frozen')}</Callout>
-        </YStack>
-      ) : null}
+      {frozen ? <Callout tone="warning">{t('balance.frozen')}</Callout> : null}
 
-      <YStack ai="center" gap={space.sm} maxWidth="100%">
+      {/* "Wallet summary": nhãn 14/20 medium viết hoa · số 24/32 bold, khe 2. */}
+      <YStack ai="center" gap={2} maxWidth="100%">
         <XStack ai="center" gap={space.xs}>
           <Text
             col={colors.text}
-            fos={fontSize.bodyLg}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
             fow={fontWeight.medium}
             textTransform="uppercase"
           >
@@ -248,31 +238,38 @@ function HeroSummary({
           </Text>
           <InfoHint label={t('summary.availableInfoLabel')} content={t('summary.availableInfo')} />
         </XStack>
-        <Text col={colors.text} fos={fontSize.h1} fow={fontWeight.bold} ta="center">
+        <Text
+          col={colors.text}
+          fos={typeScale.display.fontSize}
+          lh={typeScale.display.lineHeight}
+          fow={fontWeight.bold}
+          ta="center"
+        >
           {fmt.money(data.available)}
         </Text>
-        <VerifiedBadge />
       </YStack>
 
-      {inTransit ? (
-        <XStack ai="center" gap={space.xs} flexWrap="wrap" jc="center">
-          <Ionicons name="time-outline" size={iconSize.sm} color={colors.textMuted} />
-          <Text col={colors.textMuted} fos={fontSize.body}>
+      {/*
+        Như web `variant="hero"`: không có hàng "Đang chờ" / "Tổng XePrime phải trả" - chỉ một
+        dòng "… đang được chuyển về ngân hàng" kèm ⓘ, và chỉ khi khoản đó khác 0 (người dùng chốt
+        26/11/2026).
+      */}
+      {isZeroMoney(data.pending) ? null : (
+        <XStack ai="center" jc="center" gap={space.xs} flexWrap="wrap">
+          <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} ta="center">
             {t('summary.inTransit', { amount: fmt.money(data.pending) })}
           </Text>
           <InfoHint label={t('summary.inTransitInfoLabel')} content={t('summary.inTransitInfo')} />
         </XStack>
-      ) : null}
+      )}
 
       {onWithdraw ? (
-        <YStack alignSelf="stretch" gap={space.xs}>
-          {/*
-            Nút vẫn HIỆN khi chưa đủ điều kiện rút, chỉ bị khoá — dòng ngay dưới nói rõ vì sao.
-          */}
-          {/* = web `CtaButton` mặc định (`gradient`, bo 12, không icon) trải ngang thẻ. */}
+        <YStack gap={space.xs}>
+          {/* Nút vẫn HIỆN khi chưa đủ điều kiện rút, chỉ bị khoá - dòng ngay dưới nói rõ vì sao. */}
           <Button
             variant="gradient"
             shape="square"
+            size="sm"
             label={t('withdraw.action')}
             disabled={!withdrawable}
             onPress={onWithdraw}

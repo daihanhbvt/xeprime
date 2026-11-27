@@ -2,14 +2,11 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import {
-  CUSTOMER_DOCUMENT_TYPE,
   DRIVER_DEPOSIT_MODE,
   DRIVER_SURCHARGE_KIND,
   DRIVER_SURCHARGE_THRESHOLD_MAX,
   HANDOVER_WINDOW_MAX_PER_KIND,
-  IDENTITY_VERIFY_METHOD,
   MIN_RENTAL_MINUTES_RANGE,
-  RENTAL_TERMS_MAX_LENGTH,
   ROUTE_TYPE,
 } from '@xeprime/types';
 import {
@@ -133,40 +130,17 @@ describe('PatchVehicleServiceSettingDto — thời lượng, giấy tờ, điề
     ).toBeDefined();
   });
 
-  it('"giấy tờ khác" không nằm trong tập cấu hình được', () => {
+  it('bốn trường điều kiện thuê theo xe đã gỡ (ADR 0112): app cũ gửi thì NHẬN rồi BỎ QUA', () => {
+    // Pipe toàn cục `forbidNonWhitelisted` sẽ 400 nếu DTO xoá hẳn các trường này - bản app đã
+    // phát hành vẫn gửi. Mọi giá trị, kể cả giá trị từng bị chặn, phải qua DTO mà không lỗi.
     expect(
       errorsOf(PatchVehicleServiceSettingDto, {
-        requiredDocuments: [CUSTOMER_DOCUMENT_TYPE.PASSPORT],
+        requiredDocuments: ['other'],
+        identityVerifyMethod: 'api_vneid',
+        termsText: 'x'.repeat(100_000),
+        requireTermsAcceptance: 'không phải boolean',
       }),
     ).toEqual({});
-    expect(
-      errorsOf(PatchVehicleServiceSettingDto, {
-        requiredDocuments: [CUSTOMER_DOCUMENT_TYPE.OTHER],
-      }).requiredDocuments,
-    ).toBeDefined();
-  });
-
-  it('cách đối chiếu chỉ nhận hai phương thức THỦ CÔNG đã định nghĩa', () => {
-    expect(
-      errorsOf(PatchVehicleServiceSettingDto, {
-        identityVerifyMethod: IDENTITY_VERIFY_METHOD.VNEID,
-      }),
-    ).toEqual({});
-    expect(
-      errorsOf(PatchVehicleServiceSettingDto, { identityVerifyMethod: 'api_vneid' })
-        .identityVerifyMethod,
-    ).toBeDefined();
-  });
-
-  it('điều khoản có trần độ dài', () => {
-    expect(
-      errorsOf(PatchVehicleServiceSettingDto, { termsText: 'x'.repeat(RENTAL_TERMS_MAX_LENGTH) }),
-    ).toEqual({});
-    expect(
-      errorsOf(PatchVehicleServiceSettingDto, {
-        termsText: 'x'.repeat(RENTAL_TERMS_MAX_LENGTH + 1),
-      }).termsText,
-    ).toBeDefined();
   });
 
   it('chỉ nhận chế độ cọc hệ thống THU được — 30%/50% bị từ chối ngay ở DTO', () => {

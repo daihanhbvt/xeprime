@@ -4,9 +4,8 @@ import { Pressable, type View } from 'react-native';
 import { Controller, useFormState, useWatch, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useRentalConditionsText } from '@/features/rental-policies/rental-conditions';
 import {
-  COLLATERAL_MODE,
-  CUSTOMER_DOCUMENT_TYPE,
   HOLD_PAYMENT_WINDOW_MINUTES,
   isSameVnPhone,
   type PublicListingDetail,
@@ -18,7 +17,6 @@ import { FormSection } from '@/components/ui/FormSection';
 import { TextField } from '@/components/ui/TextField';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { BookingRequestFormValues } from '../booking-schema';
@@ -96,7 +94,6 @@ export function RequestReviewStep({
   // Cọc thế chấp khi nhận xe — điều kiện NHẬN XE, trao tay chủ xe, nên nằm ở thẻ giấy tờ (web #230).
   const { deposit } = useCustomerCostView({ listing, breakdown, isDelivery });
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
 
   /** Điều khoản chủ xe cho ĐÚNG dịch vụ đang chọn — cùng phép chọn với web và với lượt gửi. */
   const activeTerms =
@@ -124,10 +121,8 @@ export function RequestReviewStep({
         .filter(Boolean)
         .join(LIST_SEPARATOR)
     : '';
-  // Giấy tờ tuỳ thân (CCCD/CMND) không liệt kê ở đây - dòng này chỉ nhắc giấy tờ lái xe (như web).
-  const hostDocuments = (activeTerms?.requiredDocuments ?? []).filter(
-    (doc) => doc !== CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID,
-  );
+  // Giấy tờ tuỳ thân là LUẬT CHUẨN của nền tảng (ADR 0112 điều 3), không theo từng chủ xe (như web).
+  const rules = useRentalConditionsText();
   return (
     <YStack gap={space.lg}>
       <YStack gap={space.xs}>
@@ -174,7 +169,7 @@ export function RequestReviewStep({
           name="note"
           label={t('reviewPage.renter.noteLabel')}
           placeholder={t('reviewPage.renter.notePlaceholder')}
-          multiline
+          multiline scrollable
           rows={3}
           maxLength={NOTE_MAX}
         />
@@ -215,28 +210,23 @@ export function RequestReviewStep({
             </Text>
           </XStack>
         ) : null}
-        {!showLicenceEmpty && hostDocuments.length > 0 ? (
+        {!showLicenceEmpty ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('reviewPage.requirements.documents', {
-              documents: hostDocuments
-                .map((doc) => domainLabel('customerDocumentType', doc))
-                .join(', '),
+            {t('reviewPage.requirements.identity', {
+              documents: rules.documents,
+              verify: rules.verify,
             })}
           </Text>
         ) : null}
         {deposit ? (
-          // `.depositHead` web: nhãn cọc + số (đậm) cùng hàng, câu giải thích bên dưới.
+          // `.depositHead` web (ADR 0112): cọc là một CÂU - nhãn trên, mô tả dưới, tự xuống dòng.
           <YStack gap={2}>
-            <XStack ai="center" jc="space-between" gap={space.sm}>
-              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                {tPrice('deposit')}
-              </Text>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                {deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
-                  ? fmt.money(deposit.amount)
-                  : domainLabel('collateralMode', deposit.mode)}
-              </Text>
-            </XStack>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {tPrice('deposit')}
+            </Text>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {deposit.display}
+            </Text>
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
               {deposit.note}
             </Text>

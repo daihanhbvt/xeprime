@@ -6,6 +6,8 @@ import {
   BOOKING_DATE_FIELD_VALUES,
   BOOKING_HOLD_OUTCOME_VALUES,
   BOOKING_HOLD_STATUS_VALUES,
+  BOOKING_SOURCE_FILTER_VALUES,
+  BOOKING_SOURCE_VALUES,
   BOOKING_STATUS_VALUES,
   CANCELLATION_PARTY_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
@@ -60,6 +62,12 @@ export class PlatformBookingListQueryDto {
   @IsIn(BOOKING_STATUS_VALUES)
   status?: string;
 
+  /** Nguồn đơn (ADR 0110) - `xeprime` = đơn qua sàn, `direct` = mọi đơn chủ xe tự lập. */
+  @ApiPropertyOptional({ enum: BOOKING_SOURCE_FILTER_VALUES })
+  @IsOptional()
+  @IsIn(BOOKING_SOURCE_FILTER_VALUES)
+  source?: string;
+
   @ApiPropertyOptional({
     enum: BOOKING_DATE_FIELD_VALUES,
     default: BOOKING_DATE_FIELD.CREATED_AT,
@@ -106,6 +114,10 @@ export class PlatformBookingDto {
   @ApiProperty() code!: string;
   @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  /** Nguồn đơn (ADR 0110): `xeprime` = qua sàn; khác = chủ xe tự lập, ngoài sàn. */
+  @ApiProperty({ enum: BOOKING_SOURCE_VALUES }) source!: string;
+  @ApiProperty({ required: true, type: String, nullable: true, description: 'Nhãn nguồn tự nhập' })
+  sourceLabel!: string | null;
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ĐÃ che, vd 091****678' })
   customerPhoneMasked!: string | null;

@@ -20,11 +20,17 @@ export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
 export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
 export type BookingDriverIncident = Schemas['BookingDriverIncidentDto'];
 /**
- * Body của `PATCH /bookings/:id/driver` — chỉ tài xế LIÊN KẾT (`null` = bỏ gán). Khoá
- * `externalDriver` đã bỏ (ADR 0074 điều 4 — server trả 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`).
- * `wageAmount` (VND chuỗi) bỏ trống = mức mặc định × số ngày (ADR 0075).
+ * Body của `PATCH /bookings/:id/driver` — gửi ĐÚNG MỘT khoá: tài xế LIÊN KẾT (`driverId`, `null` = bỏ
+ * gán, kèm tiền công) hoặc tài xế NỘI BỘ từ danh bạ (`internalDriverId`, ADR 0108 — không tiền công).
+ * Khoá `externalDriver` đã bỏ (ADR 0074 điều 4 — server trả 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`).
+ * `wageAmount` (VND chuỗi) bỏ trống = mức mặc định × số ngày (ADR 0075). Gương web `types.ts`.
  */
-export type AssignBookingDriverInput = { driverId: string | null; wageAmount?: string };
+export type AssignBookingDriverInput =
+  | { driverId: string | null; wageAmount?: string }
+  | { internalDriverId: string };
+/** Một món tài sản thế chấp khách để lại cho đơn (ADR 0109). */
+export type BookingCollateral = Schemas['BookingCollateralDto'];
+export type BookingCollateralInput = Schemas['BookingCollateralInputDto'];
 /** Tiền công của một lượt gán (ADR 0075) — XePrime chỉ ghi nhận, chủ xe trả trực tiếp. */
 export type DriverWage = Schemas['DriverWageDto'];
 /** Số liệu cho hộp gán: số ngày, gợi ý mặc định × N, khoảng hợp lệ — server tính. */
@@ -254,6 +260,33 @@ export const bookingsApi = {
     return getApiClient().put<BookingHandoverPrep>(
       `/bookings/${encodeURIComponent(id)}/handover-prep`,
       body,
+    );
+  },
+
+  // ── Tài sản thế chấp theo đơn (ADR 0109) — native port of web `features/bookings/api.ts` ──
+  // Server trả danh sách MỚI của đơn sau mỗi thao tác — cache chi tiết đơn ghi thẳng từ đó.
+
+  addCollateral(id: string, body: BookingCollateralInput): Promise<BookingCollateral[]> {
+    return getApiClient().post<BookingCollateral[]>(
+      `/bookings/${encodeURIComponent(id)}/collaterals`,
+      body,
+    );
+  },
+
+  removeCollateral(id: string, collateralId: string): Promise<BookingCollateral[]> {
+    return getApiClient().delete<BookingCollateral[]>(
+      `/bookings/${encodeURIComponent(id)}/collaterals/${encodeURIComponent(collateralId)}`,
+    );
+  },
+
+  setCollateralReturned(
+    id: string,
+    collateralId: string,
+    returned: boolean,
+  ): Promise<BookingCollateral[]> {
+    return getApiClient().post<BookingCollateral[]>(
+      `/bookings/${encodeURIComponent(id)}/collaterals/${encodeURIComponent(collateralId)}/${returned ? 'return' : 'unreturn'}`,
+      {},
     );
   },
 

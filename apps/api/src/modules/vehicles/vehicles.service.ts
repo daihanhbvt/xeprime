@@ -21,6 +21,8 @@ import {
   isPackageShopTrack,
   missingPackageShopListingRequirements,
   SHOP_ONBOARDING_STATE,
+  POLICY_SECTION,
+  POLICY_SECTION_VALUES,
   POLICY_SOURCE,
   RECEIPT_TYPE,
   REVIEW_STATUS,
@@ -439,7 +441,7 @@ export class VehiclesService {
       // `branchId` đứng SAU `tenantId` và không thay thế nó: bộ chọn chi nhánh chỉ thu hẹp phạm
       // vi, không bao giờ là đường vòng ra khỏi gian hàng của mình.
       branchId: resolveBranchScope(query.branchId, allowedBranchIds),
-      ...(query.q ? { OR: searchOr(query.q) } : {}),
+      ...(query.q ? { OR: vehicleSearchOr(query.q) } : {}),
     };
 
     // Đếm và lấy trang trong một transaction: total khớp data cùng thời điểm.
@@ -1021,6 +1023,9 @@ export class VehiclesService {
       source: effective?.source ?? null,
       policy: effective?.values ?? null,
       shopPolicy,
+      // Xe chưa có chính sách nào cũng coi là kế thừa cả năm mục (ADR 0112 điều 1).
+      inheritedSections: effective?.inheritedSections ?? [...POLICY_SECTION_VALUES],
+      ownPolicy: effective?.ownValues ?? null,
       weekdayPrice: vehicle.weekdayPrice ? vehicle.weekdayPrice.toFixed(0) : null,
       weekendPrice: vehicle.weekendPrice ? vehicle.weekendPrice.toFixed(0) : null,
       hourlyPrice: vehicle.hourlyPrice ? vehicle.hourlyPrice.toFixed(0) : null,
@@ -1061,7 +1066,16 @@ export class VehiclesService {
     if (!current) throw notFound();
     await this.pricing.assertWithDriverPrices(dto);
 
-    const overriding = dto.source === POLICY_SOURCE.VEHICLE;
+    /*
+     * Kế thừa theo MỤC (ADR 0112 điều 1): `inheritedSections` vắng (app cũ) ⇒ riêng toàn bộ như
+     * trước. Kế thừa đủ năm mục thì không còn gì riêng ⇒ xoá dòng, đúng như `source = shop`.
+     */
+    const inheritedSections = POLICY_SECTION_VALUES.filter((s) =>
+      (dto.inheritedSections ?? []).includes(s),
+    );
+    const overriding =
+      dto.source === POLICY_SOURCE.VEHICLE &&
+      inheritedSections.length < POLICY_SECTION_VALUES.length;
     if (overriding) {
       if (!dto.policy) {
         throw new BadRequestException({
@@ -1125,9 +1139,10 @@ export class VehiclesService {
      * sách ⇒ giữ nguyên cờ.
      */
     const shopValues = await this.pricing.shopPolicyValues(tenantId, current.vehicleType);
-    const deliverySync = overriding
-      ? dto.policy!.deliveryEnabled
-      : (shopValues?.deliveryEnabled ?? null);
+    const deliverySync =
+      overriding && !inheritedSections.includes(POLICY_SECTION.DELIVERY)
+        ? dto.policy!.deliveryEnabled
+        : (shopValues?.deliveryEnabled ?? null);
 
     await this.prisma.$transaction(async (tx) => {
       const existingOverride = await tx.rentalPolicy.findUnique({
@@ -1137,7 +1152,7 @@ export class VehiclesService {
 
       let policyChanged = false;
       if (overriding) {
-        const data = policyData(dto.policy!);
+        const data = { ...policyData(dto.policy!), inheritedSections };
         if (existingOverride) {
           await tx.rentalPolicy.update({ where: { id: existingOverride.id }, data });
         } else {
@@ -1231,6 +1246,7 @@ export class VehiclesService {
           },
           after: {
             source: dto.source,
+            ...(dto.source === POLICY_SOURCE.VEHICLE ? { inheritedSections } : {}),
             ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
             ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
             ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
@@ -1999,7 +2015,8 @@ export class VehiclesService {
   }
 }
 
-function searchOr(q: string): Prisma.VehicleWhereInput[] {
+/** Ô tìm xe dùng chung của danh sách xe và bộ chọn xe khi lập đơn. */
+export function vehicleSearchOr(q: string): Prisma.VehicleWhereInput[] {
   const contains = { contains: q, mode: 'insensitive' } as const;
   return [
     { name: contains },

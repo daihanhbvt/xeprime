@@ -3,9 +3,17 @@ import {
   PAYMENT_KIND,
   PAYMENT_KIND_VALUES,
   PAYMENT_METHOD_VALUES,
+  RECORDABLE_PAYMENT_KIND_VALUES,
   PAYMENT_STATUS_VALUES,
 } from '@xeprime/types';
-import { IsDateString, IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 /** Tiền nhập string thập phân ≤ 2 số lẻ (ADR 0007). */
 const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
@@ -33,11 +41,11 @@ export class RecordPaymentDto {
   // và sinh ra kiểu BẮT BUỘC ở phía web, tức mọi lời gọi cũ vỡ biên dịch. Giá trị mặc định thuộc
   // về service (nơi nó thật sự được áp), mô tả nói rõ điều đó.
   @ApiPropertyOptional({
-    enum: PAYMENT_KIND_VALUES,
-    description: `Bỏ trống = '${PAYMENT_KIND.RENTAL}' (tiền thuê)`,
+    enum: RECORDABLE_PAYMENT_KIND_VALUES,
+    description: `Bỏ trống = '${PAYMENT_KIND.RENTAL}' (tiền thuê). '${PAYMENT_KIND.DEPOSIT_RETURN}' chỉ sinh từ lượt sửa tiền cọc`,
   })
   @IsOptional()
-  @IsIn(PAYMENT_KIND_VALUES)
+  @IsIn(RECORDABLE_PAYMENT_KIND_VALUES)
   kind?: string;
 
   @ApiPropertyOptional({ description: 'Mã tra soát/tham chiếu (CK…)' })
@@ -56,6 +64,21 @@ export class RecordPaymentDto {
   @IsOptional()
   @IsDateString()
   paidAt?: string;
+}
+
+/**
+ * Sửa số cọc ĐÃ THU của đơn bằng bút toán điều chỉnh (không sửa khoản cũ). Server tự tính chênh
+ * lệch với cọc ròng hiện tại: dương ⇒ thu thêm, âm ⇒ trả lại khách, bằng ⇒ không ghi gì.
+ */
+export class AdjustDepositCollectedDto {
+  @ApiProperty({ description: 'Số cọc đã thu mong muốn, string thập phân - ADR 0007', example: '150000' })
+  @Matches(MONEY_PATTERN, { message: 'collectedAmount phải là số tiền hợp lệ' })
+  collectedAmount!: string;
+
+  @ApiPropertyOptional({ enum: PAYMENT_METHOD_VALUES, description: 'Bỏ trống = tiền mặt' })
+  @IsOptional()
+  @IsIn(PAYMENT_METHOD_VALUES)
+  method?: string;
 }
 
 export class PaymentDto {

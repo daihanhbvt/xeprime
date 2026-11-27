@@ -1,6 +1,5 @@
-import { isZeroMoney } from '@xeprime/domain';
+import { isZeroMoney, normalizeCollateral, type CollateralLike } from '@xeprime/domain';
 import {
-  COLLATERAL_MODE,
   CUSTOMER_TRIP_STAGE,
   FUEL_TYPE,
   TRIP_ROLE,
@@ -80,11 +79,13 @@ export function canStartHoldPayment(acknowledged: boolean, expired: boolean): bo
 /** Một mục của "Checklist nhận xe" — khoá message + tham số, component chỉ việc dịch. */
 export type PickupChecklistItem =
   | { key: 'licence' }
-  | { key: 'identity'; documents: string[] }
+  | { key: 'identity' }
   | { key: 'inspect'; energy: 'electric' | 'other' }
   | { key: 'sign' }
   | { key: 'deposit'; amount: string }
-  | { key: 'asset'; assets: string[] };
+  | { key: 'asset'; assets: string[] }
+  /** Cọc tiền + tài sản cùng bật (ADR 0112): một mục, câu `describeCollateral` nói rõ "hoặc"/"và". */
+  | { key: 'collateral'; collateral: CollateralLike };
 
 /**
  * "Checklist nhận xe" — `PickupChecklist` web: mục không áp dụng thì không vẽ ("nộp cọc 0đ" là một
@@ -97,29 +98,49 @@ export type PickupChecklistItem =
 export function pickupChecklistItems(input: {
   serviceType: string;
   fuelType: string | null | undefined;
-  /** Mã giấy tờ chủ xe yêu cầu cho đúng dịch vụ này. */
-  documents: readonly string[];
   depositRequired: string | null | undefined;
-  collateral: { mode: string; assetTypes: readonly string[] } | null | undefined;
+  /** Cọc của hồ sơ xe (listing) - `null` khi không có. */
+  collateral:
+    | {
+        mode: string;
+        cashEnabled?: boolean;
+        assetEnabled?: boolean;
+        combination?: string;
+        assetTypes: readonly string[];
+        depositAmount?: string;
+      }
+    | null
+    | undefined;
 }): PickupChecklistItem[] {
   const cashDeposit =
     input.depositRequired && !isZeroMoney(input.depositRequired) ? input.depositRequired : null;
+  const listed = input.collateral;
+  const collateralInput: CollateralLike | null = listed
+    ? {
+        mode: listed.mode,
+        cashEnabled: listed.cashEnabled ?? null,
+        assetEnabled: listed.assetEnabled ?? null,
+        combination: listed.combination ?? null,
+        assetTypes: listed.assetTypes,
+        depositAmount: cashDeposit ?? listed.depositAmount ?? null,
+      }
+    : null;
+  const collateral = normalizeCollateral(collateralInput);
   const assets =
-    !cashDeposit &&
-    input.collateral?.mode === COLLATERAL_MODE.ASSET &&
-    input.collateral.assetTypes.length > 0
-      ? [...input.collateral.assetTypes]
-      : null;
+    collateral?.asset && collateral.assetTypes.length > 0 ? [...collateral.assetTypes] : null;
 
   const items: PickupChecklistItem[] = [];
   if (serviceRequiresDriverLicence(input.serviceType)) items.push({ key: 'licence' });
-  items.push({ key: 'identity', documents: [...input.documents] });
+  // Giấy tờ tuỳ thân là luật chuẩn nền tảng (ADR 0112 điều 3) - như nhau ở mọi xe.
+  items.push({ key: 'identity' });
   items.push({
     key: 'inspect',
     energy: input.fuelType === FUEL_TYPE.ELECTRIC ? 'electric' : 'other',
   });
   items.push({ key: 'sign' });
-  if (cashDeposit) items.push({ key: 'deposit', amount: cashDeposit });
+  if (cashDeposit && assets && collateralInput) {
+    items.push({ key: 'collateral', collateral: collateralInput });
+  } else if (cashDeposit) items.push({ key: 'deposit', amount: cashDeposit });
   else if (assets) items.push({ key: 'asset', assets });
   return items;
 }

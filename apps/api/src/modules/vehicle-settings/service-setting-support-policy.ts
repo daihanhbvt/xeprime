@@ -43,8 +43,6 @@ export function supportServiceSettingCapabilities(
 
 export interface PinnedServiceSetting {
   autoAcceptEnabled: boolean;
-  termsText: string | null;
-  requireTermsAcceptance: boolean;
   depositMode: string;
 }
 
@@ -57,22 +55,13 @@ export function assertSupportServiceSettingPinned(
   if (dto.autoAcceptEnabled !== undefined && dto.autoAcceptEnabled !== current.autoAcceptEnabled) {
     changed.push('autoAcceptEnabled');
   }
-  if (dto.termsText !== undefined && (dto.termsText?.trim() || null) !== current.termsText) {
-    changed.push('termsText');
-  }
-  if (
-    dto.requireTermsAcceptance !== undefined &&
-    dto.requireTermsAcceptance !== current.requireTermsAcceptance
-  ) {
-    changed.push('requireTermsAcceptance');
-  }
   if (dto.depositMode !== undefined && dto.depositMode !== current.depositMode) {
     changed.push('depositMode');
   }
   if (changed.length > 0) {
     throw new ForbiddenException({
       code: API_ERROR_CODE.SUPPORT_FIELD_NOT_ALLOWED,
-      message: 'Phiên hỗ trợ không đổi tự động nhận chuyến, điều khoản hay chế độ cọc',
+      message: 'Phiên hỗ trợ không đổi tự động nhận chuyến hay chế độ cọc',
       details: { fields: changed },
     });
   }

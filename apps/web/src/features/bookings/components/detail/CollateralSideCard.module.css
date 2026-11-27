@@ -1,0 +1,196 @@
+/* Thẻ "Cọc & thế chấp" ở cột phải chi tiết đơn (ADR 0109). */
+.count {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.cash {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+}
+
+/* "Chưa thu · Xác nhận đã thu" ngay dưới số cọc - trạng thái bên trái, link bên phải. */
+.cashStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.cashPending {
+  color: var(--xp-color-warning);
+}
+
+.cashDone {
+  color: var(--xp-color-success);
+}
+
+/* Thu dư: tiền thật đang nằm thừa trong tay chủ xe - không được trông giống "đã đủ". */
+.cashOver {
+  color: var(--xp-color-error);
+}
+
+.cashAdjustNote {
+  margin: calc(-1 * var(--xp-space-xs)) 0 var(--xp-space-md);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-caption);
+  line-height: var(--xp-line-height-caption);
+}
+
+.cashSummary {
+  margin: 0;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* `textLink` của trang (vàng như "Chỉnh sửa"), thu về cỡ 12 của dòng trạng thái. */
+.cashAction.cashAction {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.cashRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.cashRow > span {
+  color: var(--xp-color-text-tertiary);
+}
+
+.cashRow > b {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.empty {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.itemText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemType {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-xs);
+}
+
+.itemDesc {
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.itemMeta {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.itemActions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  /* Thẳng hàng với dòng tên món (đầu dòng), không trôi xuống giữa khi có mô tả / người trả. */
+  align-self: flex-start;
+  gap: 2px;
+}
+
+/* Bốn thao tác (trả lại · hoàn tác · sửa · gỡ) cùng khuôn ô vuông, màu chữ phụ - gỡ giữ màu nguy hiểm. */
+.itemActions :global(.ant-btn-icon-only) {
+  width: 28px;
+  height: 28px;
+  color: var(--xp-color-text-secondary);
+}
+
+.itemActions :global(.ant-btn-icon-only.ant-btn-dangerous) {
+  color: var(--xp-color-error);
+}
+
+.accepted {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.addActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+/* Số cọc + bút sửa (26/11/2026) - bút sát số, cùng kiểu bút "Phí giao nhận" của thẻ Thanh toán. */
+.cashValue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+/* Món đang sửa tại dòng: cùng đường kẻ với các món khác, ô nhập trải hết bề ngang. */
+.itemEditing {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+/* Hộp "Sửa tiền cọc": số đang ghi trên đơn đứng trên ô nhập. */
+.cashCurrent {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.cashCurrent b {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}

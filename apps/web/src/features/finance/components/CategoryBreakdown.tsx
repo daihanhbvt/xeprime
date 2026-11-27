@@ -12,7 +12,7 @@ import {
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { receiptsPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
-import type { FinanceCategoryBreakdown, FinanceOverviewFilters } from '../types';
+import type { FinanceCategoryBreakdown, FinancePeriodFilters, FinanceScope } from '../types';
 import styles from './CategoryBreakdown.module.css';
 
 interface CategoryBreakdownProps {
@@ -21,7 +21,9 @@ interface CategoryBreakdownProps {
   type: string;
   tone: 'revenue' | 'cost';
   data: FinanceCategoryBreakdown | undefined;
-  filters: FinanceOverviewFilters;
+  filters: FinancePeriodFilters;
+  /** Thu hẹp về một xe (hồ sơ xe) - đường ra sổ mang theo để mở đúng phiếu của xe đó. */
+  scope?: FinanceScope;
   loading: boolean;
   error: boolean;
 }
@@ -46,6 +48,7 @@ export function CategoryBreakdown({
   tone,
   data,
   filters,
+  scope,
   loading,
   error,
 }: CategoryBreakdownProps) {
@@ -83,6 +86,7 @@ export function CategoryBreakdown({
               <Link
                 className={styles.link}
                 href={receiptsPath.filtered({
+                  ...scope,
                   type,
                   status: RECEIPT_STATUS.APPROVED,
                   categoryId: item.categoryId ?? undefined,

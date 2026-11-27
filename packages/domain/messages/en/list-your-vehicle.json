@@ -1,6 +1,20 @@
 {
   "landing": {
     "chooseCta": "Choose this model & sign up",
+    "partnerApp": {
+      "subtitle": "Earn from an idle car or build a professional rental brand.<br></br>Choose the model that best fits your scale!",
+      "personalFeatures": {
+        "noFee": "Free\nsign-up",
+        "vehicleCap": "Up to\n{maxVehicles} vehicles",
+        "simple": "Basic schedule\nmanagement"
+      },
+      "shopTitle": "Professional shop",
+      "shopTagline": "All-in-one management tools, maximum profit",
+      "shopBody": "An in-depth fleet management platform with <offer>0% commission</offer>, built-in reports, staff permissions and multi-branch management.",
+      "shopOfferBody": "Pay a subscription based on your fleet size. Keep 100% of your revenue from customers.",
+      "personalOfferBodyRange": "The platform only charges a {min}% to {max}% commission on the total value of each completed trip.",
+      "personalOfferBody": "The platform only charges a commission on the total value of each completed trip."
+    },
     "metaTitle": "List your vehicle",
     "title": "Choose how to partner with XePrime",
     "back": "Back",

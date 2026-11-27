@@ -27,6 +27,7 @@ import { VehicleRegistrationUploadsService } from './registration/vehicle-regist
 import { VehicleRegistrationUploadsSweeper } from './registration/vehicle-registration-uploads.sweeper';
 import { TesseractDriverLicenceReader } from '../driver-licences/reader/tesseract-driver-licence-reader';
 import { VehicleAlertsService } from './vehicle-alerts.service';
+import { VehicleBookingPickerService } from './vehicle-booking-picker.service';
 import { VehicleContractsService } from './vehicle-contracts.service';
 import { VehicleSourceService } from './vehicle-source.service';
 import { VehiclesController } from './vehicles.controller';
@@ -72,6 +73,7 @@ import { VehiclesService } from './vehicles.service';
     VehicleSourceService,
     VehicleContractsService,
     VehicleAlertsService,
+    VehicleBookingPickerService,
     VehicleDocumentsService,
     OdometerService,
     MaintenanceService,

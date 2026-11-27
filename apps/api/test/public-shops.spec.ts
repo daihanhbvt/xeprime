@@ -18,7 +18,11 @@ import {
 } from '@xeprime/types';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makePublicListingsService, seedBranch } from './helpers/service-factory';
+import {
+  makePublicListingsService,
+  makeTenantsService,
+  seedBranch,
+} from './helpers/service-factory';
 
 /**
  * Phase 3 — trang gian hàng công khai `/shops/[slug]` chạy trên PostgreSQL THẬT. Kiểm chứng:
@@ -471,4 +475,43 @@ describe('Public shop page (/shops/[slug])', () => {
     expect(res.meta.total).toBe(0);
     expect(res.data).toHaveLength(0);
   });
+});
+
+/**
+ * Biên bản họp 19/11/2026 (#24) — link gian hàng rút gọn `xeprime.vn/<slug>`. Slug cũ còn giữ làm
+ * bí danh: link đã chia sẻ vẫn tra ra đúng gian hàng, và DTO trả slug HIỆN TẠI để web chuyển hẳn.
+ */
+describe('slug gọn + bí danh slug cũ', () => {
+  maybe('mở bằng slug cũ ⇒ đúng gian hàng, DTO mang slug hiện tại', async () => {
+    const legacy = `${activeSlug}-old123`;
+    await prisma.tenantSlugAlias.create({ data: { slug: legacy, tenantId: activeTenantId } });
+
+    const shop = await service.getShopBySlug(legacy);
+    expect(shop.slug).toBe(activeSlug);
+  });
+
+  maybe(
+    'cấp slug: tên gọn khi trống; trùng gian hàng/bí danh/đường dẫn hệ thống ⇒ thêm hậu tố',
+    async () => {
+      const tenants = makeTenantsService(asService) as unknown as {
+        uniqueSlug(tx: unknown, name: string, id: string): Promise<string>;
+      };
+      const id = newId();
+      const suffix = id.slice(-6).toLowerCase();
+      const fresh = `Gian Hàng Thử ${id.slice(-8)}`;
+
+      // Tên chưa ai dùng ⇒ gọn, không hậu tố.
+      expect(await tenants.uniqueSlug(prisma, fresh, id)).toBe(
+        `gian-hang-thu-${id.slice(-8).toLowerCase()}`,
+      );
+      // Trùng slug của một gian hàng đang có.
+      expect(await tenants.uniqueSlug(prisma, activeSlug, id)).toBe(`${activeSlug}-${suffix}`);
+      // Trùng một slug cũ đang giữ làm bí danh (link đã chia sẻ của gian hàng khác).
+      expect(await tenants.uniqueSlug(prisma, `${activeSlug}-old123`, id)).toBe(
+        `${activeSlug}-old123-${suffix}`,
+      );
+      // Trùng đường dẫn hệ thống (`xeprime.vn/search`).
+      expect(await tenants.uniqueSlug(prisma, 'Search', id)).toBe(`search-${suffix}`);
+    },
+  );
 });

@@ -18,15 +18,13 @@ import { FeatureReadOnlyNotice } from '@/components/feedback/FeatureReadOnlyNoti
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { NoResults } from '@/components/state/NoResults';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
-import { IconSquareButton } from '@/components/ui/IconSquareButton';
-import { LineIcon } from '@/components/icons/LineIcon';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
@@ -41,11 +39,11 @@ import { useCardGrid } from '@/theme/use-responsive';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { useColors } from '@/theme/ThemeProvider';
-import { iconSize } from '@/theme/tokens';
 import type { MemberRosterItem } from './api';
 import { canManageMemberScope, memberBranchNames, useBranchScopeOptions } from './branch-scope';
 import { MemberDetailSheet } from './components/MemberDetailSheet';
 import { MemberEditSheet } from './components/MemberEditSheet';
+import { MembersHeader, type MembersTab } from './components/MembersHeader';
 import { ResetPasswordSheet } from './components/ResetPasswordSheet';
 import { RosterCard, type RosterAbilities } from './components/RosterCard';
 import { StaffAccountSheet } from './components/StaffAccountSheet';
@@ -279,6 +277,15 @@ export function MemberListScreen() {
     (row: MemberRosterItem) => setConfirm({ kind: 'revoke', row }),
     [],
   );
+  const requestResetPassword = useCallback((row: MemberRosterItem) => setResetting(row), []);
+  const requestLock = useCallback(
+    (row: MemberRosterItem, locked: boolean) => setConfirm({ kind: 'lock', row, locked }),
+    [],
+  );
+  const requestRemove = useCallback(
+    (row: MemberRosterItem) => setConfirm({ kind: 'remove', row }),
+    [],
+  );
   const unknownBranch = t('roster.unknownBranch');
 
   const renderItem = useCallback<ListRenderItem<MemberRosterItem>>(
@@ -294,12 +301,58 @@ export function MemberListScreen() {
         onView={openRow}
         onEdit={setEditing}
         onRevoke={requestRevoke}
+        onResetPassword={requestResetPassword}
+        onSetLocked={requestLock}
+        onRemove={requestRemove}
       />
     ),
-    [abilitiesOf, isSelf, openRow, pendingRowId, requestRevoke, scope.labelById, unknownBranch],
+    [
+      abilitiesOf,
+      isSelf,
+      openRow,
+      pendingRowId,
+      requestLock,
+      requestRemove,
+      requestResetPassword,
+      requestRevoke,
+      scope.labelById,
+      unknownBranch,
+    ],
   );
   // iPad: thẻ xếp lưới 2 cột trong cột nội dung; điện thoại giữ 1 cột.
   const grid = useCardGrid(renderItem, { listKey: 'members' });
+
+  /*
+   * Chip trạng thái (Figma "Filter Tabs") là LỐI TẮT của nhóm "Trạng thái" trong tấm Lọc - cùng một
+   * state `status`, không phải bộ lọc thứ hai. Không kèm số: API không trả số đếm theo trạng thái.
+   */
+  const statusChips = useMemo<readonly ChipTabItem<string>[]>(
+    () => [
+      { value: FILTER_ALL, label: t('roster.chipAll') },
+      ...MEMBER_ROSTER_STATUS_VALUES.map((value) => ({
+        value,
+        label: domainLabel('memberRosterStatus', value),
+      })),
+    ],
+    [domainLabel, t],
+  );
+
+  const changeTab = useCallback(
+    (next: MembersTab) => {
+      if (next === 'roles') navigateOnce(ROUTES.manage.memberRoles());
+    },
+    [navigateOnce],
+  );
+  const header = (
+    <MembersHeader
+      tab="members"
+      onTab={changeTab}
+      canView={canView}
+      {...(canAdd
+        ? { add: { label: t('staff.addButton'), disabled: !writable, onPress: () => setAddOpen(true) } }
+        : {})}
+    />
+  );
 
   const filtered = roleKey !== FILTER_ALL || status !== FILTER_ALL || trimmedSearch.length > 0;
   const opened = openedId ? (items.find((row) => row.id === openedId) ?? null) : null;
@@ -308,7 +361,7 @@ export function MemberListScreen() {
   if (!permissions.isLoading && !canView) {
     return (
       <>
-        <ManagePageHeader title={t('page.title')} />
+        {header}
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
@@ -321,25 +374,6 @@ export function MemberListScreen() {
       </>
     );
   }
-
-  // Hai nút tròn như thanh trang Đơn thuê: "Vai trò & quyền" (khiên) và "Thêm nhân viên" (+).
-  const headerActions = (
-    <>
-      <IconSquareButton label={t('roster.rolesButton')} onPress={() => navigateOnce(ROUTES.manage.memberRoles())}>
-        <Ionicons name="shield-checkmark-outline" size={iconSize.lg} color={colors.text} />
-      </IconSquareButton>
-      {canAdd ? (
-        <IconSquareButton
-          label={t('staff.addButton')}
-          tone="brand"
-          disabled={!writable}
-          onPress={() => setAddOpen(true)}
-        >
-          <LineIcon name="plus" size={iconSize.lg} color={colors.onPrimary} />
-        </IconSquareButton>
-      ) : null}
-    </>
-  );
 
   const confirmTitle = confirm
     ? confirm.kind === 'lock'
@@ -369,18 +403,25 @@ export function MemberListScreen() {
 
   return (
     <>
-      <ManagePageHeader title={t('page.title')} actions={headerActions} />
+      {header}
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
           variant="page"
           title={t('page.title')}
-          subtitle={t('page.subtitle')}
-          {...(meta === undefined ? {} : { total: t('roster.total', { count: meta.total }) })}
           summary={<FeatureReadOnlyNotice show={canAdd && !writable} />}
           searchValue={search}
           searchLabel={t('roster.searchLabel')}
           searchPlaceholder={t('roster.searchPlaceholder')}
           onSearchChange={changeSearch}
+          tabs={
+            <ChipTabs
+              label={t('roster.status')}
+              items={statusChips}
+              value={status}
+              onSelect={(value) => changeFilter('status', value)}
+              gutter={gutter}
+            />
+          }
           hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
@@ -419,17 +460,7 @@ export function MemberListScreen() {
             ) : items.length === 0 ? (
               inStateScroll(
                 filtered ? (
-                  <ScreenMessage
-                    icon="search-outline"
-                    title={t('roster.emptyFiltered')}
-                    actionLabel={tActions('clear')}
-                    onAction={() => {
-                      setRoleKey(FILTER_ALL);
-                      setStatus(FILTER_ALL);
-                      setSearch('');
-                      setPage(FIRST_PAGE);
-                    }}
-                  />
+                  <NoResults />
                 ) : (
                   <ScreenMessage
                     icon="people-outline"

@@ -1,54 +1,6 @@
-import type { CalendarEvent, CalendarRange, EventBarPosition } from '../types/calendar.types';
+import type { CalendarEvent, CalendarRange } from '../types/calendar.types';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-/**
- * Tính vị trí thanh event trong lưới.
- *
- * Trả về đơn vị "ngày" thay vì pixel: component nhân với chiều rộng cột thật lúc render,
- * nên logic này test được mà không cần DOM, và đổi zoom level không phải sửa ở đây.
- *
- * Event nằm ngoài khoảng đang xem bị **clamp** vào biên chứ không bị bỏ: một đơn thuê kéo
- * dài 3 tuần vẫn phải hiện thanh chạy suốt khoảng đang xem.
- */
-export function computeEventPosition(
-  event: Pick<CalendarEvent, 'startAt' | 'endAt'>,
-  range: CalendarRange,
-): EventBarPosition | null {
-  const eventStart = new Date(event.startAt).getTime();
-  const eventEnd = new Date(event.endAt).getTime();
-  const rangeStart = range.startAt.getTime();
-  const rangeEnd = range.endAt.getTime();
-
-  if (Number.isNaN(eventStart) || Number.isNaN(eventEnd)) return null;
-
-  // Nửa mở: event kết thúc đúng lúc khoảng bắt đầu thì không hiện.
-  if (eventEnd <= rangeStart || eventStart >= rangeEnd) return null;
-
-  const clippedStart = eventStart < rangeStart;
-  const clippedEnd = eventEnd > rangeEnd;
-
-  const visibleStart = Math.max(eventStart, rangeStart);
-  const visibleEnd = Math.min(eventEnd, rangeEnd);
-
-  return {
-    offsetDays: (visibleStart - rangeStart) / MS_PER_DAY,
-    spanDays: Math.max((visibleEnd - visibleStart) / MS_PER_DAY, 0),
-    clippedStart,
-    clippedEnd,
-  };
-}
-
-/** Chuyển vị trí sang CSS custom property cho component đọc (ADR 0003). */
-export function positionToCssVars(
-  position: EventBarPosition,
-  dayWidthPx: number,
-): Record<string, string> {
-  return {
-    '--xp-bar-left': `${position.offsetDays * dayWidthPx}px`,
-    '--xp-bar-width': `${Math.max(position.spanDays * dayWidthPx, 4)}px`,
-  };
-}
 
 /**
  * Xếp các event của cùng một xe thành nhiều tầng khi chúng chồng nhau.
@@ -110,4 +62,80 @@ export function assignLanes<T extends { startAt: string; endAt: string }>(
   }
 
   return result;
+}
+
+/**
+ * Mức HỞ của một đầu thẻ trong ô ngày (người dùng chốt 26/11/2026): thẻ đơn chiếm trọn các ô từ
+ * ngày nhận tới ngày trả; giờ nhận/trả chỉ quyết đầu thẻ hở ra bao nhiêu, không đặt thẻ theo tỉ lệ
+ * giờ - đặt theo tỉ lệ thì hai chuyến cùng ngày (08h và 13h) bị vẽ lệch sang ngày kế.
+ *
+ *  - `0` khít: nhận trước 07h · trả sau 19h (hoặc đúng 00h hôm sau);
+ *  - `1` hở ít: nhận 07h-12h · trả 12h-19h;
+ *  - `2` hở nhiều: nhận từ 12h · trả từ 12h trở về trước.
+ *
+ * Mốc "khít" KHÔNG đối xứng: 7 tiếng từ mép trái (07h) nhưng 5 tiếng từ mép phải (19h) - trả xe
+ * chiều tối vẫn là hở ít (người dùng chốt 26/11/2026).
+ */
+export type DayEdgeGap = 0 | 1 | 2;
+
+export interface DaySnapPosition {
+  /** Ô ngày (tính từ đầu khoảng xem) chứa giờ nhận. */
+  startDay: number;
+  /** Ô ngày chứa giờ trả (TÍNH CẢ ô đó). */
+  endDay: number;
+  startGap: DayEdgeGap;
+  endGap: DayEdgeGap;
+  clippedStart: boolean;
+  clippedEnd: boolean;
+}
+
+const MS_PER_HOUR = 60 * 60 * 1000;
+/** Nhận trước 07h (7 tiếng tính từ mép trái) là "khít". */
+const START_FLUSH_HOURS = 7;
+/** Trả sau 19h (5 tiếng tính từ mép phải) là "khít". */
+const END_FLUSH_HOURS = 5;
+/** Mốc giữa ngày: qua nó là "hở nhiều". */
+const EDGE_HALF_DAY_HOURS = 12;
+
+function gapFromEdge(hoursFromEdge: number, flushHours: number): DayEdgeGap {
+  if (hoursFromEdge < flushHours) return 0;
+  if (hoursFromEdge < EDGE_HALF_DAY_HOURS) return 1;
+  return 2;
+}
+
+/**
+ * Vị trí THEO Ô NGÀY của một event. `range.startAt` là 00h giờ Việt Nam (không có giờ mùa hè), nên
+ * giờ trong ngày đọc thẳng từ khoảng cách tới đầu khoảng xem.
+ */
+export function computeDaySnap(
+  event: Pick<CalendarEvent, 'startAt' | 'endAt'>,
+  range: CalendarRange,
+): DaySnapPosition | null {
+  const eventStart = new Date(event.startAt).getTime();
+  const eventEnd = new Date(event.endAt).getTime();
+  const rangeStart = range.startAt.getTime();
+  const rangeEnd = range.endAt.getTime();
+  if (Number.isNaN(eventStart) || Number.isNaN(eventEnd)) return null;
+  if (eventEnd <= rangeStart || eventStart >= rangeEnd || eventEnd <= eventStart) return null;
+
+  const clippedStart = eventStart < rangeStart;
+  const clippedEnd = eventEnd > rangeEnd;
+
+  const fromStart = Math.max(eventStart, rangeStart) - rangeStart;
+  const startDay = Math.floor(fromStart / MS_PER_DAY);
+  const startHour = (fromStart - startDay * MS_PER_DAY) / MS_PER_HOUR;
+
+  const fromEnd = Math.min(eventEnd, rangeEnd) - rangeStart;
+  // Trả đúng 00h ⇒ thuộc ngày HÔM TRƯỚC, khít mép phải.
+  const endDay = Math.max(startDay, Math.ceil(fromEnd / MS_PER_DAY) - 1);
+  const endHour = (fromEnd - endDay * MS_PER_DAY) / MS_PER_HOUR;
+
+  return {
+    startDay,
+    endDay,
+    startGap: clippedStart ? 0 : gapFromEdge(startHour, START_FLUSH_HOURS),
+    endGap: clippedEnd ? 0 : gapFromEdge(24 - endHour, END_FLUSH_HOURS),
+    clippedStart,
+    clippedEnd,
+  };
 }

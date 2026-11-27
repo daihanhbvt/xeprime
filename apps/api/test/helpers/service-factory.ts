@@ -25,9 +25,12 @@ import { BookingExtensionsService } from '../../src/modules/booking-extensions/b
 import { OccupancyService } from '../../src/modules/calendar/occupancy.service';
 import { CustomersService } from '../../src/modules/customers/customers.service';
 import { DriversService } from '../../src/modules/drivers/drivers.service';
+import { InternalDriversService } from '../../src/modules/drivers/internal-drivers.service';
+import { BookingCollateralsService } from '../../src/modules/bookings/booking-collaterals.service';
 import { FeePoliciesService } from '../../src/modules/fee-policies/fee-policies.service';
 import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.service';
 import { WalletService } from '../../src/modules/wallet/wallet.service';
+import { ScheduledCreditService } from '../../src/modules/wallet/scheduled-credit.service';
 import { FirebaseAppService } from '../../src/modules/firebase/firebase-app.service';
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
@@ -57,6 +60,7 @@ import { SellerProfileService } from '../../src/modules/seller-profile/seller-pr
 import { SupportService } from '../../src/modules/support/support.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
 import { NotConfiguredVehicleRegistrationReader } from '../../src/modules/vehicles/registration/registration-reader';
 import { VehicleRegistrationUploadsService } from '../../src/modules/vehicles/registration/vehicle-registration-uploads.service';
@@ -82,6 +86,7 @@ export function makeVehicleSettingsService(prisma: PrismaService): VehicleSettin
     new OccupancyService(prisma),
     new ListingsService(prisma),
     makeDriversService(prisma),
+    new TenantRentalTermsService(prisma, new AuditService(prisma)),
   );
 }
 
@@ -96,6 +101,60 @@ export function makeDriversService(
     overrides.notifications ?? makeNotificationService(prisma),
     // Giới hạn tiền công tài xế (ADR 0075) đọc từ chính sách phí hiện hành.
     new FeePoliciesService(prisma, new AuditService(prisma)),
+    makeInternalDriversService(prisma, overrides.audit),
+  );
+}
+
+/** Gốc kho ảnh công khai mà các spec dùng để dựng URL ảnh "đã tải lên". */
+export const TEST_R2_PUBLIC_BASE_URL = 'https://media.xeprime.test';
+
+/** Danh bạ tài xế nội bộ (ADR 0108). */
+export function makeInternalDriversService(
+  prisma: PrismaService,
+  audit?: AuditService,
+): InternalDriversService {
+  return new InternalDriversService(
+    prisma,
+    audit ?? new AuditService(prisma),
+    // Kho ảnh công khai giả — ảnh tài xế nội bộ chỉ hợp lệ dưới `tenants/<id>/drivers/` của kho này.
+    new ConfigService({ R2_PUBLIC_BASE_URL: TEST_R2_PUBLIC_BASE_URL }),
+  );
+}
+
+/** Sổ tài sản thế chấp theo đơn (ADR 0109). */
+export function makeBookingCollateralsService(
+  prisma: PrismaService,
+  audit?: AuditService,
+): BookingCollateralsService {
+  return new BookingCollateralsService(prisma, audit ?? new AuditService(prisma));
+}
+
+/**
+ * Khoản cộng ví hẹn giờ với thời gian chờ 0 — tiền hoàn/chủ xe vào ví NGAY như trước biên bản họp
+ * 19/11/2026, để các spec dòng tiền cũ giữ nguyên ngữ nghĩa. Spec của chính cơ chế chờ dùng bản thật
+ * (`new ScheduledCreditService`) cùng cấu hình số giờ trong DB.
+ */
+export class ImmediateScheduledCreditService extends ScheduledCreditService {
+  override async delaysWithinTx(): Promise<{ refundHours: number; ownerPayoutHours: number }> {
+    return { refundHours: 0, ownerPayoutHours: 0 };
+  }
+}
+
+/** `HoldSettlementService` cho spec — mặc định cộng ví ngay (xem `ImmediateScheduledCreditService`). */
+export function makeHoldSettlementService(
+  prisma: PrismaService,
+  audit: AuditService = new AuditService(prisma),
+  notifications: NotificationService = makeNotificationService(prisma),
+  scheduled?: ScheduledCreditService,
+): HoldSettlementService {
+  const wallet = new WalletService(prisma);
+  return new HoldSettlementService(
+    prisma,
+    audit,
+    notifications,
+    wallet,
+    scheduled ?? new ImmediateScheduledCreditService(prisma, wallet, audit),
+    new ReceiptsService(prisma, audit),
   );
 }
 
@@ -194,7 +253,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     makeBookingsService(prisma),
     new OccupancyService(prisma),
     makeVehicleSettingsService(prisma),
-    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
+    makeHoldSettlementService(prisma, audit, notifications),
     makeBillingService(prisma),
     audit,
     notifications,
@@ -369,13 +428,14 @@ export function makeBookingsService(
     notifications,
     makeDriversService(prisma, { audit, notifications }),
     overrides.customers ?? makeCustomersService(prisma, audit),
-    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
+    makeHoldSettlementService(prisma, audit, notifications),
     overrides.settings ?? makeVehicleSettingsService(prisma),
     overrides.insurance ?? makeInsuranceService(prisma),
     makeAddressService(prisma),
     new TaxService(prisma, audit),
     new CancellationsService(),
     makeBookingExtensionsService(prisma, { audit, notifications }),
+    makeBookingCollateralsService(prisma, audit),
   );
 }
 
@@ -542,6 +602,7 @@ export function makePublicListingsService(prisma: PrismaService): PublicListings
     makePricingService(prisma),
     makeVehicleSettingsService(prisma),
     new HostMetricsService(prisma),
+    new TenantRentalTermsService(prisma, audit),
   );
 }
 

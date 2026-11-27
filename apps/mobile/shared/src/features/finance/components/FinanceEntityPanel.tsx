@@ -4,26 +4,19 @@ import { useTranslations } from 'use-intl';
 import {
   FINANCE_GRANULARITY,
   FINANCE_GRANULARITY_VALUES,
-  RECEIPT_STATUS,
   type FinanceGranularity,
 } from '@xeprime/types';
-import { buildPeriodRange, isNegativeMoney, isZeroMoney } from '@xeprime/domain';
-import { SectionHeader } from '@/components/ui/CardTitle';
-import { ChipTabs } from '@/components/ui/ChipTabs';
+import { buildPeriodRange, isNegativeMoney, isZeroMoney, type PeriodKey } from '@xeprime/domain';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { Card } from '@/components/ui/Card';
-import { InlineAction } from '@/components/ui/InlineAction';
+import { ChipTabs } from '@/components/ui/ChipTabs';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { ScreenError } from '@/components/state/ScreenError';
-import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontWeight, space, typeScale } from '@/theme/tokens';
 import { FINANCE_OVERVIEW_DEFAULT_PERIOD, FINANCE_OVERVIEW_PERIOD_VALUES } from '../constants';
 import { useFinanceSeries, useFinanceSummary } from '../hooks/use-finance';
-import { FinancePeriodBar } from './FinancePeriodBar';
 import { RevenueTrendChart } from './RevenueTrendChart';
 import { useBucketLabels } from '../hooks/use-bucket-labels';
 import type { FinanceScope } from '../api';
@@ -51,25 +44,18 @@ import type { FinanceScope } from '../api';
 export function FinanceEntityPanel({
   scope,
   kind,
-  canCreateReceipt = false,
 }: {
   /** Đúng MỘT khoá được đặt — panel không dựng để cắt hai chiều cùng lúc. */
   scope: FinanceScope;
   kind: 'vehicle' | 'customer';
-  /**
-   * Người đang xem có quyền ghi phiếu không — quyết định lối "Tạo phiếu thu/chi" có mặt hay không.
-   *
-   * Chỉ có nghĩa với `kind='vehicle'`: một khoản thu/chi gắn thẳng vào KHÁCH không tồn tại trong
-   * sổ — tiền của khách luôn đi qua một chuyến.
-   */
-  canCreateReceipt?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Finance.entity');
+  const tPeriods = useTranslations('Finance.entity.periods');
   const fmt = useAppFormat();
-  const navigateOnce = useNavigateOnce();
 
-  const [range, setRange] = useState(() => buildPeriodRange(FINANCE_OVERVIEW_DEFAULT_PERIOD));
+  const [period, setPeriod] = useState<PeriodKey>(FINANCE_OVERVIEW_DEFAULT_PERIOD);
+  const range = useMemo(() => buildPeriodRange(period), [period]);
   const [granularity, setGranularity] = useState<FinanceGranularity>(FINANCE_GRANULARITY.DAY);
 
   const filters = useMemo(() => ({ ...range, granularity }), [range, granularity]);
@@ -95,170 +81,126 @@ export function FinanceEntityPanel({
 
   const data = summary.data;
 
-  const cells: StatCell[] = data
+  /*
+   * Ô số theo khuôn tab "Thu chi" của Khách hàng (Figma `24494:25604`): ô nền `bg/gray-50` bo 10 đệm 12,
+   * số 16/24 đậm trên nhãn 12/18 (người dùng chốt 26/11/2026).
+   */
+  const tiles: { key: string; label: string; value: string; tone?: string; hint?: string }[] = data
     ? kind === 'vehicle'
       ? [
-          {
-            key: 'revenue',
-            icon: 'trending-up-outline',
-            label: t('revenue'),
-            value: fmt.money(data.revenue),
-            tone: colors.success,
-            valueTone: colors.success,
-          },
-          {
-            key: 'cost',
-            icon: 'trending-down-outline',
-            label: t('cost'),
-            value: fmt.money(data.cost),
-            tone: colors.danger,
-            valueTone: colors.danger,
-          },
+          { key: 'revenue', label: t('revenue'), value: fmt.money(data.revenue), tone: colors.success },
+          { key: 'cost', label: t('cost'), value: fmt.money(data.cost), tone: colors.danger },
           {
             key: 'profit',
-            icon: 'wallet-outline',
             label: t('profit'),
             value: fmt.money(data.profit),
-            tone: colors.primaryActive,
+            tone: isNegativeMoney(data.profit) ? colors.danger : colors.text,
             /* `null` = chưa có doanh thu để tính biên — khác hẳn "biên 0%" (hoà vốn). */
             hint:
               data.profitMarginPercent == null
                 ? t('marginUnknown')
                 : t('margin', { value: data.profitMarginPercent }),
-            ...(isNegativeMoney(data.profit) ? { valueTone: colors.danger } : {}),
           },
-          {
-            key: 'trips',
-            icon: 'car-outline',
-            label: t('trips'),
-            value: fmt.count(data.trips),
-            tone: colors.info,
-          },
+          { key: 'trips', label: t('trips'), value: fmt.count(data.trips) },
         ]
       : [
-          {
-            key: 'revenue',
-            icon: 'trending-up-outline',
-            label: t('revenue'),
-            value: fmt.money(data.revenue),
-            tone: colors.success,
-            valueTone: colors.success,
-          },
+          { key: 'revenue', label: t('revenue'), value: fmt.money(data.revenue), tone: colors.success },
           {
             key: 'debt',
-            icon: 'alert-circle-outline',
             label: t('debt'),
             value: fmt.money(data.totalDebt),
-            tone: colors.warning,
+            ...(isZeroMoney(data.totalDebt) ? {} : { tone: colors.danger }),
             hint: t('debtBookings', { count: data.debtBookings }),
-            ...(isZeroMoney(data.totalDebt) ? {} : { valueTone: colors.danger }),
           },
-          {
-            key: 'trips',
-            icon: 'car-outline',
-            label: t('trips'),
-            value: fmt.count(data.trips),
-            tone: colors.info,
-          },
+          { key: 'trips', label: t('trips'), value: fmt.count(data.trips) },
         ]
     : [];
 
+  const label = { col: colors.placeholder, fos: typeScale.label.fontSize, lh: typeScale.label.lineHeight } as const;
+
   return (
-    // Một thẻ có tiêu đề như các khối chi tiết đơn (người dùng 16/11/2026).
-    <Card>
-    <YStack gap={space.md}>
-      <SectionHeader icon="stats-chart-outline">{t(`title.${kind}`)}</SectionHeader>
-
-      <FinancePeriodBar
-        periods={FINANCE_OVERVIEW_PERIOD_VALUES}
-        from={range.from}
-        to={range.to}
-        onChange={setRange}
-        customRange={false}
-      />
-
-      {summary.isError && !data ? (
-        <ScreenError
-          error={summary.error}
-          title={t('error')}
-          onRetry={() => void summary.refetch()}
-        />
-      ) : !data ? (
-        <SkeletonText lines={3} />
-      ) : (
-        <YStack br={radius.md} bw={1} bc={colors.border} ov="hidden">
-          <StatGrid cells={cells} columns={2} />
-        </YStack>
-      )}
-
-      {/* Tiêu đề biểu đồ — web đặt nó trên khung biểu đồ, giữ nguyên ở đây. */}
-      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-        {t('chartTitle')}
-      </Text>
-
-      {/* Ba tab của web, giữ nguyên hình thái "một cú bấm là đổi". */}
+    <YStack gap={space.lg}>
+      {/* Chip kỳ - cùng một bộ số, chỉ đổi kỳ (khuôn Khách hàng › Thu chi). */}
       <ChipTabs
-        label={t('every.label')}
-        items={granularityOptions.map((option) => ({ value: option.value, label: option.label }))}
-        value={granularity}
-        onSelect={setGranularity}
+        label={t(`title.${kind}`)}
+        items={FINANCE_OVERVIEW_PERIOD_VALUES.map((value) => ({ value, label: tPeriods(value) }))}
+        value={period}
+        onSelect={setPeriod}
         gutter={0}
       />
 
-      {series.isError && !series.data ? (
-        <ScreenError
-          error={series.error}
-          title={t('chartError')}
-          onRetry={() => void series.refetch()}
-        />
-      ) : series.isLoading && !series.data ? (
-        <SkeletonText lines={5} />
-      ) : seriesEmpty || !series.data || series.data.buckets.length === 0 ? (
-        <ScreenMessage
-          icon="stats-chart-outline"
-          title={t('chartEmpty')}
-          description={t('chartEmptyHint')}
-        />
+      {summary.isError && !data ? (
+        <ScreenError error={summary.error} title={t('error')} onRetry={() => void summary.refetch()} />
+      ) : !data ? (
+        <Card>
+          <SkeletonText lines={4} />
+        </Card>
       ) : (
-        <RevenueTrendChart buckets={series.data.buckets} labelOf={labelOf} titleOf={titleOf} />
+        <Card>
+          <XStack flexWrap="wrap" gap={space.sm}>
+            {tiles.map((tile) => (
+              <YStack key={tile.key} w="48.5%" flexGrow={1} gap={2} p={TILE_PAD} br={TILE_RADIUS} bg={colors.background}>
+                <Text
+                  col={tile.tone ?? colors.text}
+                  fos={typeScale.title.fontSize}
+                  lh={typeScale.title.lineHeight}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {tile.value}
+                </Text>
+                <Text {...label} numberOfLines={1}>
+                  {tile.label}
+                </Text>
+                {tile.hint ? (
+                  <Text {...label} numberOfLines={1}>
+                    {tile.hint}
+                  </Text>
+                ) : null}
+              </YStack>
+            ))}
+          </XStack>
+        </Card>
       )}
 
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {t(`note.${kind}`)}
-      </Text>
-
-      {/*
-        Ghi một khoản THẲNG cho chiếc xe này — phí rửa, vá lốp, gửi bãi không thuộc chuyến nào,
-        nên nếu không có lối này thì chúng chỉ ghi được bằng cách mở sổ rồi tự tìm lại đúng chiếc
-        xe vừa xem.
-
-        KHÔNG đi kèm khoảng kỳ: kỳ đang xem là bộ lọc để ĐỌC, còn phiếu sắp ghi thì mặc định là
-        hôm nay. Mang `from`/`to` sang sẽ khiến sổ mở ra không chứa chính phiếu vừa tạo.
-      */}
-      {kind === 'vehicle' && scope.vehicleId && canCreateReceipt ? (
-        <InlineAction
-          label={t('createReceipt')}
-          onPress={() =>
-            navigateOnce(ROUTES.manage.receipts({ vehicleId: scope.vehicleId, create: true }))
-          }
-        />
-      ) : null}
-
-      <InlineAction
-        label={t('openLedger')}
-        onPress={() =>
-          navigateOnce(
-            ROUTES.manage.receipts({
-              ...scope,
-              status: RECEIPT_STATUS.APPROVED,
-              // CHỈ hai đầu kỳ — `granularity` là chuyện của biểu đồ, sổ không hiểu nó.
-              from: range.from,
-              to: range.to,
-            }),
-          )
-        }
-      />
+      <Card>
+        <YStack gap={TILE_PAD}>
+          <Text
+            col={colors.text}
+            fos={typeScale.title.fontSize}
+            lh={typeScale.title.lineHeight}
+            fow={fontWeight.semibold}
+            numberOfLines={1}
+          >
+            {t('chartTitle')}
+          </Text>
+          <SegmentedTabs
+            items={granularityOptions.map((option) => ({ key: option.value, label: option.label }))}
+            value={granularity}
+            onChange={setGranularity}
+            variant="neutral"
+          />
+          {series.isError && !series.data ? (
+            <ScreenError error={series.error} title={t('chartError')} onRetry={() => void series.refetch()} />
+          ) : series.isLoading && !series.data ? (
+            <SkeletonText lines={5} />
+          ) : seriesEmpty || !series.data || series.data.buckets.length === 0 ? (
+            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+              {t('chartEmpty')}
+            </Text>
+          ) : (
+            <RevenueTrendChart buckets={series.data.buckets} labelOf={labelOf} titleOf={titleOf} />
+          )}
+          <Text {...label}>{t(`note.${kind}`)}</Text>
+        </YStack>
+      </Card>
+      {/* "Tạo phiếu thu/chi" và "Xem trên sổ Thu/Chi" đã gỡ (người dùng chốt 26/11/2026). */}
     </YStack>
-    </Card>
   );
 }
+
+/** Khuôn Khách hàng › Thu chi: ô bo 10, đệm 12. */
+const TILE_RADIUS = 10;
+const TILE_PAD = 12;

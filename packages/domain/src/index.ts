@@ -33,6 +33,7 @@ export {
   payAtPickupAmount,
   sumMoney,
   moneyPerPart,
+  moneyPercentOf,
   absoluteMoney,
   isNegativeMoney,
   isPositiveMoney,
@@ -268,6 +269,16 @@ export {
 /** Ký hiệu trình bày dùng chung - không phải chữ, nên không nằm trong bó message. */
 export { DATE_TIME_SEPARATOR, LIST_SEPARATOR, vehicleLabel } from './display';
 
+/** Mô tả cọc kết hợp tiền + tài sản (ADR 0112 điều 2) - một câu cho web và app. */
+export {
+  describeAssetTypes,
+  describeCollateral,
+  normalizeCollateral,
+  type CollateralCopy,
+  type CollateralLike,
+  type NormalizedCollateral,
+} from './collateral';
+
 export {
   deliverySummaryText,
   deliveryTierFee,
@@ -325,21 +336,29 @@ export {
 } from './chat-thread';
 
 /**
- * Bốn văn bản pháp lý công khai của sàn - slug, ngày hiệu lực, thứ tự điều khoản.
+ * Bộ văn bản pháp lý công khai của sàn - slug, nhóm, ngày hiệu lực, thứ tự điều khoản.
  *
  * Dùng chung vì cả hai client viện dẫn cùng bộ văn bản: web render tại `/legal/<slug>`, app
  * native mở đúng địa chỉ đó trong trình duyệt trong-app (ADR 0028 điều 9).
  */
 export {
   LEGAL_DOC,
+  LEGAL_DOC_GROUP,
+  LEGAL_DOC_GROUPS,
   LEGAL_DOC_VALUES,
+  LEGAL_DOC_WEB_VALUES,
   LEGAL_EFFECTIVE_FROM,
   LEGAL_SECTIONS,
+  LEGAL_WEB_ONLY_DOCS,
   isLegalDoc,
+  isWebLegalDoc,
+  legalDocsFor,
   legalPath,
   legalSectionKeys,
   type LegalDoc,
+  type LegalDocGroup,
   type LegalSection,
+  type LegalTable,
 } from './legal';
 
 /**
@@ -442,3 +461,12 @@ export {
 } from './audit-action-label';
 
 export { customerStatusOf, type CustomerStatusKey } from './customer-status';
+
+export { insuranceCoverageItems, joinInsuranceCoverageItems } from './insurance-coverage';
+
+export {
+  customerFeeLines,
+  visibleFeeLines,
+  type CustomerFeeLine,
+  type IncludedInsuranceServiceFee,
+} from './customer-fee-lines';

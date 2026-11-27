@@ -6,6 +6,7 @@ import {
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -23,23 +24,27 @@ import {
   CurrentUser,
   Realms,
   RequirePermissions,
-  SubscriptionTrackOnly,
   SupportAction,
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   AssignBookingDriverDto,
+  BookingCollateralInputDto,
+  BookingCollateralListDto,
   BookingDetailDto,
   BookingHandoverPrepDto,
   BookingListQueryDto,
   BookingPageDto,
+  BookingSourceLabelsDto,
   CreateBookingDto,
   SetHandoverPrepCheckDto,
   TransitionBookingDto,
   UpdateBookingDeliveryFeeDto,
   UpdateBookingDto,
+  UpdateBookingSourceDto,
 } from './dto/booking.dto';
+import { BookingCollateralsService } from './booking-collaterals.service';
 import { BookingsService } from './bookings.service';
 
 /**
@@ -53,7 +58,10 @@ import { BookingsService } from './bookings.service';
 @TenantScoped()
 @Realms(ACCOUNT_REALM.PARTNER)
 export class BookingsController {
-  constructor(private readonly bookings: BookingsService) {}
+  constructor(
+    private readonly bookings: BookingsService,
+    private readonly collaterals: BookingCollateralsService,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
@@ -71,6 +79,20 @@ export class BookingsController {
     ) as Promise<BookingPageDto>;
   }
 
+  /*
+   * ⚠️ Đứng TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự khai báo.
+   */
+  @Get('source-labels')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @ApiOperation({
+    summary: 'Nhãn nguồn đơn gian hàng đã từng nhập (gợi ý cho hộp lập đơn và bộ lọc - ADR 0110)',
+  })
+  @ApiOkResponse({ type: BookingSourceLabelsDto })
+  sourceLabels(@CurrentTenant() tenant: TenantContext): Promise<BookingSourceLabelsDto> {
+    return this.bookings.sourceLabels(tenant.tenantId);
+  }
+
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Get(':id')
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
@@ -85,14 +107,12 @@ export class BookingsController {
   }
 
   /*
-   * LẬP ĐƠN TAY chỉ dành cho gian hàng tuyến gói (26/10/2026). Đơn lập tay không qua chợ nên không
-   * mang phí sàn `S` lẫn hoa hồng `H`: mở nó cho tuyến hoa hồng là cho chủ xe kéo khách từ chợ ra
-   * ngoài rồi ghi lại chuyến với `H = 0`, và nó còn tự ghi sổ khách — công cụ của gói (ADR 0027
-   * điều 1). Chủ xe cá nhân giữ lịch cho chuyến ngoài chợ bằng KHOÁ LỊCH. Mọi route còn lại của
-   * controller mở cho cả hai tuyến: đơn đã có (từ chợ) là việc vận hành của bậc cơ bản.
+   * LẬP ĐƠN TAY mở cho MỌI chủ xe, cả hai tuyến (ADR 0110, ghi đè quyết định 26/10/2026 từng khoá
+   * nó cho tuyến gói). Đơn lập tay nằm NGOÀI SÀN: không phí sàn, không hoa hồng, không thuế, không
+   * bảo hiểm, và mang NGUỒN chủ xe chọn (`source` — không bao giờ `xeprime`). Chủ xe dùng XePrime
+   * làm lịch gốc cho mọi kênh; giao dịch ngoài sàn được chấp nhận là thứ không chặn được bằng code.
    */
   @Post()
-  @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BOOKING_CREATE)
   @ApiOperation({ summary: 'Tạo đơn thuê (giữ chỗ lịch, chặn trùng bằng constraint DB)' })
   @ApiCreatedResponse({ type: BookingDetailDto })
@@ -102,6 +122,23 @@ export class BookingsController {
     @Body() dto: CreateBookingDto,
   ): Promise<BookingDetailDto> {
     return this.bookings.create(tenant.tenantId, user.id, dto);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Patch(':id/source')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({
+    summary:
+      'Đổi nguồn của một đơn tự lập (có audit). Đơn qua sàn: 409 `BOOKING_SOURCE_LOCKED` - ADR 0110',
+  })
+  @ApiOkResponse({ type: BookingDetailDto })
+  updateSource(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingSourceDto,
+  ): Promise<BookingDetailDto> {
+    return this.bookings.updateSource(tenant.tenantId, id, user.id, dto);
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
@@ -137,6 +174,97 @@ export class BookingsController {
     return this.bookings.updateDeliveryFee(tenant.tenantId, id, user.id, dto);
   }
 
+  /** Sổ tài sản thế chấp của đơn (ADR 0109) — cũ nhất trước. */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Get(':id/collaterals')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @ApiOperation({ summary: 'Tài sản thế chấp khách để lại cho đơn' })
+  @ApiOkResponse({ type: BookingCollateralListDto })
+  listCollaterals(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.list(tenant.tenantId, id);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post(':id/collaterals')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({
+    summary:
+      'Ghi thêm một món tài sản thế chấp (đơn chưa khép, tối đa 10 món - 409 `BOOKING_COLLATERAL_LOCKED`)',
+  })
+  @ApiCreatedResponse({ type: BookingCollateralListDto })
+  addCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: BookingCollateralInputDto,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.add(tenant.tenantId, id, user.id, dto);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Patch(':id/collaterals/:collateralId')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({
+    summary:
+      'Sửa loại / mô tả một món tài sản (đơn chưa khép, món chưa trả - 409 `BOOKING_COLLATERAL_LOCKED`)',
+  })
+  @ApiOkResponse({ type: BookingCollateralListDto })
+  updateCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+    @Body() dto: BookingCollateralInputDto,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.update(tenant.tenantId, id, collateralId, user.id, dto);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Delete(':id/collaterals/:collateralId')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Gỡ một món ghi nhầm (đơn chưa khép, món chưa trả)' })
+  @ApiOkResponse({ type: BookingCollateralListDto })
+  removeCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.remove(tenant.tenantId, id, collateralId, user.id);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post(':id/collaterals/:collateralId/return')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Đánh dấu đã trả tài sản cho khách (mọi trạng thái đơn, idempotent)' })
+  @ApiCreatedResponse({ type: BookingCollateralListDto })
+  returnCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.setReturned(tenant.tenantId, id, collateralId, user.id, true);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post(':id/collaterals/:collateralId/unreturn')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Hoàn tác "đã trả" của một món tài sản (bấm nhầm)' })
+  @ApiCreatedResponse({ type: BookingCollateralListDto })
+  unreturnCollateral(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('collateralId') collateralId: string,
+  ): Promise<BookingCollateralListDto> {
+    return this.collaterals.setReturned(tenant.tenantId, id, collateralId, user.id, false);
+  }
+
   /**
    * Đánh dấu / bỏ đánh dấu TAY một việc "Chuẩn bị bàn giao" (03/11/2026) — khi việc diễn ra ngoài
    * hệ thống. Việc tiền không đánh dấu tay được (phải là phiếu thu thật). Cùng quyền với soạn biên
@@ -161,9 +289,10 @@ export class BookingsController {
   @Patch(':id/driver')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({
-    summary: 'Gán/bỏ gán tài xế liên kết cho đơn (có audit)',
+    summary: 'Gán/bỏ gán tài xế (liên kết hoặc nội bộ) cho đơn (có audit)',
     description:
       '`driverId`: gán tài xế liên kết (lượt chờ tài xế nhận, ADR 0063); `null` = bỏ gán (gỡ cả tài xế ngoài hệ thống còn trên đơn cũ). ' +
+      '`internalDriverId`: gán tài xế NỘI BỘ từ danh bạ (ADR 0108) - đã nhận ngay, chống trùng lịch 409 `DRIVER_BUSY`. ' +
       '`externalDriver` đã bỏ (ADR 0074 điều 4) ⇒ 422 `EXTERNAL_DRIVER_NOT_SUPPORTED`. ' +
       'Chỉ đơn `with_driver` chưa giao xe: 422 `DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED`, 409 `DRIVER_ASSIGNMENT_LOCKED`.',
   })
@@ -180,6 +309,9 @@ export class BookingsController {
         code: API_ERROR_CODE.EXTERNAL_DRIVER_NOT_SUPPORTED,
         message: 'XePrime không còn nhận tài xế ngoài hệ thống - gán tài xế liên kết',
       });
+    }
+    if (dto.internalDriverId !== undefined) {
+      return this.bookings.assignInternalDriver(tenant.tenantId, id, user.id, dto.internalDriverId);
     }
     return this.bookings.assignDriver(
       tenant.tenantId,

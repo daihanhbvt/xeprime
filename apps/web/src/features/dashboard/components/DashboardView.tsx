@@ -17,7 +17,7 @@ import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { dayjs, toAppTz } from '@/lib/datetime';
 import { cx } from '@/lib/cx';
-import { dashboardMonthRange } from '../api';
+import { dashboardMonthRange, dashboardRevenueSeriesFilters } from '../api';
 import { answerParts, greetingKey, todayLabel, utilizationPointChange } from '../dashboard-model';
 import { useDashboardLinks } from '../hooks/use-dashboard-links';
 import { useDashboardMoney } from '../hooks/use-dashboard-money';
@@ -30,6 +30,7 @@ import { OwnerVehiclesPanel } from './OwnerVehiclesPanel';
 import { ReputationPanel } from './ReputationPanel';
 import { ShopOnboardingCard } from './ShopOnboardingCard';
 import { TodayFocus } from './TodayFocus';
+import { REVENUE_SOURCE_PARAM } from '@/features/finance/vehicle-finance';
 import { RevenueCard, TripsCard } from './TrendCards';
 import { WalletPanel } from './WalletPanel';
 import styles from './DashboardView.module.css';
@@ -243,7 +244,19 @@ export function DashboardView() {
             <div
               className={cx(styles.charts, !(money.visible && showTrips) && styles.chartsSingle)}
             >
-              {money.visible ? <RevenueCard series={money.series} /> : null}
+              {money.visible ? (
+                <RevenueCard
+                  series={money.series}
+                  bySource={money.bySource}
+                  detailHref={(view) => {
+                    // Màn Tổng quan doanh thu đúng 30 ngày của thẻ, mở sẵn góc nhìn nguồn.
+                    const { from, to } = dashboardRevenueSeriesFilters();
+                    const params = new URLSearchParams({ from: from ?? '', to: to ?? '' });
+                    if (view) params.set(REVENUE_SOURCE_PARAM, view);
+                    return withBranch(`${ROUTES.MANAGE.FINANCE}?${params.toString()}`);
+                  }}
+                />
+              ) : null}
               {showTrips ? (
                 <TripsCard
                   trend={trend ?? undefined}

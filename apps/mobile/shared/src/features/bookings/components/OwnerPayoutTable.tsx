@@ -11,7 +11,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { DashedDivider } from '@/components/ui/DashedDivider';
 import { SummaryRow } from '@/components/ui/SummaryRow';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 
 export type OwnerPayout = components['schemas']['OwnerPayoutDto'];
 
@@ -45,7 +45,7 @@ export function OwnerPayoutTable({
    * `v2` = "Nhóm thông tin" của tấm duyệt (Figma `24145:96837`): dòng `SummaryRow` cách 12, không
    * vạch đứt, dòng CUỐI là tổng 16/24 xanh. Cùng các dòng, cùng số - chỉ khác hình.
    */
-  variant?: 'default' | 'v2';
+  variant?: 'default' | 'v2' | 'ledger';
   /** Chỉ dòng CUỐI (tổng) - thân khối khi thu gọn (Figma `24145:96975`). */
   summaryOnly?: boolean;
 }) {
@@ -71,15 +71,13 @@ export function OwnerPayoutTable({
 
   const exempt = payout.taxExemptReason === TAX_EXEMPT_REASON.COMPANY;
   const showTax = exempt || isPositiveMoney(payout.taxAmount);
-  const taxLabel =
-    payout.vatPercent != null && payout.pitPercent != null
-      ? t('taxSplit', { vat: percent(payout.vatPercent), pit: percent(payout.pitPercent) })
-      : payout.taxTotalPercent != null && !exempt
-        ? t('taxCombined', { percent: percent(payout.taxTotalPercent) })
-        : t('tax');
+  // App: nhãn gọn "Thuế khấu trừ" - mức GTGT/TNCN nằm trong ⓘ (người dùng 20/11/2026).
+  const taxLabel = t('tax');
 
+  // v2: số trừ / chữ mờ CÙNG cỡ 14 với các số khác của bảng (người dùng 20/11/2026).
+  const valueSize = variant !== 'default' ? typeScale.body.fontSize : fontSize.bodySm;
   const muted = (text: string) => (
-    <Text col={colors.placeholder} fos={fontSize.label}>
+    <Text col={colors.placeholder} fos={variant !== 'default' ? typeScale.body.fontSize : fontSize.label}>
       {text}
     </Text>
   );
@@ -122,7 +120,7 @@ export function OwnerPayoutTable({
           {hintText(t('commissionHintBody'))}
         </>,
       ),
-      value: <DeductedAmount value={payout.ownerCommissionAmount} />,
+      value: <DeductedAmount value={payout.ownerCommissionAmount} size={valueSize} />,
     });
   }
   if (showTax) {
@@ -132,6 +130,21 @@ export function OwnerPayoutTable({
       hint: hint(
         t('tax'),
         <>
+          {/* Chia rõ thuế gồm những gì (người dùng 20/11/2026) - chỉ khi server có đủ số. */}
+          {payout.vatPercent != null && payout.pitPercent != null && payout.vatAmount && payout.pitAmount ? (
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {t('taxBreakdown', {
+                vat: percent(payout.vatPercent),
+                pit: percent(payout.pitPercent),
+                vatAmount: fmt.money(payout.vatAmount),
+                pitAmount: fmt.money(payout.pitAmount),
+              })}
+            </Text>
+          ) : payout.vatPercent != null && payout.pitPercent != null ? (
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {t('taxRates', { vat: percent(payout.vatPercent), pit: percent(payout.pitPercent) })}
+            </Text>
+          ) : null}
           {hintText(t('taxHint'))}
           <Text
             col={colors.text}
@@ -145,7 +158,7 @@ export function OwnerPayoutTable({
           </Text>
         </>,
       ),
-      value: exempt ? muted(t('taxExempt')) : <DeductedAmount value={payout.taxAmount} />,
+      value: exempt ? muted(t('taxExempt')) : <DeductedAmount value={payout.taxAmount} size={valueSize} />,
     });
   }
   rows.push({
@@ -173,12 +186,64 @@ export function OwnerPayoutTable({
 
   const shown = summaryOnly ? rows.slice(-1) : rows;
 
+  if (variant === 'ledger') {
+    /*
+      Figma "Transaction Detail" (Quản lý ví `24612:145387`…): nối tiếp các dòng tiền của thẻ chuyến -
+      đệm dọc 8, kẻ đáy `stroke/gray-50`, chữ 14/20; dòng tổng medium `text/gray/medium`; dòng cuối
+      (số cộng ví) nhãn medium `text/gray/high`, số semibold `brand/primary-2`, không kẻ đáy.
+    */
+    return (
+      <YStack accessibilityLabel={label}>
+        {shown.map((row, index) => {
+          const final = index === shown.length - 1;
+          const total = row.strong || row.highlight;
+          return (
+            <XStack
+              key={row.key}
+              ai="center"
+              jc="space-between"
+              gap={space.sm}
+              py={space.sm}
+              {...(final ? {} : { borderBottomWidth: 1, borderColor: colors.background })}
+            >
+              <XStack f={1} minWidth={0} ai="center" gap={space.xs}>
+                <Text
+                  flexShrink={1}
+                  col={final ? colors.text : total ? colors.textMuted : colors.placeholder}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={final || total ? fontWeight.medium : fontWeight.regular}
+                >
+                  {row.label}
+                </Text>
+                {row.hint}
+              </XStack>
+              {typeof row.value === 'string' ? (
+                <Text
+                  col={final ? colors.brandLink : colors.text}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={final ? fontWeight.semibold : fontWeight.medium}
+                  ta="right"
+                >
+                  {row.value}
+                </Text>
+              ) : (
+                row.value
+              )}
+            </XStack>
+          );
+        })}
+      </YStack>
+    );
+  }
+
   if (variant === 'v2') {
     return (
       <YStack gap={V2_ROW_GAP} accessibilityLabel={label}>
         {shown.map((row) => {
           const final = row.key === rows[rows.length - 1]?.key;
-          return (
+          const summary = (
             <SummaryRow
               key={row.key}
               label={row.label}
@@ -186,6 +251,15 @@ export function OwnerPayoutTable({
               value={row.value}
               emphasis={final ? 'success' : 'none'}
             />
+          );
+          // Figma "Lợi nhuận chuyến" `24512:131124`: vạch kẻ liền trước dòng cuối (số cộng ví).
+          return final && !summaryOnly && shown.length > 1 ? (
+            <YStack key={row.key} gap={V2_ROW_GAP}>
+              <YStack h={1} bg={colors.borderSubtle} />
+              {summary}
+            </YStack>
+          ) : (
+            summary
           );
         })}
       </YStack>

@@ -18,7 +18,6 @@ import {
 } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { ToneDotBadge } from '@/components/data-display/StatusBadge';
-import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/components/VehicleMaintenanceWorkspace';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -28,6 +27,7 @@ import { useVehicleCapabilities } from '../hooks/use-vehicle-capabilities';
 import type { Vehicle360Summary, VehicleDetail } from '../types';
 import { MarketplaceVisibilitySwitch } from './MarketplaceVisibilitySwitch';
 import { Vehicle360Aside } from './Vehicle360Aside';
+import { VehicleFinanceTab } from './VehicleFinanceTab';
 import {
   AutomationCard,
   FeaturesCard,
@@ -181,10 +181,10 @@ export function Vehicle360Overview({
                        * `@RequiresFeature`.
                        */
                       children: (
-                        <FinanceEntityPanel
-                          scope={{ vehicleId: vehicle.id }}
-                          kind="vehicle"
+                        <VehicleFinanceTab
+                          vehicle={vehicle}
                           canCreateReceipt={can.createReceipt}
+                          showCapital={isManage}
                         />
                       ),
                     },

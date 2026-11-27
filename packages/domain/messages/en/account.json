@@ -261,7 +261,7 @@
     "title": "Data protection",
     "badge": "Data protection",
     "heading": "Peace of mind with XePrime",
-    "intro": "A summary of what XePrime does with your data, per the Privacy Policy in force.",
+    "intro": "A summary of what XePrime does with your data, per the Personal Data Protection Policy in force.",
     "points": {
       "location": "Location data is only used to find vehicles near you and to compute delivery distance.",
       "bank": "Bank account details are only used for payouts and refunds, as required by law.",
@@ -313,7 +313,7 @@
     "warningTitle": "This is a request, handled manually by XePrime",
     "warningBody": "After sending it you can keep signing in as usual until XePrime confirms and completes the deletion. You can withdraw the request while it is pending.",
     "confirmTitle": "Confirm your deletion request",
-    "confirmBody": "Once the request is accepted, the following will be handled per the Privacy Policy and applicable retention obligations:",
+    "confirmBody": "Once the request is accepted, the following will be handled per the Personal Data Protection Policy and applicable retention obligations:",
     "items": {
       "profile": "Personal details & seller profile",
       "vehicles": "Listed vehicles",
@@ -355,7 +355,7 @@
     "successTitle": "Received",
     "successBody": "Your account deletion request has been received.",
     "whatHeading": "Once the request is accepted",
-    "whatLead": "The following data is handled under our Privacy Policy and the retention obligations that apply:",
+    "whatLead": "The following data is handled under our Personal Data Protection Policy and the retention obligations that apply:",
     "retentionHeading": "Data we must keep",
     "retentionBody": "Invoices, tax records and transaction logs may have to be retained for a period set by law before they can be deleted. That is a legal obligation, not a XePrime choice.",
     "inAppHeading": "Can you still sign in?",
@@ -533,7 +533,10 @@
       "notShop": "Your name and photo belong to your personal account. The name, logo and phone number renters see are managed in <strong>Shop settings</strong>.",
       "personalStorefront": "This photo and name are exactly what renters see on your <strong>host page</strong>.",
       "shopSettingsLink": "View shop settings",
-      "ownerProfileLink": "View host profile"
+      "ownerProfileLink": "View host profile",
+      "avatarSheetTitle": "Upload profile photo",
+      "avatarSheetHint": "Upload a JPG, PNG or WEBP image.\nUp to {max}MB.",
+      "workspacePartner": "XePrime partner"
     }
   }
 }

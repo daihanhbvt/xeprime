@@ -1,3 +1,4 @@
+import { IS_PARTNER_APP } from '@/lib/app-kind';
 import FilterOutlined from '@ant-design/icons-svg/es/asn/FilterOutlined';
 import { AntIcon } from '@/components/icons/AntIcon';
 import { Ionicons } from '@/components/icons/Ionicons';
@@ -9,13 +10,13 @@ import { useTranslations } from 'use-intl';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { BackToTopButton } from '@/components/ui/BackToTopButton';
-import { ActivityIndicator } from 'react-native';
 import { useCollapseOnScroll, type CollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
 import { layout } from '@/theme/layout';
 import { useResponsive } from '@/theme/use-responsive';
 import { useTabBarInset } from '@/components/layout/tab-bar-inset';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
+import { DotsLoader } from '@/components/ui/DotsLoader';
 import { FilterButton } from '@/components/ui/FilterButton';
 import { ListSearchBar } from './ListSearchBar';
 import { activeFilterCount, ManageFilterSheet, type FilterGroup } from './ManageFilterSheet';
@@ -93,12 +94,13 @@ const useStyles = makeStyles((colors) => ({
  */
 export function ManageListShell({
   title,
-  subtitle,
+  subtitle: subtitleProp,
   total,
   action,
   actions,
   branchFilter,
   summary,
+  searchBelowSummary = false,
   tabs,
   searchValue,
   searchLabel,
@@ -111,7 +113,8 @@ export function ManageListShell({
   onPageChange,
   loadingMore = false,
   variant = 'classic',
-  filterLayout = 'chips',
+  // Mọi danh sách dùng tấm Lọc dạng lưới ô chọn (người dùng chốt 20/11/2026).
+  filterLayout = 'grid',
   children,
 }: {
   /**
@@ -152,6 +155,11 @@ export function ManageListShell({
    * nhiêu việc". Web dựng đúng thứ tự này (`ManagePageHeader extra` rồi mới tới `Tabs`).
    */
   summary?: ReactNode;
+  /**
+   * Ô tìm + nút Lọc nằm DƯỚI khối `summary` (thẻ thống kê) thay vì trên - Figma sổ Thu-Chi / Công nợ
+   * (`24512:125313`): tab · kỳ · thống kê · tìm kiếm · danh sách. Chỉ ở biến thể `page`.
+   */
+  searchBelowSummary?: boolean;
   /**
    * Dải tab NGANG kèm số đếm, đặt giữa tiêu đề và ô tìm kiếm.
    *
@@ -217,6 +225,8 @@ export function ManageListShell({
     bindList: (node: unknown) => void;
   }) => ReactNode;
 }) {
+  // Feedback thiết kế 20/11/2026 (dòng 2 "All Page"): app Partner bỏ câu mô tả dưới tiêu đề trang.
+  const subtitle = IS_PARTNER_APP ? undefined : subtitleProp;
   const colors = useColors();
   const styles = useStyles();
   const tFilters = useTranslations('Common.filters');
@@ -378,6 +388,7 @@ export function ManageListShell({
                   {subtitle}
                 </Text>
               ) : null}
+              {searchBelowSummary ? summary : null}
               {/* Figma "Tab List" `24175:57178`: ô tìm co giãn · nút "Lọc", cách 12. */}
               <ListSearchBar
                 value={searchValue}
@@ -388,7 +399,7 @@ export function ManageListShell({
                 {...(groups.length > 0 ? { onFilterPress: openFilters } : {})}
                 gutter={gutter}
               />
-              {summary}
+              {searchBelowSummary ? null : summary}
               {tabs}
             </YStack>
           ) : (
@@ -459,7 +470,10 @@ export function ManageListShell({
       {/* NGOÀI vùng cuộn và KHÔNG ẩn theo cuộn — xem ghi chú ở `Pagination` và ở đầu file. */}
       {loadingMore ? (
         <YStack pos="absolute" left={0} right={0} bottom={tabBarInset + space.sm} ai="center" pointerEvents="none">
-          <ActivityIndicator color={colors.primary} />
+          {/* Viên trắng bo tròn sau ba chấm để chấm đọc rõ trên nền thẻ. */}
+          <YStack bg={colors.surface} br={radius.pill} bw={1} bc={colors.border} px={space.lg}>
+            <DotsLoader />
+          </YStack>
         </YStack>
       ) : null}
       <BackToTopButton visible={pastTop} onPress={backToTop} bottom={tabBarInset + space.md} />
@@ -470,9 +484,8 @@ export function ManageListShell({
         onChange={onFilterChange}
         onClose={closeFilters}
         layout={filterLayout}
-        {...(filterLayout === 'grid'
-          ? { searchValue, searchLabel, searchPlaceholder, onSearchChange }
-          : {})}
+        // KHÔNG đưa ô tìm vào tấm: màn đã có ô tìm ngay trên danh sách, và huy hiệu số của nút "Lọc"
+        // chỉ đếm các ô lọc - tìm trong tấm thì nút không báo gì (người dùng 20/11/2026).
       />
     </>
   );

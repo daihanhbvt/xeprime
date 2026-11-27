@@ -114,6 +114,50 @@
     "legal": {
       "title": "Văn bản pháp lý",
       "body": "Quy chế hoạt động sàn ràng buộc gian hàng của bạn: điều kiện đăng tin, thứ tự hiển thị, phí dịch vụ và cách xử lý tranh chấp. Mở trong tab mới để không mất việc đang làm."
+    },
+    "app": {
+      "quickStart": {
+        "vehicles": {
+          "title": "Thêm xe cho thuê",
+          "body": "Cập nhật hồ sơ xe, hình ảnh & giấy tờ đăng kiểm.",
+          "cta": "Thêm xe"
+        },
+        "policies": {
+          "title": "Thiết lập chính sách",
+          "body": "Giá thuê theo ngày, đặt cọc, phí rửa xe phụ trội.",
+          "cta": "Mở chính sách"
+        },
+        "requests": {
+          "title": "Duyệt yêu cầu đặt xe",
+          "body": "Xác nhận khách đặt, thời hạn phản hồi.",
+          "cta": "Xem yêu cầu"
+        },
+        "calendar": {
+          "title": "Theo dõi lịch thuê",
+          "body": "Lịch xe bận và các chuyến sắp tới trên một lưới.",
+          "cta": "Mở lịch"
+        },
+        "finance": {
+          "title": "Quản lý thu chi",
+          "body": "Ghi thu chi, đối soát doanh thu của gian hàng.",
+          "cta": "Mở sổ thu chi"
+        },
+        "members": {
+          "title": "Tài khoản nhân viên",
+          "body": "Cấp tài khoản, phân quyền quản lý xe, kế toán.",
+          "cta": "Mở nhân viên"
+        }
+      },
+      "faq": {
+        "publishLink": "Xem trạng thái duyệt xe"
+      },
+      "legalBody": "Quy chế hoạt động sàn áp dụng cho gian hàng, bao gồm điều kiện đăng tin, thứ tự hiển thị, phí dịch vụ và quy trình xử lý tranh chấp.",
+      "contact": {
+        "title": "Bạn chưa tìm thấy câu trả lời?",
+        "casesBody": "Với các vấn đề cần XePrime xử lý như tranh chấp chuyến, sự cố hoặc thanh toán, hãy gửi yêu cầu hỗ trợ để được cấp mã theo dõi.",
+        "hotline": "Hoặc liên hệ qua hotline: ",
+        "callHotline": "Gọi hotline {phone}"
+      }
     }
   },
   "adminGate": {

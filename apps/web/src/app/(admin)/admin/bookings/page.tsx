@@ -4,7 +4,7 @@ import { DatePicker, Select, Space } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, type ReactNode } from 'react';
-import { BOOKING_DATE_FIELD } from '@xeprime/types';
+import { BOOKING_DATE_FIELD, BOOKING_SOURCE, BOOKING_SOURCE_FILTER_DIRECT } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -29,6 +29,7 @@ import { useAdminBookings } from '@/features/admin-bookings/hooks/use-admin-book
 import type { AdminBookingFilters } from '@/features/admin-bookings/types';
 import { ALL_FILTER } from '@/constants/filters';
 import { useDatePickerPattern } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
 import styles from './bookings-page.module.css';
 
@@ -38,6 +39,7 @@ const CLEARED: Partial<AdminBookingFilters> = {
   tenantId: undefined,
   vehicleId: undefined,
   status: ALL_FILTER,
+  source: undefined,
   dateFrom: undefined,
   dateTo: undefined,
 };
@@ -98,6 +100,7 @@ function AdminBookingsTabs() {
 
 function AdminBookingsView({ tabs }: { tabs: ReactNode }) {
   const t = useTranslations('AdminBookings');
+  const domainLabel = useDomainLabel();
   const options = useAdminBookingOptions();
   const datePattern = useDatePickerPattern();
   const { filters, setFilters } = useAdminBookingFilters();
@@ -117,6 +120,7 @@ function AdminBookingsView({ tabs }: { tabs: ReactNode }) {
     filters.tenantId ||
     filters.vehicleId ||
     (filters.status && filters.status !== ALL_FILTER) ||
+    filters.source ||
     filters.dateFrom ||
     filters.dateTo,
   );
@@ -157,6 +161,24 @@ function AdminBookingsView({ tabs }: { tabs: ReactNode }) {
               value={filters.status ?? ALL_FILTER}
               options={options.status}
               onChange={(value: string) => setFilters({ status: value })}
+            />
+            {/* Nguồn đơn (ADR 0110): tách đơn qua sàn khỏi đơn chủ xe tự lập. */}
+            <Select
+              className={styles.statusSelect}
+              size="large"
+              aria-label={t('filters.sourceLabel')}
+              value={filters.source ?? ALL_FILTER}
+              options={[
+                { value: ALL_FILTER, label: t('filters.allSources') },
+                {
+                  value: BOOKING_SOURCE.XEPRIME,
+                  label: domainLabel('bookingSource', BOOKING_SOURCE.XEPRIME),
+                },
+                { value: BOOKING_SOURCE_FILTER_DIRECT, label: t('filters.directSources') },
+              ]}
+              onChange={(value: string) =>
+                setFilters({ source: value === ALL_FILTER ? undefined : value })
+              }
             />
             <Select
               className={styles.dateFieldSelect}

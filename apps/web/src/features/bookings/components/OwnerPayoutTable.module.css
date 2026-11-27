@@ -78,3 +78,39 @@
   font-weight: var(--xp-font-weight-semibold);
   text-decoration: underline;
 }
+
+/*
+ * Khổ điện thoại của chi tiết đơn (`phoneCard`, Figma Partner) - dòng 14/20 cách 12, bỏ vạch nhóm
+ * đứt; dòng "Số tiền cộng ví" đứng sau MỘT đường kẻ liền, nhãn đậm, số xanh thay cho nền nổi.
+ * Thuế vẫn đỏ qua `DeductedAmount`. Desktop và hộp duyệt yêu cầu không đổi.
+ */
+@media (max-width: 640px) {
+  .phoneCard {
+    gap: var(--xp-space-12);
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .phoneCard .groupStart {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .phoneCard .highlight {
+    margin-top: 0;
+    padding: var(--xp-space-12) 0 0;
+    border-top: 1px solid var(--xp-color-border);
+    border-radius: 0;
+    background: none;
+  }
+
+  .phoneCard .highlight dt {
+    font-weight: var(--xp-font-weight-semibold);
+  }
+
+  .phoneCard .highlight dd {
+    color: var(--xp-color-success);
+    font-size: var(--xp-font-size-body);
+    font-weight: var(--xp-font-weight-semibold);
+  }
+}

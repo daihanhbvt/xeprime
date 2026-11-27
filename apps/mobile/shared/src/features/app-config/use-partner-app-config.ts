@@ -32,6 +32,8 @@ export function usePartnerAppConfig() {
 
   return {
     isPlanPromotionEnabled: query.data?.isPlanPromotionEnabled === true,
+    /** Hotline hỗ trợ đối tác (admin đặt) - `null` khi chưa đặt hoặc đang tải: ẩn dòng hotline. */
+    supportHotline: query.data?.supportHotline ?? null,
     isLoading: query.isLoading,
   };
 }

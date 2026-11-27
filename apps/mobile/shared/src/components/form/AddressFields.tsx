@@ -40,6 +40,15 @@ export interface AddressFieldNames<T extends FieldValues> {
 }
 
 /** Tên bốn trường GHIM. Bỏ trống = địa chỉ này không lưu toạ độ (sổ khách). */
+/** Chữ thay thế của `AddressFields` (prop `labels`) - ô nào vắng thì giữ chữ chung `Address.*`. */
+export interface AddressFieldLabels {
+  province?: string;
+  ward?: string;
+  wardPlaceholder?: string;
+  addressLine?: string;
+  addressLinePlaceholder?: string;
+}
+
 export interface AddressPinNames<T extends FieldValues> {
   placeId: Path<T>;
   latitude: Path<T>;
@@ -72,6 +81,8 @@ export function AddressFields<T extends FieldValues>({
   addressLineRequired = required,
   disabled,
   prefillRememberedProvince = false,
+  labels,
+  inlineAdmin = false,
 }: {
   control: Control<T>;
   names: AddressFieldNames<T>;
@@ -102,6 +113,13 @@ export function AddressFields<T extends FieldValues>({
    * khác, âm thầm, chỉ vì họ bấm Lưu.
    */
   prefillRememberedProvince?: boolean;
+  /**
+   * Thay CHỮ hiển thị của ô (nhãn, placeholder) cho một màn có bản vẽ riêng - vd. form đăng ký đối
+   * tác app Partner theo nguyên văn Figma. Chỉ là chữ: luật, dữ liệu, thứ tự ô không đổi.
+   */
+  labels?: AddressFieldLabels;
+  /** Tỉnh/thành và xã/phường nằm cùng một hàng hai cột (mặc định xếp dọc). */
+  inlineAdmin?: boolean;
 }) {
   const t = useTranslations('Address');
   const province = useController({ control, name: names.provinceCode });
@@ -200,49 +218,69 @@ export function AddressFields<T extends FieldValues>({
    * khoanh vùng do ĐIỂM NEO lo, và nó khoanh bằng TOẠ ĐỘ chứ không bằng chữ (ADR 0042 điều 5).
    */
 
+  const provinceField = (
+    <SelectField
+      control={control}
+      name={names.provinceCode}
+      label={labels?.province ?? t('provinceLabel')}
+      options={provinces.options}
+      required={provinceRequired ?? false}
+      disabled={(disabled ?? false) || provinces.isError}
+      placeholder={t('provincePlaceholder')}
+      onValueChange={onProvinceChange}
+    />
+  );
+  /*
+   * Xã/phường LUÔN hỏi, kể cả khi có ghim (ADR 0077 ghi đè ADR 0042): bề mặt công khai hiện
+   * "Phường/Xã, Tỉnh/TP" ghép từ danh mục. Bắt buộc hay không do nơi gọi (`wardRequired`).
+   */
+  const wardField = (
+    <SelectField
+      control={control}
+      name={names.wardCode}
+      label={labels?.ward ?? t('wardLabel')}
+      options={wardOptions}
+      required={wardRequired ?? false}
+      disabled={(disabled ?? false) || !provinceCode}
+      placeholder={provinceCode ? (labels?.wardPlaceholder ?? t('wardPlaceholder')) : t('wardNeedsProvince')}
+      onSearch={setWardSearch}
+      /*
+       * Cấp CHA đổi thì cấp CON xoá: người dùng tự chọn lại xã ⇒ địa chỉ + ghim cũ thuộc xã khác,
+       * dựng lại ô địa chỉ (cùng cơ chế đổi tỉnh). Xã TỰ ĐIỀN theo địa điểm vừa chọn đi đường
+       * `ward.field.onChange`, không qua đây — địa chỉ đó chính là thứ vừa chọn, không xoá.
+       */
+      onValueChange={() => {
+        setPinResetKey((n) => n + 1);
+        setProvinceMismatch(false);
+      }}
+      searchPlaceholder={labels?.wardPlaceholder ?? t('wardPlaceholder')}
+      emptyText={wards.isError ? t('wardLoadError') : t('wardEmpty')}
+      {...(wards.isError ? { hint: t('wardLoadError') } : {})}
+    />
+  );
+
   return (
     <YStack gap={space.md}>
       {title ? <FieldLabel label={title} required={required} /> : null}
 
       {provinces.isError ? <Callout tone="warning" title={t('provinceLoadError')} /> : null}
 
-      <SelectField
-        control={control}
-        name={names.provinceCode}
-        label={t('provinceLabel')}
-        options={provinces.options}
-        required={provinceRequired ?? false}
-        disabled={(disabled ?? false) || provinces.isError}
-        placeholder={t('provincePlaceholder')}
-        onValueChange={onProvinceChange}
-      />
-
-      {/*
-        Xã/phường LUÔN hỏi, kể cả khi có ghim (ADR 0077 ghi đè ADR 0042): bề mặt công khai hiện
-        "Phường/Xã, Tỉnh/TP" ghép từ danh mục. Bắt buộc hay không do nơi gọi (`wardRequired`).
-      */}
-      <SelectField
-        control={control}
-        name={names.wardCode}
-        label={t('wardLabel')}
-        options={wardOptions}
-        required={wardRequired ?? false}
-        disabled={(disabled ?? false) || !provinceCode}
-        placeholder={provinceCode ? t('wardPlaceholder') : t('wardNeedsProvince')}
-        onSearch={setWardSearch}
-        /*
-         * Cấp CHA đổi thì cấp CON xoá: người dùng tự chọn lại xã ⇒ địa chỉ + ghim cũ thuộc xã khác,
-         * dựng lại ô địa chỉ (cùng cơ chế đổi tỉnh). Xã TỰ ĐIỀN theo địa điểm vừa chọn đi đường
-         * `ward.field.onChange`, không qua đây — địa chỉ đó chính là thứ vừa chọn, không xoá.
-         */
-        onValueChange={() => {
-          setPinResetKey((n) => n + 1);
-          setProvinceMismatch(false);
-        }}
-        searchPlaceholder={t('wardPlaceholder')}
-        emptyText={wards.isError ? t('wardLoadError') : t('wardEmpty')}
-        {...(wards.isError ? { hint: t('wardLoadError') } : {})}
-      />
+      {inlineAdmin ? (
+        // Tỉnh/thành và xã/phường cùng MỘT hàng hai cột (Figma "Chỉnh sửa khách hàng").
+        <XStack gap={space.sm} ai="flex-start">
+          <YStack f={1} flexBasis={0} minWidth={0}>
+            {provinceField}
+          </YStack>
+          <YStack f={1} flexBasis={0} minWidth={0}>
+            {wardField}
+          </YStack>
+        </XStack>
+      ) : (
+        <>
+          {provinceField}
+          {wardField}
+        </>
+      )}
 
       {pin ? (
         <>
@@ -297,8 +335,8 @@ export function AddressFields<T extends FieldValues>({
         <TextField
           control={control}
           name={names.addressLine}
-          label={t('addressLineLabel')}
-          placeholder={t('addressLinePlaceholder')}
+          label={labels?.addressLine ?? t('addressLineLabel')}
+          placeholder={labels?.addressLinePlaceholder ?? t('addressLinePlaceholder')}
           required={addressLineRequired ?? false}
           editable={!disabled}
         />

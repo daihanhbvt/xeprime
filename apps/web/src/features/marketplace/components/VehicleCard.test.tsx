@@ -138,7 +138,7 @@ describe('VehicleCard', () => {
   it('liên kết gian hàng vẫn còn', () => {
     render(<VehicleCard listing={LISTING} />);
     expect(screen.getByRole('link', { name: 'Gian hàng Minh Tuấn' }).getAttribute('href')).toBe(
-      '/shops/minh-tuan',
+      '/minh-tuan',
     );
   });
 

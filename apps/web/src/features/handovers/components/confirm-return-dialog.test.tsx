@@ -20,6 +20,10 @@ import type { HandoverContext } from '../types';
  * Đặc tả hộp "Xác nhận đã nhận lại xe" (Figma `23941:65305`, 06/11/2026): ô "Đã thu tiền" BẬT SẴN và
  * nộp ĐÚNG số server tính; bỏ tick là đơn hoàn thành với khoản còn nợ; phụ phí gõ trong hộp đi cùng
  * lượt xác nhận; mọi cổng quyền / gói ẩn đúng phần của nó.
+ *
+ * 25/11/2026: vùng "Tình trạng, ảnh & ghi chú" LUÔN mở (không còn thu gọn); ô ghi chú chỉ hiện khi
+ * chọn "Có điểm cần lưu ý"; thiếu ảnh ngoại thất thì bấm xác nhận hiện popup CẢNH BÁO — vẫn đi
+ * tiếp được.
  */
 
 const permissions = vi.hoisted(() => ({ granted: new Set<string>() }));
@@ -92,7 +96,12 @@ function context(overrides: Partial<HandoverContext> = {}): HandoverContext {
     vehicleOdometerKm: 42500,
     pickupOdometerKm: 42500,
     pickup: null,
-    return: null,
+    // Đủ bốn góc ngoại thất — các ca không bàn về ảnh đi thẳng, không vướng popup thiếu ảnh.
+    return: {
+      rowVersion: 1,
+      odometerKm: null,
+      photos: ['front', 'rear', 'left', 'right'].map((slot) => ({ slot })),
+    },
     canStartPickup: false,
     canStartReturn: true,
     ...overrides,
@@ -168,11 +177,13 @@ describe('ConfirmReturnDialog', () => {
     for (const label of ['Tiền cọc đã nhận', 'Phụ phí phát sinh', 'Đề xuất hoàn cọc']) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
-    // Vùng tình trạng / ảnh / ghi chú THU GỌN sẵn, đếm ảnh theo bộ góc của ô tô.
-    const header = screen.getByRole('button', { name: /Tình trạng, ảnh & ghi chú/ });
-    expect(header.getAttribute('aria-expanded')).toBe('false');
-    expect(within(header).getByText('0/5 ảnh')).toBeTruthy();
-    expect(screen.getByTestId('photo-grid').textContent).toBe(HANDOVER_TYPE.RETURN);
+    // Vùng tình trạng / ảnh / ghi chú LUÔN mở — không còn nút thu gọn; đếm theo bộ góc của ô tô.
+    const section = screen.getByRole('region', { name: 'Tình trạng, ảnh & ghi chú' });
+    expect(screen.queryByRole('button', { name: /Tình trạng, ảnh & ghi chú/ })).toBeNull();
+    expect(within(section).getByText('Khuyến khích')).toBeTruthy();
+    expect(within(section).getByText('4/5 ảnh')).toBeTruthy();
+    expect(within(section).getByTestId('photo-grid').textContent).toBe(HANDOVER_TYPE.RETURN);
+    expect(within(section).getByRole('radio', { name: 'Có điểm cần lưu ý' })).toBeTruthy();
   });
 
   it('nhận lại xe sớm hơn giờ hẹn ≥ 60′ ⇒ viên "Sớm …" + cảnh báo nhả lịch, tiền giữ nguyên theo đơn', () => {
@@ -211,25 +222,76 @@ describe('ConfirmReturnDialog', () => {
     expect(lastBody().occurredAt).toBe('2026-11-01T02:00:00.000Z');
   });
 
-  it('bấm "Hiện tại" làm hiện gợi ý quá giờ ⇒ vùng tình trạng KHÔNG tự bung ra', () => {
-    state.context = context({ bookingReturnAt: '2026-11-01T02:00:00.000Z' });
-    renderDialog();
-    const header = () => screen.getByRole('button', { name: /Tình trạng, ảnh & ghi chú/ });
-    expect(header().getAttribute('aria-expanded')).toBe('false');
+  it('ghi chú chỉ hiện khi chọn "Có điểm cần lưu ý" và chỉ khi đó mới được gửi', async () => {
+    const { onClose } = renderDialog();
+    expect(screen.queryByRole('textbox', { name: 'Ghi chú' })).toBeNull();
 
-    // Giờ mới trễ ⇒ server trả gợi ý phí quá giờ ở lượt xem trước kế tiếp.
-    state.preview = preview({
-      overtime: {
-        available: true,
-        lateMinutes: 120,
-        chargedHours: 2,
-        feePerHour: '100000',
-        amount: '200000.00',
-        formula: null,
-      },
+    fireEvent.click(screen.getByRole('radio', { name: 'Có điểm cần lưu ý' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Ghi chú' }), {
+      target: { value: 'Xước cản sau' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Đặt về giờ hiện tại' }));
-    expect(header().getAttribute('aria-expanded')).toBe('false');
+    // Đổi về "Bình thường": ô ghi chú ẩn, chữ đã gõ không đi theo lượt xác nhận.
+    fireEvent.click(screen.getByRole('radio', { name: /Bình thường/ }));
+    expect(screen.queryByRole('textbox', { name: 'Ghi chú' })).toBeNull();
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastBody().condition).toBe('normal');
+    expect(lastBody().notes).toBeUndefined();
+  });
+
+  it('có điểm cần lưu ý ⇒ ghi chú đi cùng lượt xác nhận', async () => {
+    const { onClose } = renderDialog();
+    fireEvent.click(screen.getByRole('radio', { name: 'Có điểm cần lưu ý' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Ghi chú' }), {
+      target: { value: 'Xước cản sau' },
+    });
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(lastBody()).toMatchObject({ condition: 'attention', notes: 'Xước cản sau' });
+  });
+
+  it('thiếu ảnh ngoại thất ⇒ popup CẢNH BÁO; "Thêm ảnh" ở lại hộp, "Vẫn xác nhận" đi tiếp', async () => {
+    state.context = context({
+      return: {
+        rowVersion: 1,
+        odometerKm: null,
+        photos: [{ slot: 'front' }, { slot: 'odometer' }],
+      },
+    } as unknown as Partial<HandoverContext>);
+    const { onClose } = renderDialog();
+
+    fireEvent.click(confirmButton());
+    expect(await screen.findByText('Chưa đủ ảnh hiện trạng xe')).toBeTruthy();
+    expect(screen.getByText(/Còn thiếu ảnh: Mặt sau · Bên trái · Bên phải./)).toBeTruthy();
+    expect(api.confirmHandover).not.toHaveBeenCalled();
+
+    // "Thêm ảnh" đóng popup, ở lại hộp nhận xe — không gửi gì.
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm ảnh' }));
+    expect(api.confirmHandover).not.toHaveBeenCalled();
+
+    fireEvent.click(confirmButton());
+    fireEvent.click(await screen.findByRole('button', { name: 'Vẫn xác nhận' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(api.confirmHandover).toHaveBeenCalledTimes(1);
+  });
+
+  it('chưa có biên bản trả (chưa tải ảnh nào) ⇒ cũng cảnh báo', async () => {
+    state.context = context({ return: null } as unknown as Partial<HandoverContext>);
+    renderDialog();
+    fireEvent.click(confirmButton());
+    expect(
+      await screen.findByText(/Còn thiếu ảnh: Mặt trước · Mặt sau · Bên trái · Bên phải./),
+    ).toBeTruthy();
+  });
+
+  it('xe máy chỉ đòi trước + sau — đủ hai góc đó thì không cảnh báo', async () => {
+    state.context = context({
+      vehicleType: 'motorbike',
+      return: { rowVersion: 1, odometerKm: null, photos: [{ slot: 'front' }, { slot: 'rear' }] },
+    } as unknown as Partial<HandoverContext>);
+    const { onClose } = renderDialog();
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it('khách chưa báo trả, bấm xác nhận ngay ⇒ nộp đúng giờ hẹn', async () => {
@@ -296,12 +358,8 @@ describe('ConfirmReturnDialog', () => {
   });
 
   it('gói không có Thu chi (tuyến hoa hồng) ⇒ không có ô thu tiền; thiếu payments.record ⇒ không có cả phụ phí', () => {
-    const openDetails = () =>
-      fireEvent.click(screen.getByRole('button', { name: /Tình trạng, ảnh & ghi chú/ }));
-
     feature.financeVisible = false;
     renderDialog();
-    openDetails();
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(screen.getByRole('button', { name: /Thêm phụ phí/ })).toBeTruthy();
     cleanup();
@@ -309,14 +367,12 @@ describe('ConfirmReturnDialog', () => {
     feature.financeVisible = true;
     permissions.granted.delete(PERMISSION.PAYMENT_RECORD);
     renderDialog();
-    openDetails();
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(screen.queryByRole('button', { name: /Thêm phụ phí/ })).toBeNull();
   });
 
   it('phụ phí gõ trong hộp đi cùng lượt xác nhận; dòng thiếu số tiền chặn gửi', async () => {
     const { onClose } = renderDialog();
-    fireEvent.click(screen.getByRole('button', { name: /Tình trạng, ảnh & ghi chú/ }));
     fireEvent.click(screen.getByRole('button', { name: /Thêm phụ phí/ }));
 
     fireEvent.click(confirmButton());
@@ -345,12 +401,6 @@ describe('ConfirmReturnDialog', () => {
       },
     });
     const { onClose } = renderDialog();
-    // Có gợi ý ⇒ vùng chi tiết mở sẵn.
-    expect(
-      screen
-        .getByRole('button', { name: /Tình trạng, ảnh & ghi chú/ })
-        .getAttribute('aria-expanded'),
-    ).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
 
     fireEvent.click(confirmButton());

@@ -26,12 +26,15 @@ export function ChatBadgeButton({
   surface,
   compact = false,
   chip = false,
+  chipShape = 'round',
 }: {
   surface: ChatSide;
   /** Vẽ nhỏ lại, vùng chạm giữ nguyên — cho thanh trên CHẬT của khu quản lý. */
   compact?: boolean;
   /** Vòng tròn có viền + bóng như `HeaderIconButton` web — thanh trên khu khách. */
   chip?: boolean;
+  /** Dạng chip: `square` - ô 42 bo 12 của đầu Tổng quan app Partner (Figma Overview MB). */
+  chipShape?: 'round' | 'square';
 }) {
   const colors = useColors();
   const t = useTranslations('Navigation');
@@ -46,6 +49,7 @@ export function ChatBadgeButton({
       <HeaderChip
         // Khu khách vẽ bằng bộ icon nét design v2 (web `ChatMenu icon={<LineIcon name="message" />}`).
         icon={{ line: 'message' }}
+        shape={chipShape}
         onPress={() => navigateOnce(chat.href)}
         accessibilityLabel={label}
         badgeCount={chat.count}

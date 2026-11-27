@@ -4,7 +4,13 @@ import { App } from 'antd';
 import Link from 'next/link';
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
-import { PERMISSION, TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
+import {
+  PERMISSION,
+  TENANT_STATUS_META,
+  isMarketplaceBooking,
+  type TenantStatus,
+} from '@xeprime/types';
+import { BookingSourceChip } from '@/components/data-display/BookingSourceChip';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ROUTES, adminPartnerPath } from '@/constants/routes';
@@ -90,6 +96,15 @@ export function BookingInformation({ booking }: { booking: AdminBookingDetail })
           <dt>{t('service')}</dt>
           <dd>{domainLabel('serviceType', booking.serviceType)}</dd>
         </div>
+        {/* Đơn qua sàn là nguồn mặc định - chỉ đơn chủ xe tự lập mới có dòng nguồn (ADR 0110). */}
+        {!isMarketplaceBooking(booking.source) ? (
+          <div className={styles.field}>
+            <dt>{t('source')}</dt>
+            <dd>
+              <BookingSourceChip source={booking.source} sourceLabel={booking.sourceLabel} />
+            </dd>
+          </div>
+        ) : null}
         {booking.note ? (
           <div className={styles.field}>
             <dt>{t('note')}</dt>

@@ -15,6 +15,7 @@ import {
   isAwaitingPayment,
   isHoldPastDue,
   isSubscriptionInvoicePayable,
+  PAYMENT_CHECKOUT_PAGE_PATH,
   PAYMENT_PAGE_PATH,
   PAYMENT_GATEWAY_AMOUNT_LIMITS,
   PAYMENT_GATEWAY_CLIENT,
@@ -84,6 +85,10 @@ type InvoicePaymentOutcome = Awaited<
   ReturnType<BillingService['applyBankPaymentWithinTx']>
 >['outcome'];
 
+type CheckoutPaymentOutcome = Awaited<
+  ReturnType<BillingService['applyCheckoutPaymentWithinTx']>
+>['outcome'];
+
 export interface CheckoutRequest {
   provider: PaymentGatewayProvider;
   client: PaymentGatewayClient;
@@ -97,6 +102,7 @@ interface PreparedTarget {
   targetType: PaymentOrderTarget;
   subscriptionInvoiceId: string | null;
   bookingHoldId: string | null;
+  subscriptionCheckoutId: string | null;
   targetCode: string;
   tenantId: string;
   /** Phần còn thiếu của đích - số tiền DUY NHẤT được gửi sang cổng. */
@@ -208,6 +214,20 @@ export class PaymentGatewayService {
     );
   }
 
+  /**
+   * Gian hàng trả MỘT PHIẾU GỘP nhiều gói (ô tô + xe máy) của chính mình — ADR 0083 điều 6 (sửa
+   * 27/11/2026). Một phiên cho cả phiếu: đủ tổng thì mọi gói trong phiếu bật cùng lúc.
+   */
+  startSubscriptionCheckoutPayment(
+    tenantId: string,
+    checkoutId: string,
+    request: CheckoutRequest,
+  ): Promise<PaymentOrderDto> {
+    return this.startCheckout(PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT, request, (tx, now) =>
+      this.prepareSubscriptionCheckout(tx, now, tenantId, checkoutId, request.client),
+    );
+  }
+
   /** Khách trả tiền giữ chỗ của CHÍNH chuyến mình - quyền sở hữu nằm trong câu truy vấn. */
   startHoldCheckout(
     customerUserId: string,
@@ -241,6 +261,7 @@ export class PaymentGatewayService {
       const targetWhere = {
         subscriptionInvoiceId: p.subscriptionInvoiceId,
         bookingHoldId: p.bookingHoldId,
+        subscriptionCheckoutId: p.subscriptionCheckoutId,
       };
 
       /*
@@ -289,6 +310,7 @@ export class PaymentGatewayService {
           targetType: p.targetType,
           subscriptionInvoiceId: p.subscriptionInvoiceId,
           bookingHoldId: p.bookingHoldId,
+          subscriptionCheckoutId: p.subscriptionCheckoutId,
           targetCode: p.targetCode,
           tenantId: p.tenantId,
           initiatedBy: request.actorUserId,
@@ -386,13 +408,12 @@ export class PaymentGatewayService {
     }
     /*
      * Hoá đơn thuộc PHIẾU GỘP (ADR 0083) chỉ nhận tiền qua phiếu - một phiên cổng cho riêng nó sẽ
-     * trả một nửa lượt mua. Phiếu gộp chưa có đường cổng (ADR 0058 còn Proposed), nên chặn hẳn.
+     * trả một nửa lượt mua. Phiếu có đích cổng riêng (`startSubscriptionCheckoutPayment`).
      */
     if (invoice.checkoutId) {
       throw new ConflictException({
         code: API_ERROR_CODE.PAYMENT_TARGET_NOT_PAYABLE,
-        message:
-          'Hoá đơn này thanh toán chung trong một phiếu gộp - chuyển khoản theo mã của phiếu',
+        message: 'Hoá đơn này thanh toán chung trong một phiếu gộp - thanh toán theo phiếu',
         details: { status: invoice.status, checkoutId: invoice.checkoutId },
       });
     }
@@ -409,6 +430,7 @@ export class PaymentGatewayService {
       targetType: PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE,
       subscriptionInvoiceId: invoice.id,
       bookingHoldId: null,
+      subscriptionCheckoutId: null,
       targetCode: invoice.code,
       tenantId: invoice.tenantId,
       amount: remaining,
@@ -422,6 +444,71 @@ export class PaymentGatewayService {
         withNativeFlag(
           `${this.realms.webUrlFor(ACCOUNT_REALM.PARTNER)}${PAYMENT_PAGE_PATH}/` +
             `${encodeURIComponent(invoice.id)}?${PAYMENT_RETURN_PARAM.ORDER}=${orderId}`,
+          client,
+        ),
+    };
+  }
+
+  /**
+   * Phiếu gộp nhiều gói (ADR 0083). Cùng luật hoá đơn lẻ: tenant TRONG câu truy vấn, số tiền là
+   * phần còn thiếu của CẢ phiếu, phiên kết thúc trước hạn phiếu. Phiếu còn mở mà có hoá đơn con
+   * không nhận tiền được là dữ liệu lệch - `applyCheckoutPaymentWithinTx` sẽ từ chối áp, nên không
+   * mời khách trả vào đó.
+   */
+  private async prepareSubscriptionCheckout(
+    tx: Prisma.TransactionClient,
+    now: Date,
+    tenantId: string,
+    checkoutId: string,
+    client: PaymentGatewayClient,
+  ): Promise<PreparedTarget> {
+    await this.lockTarget(tx, checkoutId);
+    const checkout = await tx.subscriptionCheckout.findFirst({
+      where: { id: checkoutId, tenantId },
+      select: {
+        id: true,
+        code: true,
+        tenantId: true,
+        status: true,
+        totalAmount: true,
+        paidAmount: true,
+        expiresAt: true,
+        invoices: { select: { status: true } },
+      },
+    });
+    if (!checkout) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy phiếu thanh toán',
+      });
+    }
+    const remaining = checkout.totalAmount.sub(checkout.paidAmount);
+    if (
+      !isSubscriptionInvoicePayable(checkout.status) ||
+      remaining.lte(0) ||
+      checkout.invoices.length === 0 ||
+      checkout.invoices.some((invoice) => !isSubscriptionInvoicePayable(invoice.status))
+    ) {
+      throw notPayable(checkout.status);
+    }
+
+    const expiresAt = capExpiry(now, checkout.expiresAt);
+    if (expiresAt.getTime() - now.getTime() < MINUTE_MS) throw notPayable(checkout.status);
+
+    return {
+      targetType: PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT,
+      subscriptionInvoiceId: null,
+      bookingHoldId: null,
+      subscriptionCheckoutId: checkout.id,
+      targetCode: checkout.code,
+      tenantId: checkout.tenantId,
+      amount: remaining,
+      orderInfo: `Thanh toan goi XePrime ${checkout.code}`,
+      expiresAt,
+      returnUrl: (orderId) =>
+        withNativeFlag(
+          `${this.realms.webUrlFor(ACCOUNT_REALM.PARTNER)}${PAYMENT_CHECKOUT_PAGE_PATH}/` +
+            `${encodeURIComponent(checkout.id)}?${PAYMENT_RETURN_PARAM.ORDER}=${orderId}`,
           client,
         ),
     };
@@ -486,6 +573,7 @@ export class PaymentGatewayService {
       targetType: PAYMENT_ORDER_TARGET.BOOKING_HOLD,
       subscriptionInvoiceId: null,
       bookingHoldId: hold.id,
+      subscriptionCheckoutId: null,
       targetCode: hold.code,
       tenantId: hold.tenantId,
       amount: remaining,
@@ -576,10 +664,16 @@ export class PaymentGatewayService {
     return this.loadDto(orderId);
   }
 
-  /** Lượt trả hoá đơn gói của gian hàng đang trong phạm vi (tenant từ membership). */
+  /** Lượt trả gói (hoá đơn lẻ hoặc phiếu gộp) của gian hàng đang trong phạm vi (tenant từ membership). */
   async orderForTenant(tenantId: string, orderId: string): Promise<PaymentOrderDto> {
     const owned = await this.prisma.paymentGatewayOrder.findFirst({
-      where: { id: orderId, targetType: PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE, tenantId },
+      where: {
+        id: orderId,
+        targetType: {
+          in: [PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE, PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT],
+        },
+        tenantId,
+      },
       select: { id: true },
     });
     if (!owned) throw orderNotFound();
@@ -937,22 +1031,23 @@ export class PaymentGatewayService {
 
         // Mã tham chiếu đi vào ghi chú hoàn tiền/audit của hàm áp - mang tên cổng để người đọc biết nguồn.
         const reference = `${order.provider}:${order.providerTxId}`;
-        const applied =
-          order.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE
-            ? fromInvoice(
-                await this.billing.applyBankPaymentWithinTx(tx, {
-                  code: order.targetCode,
-                  amount: order.paidAmount,
-                  providerTxId: reference,
-                }),
-              )
-            : fromHold(
-                await this.holds.applyBankPaymentWithinTx(tx, {
-                  code: order.targetCode,
-                  amount: order.paidAmount,
-                  providerTxId: reference,
-                }),
-              );
+        const payment = {
+          code: order.targetCode,
+          amount: order.paidAmount,
+          providerTxId: reference,
+        };
+        let applied: AppliedResult;
+        switch (order.targetType) {
+          case PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE:
+            applied = fromInvoice(await this.billing.applyBankPaymentWithinTx(tx, payment));
+            break;
+          case PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT:
+            // Cùng hàm webhook SePay gọi cho mã `XPC…` (ADR 0083 điều 3) - một đường tiền.
+            applied = fromCheckout(await this.billing.applyCheckoutPaymentWithinTx(tx, payment));
+            break;
+          default:
+            applied = fromHold(await this.holds.applyBankPaymentWithinTx(tx, payment));
+        }
         const outcome = applied.outcome;
 
         const now = new Date();
@@ -1255,6 +1350,25 @@ interface AppliedResult {
 
 function fromInvoice(result: { outcome: InvoicePaymentOutcome }): AppliedResult {
   return { outcome: invoiceOutcome(result.outcome), duplicateRefundRecorded: false };
+}
+
+function fromCheckout(result: { outcome: CheckoutPaymentOutcome }): AppliedResult {
+  return { outcome: checkoutOutcome(result.outcome), duplicateRefundRecorded: false };
+}
+
+function checkoutOutcome(outcome: CheckoutPaymentOutcome): PaymentOrderApplyOutcome {
+  switch (outcome) {
+    case 'checkout_not_found':
+      return PAYMENT_ORDER_APPLY_OUTCOME.TARGET_NOT_FOUND;
+    case 'checkout_closed':
+      return PAYMENT_ORDER_APPLY_OUTCOME.TARGET_CLOSED;
+    case 'partial':
+      return PAYMENT_ORDER_APPLY_OUTCOME.PARTIAL;
+    case 'already_paid':
+      return PAYMENT_ORDER_APPLY_OUTCOME.ALREADY_PAID;
+    case 'activated':
+      return PAYMENT_ORDER_APPLY_OUTCOME.ACTIVATED;
+  }
 }
 
 function fromHold(result: HoldPaymentOutcome): AppliedResult {

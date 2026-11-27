@@ -250,6 +250,8 @@ const SELECT = {
       customerTotalAmount: true,
       paidAmount: true,
       ownerPayableAmount: true,
+      // Phí giao xe tận nơi — chủ xe sửa được trên đơn sau lượt duyệt, nên đọc cột của ĐƠN.
+      deliveryFee: true,
     },
   },
 } satisfies Prisma.BookingRequestSelect;
@@ -604,7 +606,8 @@ export class BookingRequestsService {
      * Thiết lập THEO XE (08/09/2026) — kiểm ở SERVER, giao diện chỉ là preview:
      *   - giờ nhận/trả phải rơi vào khung giờ giao nhận chủ xe đặt (dài hạn: kiểm lúc duyệt);
      *   - thời lượng tối thiểu của chuyến có tài xế;
-     *   - chủ xe bắt buộc đồng ý điều khoản thì payload phải tích.
+     *   - gian hàng bắt buộc đồng ý điều khoản (theo nhóm dịch vụ - ADR 0112 điều 3) thì payload
+     *     phải tích.
      * Điều kiện tại thời điểm này được ĐÓNG BĂNG vào yêu cầu — chủ xe đổi sau không viết lại.
      */
     const setting = await this.settings.serviceSettingFor(
@@ -623,6 +626,7 @@ export class BookingRequestsService {
       serviceType,
       dto.acceptedTerms === true ? new Date() : null,
     );
+    this.settings.assertRentalTermsAccepted(rentalTerms, dto.acceptedTerms === true);
     /*
      * Ứng viên tự động nhận: dịch vụ theo ngày và xe đang bật. Quyết định thật nằm ở
      * `tryAutoAccept` SAU khi yêu cầu đã tồn tại — ở đây chỉ để biết thông báo "có yêu cầu mới"
@@ -1161,7 +1165,7 @@ export class BookingRequestsService {
         returnAt: schedule.returnAt,
         quoteIsEstimate: breakdown.estimateNote != null,
         holdRequired: Boolean(fees?.holdAmount),
-        termsAccepted: !setting.requireTermsAcceptance || terms?.termsAcceptedAt != null,
+        termsAccepted: !terms?.requireTermsAcceptance || terms.termsAcceptedAt != null,
       });
       if (blocker) {
         await this.recordAutoAcceptSkip(tenantId, id, blocker);
@@ -1304,6 +1308,8 @@ export class BookingRequestsService {
           ? {
               isEstimate: true,
               rentalTotal: estimate.breakdown.totalAmount,
+              // Chủ xe nhập phí giao NGAY ở hộp duyệt — chưa duyệt thì chưa có con số nào.
+              deliveryFee: null,
               customerTotalAmount:
                 estimate.fees?.customerTotalAmount ?? estimate.breakdown.totalAmount,
               paidAmount: null,
@@ -1413,6 +1419,7 @@ export class BookingRequestsService {
       return {
         isEstimate: false,
         rentalTotal,
+        deliveryFee: r.booking.deliveryFee.toFixed(0),
         customerTotalAmount,
         paidAmount,
         // Chỉ có ý nghĩa khi đơn thật sự có phụ phí (billingMode khác null) — đơn ngoài luồng
@@ -1433,6 +1440,9 @@ export class BookingRequestsService {
       return {
         isEstimate: false,
         rentalTotal,
+        // Phí giao đóng băng lúc duyệt — dòng `delivery` của snapshot (`fees.deliveryAmount` là
+        // cùng con số, nhưng snapshot trước 21/10/2026 không có trường đó).
+        deliveryFee: rowAmount(snapshot.rows, 'delivery'),
         customerTotalAmount: snapshot.fees?.customerTotalAmount ?? rentalTotal,
         paidAmount: r.hold.paidAmount.toFixed(0),
         remainingAmount: snapshot.fees?.payAtPickupAmount ?? null,

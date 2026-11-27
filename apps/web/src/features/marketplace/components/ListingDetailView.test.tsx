@@ -292,7 +292,7 @@ describe('ListingDetailView - điều kiện thuê công bố', () => {
     driverSurchargeRules: [],
   } as unknown as PublicListingDetail;
 
-  it('tự lái: hiện giấy tờ, cách đối chiếu, điều khoản và nhãn Tự động duyệt', async () => {
+  it('tự lái: hiện giấy tờ + cách đối chiếu chuẩn nền tảng, điều khoản gian hàng và nhãn Tự động duyệt', async () => {
     renderWithIntl(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
     fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ thuê xe' }));
 
@@ -301,9 +301,12 @@ describe('ListingDetailView - điều kiện thuê công bố', () => {
     expect(
       screen.getByText(
         (_, el) =>
-          el?.tagName === 'SPAN' && /Giấy tờ cần có: Giấy phép lái xe/.test(el.textContent ?? ''),
+          el?.tagName === 'SPAN' &&
+          /Giấy tờ cần có: CMND\/CCCD còn hạn hoặc Hộ chiếu còn hạn/.test(el.textContent ?? ''),
       ),
     ).toBeTruthy();
+    // Luật chuẩn nền tảng (ADR 0112 điều 3), không theo giấy tờ chủ xe khai.
+    expect(screen.getByText('Đối chiếu qua VNeID hoặc bản gốc trực tiếp')).toBeTruthy();
     // "Đặt ngay" hiện cho khách dưới nhãn "Tự động duyệt" (Figma, 04/11/2026).
     expect(screen.getByText('Tự động duyệt')).toBeTruthy();
     expect(screen.getByText('Không hút thuốc trong xe.')).toBeTruthy();

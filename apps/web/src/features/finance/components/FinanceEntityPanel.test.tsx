@@ -6,13 +6,13 @@ import type { FinanceSummary } from '../types';
 import { FinanceEntityPanel } from './FinanceEntityPanel';
 
 /**
- * Khối tiền nhúng trong hồ sơ một chiếc xe / một khách.
+ * Khối tiền nhúng trong hồ sơ một khách (hồ sơ xe có tab riêng - `VehicleFinanceTab`).
  *
  * Ba điều phải sống sót:
- *  1. **Phạm vi đi xuống tận truy vấn.** Panel ở hồ sơ xe A không được hỏi một câu không mang
- *     `vehicleId` — nếu không nó sẽ vẽ doanh thu của cả gian hàng lên hồ sơ một chiếc xe.
- *  2. **Bộ số khác nhau theo loại thực thể.** Khách không có "Chi phí"/"Lợi nhuận": chi phí gian
- *     hàng không gắn vào khách, nên hai ô đó chỉ là số 0 giả vờ mang thông tin.
+ *  1. **Phạm vi đi xuống tận truy vấn.** Panel ở hồ sơ khách A không được hỏi một câu không mang
+ *     `tenantCustomerId` — nếu không nó sẽ vẽ doanh thu của cả gian hàng lên hồ sơ một khách.
+ *  2. **Bộ số của khách.** Khách không có "Chi phí"/"Lợi nhuận": chi phí gian hàng không gắn vào
+ *     khách, nên hai ô đó chỉ là số 0 giả vờ mang thông tin.
  *  3. **Đường ra sổ mang đúng kỳ và chỉ kỳ** — `granularity` là chuyện của biểu đồ, sổ không hiểu.
  */
 
@@ -24,7 +24,7 @@ const nav = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
-  usePathname: () => '/manage/vehicles/v1',
+  usePathname: () => '/manage/customers/c1',
   useSearchParams: () => nav.params,
 }));
 
@@ -92,77 +92,16 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('FinanceEntityPanel - hồ sơ xe', () => {
-  it('phạm vi xe đi xuống CẢ hai truy vấn', () => {
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
-
-    expect(queries.summaryScope).toEqual({ vehicleId: 'v1' });
-    expect(queries.seriesScope).toEqual({ vehicleId: 'v1' });
-  });
-
-  it('xe hiện doanh thu · chi phí · lợi nhuận · số chuyến', () => {
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
-
-    const panel = screen.getByRole('region', { name: 'Tiền của xe này' });
-    expect(within(panel).getByText('18.400.000 ₫')).toBeTruthy();
-    expect(within(panel).getByText('2.100.000 ₫')).toBeTruthy();
-    expect(within(panel).getByText('16.300.000 ₫')).toBeTruthy();
-    expect(within(panel).getByText(/^Biên 88[.,]6%$/)).toBeTruthy();
-    expect(within(panel).getByText('12')).toBeTruthy();
-  });
-
-  it('nói rõ lợi nhuận này chưa trừ khấu hao / lãi vay', () => {
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
-    expect(screen.getByText(/chưa trừ khấu hao/i)).toBeTruthy();
-  });
-
-  it('đường ra sổ mang phạm vi + kỳ + đã duyệt, KHÔNG mang độ mịn biểu đồ', () => {
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
-
-    const href = screen.getByText('Xem trên sổ Thu-Chi').getAttribute('href') ?? '';
-    expect(href).toContain('vehicleId=v1');
-    expect(href).toContain('status=approved');
-    expect(href).toContain('from=2026-08-01');
-    expect(href).toContain('to=2026-08-31');
-    expect(href).not.toContain('granularity');
-  });
-
-  /*
-   * Lối GHI, đứng cạnh lối ĐỌC.
-   *
-   * Phí rửa xe / vá lốp / gửi bãi không thuộc chuyến nào, nên trước đây chúng không có đường vào
-   * từ hồ sơ xe. Hai khẳng định quan trọng ở đây: link mang `create=1` (mở sẵn form), và KHÔNG
-   * mang kỳ đang xem — phiếu sắp ghi mặc định là hôm nay, kéo `from`/`to` sang sẽ mở ra một sổ
-   * không chứa chính phiếu vừa tạo.
-   */
-  it('có quyền ghi: lối tạo phiếu mang xe + cờ mở form, KHÔNG mang kỳ đang xem', () => {
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" canCreateReceipt />);
-
-    const href = screen.getByText('Tạo phiếu thu/chi').getAttribute('href') ?? '';
-    expect(href).toContain('vehicleId=v1');
-    expect(href).toContain('create=1');
-    expect(href).not.toContain('from=');
-    expect(href).not.toContain('status=');
-  });
-
-  it('không có quyền ghi: chỉ còn lối đọc sổ', () => {
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
-
-    expect(screen.queryByText('Tạo phiếu thu/chi')).toBeNull();
-    expect(screen.getByText('Xem trên sổ Thu-Chi')).toBeTruthy();
-  });
-});
-
 describe('FinanceEntityPanel - hồ sơ khách', () => {
   // Một khoản thu/chi gắn thẳng vào KHÁCH không tồn tại trong sổ — tiền của khách luôn đi qua
-  // một chuyến, nên lối ghi không có nghĩa ở đây kể cả khi người xem đủ quyền.
-  it('khách KHÔNG có lối tạo phiếu, kể cả khi đủ quyền', () => {
-    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} kind="customer" canCreateReceipt />);
+  // một chuyến, nên lối ghi không có nghĩa ở đây.
+  it('khách KHÔNG có lối tạo phiếu', () => {
+    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} />);
     expect(screen.queryByText('Tạo phiếu thu/chi')).toBeNull();
   });
 
   it('khách hiện doanh thu · còn nợ · số chuyến, KHÔNG hiện chi phí/lợi nhuận', () => {
-    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} kind="customer" />);
+    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} />);
 
     const panel = screen.getByRole('region', { name: 'Doanh thu từ khách này' });
     expect(within(panel).getByText('18.400.000 ₫')).toBeTruthy();
@@ -173,12 +112,12 @@ describe('FinanceEntityPanel - hồ sơ khách', () => {
   });
 
   it('nói rõ con số này khác "Tổng giá trị thuê" ở đầu hồ sơ', () => {
-    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} kind="customer" />);
+    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} />);
     expect(screen.getByText(/Tổng giá trị thuê/)).toBeTruthy();
   });
 
   it('phạm vi khách đi xuống truy vấn', () => {
-    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} kind="customer" />);
+    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} />);
     expect(queries.summaryScope).toEqual({ tenantCustomerId: 'c1' });
   });
 });
@@ -187,16 +126,9 @@ describe('FinanceEntityPanel - trạng thái', () => {
   it('lỗi tải thẻ tổng: báo lỗi thay vì hiện số rỗng như thật', () => {
     queries.summary.data = undefined;
     queries.summary.isError = true;
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
+    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} />);
 
     expect(screen.getByText('Không tải được số liệu')).toBeTruthy();
     expect(screen.queryByText('Doanh thu')).toBeNull();
-  });
-
-  it('chưa có doanh thu ⇒ biên là câu giải thích, không phải 0%', () => {
-    queries.summary.data = summary({ revenue: '0', profit: '0', profitMarginPercent: null });
-    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
-
-    expect(screen.getByText('Chưa có doanh thu để tính biên')).toBeTruthy();
   });
 });

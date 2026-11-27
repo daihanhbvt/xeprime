@@ -1,4 +1,8 @@
+import { dismissKeyboardFirst } from '@/lib/dismiss-keyboard-first';
+import { usePathname } from 'expo-router';
 import {
+  Fragment,
+  isValidElement,
   useCallback,
   useEffect,
   useId,
@@ -50,6 +54,7 @@ import { useAppStyles } from '@/theme/styles';
 import { useAppScheme, useColors, useFloatingSurfaceBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import { LineIcon } from '@/components/icons/LineIcon';
+import { IS_PARTNER_APP } from '@/lib/app-kind';
 
 /** Tấm trượt trồi lên bằng lò xo (luồng UI). Tôn trọng "Giảm chuyển động". */
 const sheetEntering = SlideInDown.springify()
@@ -131,6 +136,8 @@ interface BottomSheetProps {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /** Phần tử nhỏ đặt SÁT sau chữ tiêu đề (v2) - vd dấu (!) giải thích. */
+  titleAdornment?: ReactNode;
   /** Dòng phụ dưới tiêu đề - chuỗi, hoặc node khi cần chữ đậm (`t.rich`) như câu dẫn của tấm quyết định. */
   subtitle?: ReactNode;
   children: ReactNode;
@@ -175,9 +182,32 @@ interface BottomSheetProps {
    * của tấm biểu mẫu `24145:96205`). Menu mục (`ManageSectionSheet`) không có vạch nên mặc định tắt.
    */
   headerDivider?: boolean;
+  /** Chỉ với `chrome="v2"`: một thao tác nhỏ đứng trước nút ✕ (vd link "Đọc tất cả" của tấm Thông báo). */
+  headerAction?: ReactNode;
+  /**
+   * Đổi giá trị (khác rỗng) ⇒ cuộn xuống CUỐI nội dung sau lượt vẽ kế tiếp - khi một khối vừa mở
+   * ra ở đáy tấm (thẻ "Thêm danh mục mới") mà người dùng phải thấy ngay, không phải tự cuộn tìm.
+   */
+  scrollToEndKey?: string | number | false | null;
 }
 
-export function BottomSheet(props: BottomSheetProps) {
+export function BottomSheet(rawProps: BottomSheetProps) {
+  /*
+   * Tấm trượt ĐÓNG (hoặc bị gỡ) khi ô nhập bên trong còn tiêu điểm thì Android để bàn phím lại - cất nó
+   * ở đây cho MỌI tấm (người dùng 25/11/2026). Cleanup chạy đúng lúc `open` chuyển true → false hoặc
+   * tấm unmount; `Keyboard.dismiss()` no-op khi không có bàn phím.
+   */
+  useEffect(() => {
+    if (!rawProps.open) return undefined;
+    return () => Keyboard.dismiss();
+  }, [rawProps.open]);
+  /*
+   * Màn chứa tấm KHÔNG còn trên cùng (vd bấm "Chính sách huỷ" trong tấm duyệt ⇒ sang màn chính
+   * sách) ⇒ tấm TẠM ẨN, quay lại thì hiện lại nguyên trạng. Tấm vẽ ở host phủ trên cả ngăn xếp,
+   * nên không ẩn thì nó đè lên màn mới (người dùng 20/11/2026). Không gọi `onClose`.
+   */
+  const screenFocused = useHostScreenFocused(rawProps.open);
+  const props = screenFocused || !rawProps.open ? rawProps : { ...rawProps, open: false };
   const { open, onClose, dismissable = true, presentation = 'portal' } = props;
   const portal = useSheetPortal();
   /* Mở từ BÊN TRONG một tấm khác (vd. ô chọn trong tấm Từ chối) ⇒ level lớn hơn ⇒ vẽ trên tấm đó. */
@@ -233,14 +263,19 @@ function SheetSurface({
   onClose,
   title,
   subtitle,
+  titleAdornment,
   children,
   footer,
   maxRatio = 0.9,
   padded = true,
   dismissable = true,
   scroll = true,
-  chrome = 'default',
-  headerDivider = false,
+  // App Partner: MỌI tấm theo Figma (tấm Thông báo `24512:124878`, người dùng chốt 20/11/2026) -
+  // bo 16, tay nắm 48, tiêu đề 18/28 semibold, ✕ 24 xám, vạch dưới đầu tấm.
+  chrome = IS_PARTNER_APP ? 'v2' : 'default',
+  headerDivider = IS_PARTNER_APP,
+  headerAction,
+  scrollToEndKey,
   mode,
   sheetId,
 }: BottomSheetProps & { mode: SheetMode; sheetId: string }) {
@@ -273,6 +308,12 @@ function SheetSurface({
    */
   const scroller = useRef<ScrollView>(null);
   const scrollY = useRef(0);
+  /* Chờ nội dung đổi cỡ (khối mới đã vẽ) rồi mới cuộn - cuộn ngay thì đáy cũ chưa dài ra. */
+  const pendingScrollEnd = useRef(false);
+  useEffect(() => {
+    if (!scrollToEndKey) return;
+    pendingScrollEnd.current = true;
+  }, [scrollToEndKey]);
   const revealOnFocus = useCallback(() => {
     if (keyboardHeight <= 0) return;
     requestAnimationFrame(() => {
@@ -337,6 +378,8 @@ function SheetSurface({
   }, [layered, mode, portal, sheetId, open, dismissable, onClose]);
 
   const lifted = keyboardHeight > 0;
+  // Chạm ra ngoài khi bàn phím mở = cất bàn phím trước (quy tắc chung `dismissKeyboardFirst`).
+  const onScrimPress = dismissKeyboardFirst(onClose);
   const available = height - keyboardHeight;
   const ceiling = available * maxRatio;
 
@@ -344,11 +387,18 @@ function SheetSurface({
       <View style={layered ? appStyles.overlayFill : appStyles.fill} accessibilityViewIsModal>
         <FocusRevealProvider reveal={revealOnFocus}>
           <KeyboardHoldProvider value={keyboardHold}>
+            {/*
+              Lớp phủ tối PHỦ TRỌN khung (kể cả phía sau tấm), không chỉ phần phía trên: chỗ khuyết
+              của góc bo 16 phải là màu phủ, không lộ "tai" sáng của màn bên dưới (Figma tấm Thông
+              báo, người dùng bắt lỗi 20/11/2026). Khoảng trống đẩy tấm xuống đáy không nhận chạm
+              nên chạm ra ngoài vẫn rơi vào lớp phủ.
+            */}
+            <View style={StyleSheet.absoluteFill}>
             {layered ? (
               <Animated.View style={appStyles.fill} entering={scrimEntering} exiting={scrimExiting}>
                 <Pressable
                   style={appStyles.scrim}
-                  onPress={dismissable ? onClose : undefined}
+                  onPress={dismissable ? onScrimPress : undefined}
                   accessibilityRole="button"
                   accessibilityLabel={t('close')}
                 />
@@ -356,11 +406,13 @@ function SheetSurface({
             ) : (
               <Pressable
                 style={appStyles.scrim}
-                onPress={dismissable ? onClose : undefined}
+                onPress={dismissable ? onScrimPress : undefined}
                 accessibilityRole="button"
                 accessibilityLabel={t('close')}
               />
             )}
+            </View>
+            <View style={appStyles.fill} pointerEvents="none" />
             {/* Màn rộng (iPad): tấm trượt có trần bề rộng và nằm giữa, như một hộp thoại. */}
             <Animated.View
               entering={sheetEntering}
@@ -392,9 +444,8 @@ function SheetSurface({
               bg={colors.surface}
               borderTopLeftRadius={v2 ? radius.card : radius.lg}
               borderTopRightRadius={v2 ? radius.card : radius.lg}
-              borderTopWidth={1}
-              borderColor={colors.borderSubtle}
-              {...floatingBorder}
+              // v2 (Figma tấm Thông báo): KHÔNG viền - mép tấm chỉ là nền trắng trên lớp phủ tối.
+              {...(v2 ? {} : { borderTopWidth: 1, borderColor: colors.borderSubtle, ...floatingBorder })}
               ov="hidden"
               /*
             Lề đáy có SÀN, không chỉ là safe-area inset.
@@ -426,22 +477,33 @@ function SheetSurface({
                     : null)}
                 >
                   <YStack f={1} gap={2}>
-                    <Text
-                      col={colors.text}
-                      fos={typeScale.heading.fontSize}
-                      lh={typeScale.heading.lineHeight}
-                      fow={fontWeight.semibold}
-                      accessibilityRole="header"
-                    >
-                      {title}
-                    </Text>
-                    {subtitle ? (
-                      // Figma: 14/22 `text/gray/low`.
-                      <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={V2_SUBTITLE_LH}>
-                        {subtitle}
+                    <XStack ai="center" gap={space.xs}>
+                      <Text
+                        col={colors.text}
+                        fos={typeScale.heading.fontSize}
+                        lh={typeScale.heading.lineHeight}
+                        fow={fontWeight.semibold}
+                        accessibilityRole="header"
+                        flexShrink={1}
+                      >
+                        {title}
                       </Text>
+                      {titleAdornment}
+                    </XStack>
+                    {subtitle ? (
+                      !isValidElement(subtitle) || subtitle.type === Fragment ? (
+                        // Figma: 14/22 `text/gray/low`.
+                        <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={V2_SUBTITLE_LH}>
+                          {subtitle}
+                        </Text>
+                      ) : (
+                        // MỘT phần tử dựng sẵn (khối nhiều dòng, có chip...) - nơi gọi lo kiểu chữ, không bọc `Text`.
+                        // Chuỗi / mảng `t.rich` vẫn đi nhánh `Text` ở trên (chữ trần ngoài `Text` là crash).
+                        subtitle
+                      )
                     ) : null}
                   </YStack>
+                  {headerAction ? <YStack minHeight={V2_CLOSE} jc="center">{headerAction}</YStack> : null}
                   {dismissable ? (
                     <Pressable
                       onPress={onClose}
@@ -449,7 +511,7 @@ function SheetSurface({
                       accessibilityLabel={t('close')}
                       hitSlop={space.md}
                     >
-                      <LineIcon name="close" size={V2_CLOSE} color={colors.textMuted} />
+                      <LineIcon name="close" size={V2_CLOSE} color={colors.placeholder} />
                     </Pressable>
                   ) : null}
                 </XStack>
@@ -488,6 +550,11 @@ function SheetSurface({
                     scrollY.current = event.nativeEvent.contentOffset.y;
                   }}
                   scrollEventThrottle={SCROLL_REPORT_MS}
+                  onContentSizeChange={() => {
+                    if (!pendingScrollEnd.current) return;
+                    pendingScrollEnd.current = false;
+                    scroller.current?.scrollToEnd({ animated: true });
+                  }}
                 >
                   {children}
                 </ScrollView>
@@ -532,3 +599,15 @@ const V2_CLOSE = 24;
 const V2_BOTTOM_PAD = 20;
 const V2_BODY_GAP = 12;
 const V2_SUBTITLE_LH = 22;
+
+/**
+ * Màn mở tấm còn là màn đang hiện? So ĐƯỜNG DẪN lúc mở với đường dẫn hiện tại (`usePathname` chạy
+ * được ở mọi chỗ, kể cả ngoài một màn). Đóng tấm thì quên mốc.
+ */
+function useHostScreenFocused(open: boolean): boolean {
+  const pathname = usePathname();
+  const openedAt = useRef<string | null>(null);
+  if (!open) openedAt.current = null;
+  else if (openedAt.current === null) openedAt.current = pathname;
+  return openedAt.current === null || openedAt.current === pathname;
+}

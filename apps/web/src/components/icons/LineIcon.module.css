@@ -231,6 +231,19 @@
   mask-image: url('/icons/menu/rotate-right.svg');
 }
 
+/* Ô chọn + popup bảo hiểm MIC (Figma `22548:36923`): khiên tích 24px, mũi tên "Xem quyền lợi" 16px. */
+.shield-tick {
+  mask-image: url('/icons/menu/shield-tick.svg');
+}
+
+.arrow-down {
+  mask-image: url('/icons/menu/arrow-down.svg');
+}
+
+.arrow-up {
+  mask-image: url('/icons/menu/arrow-up.svg');
+}
+
 /* Trang Tài khoản & bảo mật (design `24131:71661`): máy ảnh 16px, bút sửa / thùng rác 20px, thư 24px. */
 .camera {
   mask-image: url('/icons/menu/camera.svg');

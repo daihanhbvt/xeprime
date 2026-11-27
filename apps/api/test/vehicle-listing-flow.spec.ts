@@ -753,7 +753,8 @@ describe('Hạn mức quãng đường', () => {
       source: POLICY_SOURCE.VEHICLE,
       policy: {
         ...basePolicy,
-        collateralMode: COLLATERAL_MODE.CASH,
+        collateralMode: COLLATERAL_MODE.REQUIRED,
+        collateralCashEnabled: true,
         depositAmount: '5000000',
         overtimeFeePerHour: '100000',
       },

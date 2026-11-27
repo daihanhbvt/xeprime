@@ -142,6 +142,9 @@ export function notificationDeepLink(
       // `targetId` của review là id ĐÁNH GIÁ, không phải id chuyến — dừng ở danh sách.
       case NOTIFICATION_TARGET_TYPE.REVIEW:
         return '/trips';
+      // Rút tiền Ví điểm (đã chuyển / từ chối / đảo) - màn Số dư của tài khoản (web, #304).
+      case NOTIFICATION_TARGET_TYPE.WITHDRAWAL:
+        return '/account/balance';
       /*
        * Hai loại dưới chỉ tới được với người CÓ gian hàng, nên chúng chỉ có đích ở bề mặt
        * `owner`. Khách thuê thuần không bao giờ nhận chúng; trả `null` ở đó là ĐÚNG, không phải
@@ -172,6 +175,8 @@ export function notificationDeepLink(
       return '/manage/shop';
     case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
       return '/manage/drivers';
+    case NOTIFICATION_TARGET_TYPE.WITHDRAWAL:
+      return '/manage/balance';
     default:
       return null;
   }

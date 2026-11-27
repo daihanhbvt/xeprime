@@ -43,6 +43,7 @@
     "accountEmpty": "Thêm tài khoản nhận tiền",
     "addAccount": "Thêm tài khoản nhận",
     "commitment": "XePrime chuyển trong tối đa {days} ngày làm việc kể từ khi duyệt.",
+    "policyLink": "Điều kiện rút tiền xem tại <policy>Chính sách thanh toán và Ví điểm</policy>.",
     "submit": "Gửi yêu cầu rút",
     "created": "Đã gửi yêu cầu rút. XePrime sẽ chuyển trong thời gian cam kết.",
     "cancelled": "Đã huỷ yêu cầu rút.",
@@ -58,6 +59,7 @@
     "cancel": "Huỷ yêu cầu",
     "cancelConfirm": "Huỷ yêu cầu rút này?",
     "cancelHint": "Tiền quay lại số dư rút được ngay.",
+    "cancelAsk": "Bạn có chắc chắn muốn huỷ yêu cầu rút tiền này không?",
     "reversed": "Chuyển không thành công: {reason}. Tiền đã về lại số dư - kiểm tra tài khoản nhận rồi tạo lệnh mới."
   },
   "admin": {
@@ -145,7 +147,7 @@
     "loadError": "Không tải được bảng tổng hợp.",
     "totalLabel": "{count, plural, other {# chuyến}}",
     "stats": {
-      "rating": "{count, plural, =0 {Chưa có đánh giá} other {Đánh giá sao (# lượt)}}",
+      "rating": "Đánh giá ({count} lượt)",
       "trips": "Chuyến thành công",
       "tripsValue": "{count, plural, other {# chuyến}}",
       "response": "Tỉ lệ phản hồi",
@@ -186,7 +188,10 @@
       "ownerIncomeGeneric": "Thu nhập",
       "appSubscriptionFee": "Phí quản lý & vận hành nền tảng",
       "appOwnerIncomeHint": "Doanh thu cho thuê xe trừ phí dịch vụ - chủ xe, thuế khấu trừ và phí nền tảng - gồm cả phần khách trả trực tiếp, không gồm phí giao xe."
-    }
+    },
+    "unitPerDay": "/ngày",
+    "unitPerMonth": "/tháng",
+    "toggle": "Mở hoặc thu gọn chuyến {code}"
   },
   "pill": {
     "label": "Số dư",

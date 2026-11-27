@@ -1,5 +1,13 @@
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useController, useForm } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -31,6 +39,13 @@ import { generateStaffPassword } from '../staff-password';
 import { BranchScopePicker } from './BranchScopePicker';
 import { StaffCredentials } from './StaffCredentials';
 
+/** Khoảng cách giữa các ô của form (Figma "Filter Form" `24232:114790`: gap 12). */
+const FIELD_GAP = 12;
+
+interface FormHandle {
+  submit: () => void;
+}
+
 interface Created {
   name: string;
   username: string;
@@ -46,10 +61,16 @@ interface Created {
  * đăng nhập để chủ sao chép gửi nhân viên, rồi mới bấm "Xong". Vai trong ô chọn lọc theo người tạo
  * (`invitableTenantRoles`): quản lý chỉ cấp được vai Nhân viên; server là chốt thật
  * (`MEMBER_ROLE_NOT_INVITABLE`).
+ *
+ * Khuôn tấm theo Figma "Mời thành viên" (`24232:114790`, người dùng chốt 26/11/2026 giữ luồng CẤP
+ * tài khoản, chỉ lấy giao diện): đầu tấm v2 + vạch, các ô cách 12, chân tấm cố định "Huỷ" + nút vàng.
  */
 export function StaffAccountSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations('Members');
+  const tActions = useTranslations('Common.actions');
   const [created, setCreated] = useState<Created | null>(null);
+  const [pending, setPending] = useState(false);
+  const formRef = useRef<FormHandle>(null);
   /*
    * Đóng tấm khi lượt tạo còn đang chạy thì `onSuccess` về SAU — không được ghi `created` lúc đó,
    * không thì lần mở sau hiện tên + mật khẩu của người trước (web dọn khi tấm mở lại).
@@ -74,36 +95,57 @@ export function StaffAccountSheet({ open, onClose }: { open: boolean; onClose: (
       onClose={finish}
       title={created ? t('staff.created.title') : t('staff.title')}
       {...(created ? {} : { subtitle: t('staff.subtitle') })}
+      footer={
+        created ? (
+          <Button variant="gradient" label={t('staff.created.done')} onPress={finish} />
+        ) : (
+          <XStack gap={space.sm}>
+            <YStack flexShrink={0}>
+              <Button
+                label={tActions('cancel')}
+                variant="secondary"
+                disabled={pending}
+                onPress={finish}
+              />
+            </YStack>
+            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <Button
+                variant="gradient"
+                label={t('staff.submit')}
+                loading={pending}
+                onPress={() => formRef.current?.submit()}
+              />
+            </YStack>
+          </XStack>
+        )
+      }
     >
       {open ? (
         created ? (
-          <YStack gap={space.md}>
-            <StaffCredentials
-              name={created.name}
-              username={created.username}
-              password={created.password}
-              body={t('staff.created.body', { name: created.name })}
-            />
-            <Button label={t('staff.created.done')} onPress={finish} />
-          </YStack>
+          <StaffCredentials
+            name={created.name}
+            username={created.username}
+            password={created.password}
+            body={t('staff.created.body', { name: created.name })}
+          />
         ) : (
           // Form chỉ mount khi tấm mở ⇒ mỗi lần mở là một tài khoản mới + một mật khẩu ngẫu nhiên mới.
-          <StaffAccountForm onDone={finish} onCreated={onCreated} />
+          <StaffAccountForm ref={formRef} onCreated={onCreated} onPendingChange={setPending} />
         )
       ) : null}
     </BottomSheet>
   );
 }
 
-function StaffAccountForm({
-  onDone,
-  onCreated,
-}: {
-  onDone: () => void;
-  onCreated: (created: Created) => void;
-}) {
+const StaffAccountForm = forwardRef<
+  FormHandle,
+  {
+    onCreated: (created: Created) => void;
+    /** Lượt tạo đang chạy - chân tấm (ở tấm cha) khoá nút theo nó. */
+    onPendingChange: (pending: boolean) => void;
+  }
+>(function StaffAccountForm({ onCreated, onPendingChange }, ref) {
   const t = useTranslations('Members');
-  const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -188,6 +230,12 @@ function StaffAccountForm({
     [domainLabel, invitable, t],
   );
 
+  useEffect(() => {
+    onPendingChange(create.isPending);
+  }, [create.isPending, onPendingChange]);
+  // Rời form (tạo xong / đóng tấm) thì chân tấm không còn "đang tạo".
+  useEffect(() => () => onPendingChange(false), [onPendingChange]);
+
   const submit = handleSubmit((values) => {
     if (create.isPending) return;
     create.mutate(
@@ -213,8 +261,10 @@ function StaffAccountForm({
     );
   });
 
+  useImperativeHandle(ref, () => ({ submit: () => void submit() }), [submit]);
+
   return (
-    <YStack gap={space.md}>
+    <YStack gap={FIELD_GAP}>
       <TextField
         control={control}
         name="displayName"
@@ -277,28 +327,10 @@ function StaffAccountForm({
         label={t('staff.contactPhone')}
         placeholder={t('staff.contactPhonePlaceholder')}
         hint={t('staff.contactPhoneHelp')}
+        hintInLabel
         keyboardType="phone-pad"
         autoComplete="tel"
       />
-
-      <XStack gap={space.sm}>
-        <YStack flexShrink={0}>
-          <Button
-            label={tActions('close')}
-            variant="ghost"
-            disabled={create.isPending}
-            onPress={onDone}
-          />
-        </YStack>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-          <Button
-            label={t('staff.submit')}
-            icon="person-add-outline"
-            loading={create.isPending}
-            onPress={() => void submit()}
-          />
-        </YStack>
-      </XStack>
     </YStack>
   );
-}
+});

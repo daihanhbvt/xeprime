@@ -1,8 +1,15 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { absoluteMoney, isNegativeMoney, isZeroMoney } from '@xeprime/domain';
-import { COLLATERAL_MODE, PRICE_ROW, type CollateralMode } from '@xeprime/types';
+import {
+  absoluteMoney,
+  isNegativeMoney,
+  isZeroMoney,
+  normalizeCollateral,
+  type CollateralLike,
+} from '@xeprime/domain';
+import { COLLATERAL_MODE, PRICE_ROW } from '@xeprime/types';
+import { useDescribeCollateral } from '@/features/rental-policies/collateral-text';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { PublicQuote } from '@/features/rental-policies/types';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -26,9 +33,18 @@ export type CustomerCostBreakdown = Pick<
 };
 
 export interface CustomerDepositView {
-  mode: CollateralMode;
-  /** Số tiền khi cọc bằng TIỀN; hình thức khác thì `null` và nơi vẽ hiện tên hình thức. */
-  amount: string | null;
+  /** Miễn thế chấp. */
+  none: boolean;
+  /**
+   * Chữ đứng ở cột số tiền: chỉ cọc tiền ⇒ số tiền; còn lại ⇒ câu `describeCollateral` ("Cọc tiền X
+   * hoặc Cọc tài sản (…)", "Miễn thế chấp" - ADR 0112).
+   */
+  display: string;
+  /**
+   * `display` là một CÂU (cọc tài sản / kết hợp / miễn), không phải số tiền - dòng "nhãn ... giá trị"
+   * phải xếp chồng để câu xuống dòng thay vì ép nhãn thành cột chữ dọc.
+   */
+  textual: boolean;
   /** Câu giải thích dưới dòng cọc. */
   note: string;
 }
@@ -60,6 +76,7 @@ export function useCustomerCostView({
   const t = useTranslations('BookingRequests.flow');
   const tCommon = useTranslations('Common');
   const dl = useDomainLabel();
+  const describeCollateral = useDescribeCollateral();
   const fmt = useAppFormat();
 
   /** Số âm (dòng giảm) viết bằng dấu trừ thật — `-` của chuỗi trên dây đọc như gạch nối. */
@@ -100,35 +117,51 @@ export function useCustomerCostView({
    * (chính sách hiệu lực của chuyến này), rồi tới hồ sơ xe. Không có gì để nói thì KHÔNG vẽ dòng —
    * không bao giờ một con số mặc định.
    */
-  const collateral = listing?.collateral ?? null;
+  const listed = listing?.collateral ?? null;
   const quotedDeposit =
     breakdown?.depositAmount && !isZeroMoney(breakdown.depositAmount)
       ? breakdown.depositAmount
       : null;
-  const depositMode: CollateralMode | null =
-    listing?.noCollateral || collateral?.mode === COLLATERAL_MODE.NONE
-      ? COLLATERAL_MODE.NONE
-      : (collateral?.mode ?? (quotedDeposit ? COLLATERAL_MODE.CASH : null));
-  const depositAmount =
-    quotedDeposit ??
-    (collateral && !isZeroMoney(collateral.depositAmount) ? collateral.depositAmount : null);
+  /*
+   * Cọc kết hợp (ADR 0112): hình thức từ hồ sơ xe; số tiền cọc ưu tiên báo giá. Hồ sơ xe vắng mà báo
+   * giá có số cọc ⇒ cọc tiền.
+   */
+  const collateralInput: CollateralLike | null =
+    listing?.noCollateral || listed?.mode === COLLATERAL_MODE.NONE
+      ? { mode: COLLATERAL_MODE.NONE }
+      : listed
+        ? {
+            mode: listed.mode,
+            cashEnabled: listed.cashEnabled,
+            assetEnabled: listed.assetEnabled,
+            combination: listed.combination,
+            assetTypes: listed.assetTypes,
+            depositAmount: quotedDeposit ?? listed.depositAmount,
+          }
+        : quotedDeposit
+          ? { mode: COLLATERAL_MODE.REQUIRED, cashEnabled: true, depositAmount: quotedDeposit }
+          : null;
+  const normalized = normalizeCollateral(collateralInput);
+  const collateralText = describeCollateral(collateralInput);
+  const cashOnly = normalized != null && normalized.cash && !normalized.asset;
   const deposit: CustomerDepositView | null =
-    depositMode === COLLATERAL_MODE.NONE ||
-    depositMode === COLLATERAL_MODE.ASSET ||
-    (depositMode === COLLATERAL_MODE.CASH && depositAmount != null)
+    normalized && collateralText && (!cashOnly || normalized.depositAmount != null)
       ? {
-          mode: depositMode,
-          amount: depositMode === COLLATERAL_MODE.CASH ? depositAmount : null,
-          note:
-            depositMode === COLLATERAL_MODE.NONE
-              ? t('reviewPage.others.noDepositBody')
-              : depositMode === COLLATERAL_MODE.ASSET && collateral?.assetTypes.length
-                ? t('reviewPage.others.assetBody', {
-                    assets: collateral.assetTypes
-                      .map((asset) => dl('collateralAssetType', asset))
-                      .join(', '),
-                  })
-                : tCommon('components.price.depositHint'),
+          none: normalized.none,
+          textual: !(cashOnly && normalized.depositAmount),
+          display:
+            cashOnly && normalized.depositAmount
+              ? fmt.money(normalized.depositAmount)
+              : collateralText,
+          note: normalized.none
+            ? t('reviewPage.others.noDepositBody')
+            : normalized.asset && !normalized.cash && normalized.assetTypes.length
+              ? t('reviewPage.others.assetBody', {
+                  assets: normalized.assetTypes
+                    .map((asset) => dl('collateralAssetType', asset))
+                    .join(', '),
+                })
+              : tCommon('components.price.depositHint'),
         }
       : null;
 

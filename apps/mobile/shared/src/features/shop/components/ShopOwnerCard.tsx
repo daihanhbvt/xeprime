@@ -1,16 +1,15 @@
-import CheckOutlined from '@ant-design/icons-svg/es/asn/CheckOutlined';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { STATUS_COLOR, TENANT_ROLE, toLocalVnPhone } from '@xeprime/types';
 
-import { AntIcon } from '@/components/icons/AntIcon';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
 import { InfoCard, InfoRow, InfoRows } from '@/components/ui/InfoCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontWeight, iconSize, typeScale } from '@/theme/tokens';
 import type { ShopOwnerAccount } from '../api';
 
 /**
@@ -31,14 +30,17 @@ import type { ShopOwnerAccount } from '../api';
  * Lối sang màn bảo mật chỉ hiện với CHÍNH CHỦ: với quản lý/nhân viên, nút nằm dưới thông tin của
  * NGƯỜI KHÁC nhưng lại mở tài khoản của chính họ — một nút nói dối về việc nó làm gì.
  */
-const OWNER_AVATAR_SIZE = 40;
-/** Dấu tích xanh 16px của web `.verifiedMark` (`ShopOwnerSection.module.css`). */
+/** Ảnh 48 tròn có viền (Figma `24231:113381`). */
+const OWNER_AVATAR_SIZE = 48;
+/** Dấu tích "Tick Circle" 16 xanh (`24231:113388`). */
 const VERIFIED_MARK = 16;
+/** Ảnh ↔ tên 8; các hàng cách 8 (`24231:113378`). */
+const OWNER_GAP = 8;
 
 /**
- * Bố cục đúng `ShopOwnerSection` web ở khổ điện thoại (design `23999:111299`): khung `InfoCard`,
- * ảnh 40 + tên (14 đậm, khe 16), hai dòng nhãn ↔ giá trị căn phải với dấu tích xanh hoặc nhãn
- * "Chưa xác minh", rồi nút viền "Quản lý tài khoản".
+ * Bố cục theo Figma Partner "Quản lý gian hàng" (`24231:113310`): đầu thẻ "Chủ gian hàng" + nút
+ * Profile 40 ở góc (= "Quản lý tài khoản", chỉ CHÍNH CHỦ), ảnh 48 + tên 14 đậm vừa, hai hàng nhãn ↔
+ * giá trị căn phải kèm dấu tích xanh hoặc nhãn "Chưa xác minh".
  */
 export function ShopOwnerCard({
   owner,
@@ -55,43 +57,48 @@ export function ShopOwnerCard({
   const isOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && user.id === owner.userId;
 
   return (
-    <InfoCard title={t('title')} hint={t('hint')}>
-      <XStack ai="center" gap={space.md}>
-        <Avatar name={owner.displayName} url={owner.avatarUrl ?? null} size={OWNER_AVATAR_SIZE} />
-        <Text f={1} col={colors.text} fos={fontSize.body} lineHeight={20} fow={fontWeight.semibold}>
-          {owner.displayName}
-        </Text>
-      </XStack>
-
-      <InfoRows>
-        <ContactRow
-          label={t('email')}
-          value={owner.email ?? null}
-          emptyLabel={t('noEmail')}
-          verified={owner.emailVerified}
-        />
-        <ContactRow
-          label={t('phone')}
-          /* SĐT lưu dạng `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` hiện đúng. */
-          value={owner.phone ? toLocalVnPhone(owner.phone) : null}
-          emptyLabel={t('noPhone')}
-          verified={owner.phoneVerified}
-        />
-      </InfoRows>
-
-      {isOwner ? (
-        <XStack flexWrap="wrap" gap={space.sm}>
-          <Button
-            label={t('manageAccount')}
-            variant="secondary"
-            size="md"
-            shape="square"
-            block={false}
-            icon="person-outline"
-            onPress={onOpenSecurity}
-          />
+    <InfoCard
+      look="figma"
+      title={t('title')}
+      hint={t('hint')}
+      extra={
+        isOwner ? (
+          <IconSquareButton label={t('manageAccount')} onPress={onOpenSecurity} size="card">
+            <LineIcon name="profile" size={iconSize.lg} color={colors.textMuted} />
+          </IconSquareButton>
+        ) : undefined
+      }
+    >
+      <YStack gap={OWNER_GAP}>
+        <XStack ai="center" gap={OWNER_GAP}>
+          <Avatar name={owner.displayName} url={owner.avatarUrl ?? null} size={OWNER_AVATAR_SIZE} bordered />
+          <Text
+            f={1}
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.semibold}
+          >
+            {owner.displayName}
+          </Text>
         </XStack>
-      ) : null}
+
+        <InfoRows gap={OWNER_GAP}>
+          <ContactRow
+            label={t('email')}
+            value={owner.email ?? null}
+            emptyLabel={t('noEmail')}
+            verified={owner.emailVerified}
+          />
+          <ContactRow
+            label={t('phone')}
+            /* SĐT lưu dạng `0…` (ADR 0082); vẫn quy để hàng cũ còn `84…` hiện đúng. */
+            value={owner.phone ? toLocalVnPhone(owner.phone) : null}
+            emptyLabel={t('noPhone')}
+            verified={owner.phoneVerified}
+          />
+        </InfoRows>
+      </YStack>
     </InfoCard>
   );
 }
@@ -117,18 +124,8 @@ function ContactRow({
       suffix={
         value ? (
           verified ? (
-            <YStack
-              w={VERIFIED_MARK}
-              h={VERIFIED_MARK}
-              br={VERIFIED_MARK / 2}
-              bg={colors.success}
-              ai="center"
-              jc="center"
-              accessible
-              accessibilityRole="image"
-              accessibilityLabel={t('verified')}
-            >
-              <AntIcon icon={CheckOutlined} size={9} color={colors.textInverse} />
+            <YStack accessible accessibilityRole="image" accessibilityLabel={t('verified')}>
+              <LineIcon name="tick-circle-fill" size={VERIFIED_MARK} color={colors.success} />
             </YStack>
           ) : (
             <StatusBadge label={t('unverified')} color={STATUS_COLOR.WARNING} size="sm" />

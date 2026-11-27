@@ -5,7 +5,9 @@ import {
   driverFiltersToParams,
   driverSharedFilterParams,
   driversApi,
+  tripFiltersToParams,
   type DriverFilters,
+  type DriverTripFilters,
   type InviteDriverInput,
   type UpdateDriverInput,
   type UpdateDriverWageSettingsInput,
@@ -24,6 +26,43 @@ export function useDriversPage(filters: DriverFilters, enabled = true) {
     queryFn: () => driversApi.list(withLimit),
     placeholderData: keepPageData<Awaited<ReturnType<typeof driversApi.list>>>(params),
     enabled,
+  });
+}
+
+/**
+ * MỘT trang danh sách GỘP tài xế liên kết + nội bộ (web `useDriverRoster`, 25/11/2026). Tìm kiếm,
+ * lọc, sắp và cắt trang ở SERVER; app gộp trang bằng `useAccumulatedPages` (cuộn vô hạn).
+ */
+export function useDriverRoster(filters: DriverFilters, enabled = true) {
+  const withLimit = { ...filters, limit: DRIVERS_PAGE_SIZE };
+  const params = driverFiltersToParams(withLimit);
+  return useQuery({
+    queryKey: queryKeys.drivers.roster(params),
+    queryFn: () => driversApi.roster(withLimit),
+    placeholderData: keepPageData<Awaited<ReturnType<typeof driversApi.roster>>>(params),
+    enabled,
+  });
+}
+
+/** Dải số đếm của danh sách gộp — theo bộ lọc chung (tìm kiếm, hình thức, vận hành). */
+export function useDriverRosterSummary(filters: DriverFilters, enabled = true) {
+  const params = driverSharedFilterParams(filters);
+  return useQuery({
+    queryKey: queryKeys.drivers.rosterSummary(params),
+    queryFn: () => driversApi.rosterSummary(filters),
+    placeholderData: (prev) => prev,
+    enabled,
+  });
+}
+
+/** Tra tài khoản khách theo SĐT trước khi mời — tên + ảnh (web `useDriverAccountLookup`). */
+export function useDriverAccountLookup(phone: string | null) {
+  return useQuery({
+    queryKey: queryKeys.drivers.accountLookup(phone ?? ''),
+    queryFn: () => driversApi.accountLookup(phone as string),
+    enabled: Boolean(phone),
+    staleTime: 60_000,
+    retry: false,
   });
 }
 
@@ -62,6 +101,12 @@ export const useSuspendDriver = () => useDriverMutation((id: string) => driversA
 export const useResumeDriver = () => useDriverMutation((id: string) => driversApi.resume(id));
 export const useEndDriver = () => useDriverMutation((id: string) => driversApi.end(id));
 
+/** "Đã đối chiếu" bằng lái / gỡ đánh dấu (web `useSetDriverLicenceChecked`). */
+export const useSetDriverLicenceChecked = () =>
+  useDriverMutation(({ id, checked }: { id: string; checked: boolean }) =>
+    driversApi.setLicenceChecked(id, checked),
+  );
+
 /** Chi tiết một tài xế trong tháng — đổi tháng giữ số cũ tới khi có số mới (cùng khoá web). */
 export function useDriverOverview(id: string | null, month: string | undefined) {
   return useQuery({
@@ -73,14 +118,14 @@ export function useDriverOverview(id: string | null, month: string | undefined) 
 }
 
 /**
- * Tab "Chuyến & tiền công" của chi tiết tài xế — cùng khoá trang của web
- * (`{ month, page }`), phân trang server-side.
+ * Tab "Chuyến & tiền công" của chi tiết tài xế — cùng khoá của web (tháng, tìm, kết cục, trang),
+ * phân trang server-side.
  */
-export function useDriverAssignments(id: string | null, month: string | undefined, page: number) {
-  const params = { month: month ?? null, page };
+export function useDriverAssignments(id: string | null, filters: DriverTripFilters) {
+  const params = { ...tripFiltersToParams(filters), outcome: filters.status ?? null };
   return useQuery({
     queryKey: queryKeys.drivers.assignments(id ?? '', params),
-    queryFn: () => driversApi.assignments(id as string, { month, page }),
+    queryFn: () => driversApi.assignments(id as string, filters),
     enabled: Boolean(id),
     placeholderData: (prev) => prev,
   });

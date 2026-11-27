@@ -132,7 +132,7 @@ export function VehicleManageShell({
     return (
       <>
         {header}
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('forbiddenTitle')}
@@ -149,7 +149,7 @@ export function VehicleManageShell({
     return (
       <>
         {header}
-        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']}>
           <MiniRowsSkeleton rows={6} />
         </Screen>
       </>
@@ -161,7 +161,7 @@ export function VehicleManageShell({
     return (
       <>
         {header}
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="alert-circle-outline"
             title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
@@ -200,16 +200,14 @@ export function VehicleManageShell({
     <>
       {header}
       <Screen
-        scrollReveal
+        scrollReveal={false}
+        motion={false}
         edges={['left', 'right', 'bottom']}
         {...(scrollRef ? { scrollRef } : {})}
         {...(footer ? { footer } : {})}
       >
         <FooterSlot.Provider value={setFooter}>
           <YStack gap={space.md}>
-            {isManage && section === VEHICLE_MANAGE_SECTION.IMAGES ? (
-              <VehicleEditSummaryCard vehicleId={vehicleId} tab={VEHICLE_EDIT_TAB.MEDIA} />
-            ) : null}
             {!canEdit ? <Callout tone="info">{t('readOnlyNotice')}</Callout> : null}
             {children({ vehicle, canEdit })}
           </YStack>

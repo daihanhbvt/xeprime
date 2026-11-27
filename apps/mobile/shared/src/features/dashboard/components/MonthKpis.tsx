@@ -45,7 +45,8 @@ export function MonthKpis({
   report?: InfoGroupLink;
 }) {
   const colors = useColors();
-  const t = useTranslations('Dashboard.kpi');
+  // Chữ nguyên văn Figma "Tháng 11 vs tháng trước" - khoá riêng app (người dùng chốt 20/11/2026).
+  const tApp = useTranslations('Dashboard.partnerApp');
   const month = nowInAppTz().month() + 1;
   const rows = useMemo(() => {
     const list: KpiCard[][] = [];
@@ -55,7 +56,7 @@ export function MonthKpis({
 
   if (cards.length === 0) return null;
   return (
-    <InfoGroupCard title={t('titleVsPrevious', { month })} {...(report ? { headerLink: report } : {})}>
+    <InfoGroupCard title={tApp('monthTitle', { month })} {...(report ? { headerLink: report } : {})}>
       <YStack bw={1} bc={colors.border} br={radius.control} p={BOX_PAD} gap={BOX_GAP}>
         {rows.map((row, index) => (
           <YStack key={row.map((card) => card.key).join('|')} gap={BOX_GAP}>
@@ -144,6 +145,7 @@ const PRESSED = { opacity: 0.7 } as const;
 function ChangeLine({ change }: { change: NonNullable<KpiCard['change']> }) {
   const colors = useColors();
   const t = useTranslations('Dashboard.change');
+  const tApp = useTranslations('Dashboard.partnerApp');
   const { value, unit = 'percent', previous } = change;
 
   if (value === null) {
@@ -181,7 +183,7 @@ function ChangeLine({ change }: { change: NonNullable<KpiCard['change']> }) {
         </Text>
       </XStack>
       <Text col={accent} fos={typeScale.caption.fontSize} lh={typeScale.caption.lineHeight} numberOfLines={1}>
-        {previous ? t('vsPrevious', { value: previous }) : t('vsPreviousBare')}
+        {previous ? tApp('vsPrevious', { value: previous }) : tApp('vsPreviousBare')}
       </Text>
     </YStack>
   );

@@ -69,11 +69,34 @@ export class PartnerPaymentGatewayController {
     );
   }
 
+  @Post('checkouts/:checkoutId/checkout')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary:
+      'Mở phiên thanh toán PHIẾU GỘP nhiều gói qua cổng (ADR 0083) - số tiền là phần còn thiếu của cả phiếu đọc từ DB; dùng lại phiên còn hạn',
+  })
+  @ApiOkResponse({ type: PaymentOrderDto })
+  checkoutCombined(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('checkoutId') checkoutId: string,
+    @Body() dto: StartGatewayCheckoutDto,
+    @Req() req: Request,
+  ): Promise<PaymentOrderDto> {
+    return this.gateway.startSubscriptionCheckoutPayment(
+      tenant.tenantId,
+      checkoutId,
+      checkoutRequestFrom(req, dto, user.id),
+    );
+  }
+
   @Get('orders/:orderId')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({
     summary:
-      'Trạng thái MỘT lượt thanh toán hoá đơn qua cổng (trang quay về) - server tự hỏi cổng khi còn chờ quá lâu',
+      'Trạng thái MỘT lượt thanh toán gói qua cổng - hoá đơn hoặc phiếu gộp (trang quay về); server tự hỏi cổng khi còn chờ quá lâu',
   })
   @ApiOkResponse({ type: PaymentOrderDto })
   order(

@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useTabBarHidden } from '@/components/layout/tab-bar-visibility';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
+import { useTabBarHide } from '@/components/layout/tab-bar-inset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';
 import { YStack } from 'tamagui';
@@ -29,7 +29,7 @@ import {
 import { drawnLeavesOf, leafActiveHref, type ResolvedSection } from './manage-menu';
 import { ManageSectionSheet } from './ManageSectionSheet';
 import { PartnerMenuIcon, type PartnerMenuIconName } from './PartnerMenuIcon';
-import { useManageMenu } from './use-manage-menu';
+import { useManageMenu, useManageTabBarHidden } from './use-manage-menu';
 
 /*
  * Số đo thanh menu — Figma Partner-XePrime `Menu MB` (`24175:37780`) + `_Menu item` (`24175:37769`).
@@ -72,6 +72,8 @@ const TAB_ICON: Readonly<Record<Exclude<ManageMenuTabKey, 'account'>, PartnerMen
 };
 
 const styles = StyleSheet.create({
+  /** Khung trượt của thanh: neo đáy màn, bề ngang trọn màn. */
+  slide: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -143,7 +145,17 @@ interface VisibleTab {
  */
 export function ManageTabBar({ onHeight }: { onHeight?: (height: number) => void } = {}) {
   // Màn chi tiết mở NGAY TRONG tab (vd. chi tiết yêu cầu) xin che thanh - `useHideTabBar`.
-  const hidden = useTabBarHidden();
+  // Màn con của menu (vd. Đơn đã kết thúc) hoặc màn xin che - thanh ẩn (người dùng chốt 20/11/2026).
+  const hidden = useManageTabBarHidden();
+  /*
+   * Cuộn xuống ẩn / cuộn lên hiện (feedback thiết kế 20/11/2026, dòng 7): trượt cả khung xuống
+   * dưới mép màn theo `TabBarHideContext` (0 = hiện, 1 = ẩn) mà `Screen` / khung danh sách ghi vào.
+   */
+  const slide = useTabBarHide();
+  const [barHeight, setBarHeight] = useState(0);
+  const slideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: (slide?.value ?? 0) * barHeight }],
+  }));
   useEffect(() => {
     if (hidden) onHeight?.(0);
   }, [hidden, onHeight]);
@@ -236,14 +248,12 @@ export function ManageTabBar({ onHeight }: { onHeight?: (height: number) => void
       nội dung bên dưới.
     */
     <>
+      <Animated.View pointerEvents="box-none" style={[styles.slide, slideStyle]}>
       <YStack
-        pos="absolute"
-        left={0}
-        right={0}
-        bottom={0}
         pointerEvents="box-none"
         display={hidden ? 'none' : 'flex'}
         onLayout={(event) => {
+          setBarHeight(event.nativeEvent.layout.height);
           if (!hidden) onHeight?.(event.nativeEvent.layout.height);
         }}
         px={BAR_SIDE}
@@ -308,6 +318,7 @@ export function ManageTabBar({ onHeight }: { onHeight?: (height: number) => void
           })}
         </View>
       </YStack>
+      </Animated.View>
 
       {/*
         Tấm danh sách mục của khối là ANH EM của thanh (không nằm trong khung đáy của nó) và vẽ TRONG

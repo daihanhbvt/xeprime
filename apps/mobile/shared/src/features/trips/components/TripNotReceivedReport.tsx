@@ -41,12 +41,15 @@ export function TripNotReceivedReport({ trip }: { trip: CustomerTripDetail }) {
   }
 
   // Chỉ để HIỂN THỊ — xem chú thích cùng chỗ ở web: trang mở trước giờ nhận xe phải tự hiện nút
-  // đúng `pickupAt` và tự ẩn lúc cửa sổ đóng, không chờ hỏi lại server.
+  // đúng `pickupAt` và tự ẩn lúc cửa sổ đóng, không chờ hỏi lại server. Mốc mở là
+  // `notReceivedReportFrom`: chủ xe giao SỚM hơn giờ nhận thì cửa sổ mở từ lúc giao (ADR 0104 điều 2).
   const until = trip.notReceivedReportUntil;
+  const from = trip.notReceivedReportFrom;
   const windowOpen =
     until != null &&
     trip.pickupAt != null &&
-    notReceivedWindowPhase(new Date(trip.pickupAt), new Date(now)) === 'open';
+    notReceivedWindowPhase(new Date(trip.pickupAt), new Date(now), from ? new Date(from) : null) ===
+      'open';
   if (!windowOpen) return null;
 
   return (

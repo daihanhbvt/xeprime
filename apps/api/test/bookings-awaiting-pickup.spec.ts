@@ -22,6 +22,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
@@ -65,7 +66,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService));
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService), new TenantRentalTermsService(asService, audit));
 
 const bookings = makeBookingsService(asService, { audit, notifications, occupancy, settings });
 const holds = makeBookingHoldsService(asService);
@@ -715,8 +716,15 @@ describe('Chi tiết đơn — đánh dấu tay việc chuẩn bị bàn giao (0
     expect(actions).toEqual(['booking.prep_check', 'booking.prep_uncheck']);
   });
 
-  maybe('từ chối khi đơn đã giao, và việc tài xế ở đơn tự lái', async () => {
+  maybe('từ chối khi đơn đã giao, việc tài xế ở đơn tự lái, và ảnh bàn giao', async () => {
     const created = await createDirect(0);
+    // Ảnh bàn giao chỉ xong khi biên bản đủ ảnh - không đánh dấu tay (26/11/2026).
+    await expect(
+      bookings.setHandoverPrepCheck(tenantId, created.id, ownerId, {
+        item: HANDOVER_PREP_ITEM.PHOTOS,
+        checked: true,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'HANDOVER_NOT_ELIGIBLE' } });
     await expect(
       bookings.setHandoverPrepCheck(tenantId, created.id, ownerId, {
         item: HANDOVER_PREP_ITEM.DRIVER,
@@ -727,7 +735,7 @@ describe('Chi tiết đơn — đánh dấu tay việc chuẩn bị bàn giao (0
     await markActive(created.id);
     await expect(
       bookings.setHandoverPrepCheck(tenantId, created.id, ownerId, {
-        item: HANDOVER_PREP_ITEM.PHOTOS,
+        item: HANDOVER_PREP_ITEM.CONTRACT,
         checked: true,
       }),
     ).rejects.toMatchObject({ response: { code: 'HANDOVER_NOT_ELIGIBLE' } });
@@ -745,8 +753,13 @@ describe('Chi tiết đơn — tiền thu tay lúc nhận xe (03/11/2026)', () =
     const d = (row.priceSnapshot as { fees?: { depositAmount?: string } }).fees?.depositAmount;
     expect(d).toBeTruthy();
     expect(new Prisma.Decimal(d!).gt(0)).toBe(true);
-    const expected = Prisma.Decimal.max(0, new Prisma.Decimal(detail.debtAmount).minus(d!));
-    expect(detail.handoverPrep?.rentDueAmount).toBe(expected.toFixed(0));
+    // `D` khách đã trả online nằm sẵn trong "đã thu" của đơn: công nợ đã trừ nó, nên số thu tay
+    // lúc nhận xe CHÍNH LÀ công nợ - không trừ `D` lần hai.
+    expect(new Prisma.Decimal(detail.collectedAmount).gte(d!)).toBe(true);
+    expect(detail.handoverPrep?.rentDueAmount).toBe(
+      new Prisma.Decimal(detail.debtAmount).toFixed(0),
+    );
+    expect(detail.counterDueAmount).toBe(new Prisma.Decimal(detail.debtAmount).toString());
 
     // Mốc của thanh tiến trình: xác nhận = lượt nhận yêu cầu, tiền giữ chỗ về ⇒ có `holdPaidAt`.
     expect(detail.holdPaidAt).not.toBeNull();

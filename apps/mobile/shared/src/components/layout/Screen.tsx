@@ -1,3 +1,6 @@
+import { NoMotionScope } from '@/components/motion/no-motion';
+import { PartnerBackdrop } from '@/components/layout/PartnerBackdrop';
+import { useTabBarAutoHide } from '@/hooks/use-tab-bar-auto-hide';
 import { useBottomInsetConsumed, useTabBarInset } from './tab-bar-inset';
 import {
   useCallback,
@@ -46,6 +49,8 @@ const KEYBOARD_TAIL = space.xl;
  * gọi qua cầu JS mỗi nhịp — 100ms đủ để giữ con số gần đúng mà không bám theo từng khung hình.
  */
 const SCROLL_REPORT_MS = 100;
+/** Gọi `onNearEnd` khi còn cách đáy dưới bấy nhiêu chiều cao màn - đủ sớm để trang kế về kịp. */
+const NEAR_END_SCREENS = 1.5;
 
 /**
  * Mép trên bàn phím, quy về HỆ TOẠ ĐỘ CỬA SỔ.
@@ -147,6 +152,17 @@ interface ScreenProps {
    * đọc ra như một vạch kẻ lạc dưới tấm trắng.
    */
   surface?: boolean;
+  /**
+   * Gọi khi cuộn còn cách đáy nội dung dưới ~1,5 màn hình - cho danh sách CUỘN VÔ HẠN nằm ở CUỐI một
+   * màn cuộn dài (tab ví…), nơi không có `FlatList` để dùng `onEndReached`. Gọi tối đa một lần cho
+   * mỗi chiều cao nội dung: phải có trang mới nối vào (nội dung cao thêm) mới gọi lại.
+   */
+  onNearEnd?: () => void;
+  /**
+   * `false` = TẮT mọi chuyển động của khối con (co khi nhấn, vạch tab trượt, công tắc trượt) qua
+   * `NoMotionScope` - màn người dùng yêu cầu không hiệu ứng (màn sửa xe). Mặc định giữ nguyên.
+   */
+  motion?: boolean;
 }
 
 /**
@@ -169,6 +185,8 @@ export function Screen({
   scrollOffset: scrollOffsetProp,
   scrollReveal: scrollRevealProp,
   surface = false,
+  onNearEnd,
+  motion = true,
 }: ScreenProps) {
   const scrollRevealDefault = useScrollRevealDefault();
   const scrollReveal = scroll && (scrollRevealProp ?? scrollRevealDefault);
@@ -281,11 +299,39 @@ export function Screen({
   const offsetRef = useRef(scrollOffset);
   offsetRef.current = scrollOffset;
   const readScrollY = () => (offsetRef.current ? offsetRef.current.value : scrollY.current);
-  const animatedScrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      if (scrollOffset) scrollOffset.value = event.contentOffset.y;
+  // App Partner: cuộn xuống ẩn thanh menu đáy, cuộn lên hiện lại (feedback thiết kế 20/11/2026).
+  const autoHideTabBar = useTabBarAutoHide();
+  /*
+   * Mốc gần đáy: nhớ chiều cao nội dung lần đã gọi, để cuộn qua lại ở đáy không bắn liên tục - chỉ
+   * khi trang mới nối vào (nội dung cao thêm) mới được gọi lần nữa.
+   */
+  const nearEndRef = useRef(onNearEnd);
+  nearEndRef.current = onNearEnd;
+  const nearEndFiredAt = useRef(-1);
+  const checkNearEnd = useCallback((y: number, viewH: number, contentH: number) => {
+    if (!nearEndRef.current || contentH <= 0) return;
+    if (contentH - viewH - y > viewH * NEAR_END_SCREENS) return;
+    if (nearEndFiredAt.current === contentH) return;
+    nearEndFiredAt.current = contentH;
+    nearEndRef.current();
+  }, []);
+  const watchNearEnd = Boolean(onNearEnd);
+  const animatedScrollHandler = useAnimatedScrollHandler(
+    {
+      onScroll: (event) => {
+        if (scrollOffset) scrollOffset.value = event.contentOffset.y;
+        autoHideTabBar?.(event.contentOffset.y);
+        if (watchNearEnd) {
+          runOnJS(checkNearEnd)(
+            event.contentOffset.y,
+            event.layoutMeasurement.height,
+            event.contentSize.height,
+          );
+        }
+      },
     },
-  });
+    [watchNearEnd],
+  );
 
   /** Mép trên bàn phím trong hệ CỬA SỔ — `null` khi bàn phím đang đóng. */
   const keyboardTop = useRef<number | null>(null);
@@ -430,8 +476,20 @@ export function Screen({
       onScroll={
         scrollOffset
           ? animatedScrollHandler
-          : (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+          : (event: {
+              nativeEvent: {
+                contentOffset: { y: number };
+                layoutMeasurement: { height: number };
+                contentSize: { height: number };
+              };
+            }) => {
               scrollY.current = event.nativeEvent.contentOffset.y;
+              autoHideTabBar?.(event.nativeEvent.contentOffset.y);
+              checkNearEnd(
+                event.nativeEvent.contentOffset.y,
+                event.nativeEvent.layoutMeasurement.height,
+                event.nativeEvent.contentSize.height,
+              );
             }
       }
       scrollEventThrottle={scrollOffset ? 16 : SCROLL_REPORT_MS}
@@ -472,6 +530,8 @@ export function Screen({
       style={surface ? [styles.flex, styles.surface] : styles.flex}
       {...(safeEdges ? { edges: safeEdges } : {})}
     >
+      {/* Nền gradient nhạt của app Partner (feedback thiết kế 20/11/2026) - màn nền trắng thì không. */}
+      {surface ? null : <PartnerBackdrop />}
       {/*
         CÙNG cơ chế với `BottomSheet` (`behavior="padding"` cho cả hai nền), cộng thêm thứ tấm
         trượt không cần: `keyboardVerticalOffset`.
@@ -490,12 +550,14 @@ export function Screen({
         <FocusRevealProvider reveal={revealOnFocus}>
           <KeyboardHoldProvider value={keyboardHold}>
             <ContentColumnContext.Provider value={columnWidth}>
-              {body}
-              {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
-                <View style={[styles.footer, { paddingBottom: footerBottom }]}>
-                  <View style={column}>{footer}</View>
-                </View>
-              ) : null}
+              <NoMotionScope off={!motion}>
+                {body}
+                {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
+                  <View style={[styles.footer, { paddingBottom: footerBottom }]}>
+                    <View style={column}>{footer}</View>
+                  </View>
+                ) : null}
+              </NoMotionScope>
             </ContentColumnContext.Provider>
           </KeyboardHoldProvider>
         </FocusRevealProvider>

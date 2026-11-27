@@ -48,7 +48,7 @@ export function CustomerReceiptsPanel({ customerId }: { customerId: string }) {
 
   return (
     <div className={styles.panel}>
-      <FinanceEntityPanel scope={{ tenantCustomerId: customerId }} kind="customer" />
+      <FinanceEntityPanel scope={{ tenantCustomerId: customerId }} />
 
       <section className={styles.receipts} aria-label={t('list.title')}>
         <h3 className={styles.listTitle}>{t('list.title')}</h3>

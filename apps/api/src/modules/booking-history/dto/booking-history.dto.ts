@@ -3,6 +3,8 @@ import {
   BOOKING_HISTORY_KIND_VALUES,
   BOOKING_HISTORY_OUTCOME_VALUES,
   BOOKING_HISTORY_TAB_VALUES,
+  BOOKING_SOURCE_FILTER_VALUES,
+  BOOKING_SOURCE_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   SERVICE_TYPE_VALUES,
   type BookingHistoryOutcome,
@@ -45,6 +47,15 @@ export class BookingHistoryQueryDto {
   @BranchIdQuery()
   branchId?: string;
 
+  /**
+   * Nguồn đơn (ADR 0110) — `direct` = mọi đơn ngoài sàn. Yêu cầu không thành đơn luôn là của sàn:
+   * chúng chỉ còn trong trang khi không lọc hoặc lọc `xeprime`.
+   */
+  @ApiPropertyOptional({ enum: BOOKING_SOURCE_FILTER_VALUES })
+  @IsOptional()
+  @IsIn(BOOKING_SOURCE_FILTER_VALUES)
+  source?: string;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -76,6 +87,10 @@ export class BookingHistoryItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC - lúc chuyến kết thúc / yêu cầu đóng' })
   endedAt!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  /** Nguồn đơn (ADR 0110) — dòng YÊU CẦU luôn `xeprime` (khách gửi từ sàn). */
+  @ApiProperty({ enum: BOOKING_SOURCE_VALUES }) source!: string;
+  @ApiProperty({ required: true, type: String, nullable: true, description: 'Nhãn nguồn tự nhập' })
+  sourceLabel!: string | null;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,

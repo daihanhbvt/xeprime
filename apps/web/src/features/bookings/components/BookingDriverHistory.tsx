@@ -1,117 +1,139 @@
 'use client';
 
-import { Collapse, Skeleton, Tag, Timeline } from 'antd';
-import { useState } from 'react';
+import { Button, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   DRIVER_ASSIGNMENT_OUTCOME,
   DRIVER_ASSIGNMENT_OUTCOME_META,
   type DriverAssignmentOutcome,
 } from '@xeprime/types';
+import { StatusBadge } from '@/components/data-display/StatusBadge';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { cx } from '@/lib/cx';
 import { useBookingDriverHistory } from '../hooks/use-booking';
 import type { BookingDriverHistoryItem } from '../types';
 import { DriverWageInfo } from './DriverWageInfo';
 import styles from './BookingDriverSection.module.css';
 
 /**
- * Lịch sử gán tài xế của đơn (ADR 0063) — thu gọn mặc định, mở ra mới tải. Mỗi lượt: ai được gán,
- * ai gán (hoặc hệ thống "Đặt ngay"), lúc nhận, và kết thúc ra sao. Đọc sổ
- * `booking_driver_assignments`, không suy từ audit. Mỗi lượt kèm tiền công + lịch sử sửa (ADR 0075).
+ * Hộp "Lịch sử gán tài xế" của đơn (Figma `24145:62811`, ADR 0063) — mở từ link ở đầu thẻ Tài xế.
+ * Mỗi lượt: chấm (đang mở thì vàng), tên · SĐT, tiền công bên phải; "Gán bởi …, lúc …" và viên kết
+ * cục bên dưới. Ngoài design (giữ từ trước): lúc nhận, lý do + vùng của lượt RÚT (ADR 0074), ai kết
+ * thúc lượt, và lịch sử sửa tiền công + nút sửa (ADR 0075). Đọc sổ `booking_driver_assignments`.
  */
-export function BookingDriverHistory({
+export function BookingDriverHistoryDialog({
   bookingId,
-  canEditWage = false,
+  subtitle,
+  canEditWage,
   onEditWage,
+  onClose,
 }: {
   bookingId: string;
-  canEditWage?: boolean;
-  onEditWage?: (item: BookingDriverHistoryItem) => void;
+  /** "Đơn hàng #…, khung giờ". */
+  subtitle: string;
+  canEditWage: boolean;
+  onEditWage: (item: BookingDriverHistoryItem) => void;
+  onClose: () => void;
 }) {
   const t = useTranslations('Drivers.history');
+  const tDialog = useTranslations('Drivers.booking.historyDialog');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const [open, setOpen] = useState(false);
-  const history = useBookingDriverHistory(bookingId, open);
-
-  const body = history.isLoading ? (
-    <Skeleton active paragraph={{ rows: 2 }} />
-  ) : history.isError ? (
-    <p className={styles.meta}>{t('loadError')}</p>
-  ) : !history.data?.length ? (
-    <p className={styles.meta}>{t('empty')}</p>
-  ) : (
-    <Timeline
-      items={history.data.map((h) => {
-        const outcome = h.outcome as DriverAssignmentOutcome;
-        return {
-          key: h.id,
-          color:
-            outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN
-              ? 'blue'
-              : outcome === DRIVER_ASSIGNMENT_OUTCOME.DROPPED
-                ? 'red'
-                : 'gray',
-          children: (
-            <div className={styles.stack}>
-              <span>
-                <span className={styles.strong}>{h.driverName}</span> · {h.driverPhone}{' '}
-                <Tag color={DRIVER_ASSIGNMENT_OUTCOME_META[outcome]?.color}>
-                  {domainLabel('driverAssignmentOutcome', h.outcome)}
-                </Tag>
-              </span>
-              <span className={styles.meta}>
-                {h.assignedByName
-                  ? t('assignedBy', { name: h.assignedByName, time: fmt.dateTime(h.assignedAt) })
-                  : t('assignedBySystem', { time: fmt.dateTime(h.assignedAt) })}
-              </span>
-              {h.acceptedAt ? (
-                <span className={styles.meta}>
-                  {t('acceptedAt', { time: fmt.dateTime(h.acceptedAt) })}
-                </span>
-              ) : null}
-              {/* Lượt RÚT (ADR 0074): lý do + độ sát giờ — để bên thuê quyết có tạm khoá tài xế hay không. */}
-              {h.dropReasonCategory ? (
-                <span>
-                  {t('dropReason', {
-                    reason: domainLabel('driverDropReason', h.dropReasonCategory),
-                  })}
-                  {h.dropReason ? ` ${t('dropNote', { note: h.dropReason })}` : ''}
-                </span>
-              ) : null}
-              {h.dropZone ? (
-                <span className={styles.meta}>
-                  {t('dropZone', { zone: domainLabel('driverDropZone', h.dropZone) })}
-                </span>
-              ) : null}
-              {h.endedAt ? (
-                <span className={styles.meta}>
-                  {h.endedByName
-                    ? t('endedBy', { name: h.endedByName, time: fmt.dateTime(h.endedAt) })
-                    : t('endedAt', { time: fmt.dateTime(h.endedAt) })}
-                </span>
-              ) : null}
-              <DriverWageInfo
-                wage={h.wage}
-                canEdit={canEditWage && Boolean(onEditWage)}
-                onEdit={() => onEditWage?.(h)}
-              />
-            </div>
-          ),
-        };
-      })}
-    />
-  );
+  const history = useBookingDriverHistory(bookingId, true);
 
   return (
-    <Collapse
-      ghost
-      size="small"
-      className={styles.history}
-      activeKey={open ? ['history'] : []}
-      onChange={(keys) => setOpen((Array.isArray(keys) ? keys : [keys]).includes('history'))}
-      items={[{ key: 'history', label: t('title'), children: body }]}
-    />
+    <ResponsiveDialog
+      title={
+        <span>
+          {tDialog('title')}
+          <span className={styles.dialogSubtitle}>{subtitle}</span>
+        </span>
+      }
+      open
+      size="md"
+      onClose={onClose}
+      footer={<Button onClick={onClose}>{tDialog('close')}</Button>}
+    >
+      {history.isLoading ? (
+        <Skeleton active paragraph={{ rows: 4 }} />
+      ) : history.isError ? (
+        <p className={styles.meta}>{t('loadError')}</p>
+      ) : !history.data?.length ? (
+        <p className={styles.meta}>{t('empty')}</p>
+      ) : (
+        <ol className={styles.historyList}>
+          {history.data.map((h) => {
+            const outcome = h.outcome as DriverAssignmentOutcome;
+            const open = outcome === DRIVER_ASSIGNMENT_OUTCOME.OPEN;
+            return (
+              <li key={h.id} className={styles.historyItem}>
+                <span className={cx(styles.dot, open && styles.dotOpen)} aria-hidden="true" />
+                <div className={styles.historyBody}>
+                  <div className={styles.historyLine}>
+                    <span>
+                      <b>{h.driverName}</b>
+                      <span className={styles.meta}> {h.driverPhone}</span>
+                    </span>
+                    {h.wage.amount !== null ? (
+                      <b className={styles.money}>{fmt.money(h.wage.amount)}</b>
+                    ) : null}
+                  </div>
+                  <div className={styles.historyLine}>
+                    <span className={styles.meta}>
+                      {h.assignedByName
+                        ? tDialog('assignedBy', {
+                            name: h.assignedByName,
+                            time: fmt.dateTime(h.assignedAt),
+                          })
+                        : tDialog('assignedBySystem', { time: fmt.dateTime(h.assignedAt) })}
+                    </span>
+                    <StatusBadge
+                      value={outcome}
+                      meta={DRIVER_ASSIGNMENT_OUTCOME_META}
+                      group="driverAssignmentOutcome"
+                    />
+                  </div>
+                  {h.acceptedAt ? (
+                    <span className={styles.meta}>
+                      {t('acceptedAt', { time: fmt.dateTime(h.acceptedAt) })}
+                    </span>
+                  ) : null}
+                  {h.dropReasonCategory ? (
+                    <span>
+                      {t('dropReason', {
+                        reason: domainLabel('driverDropReason', h.dropReasonCategory),
+                      })}
+                      {h.dropReason ? ` ${t('dropNote', { note: h.dropReason })}` : ''}
+                    </span>
+                  ) : null}
+                  {h.dropZone ? (
+                    <span className={styles.meta}>
+                      {t('dropZone', { zone: domainLabel('driverDropZone', h.dropZone) })}
+                    </span>
+                  ) : null}
+                  {h.endedAt ? (
+                    <span className={styles.meta}>
+                      {h.endedByName
+                        ? t('endedBy', { name: h.endedByName, time: fmt.dateTime(h.endedAt) })
+                        : t('endedAt', { time: fmt.dateTime(h.endedAt) })}
+                    </span>
+                  ) : null}
+                  {h.wage.changes.length > 0 || (canEditWage && h.wage.editable) ? (
+                    <DriverWageInfo
+                      wage={h.wage}
+                      canEdit={canEditWage}
+                      onEdit={() => onEditWage(h)}
+                      hideLine
+                    />
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </ResponsiveDialog>
   );
 }

@@ -32,7 +32,8 @@ export function receiptFormSchema(t: FormTranslate) {
       .min(0, t('errors.amountMin'))
       .test('required', t('errors.amountType'), (v) => v != null),
     paymentMethod: yup.string().required(t('errors.method')).oneOf([...PAYMENT_METHOD_VALUES]),
-    categoryId: yup.string().nullable().default(null),
+    // Bắt buộc như dấu * trên form (chốt 26/11/2026) - trước đây chỉ có dấu * mà không chặn.
+    categoryId: yup.string().nullable().default(null).test('required', t('errors.category'), (v) => Boolean(v)),
     /**
      * Phiếu này gắn vào cái gì — xem `RECEIPT_LINK_MODE`.
      *

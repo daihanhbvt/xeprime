@@ -1,0 +1,72 @@
+/*
+ * Khuôn "_Badge" bo tròn của Figma chi tiết đơn (`23845:49959`: đệm 2/8, chữ 14/20 Medium, không chấm) -
+ * viên nguồn đứng ngay cạnh nhãn chặng ở đầu trang chi tiết đơn và cạnh viên dịch vụ trên thẻ đơn.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 180px;
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sm {
+  max-width: 120px;
+  padding: 0 6px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 18px;
+}
+
+/*
+ * Mỗi nguồn tự khai thác một sắc, để chủ xe liếc là biết khách tới từ đâu (đơn qua sàn là mặc định,
+ * không có viên). Sắc ngữ nghĩa có sẵn đều có bản tối - đỏ để dành cho lỗi, không dùng.
+ */
+.walk_in {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.repeat_customer {
+  border-color: var(--xp-color-info-border);
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+}
+
+.referral {
+  border-color: var(--xp-color-purple-border);
+  background: var(--xp-color-purple-bg);
+  color: var(--xp-color-purple);
+}
+
+.social {
+  border-color: var(--xp-color-pink-border);
+  background: var(--xp-color-pink-bg);
+  color: var(--xp-color-pink);
+}
+
+.other_platform {
+  border-color: var(--xp-color-warning-border);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning-strong);
+}
+
+/* Nguồn khác: xanh ngọc pha từ hai sắc có sẵn - vẫn có màu, không lẫn với nguồn nào ở trên. */
+.other {
+  border-color: color-mix(in srgb, var(--xp-color-success) 35%, var(--xp-color-info-border));
+  background: color-mix(in srgb, var(--xp-color-success) 8%, var(--xp-color-info-bg));
+  color: color-mix(in srgb, var(--xp-color-success) 55%, var(--xp-color-info-strong));
+}

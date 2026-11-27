@@ -48,7 +48,8 @@
       "payoutNote": "Ghi chú bồi thường",
       "status": "Trạng thái",
       "partner": "Kết nối đối tác",
-      "daily": "Phí theo ngày"
+      "daily": "Phí theo ngày",
+      "summary": "Mô tả ngắn"
     },
     "fields": {
       "nameVi": "Tên (tiếng Việt)",
@@ -74,7 +75,9 @@
       "serviceFeePercent": "% trên phí bảo hiểm",
       "agencyCommissionPercent": "Hoa hồng đại lý",
       "dailyAmountCar": "Phí mỗi ngày - ô tô",
-      "dailyAmountMotorbike": "Phí mỗi ngày - xe máy"
+      "dailyAmountMotorbike": "Phí mỗi ngày - xe máy",
+      "summaryVi": "Mô tả ngắn (tiếng Việt)",
+      "summaryEn": "Mô tả ngắn (tiếng Anh)"
     },
     "help": {
       "amountEmpty": "Để trống nếu không áp dụng.",
@@ -83,7 +86,9 @@
       "premiumTiersHint": "Phí = giá trị xe × tỷ lệ của bậc thời lượng chuyến (đã gồm VAT), theo biểu phí MIC loại xe M1.11. Bậc tăng dần cả số ngày lẫn tỷ lệ; giờ lẻ làm tròn lên bậc kế tiếp. Sản phẩm bán kèm ô tô tự lái đủ điều kiện, chủ xe chọn Bắt buộc hoặc Tuỳ chọn.",
       "serviceFeePercent": "Tính trên phí bảo hiểm. Đổi % áp cho báo giá và lượt duyệt từ lúc lưu - đơn và khoản giữ chỗ đã có giữ số đã chốt.",
       "partnerSection": "Mã sản phẩm do MIC cấp. Hotline hiện cạnh giấy chứng nhận cho khách và chủ xe. Mẫu URL bắt đầu bằng https:// và chứa '{certCode}' - chỗ thay số chứng nhận.",
-      "dailyAmount": "Khách tự chọn, trả theo số ngày thuê. Để trống hoặc 0 thì không bán cho loại xe đó. Đổi số áp cho báo giá từ lúc lưu - đơn đã có giữ số đã chốt."
+      "dailyAmount": "Khách tự chọn, trả theo số ngày thuê. Để trống hoặc 0 thì không bán cho loại xe đó. Đổi số áp cho báo giá từ lúc lưu - đơn đã có giữ số đã chốt.",
+      "summary": "Một dòng dưới tên sản phẩm ở ô chọn bảo hiểm của trang xe. Để trống thì ghép từ các mục phạm vi bảo vệ.",
+      "coverage": "Mỗi mục là một dòng có dấu tích ở ô chọn bảo hiểm, popup quyền lợi và trang /insurance. Mục trống bị bỏ khi lưu."
     },
     "validation": {
       "required": "Bắt buộc nhập.",
@@ -98,7 +103,8 @@
       "serviceFeePercent": "Tỷ lệ từ 0 đến {max}%, tối đa 2 chữ số lẻ.",
       "serviceFeePercentRequired": "Bật phí thu hộ thì tỷ lệ phải lớn hơn 0.",
       "agencyCommissionPercent": "Từ 0 tới {max}%, tối đa hai chữ số lẻ",
-      "bands": "Biểu phí theo năm sản xuất chưa hợp lệ: mỗi % phải lớn hơn 0, tối đa 4 chữ số lẻ và tăng dần theo bậc."
+      "bands": "Biểu phí theo năm sản xuất chưa hợp lệ: mỗi % phải lớn hơn 0, tối đa 4 chữ số lẻ và tăng dần theo bậc.",
+      "coverageItems": "Cần từ 1 tới {max} mục có nội dung."
     },
     "saved": "Đã lưu sản phẩm {name}.",
     "actions": {
@@ -124,7 +130,9 @@
       "payoutNote": "Ví dụ ghi chú",
       "isActive": "Tắt sản phẩm thì sao",
       "partner": "Giải thích các ô kết nối",
-      "daily": "Phí theo ngày tính thế nào"
+      "daily": "Phí theo ngày tính thế nào",
+      "summary": "Mô tả ngắn hiện ở đâu",
+      "coverage": "Phạm vi bảo vệ hiện thế nào"
     },
     "placeholders": {
       "notApplicable": "Không áp dụng",
@@ -145,6 +153,12 @@
       "hintLabel": "Bảng xem trước tính thế nào",
       "sampleValue": "Giá trị xe mẫu",
       "invalidTiers": "Sửa bậc phí cho hợp lệ để xem trước."
+    },
+    "coverage": {
+      "add": "Thêm mục",
+      "remove": "Xoá mục này",
+      "itemAria": "Mục phạm vi {index}",
+      "itemPlaceholder": "VD: Đâm va, lật đổ trong thời gian thuê"
     }
   },
   "certificates": {

@@ -111,7 +111,7 @@ describe('FeaturedHosts', () => {
     };
     render(<FeaturedHosts />);
     const card = screen.getByRole('link', { name: 'Xem gian hàng XePrime Sài Gòn' });
-    expect(card.getAttribute('href')).toBe('/shops/xeprime-sai-gon');
+    expect(card.getAttribute('href')).toBe('/xeprime-sai-gon');
     expect(within(card).getByText('14')).toBeTruthy();
 
     const fresh = screen.getByRole('link', { name: 'Xem gian hàng Chủ xe mới' });

@@ -7,40 +7,60 @@ import {
   fetchAssignableDrivers,
   fetchDriverAssignments,
   fetchDriverOverview,
-  fetchDriverSummary,
+  fetchDriverRoster,
+  fetchDriverRosterSummary,
   fetchDriverWageSettings,
-  fetchDrivers,
-  filtersToParams,
-  sharedFilterParams,
   inviteDriver,
+  lookupDriverAccount,
   resumeDriver,
+  rosterFiltersToParams,
+  setDriverLicenceChecked,
+  sharedFilterParams,
   suspendDriver,
+  tripFiltersToParams,
   updateDriver,
   updateDriverWageSettings,
 } from '../api';
 import type {
   DriverFilters,
+  DriverTripFilters,
   InviteDriverInput,
   UpdateDriverInput,
   UpdateDriverWageSettingsInput,
 } from '../types';
 
-/** Danh sách liên kết tài xế (phân trang/tìm kiếm server-side). */
-export function useDrivers(filters: DriverFilters) {
+/** Danh sách GỘP liên kết + nội bộ của màn Tài xế (phân trang/lọc server-side). */
+export function useDriverRoster(filters: DriverFilters, enabled = true) {
   return useQuery({
-    queryKey: queryKeys.drivers.list(filtersToParams(filters)),
-    queryFn: () => fetchDrivers(filters),
+    queryKey: queryKeys.drivers.roster(rosterFiltersToParams(filters)),
+    queryFn: () => fetchDriverRoster(filters),
     placeholderData: (prev) => prev,
+    enabled,
   });
 }
 
 /** Dải số đếm đầu màn Tài xế — theo bộ lọc chung (tìm kiếm, hình thức, vận hành). */
-export function useDriverSummary(filters: DriverFilters) {
+export function useDriverRosterSummary(filters: DriverFilters, enabled = true) {
   const params = sharedFilterParams(filters);
   return useQuery({
-    queryKey: queryKeys.drivers.summary(params),
-    queryFn: () => fetchDriverSummary(filters),
+    queryKey: queryKeys.drivers.rosterSummary(params),
+    queryFn: () => fetchDriverRosterSummary(filters),
     placeholderData: (prev) => prev,
+    enabled,
+  });
+}
+
+/**
+ * Tra tài khoản theo SĐT ở hộp "Mời tài xế" — chỉ chạy khi số đã đủ hình dạng di động VN. Kết quả
+ * giữ một phút: gõ lại đúng số không tốn thêm lượt (server giới hạn số lượt tra mỗi phút).
+ */
+export function useDriverAccountLookup(phone: string | null) {
+  return useQuery({
+    queryKey: queryKeys.drivers.accountLookup(phone ?? ''),
+    queryFn: () => lookupDriverAccount(phone as string),
+    enabled: Boolean(phone),
+    staleTime: 60_000,
+    retry: false,
   });
 }
 
@@ -60,7 +80,7 @@ export function useAssignableDrivers(
   });
 }
 
-function useDriverMutation<TVars>(fn: (vars: TVars) => Promise<unknown>) {
+function useDriverMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: fn,
@@ -79,6 +99,10 @@ export const useUpdateDriver = () =>
 export const useSuspendDriver = () => useDriverMutation((id: string) => suspendDriver(id));
 export const useResumeDriver = () => useDriverMutation((id: string) => resumeDriver(id));
 export const useEndDriver = () => useDriverMutation((id: string) => endDriver(id));
+export const useSetDriverLicenceChecked = () =>
+  useDriverMutation(({ id, checked }: { id: string; checked: boolean }) =>
+    setDriverLicenceChecked(id, checked),
+  );
 
 /** Tiền công/ngày mặc định của gian hàng + giới hạn (ADR 0075). */
 export function useDriverWageSettings(enabled = true) {
@@ -105,7 +129,7 @@ export function useUpdateDriverWageSettings() {
   });
 }
 
-/** Ngăn chi tiết một tài xế trong tháng — tải khi ngăn mở; đổi tháng giữ số cũ tới khi có số mới. */
+/** Trang chi tiết một tài xế trong tháng — đổi tháng giữ số cũ tới khi có số mới. */
 export function useDriverOverview(id: string | null, month: string | undefined) {
   return useQuery({
     queryKey: queryKeys.drivers.overview(id ?? '', { month: month ?? null }),
@@ -115,12 +139,12 @@ export function useDriverOverview(id: string | null, month: string | undefined) 
   });
 }
 
-/** Tab "Chuyến & tiền công" trong ngăn chi tiết tài xế (phân trang server-side). */
-export function useDriverAssignments(id: string | null, month: string | undefined, page: number) {
-  const params = { month: month ?? null, page };
+/** Bảng "Chuyến & tiền công" của trang chi tiết tài xế (tìm, lọc, phân trang server-side). */
+export function useDriverAssignments(id: string | null, filters: DriverTripFilters) {
+  const params = { ...tripFiltersToParams(filters), outcome: filters.status ?? null };
   return useQuery({
     queryKey: queryKeys.drivers.assignments(id ?? '', params),
-    queryFn: () => fetchDriverAssignments(id as string, { month, page }),
+    queryFn: () => fetchDriverAssignments(id as string, filters),
     enabled: Boolean(id),
     placeholderData: (prev) => prev,
   });

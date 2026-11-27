@@ -191,6 +191,7 @@ const TRIP: CustomerTripDetail = {
     refundedAt: null,
     refundReference: null,
     legacyPricing: false,
+    collaterals: [],
   },
 };
 
@@ -750,7 +751,7 @@ describe('Đã xác nhận, chờ ngày nhận xe (khách)', () => {
       'tel:0909123456',
     );
     expect(screen.getByRole('link', { name: /^Gian hàng Minh Tuấn/ }).getAttribute('href')).toBe(
-      '/shops/minh-tuan',
+      '/minh-tuan',
     );
   });
 

@@ -4,7 +4,7 @@
  * ADR 0031: hai bản KHÔNG tự đồng bộ. Đây là chỗ quyết định thứ gì bị ĐÓNG BĂNG vào chiếc xe và
  * chính sách của nó, nên lệch một dòng ở đây là hai client tạo ra hai chiếc xe khác nhau.
  */
-import { COLLATERAL_MODE, VEHICLE_TYPE } from '@xeprime/types';
+import { COLLATERAL_COMBINATION, COLLATERAL_MODE, VEHICLE_TYPE } from '@xeprime/types';
 
 import type { CreateVehicleInput } from '@/api/vehicles/api';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from '@/api/rental-policies/api';
@@ -30,7 +30,8 @@ const money = (value: number | null | undefined): string | undefined =>
  */
 export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVehicleInput {
   return {
-    name: values.name.trim(),
+    // Không hỏi tên: server ghép "Hãng Dòng Phiên bản Năm" (ADR 0102). Trống ⇒ không gửi.
+    name: values.name.trim() || undefined,
     branchId: values.branchId,
     vehicleType: values.vehicleType,
     serviceTypes: [...QUICK_VEHICLE_FIXED.serviceTypes],
@@ -97,6 +98,9 @@ export function quickVehicleToPolicyInput(
     // Khối bảo đảm: giữ NGUYÊN thứ đang hiệu lực. Wizard nhanh không hỏi cọc, nên nó cũng không
     // được quyền đặt lại cọc về 0 cho một gian hàng đang nhận thế chấp.
     collateralMode: base?.collateralMode ?? COLLATERAL_MODE.NONE,
+    collateralCashEnabled: base?.collateralCashEnabled ?? false,
+    collateralAssetEnabled: base?.collateralAssetEnabled ?? false,
+    collateralCombination: base?.collateralCombination ?? COLLATERAL_COMBINATION.ANY_ONE,
     collateralAssetTypes: base?.collateralAssetTypes ?? [],
     depositAmount: base?.depositAmount ?? '0',
 
@@ -119,16 +123,4 @@ export function quickVehicleToPolicyInput(
         ? String(Math.round(values.excessDistanceFeePerKm))
         : null,
   } as SaveRentalPolicyInput;
-}
-
-/** Gợi ý tên hiển thị từ hãng + mẫu + năm — người dùng vẫn sửa được, không có tên ẩn nào. */
-export function suggestVehicleName(values: {
-  brandLabel?: string | null;
-  model?: string | null;
-  manufactureYear?: number | null;
-}): string {
-  return [values.brandLabel, values.model, values.manufactureYear]
-    .map((part) => (part == null ? '' : String(part).trim()))
-    .filter(Boolean)
-    .join(' ');
 }

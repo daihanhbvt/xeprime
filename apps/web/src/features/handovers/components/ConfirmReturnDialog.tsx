@@ -14,11 +14,14 @@ import {
   Skeleton,
 } from 'antd';
 import { useTranslations } from 'next-intl';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useId, useMemo, useRef, useState } from 'react';
 import {
   API_ERROR_CODE,
   HANDOVER_CONDITION,
+  HANDOVER_PHOTO_SLOT_LABEL,
   HANDOVER_TYPE,
+  handoverExteriorSlotsFor,
   handoverPhotoSlotsFor,
   isEarlyReturn,
   isSingleEntrySurchargeCategory,
@@ -164,7 +167,9 @@ export function ConfirmReturnDialog({
   const [notes, setNotes] = useState('');
   const [rows, setRows] = useState<SurchargeRow[]>([]);
   const [rowsInvalid, setRowsInvalid] = useState(false);
-  const [expandedChoice, setExpandedChoice] = useState<boolean | null>(null);
+  /** Popup "chưa đủ ảnh" đang mở · các góc vừa bị cảnh báo (viền đỏ trên lưới ảnh). */
+  const [photoWarningOpen, setPhotoWarningOpen] = useState(false);
+  const [flaggedSlots, setFlaggedSlots] = useState<ReadonlySet<string> | undefined>(undefined);
   const [collect, setCollect] = useState(true);
   const [method, setMethod] = useState<PaymentMethod>(PAYMENT_METHOD.CASH);
   const [submitting, setSubmitting] = useState(false);
@@ -268,29 +273,15 @@ export function ConfirmReturnDialog({
     !hasCategory(SURCHARGE_CATEGORY.EXCESS_MILEAGE)
       ? mileage
       : null;
-  /*
-   * Chưa ai mở/đóng tay: có gợi ý (trả trễ / vượt km) hoặc đã có dòng phụ phí thì mở sẵn, để người
-   * nhận xe thấy ngay. Bấm tiêu đề một lần là lựa chọn của họ thắng.
-   */
-  const expanded =
-    expandedChoice ?? Boolean(overtimeSuggestion || mileageSuggestion || rows.length > 0);
 
   function addRow(row: Omit<SurchargeRow, 'key'>) {
     rowSeq.current += 1;
     const key = rowSeq.current;
     setRows((current) => [...current, { ...row, key }]);
     setRowsInvalid(false);
-    // Thêm từ gợi ý làm gợi ý biến mất — giữ vùng mở, đừng để nó tự gập dưới tay người dùng.
-    setExpandedChoice(true);
   }
 
-  /*
-   * Người dùng tự đổi giờ nhận (ô chọn giờ, nút "Hiện tại" / "Đúng giờ"): giờ mới có thể làm hiện
-   * gợi ý phí quá giờ, và vùng tình trạng tự bung ra dưới tay họ (phản hồi 06/11/2026). Chốt trạng
-   * thái mở/đóng đang thấy — gợi ý vẫn nằm trong vùng, mở là thấy.
-   */
   function pickTime(next: Dayjs) {
-    setExpandedChoice((choice) => choice ?? expanded);
     setPickedAt(next);
   }
 
@@ -340,6 +331,16 @@ export function ConfirmReturnDialog({
   const photosDone = returnPhotos.filter((photo) =>
     (slots as readonly string[]).includes(photo.slot),
   ).length;
+  /*
+   * Góc NGOẠI THẤT còn trống (ô tô: trước · sau · trái · phải; xe máy: trước · sau) — Odo không
+   * tính. Thiếu thì bấm xác nhận hiện popup CẢNH BÁO, chủ xe vẫn đi tiếp được (chốt 25/11/2026):
+   * ảnh vẫn tuỳ chọn ở mọi tầng, popup chỉ để họ không bỏ quên bằng chứng khi khách khiếu nại.
+   */
+  const filledSlots = new Set(returnPhotos.map((photo) => photo.slot));
+  const missingExterior = ctx
+    ? handoverExteriorSlotsFor(ctx.vehicleType).filter((slot) => !filledSlots.has(slot))
+    : [];
+  const isAttention = condition === HANDOVER_CONDITION.ATTENTION;
 
   const pickupKm = ctx?.pickupOdometerKm ?? null;
   const odometerHint =
@@ -368,7 +369,6 @@ export function ConfirmReturnDialog({
     if (submitting || !ctx) return;
     if (rows.some((row) => row.amount == null || row.amount <= 0)) {
       setRowsInvalid(true);
-      setExpandedChoice(true);
       return;
     }
     setError(null);
@@ -381,7 +381,8 @@ export function ConfirmReturnDialog({
       // Ô trống: không gửi (giữ số của bản nháp, nếu có) — trừ khi người dùng vừa XOÁ số nháp.
       ...(odometerKm != null ? { odometerKm } : draftOdometer != null ? { odometerKm: null } : {}),
       ...(condition ? { condition } : {}),
-      ...(notes.trim() ? { notes: notes.trim() } : {}),
+      // Ô ghi chú chỉ hiện khi "Có điểm cần lưu ý" — đổi về "Bình thường" thì chữ đã gõ không đi theo.
+      ...(isAttention && notes.trim() ? { notes: notes.trim() } : {}),
       // Ảnh tải trong hộp làm `rowVersion` nhảy — ngữ cảnh được làm mới sau mỗi ảnh.
       ...(ctx.return?.rowVersion ? { expectedRowVersion: ctx.return.rowVersion } : {}),
       ...(acknowledgeSuspicious ? { acknowledgeSuspicious: true } : {}),
@@ -460,7 +461,10 @@ export function ConfirmReturnDialog({
             type="primary"
             loading={submitting}
             disabled={!ctx || waitingForMoney}
-            onClick={() => void submit()}
+            onClick={() => {
+              if (missingExterior.length > 0) setPhotoWarningOpen(true);
+              else void submit();
+            }}
           >
             {t('confirm')}
           </Button>
@@ -610,30 +614,24 @@ export function ConfirmReturnDialog({
             </label>
           </div>
 
-          {/* Tình trạng, ảnh & ghi chú — THU GỌN sẵn (Figma 23941:64008); không bắt buộc. */}
-          <section className={styles.details}>
-            <button
-              type="button"
-              className={styles.detailsHeader}
-              aria-expanded={expanded}
-              aria-controls={sectionId}
-              onClick={() => setExpandedChoice(!expanded)}
-            >
+          {/*
+            Tình trạng, ảnh & ghi chú — LUÔN mở (25/11/2026, thay khối thu gọn của Figma 23941:64008):
+            mục này để KHUYẾN KHÍCH chủ xe đánh giá xe và chụp ảnh lúc nhận lại, gập sẵn là giấu nó đi.
+          */}
+          <section className={styles.details} aria-labelledby={`${sectionId}-details`}>
+            <div className={styles.detailsHeader}>
               <span className={styles.detailsHeading}>
-                <LineIcon
-                  name="chevron-down"
-                  className={cx(styles.chevron, !expanded && styles.chevronCollapsed)}
-                />
-                <span className={styles.detailsTitle}>{t('detailsTitle')}</span>
-                <span className={styles.optional}>{t('optional')}</span>
+                <span id={`${sectionId}-details`} className={styles.detailsTitle}>
+                  {t('detailsTitle')}
+                </span>
+                <span className={styles.encouraged}>{t('encouraged')}</span>
               </span>
               <span className={styles.photoCount}>
                 {t('photoCount', { done: photosDone, total: slots.length })}
               </span>
-            </button>
+            </div>
 
-            {/* `hidden` chứ không gỡ: ảnh đang tải dở không mất khi người dùng thu gọn. */}
-            <div id={sectionId} className={styles.detailsBody} hidden={!expanded}>
+            <div id={sectionId} className={styles.detailsBody}>
               <div className={styles.group}>
                 <span className={styles.groupTitle}>{tHandover('condition.label')}</span>
                 <div
@@ -662,9 +660,10 @@ export function ConfirmReturnDialog({
                 </div>
               </div>
 
-              <div className={styles.group}>
+              <div className={styles.group} id={`${sectionId}-photos`}>
                 <span className={styles.groupTitle}>{t('photosLabel')}</span>
                 <HandoverPhotoGrid
+                  highlightSlots={flaggedSlots}
                   variant="row"
                   bookingId={booking.id}
                   type={HANDOVER_TYPE.RETURN}
@@ -689,16 +688,19 @@ export function ConfirmReturnDialog({
                 />
               </div>
 
-              <label className={styles.group}>
-                <span className={styles.groupTitle}>{tHandover('notes.label')}</span>
-                <Input.TextArea
-                  value={notes}
-                  maxLength={2000}
-                  autoSize={{ minRows: 2, maxRows: 5 }}
-                  placeholder={t('notesPlaceholder')}
-                  onChange={(event) => setNotes(event.target.value)}
-                />
-              </label>
+              {/* Ghi chú chỉ cần khi xe CÓ điểm cần lưu ý — xe bình thường thì không có gì để ghi. */}
+              {isAttention ? (
+                <label className={styles.group}>
+                  <span className={styles.groupTitle}>{tHandover('notes.label')}</span>
+                  <Input.TextArea
+                    value={notes}
+                    maxLength={2000}
+                    autoSize={{ minRows: 2, maxRows: 5 }}
+                    placeholder={t('notesPlaceholder')}
+                    onChange={(event) => setNotes(event.target.value)}
+                  />
+                </label>
+              ) : null}
 
               {canRecord ? (
                 <div className={styles.group}>
@@ -915,6 +917,51 @@ export function ConfirmReturnDialog({
           {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}
         </div>
       )}
+
+      {/* Popup CẢNH BÁO thiếu ảnh ngoại thất — chỉ nhắc, "Vẫn xác nhận" đi tiếp như thường. */}
+      <ResponsiveDialog
+        open={photoWarningOpen}
+        onClose={() => setPhotoWarningOpen(false)}
+        size="sm"
+        title={t('photosWarningTitle')}
+        footer={
+          <div className={styles.footer}>
+            <Button
+              size="large"
+              onClick={() => {
+                setPhotoWarningOpen(false);
+                // Đưa lưới ảnh vào tầm mắt và tô đỏ đúng các góc còn thiếu.
+                setFlaggedSlots(new Set(missingExterior));
+                document
+                  .getElementById(`${sectionId}-photos`)
+                  ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+              }}
+            >
+              {t('photosWarningAdd')}
+            </Button>
+            <Button
+              size="large"
+              type="primary"
+              onClick={() => {
+                setPhotoWarningOpen(false);
+                void submit();
+              }}
+            >
+              {t('photosWarningContinue')}
+            </Button>
+          </div>
+        }
+      >
+        <p className={styles.warningBody}>
+          {t('photosWarningBody', {
+            slots: missingExterior
+              .map((slot) =>
+                domainLabel('handoverPhotoSlot', slot, HANDOVER_PHOTO_SLOT_LABEL[slot]),
+              )
+              .join(LIST_SEPARATOR),
+          })}
+        </p>
+      </ResponsiveDialog>
     </ResponsiveDialog>
   );
 }

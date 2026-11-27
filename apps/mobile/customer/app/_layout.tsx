@@ -29,6 +29,7 @@ import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
 import { queryPersistOptions } from '@/queries/query-persist';
 import { NetworkBanner } from '@/components/network/NetworkBanner';
+import { KeyboardAutoDismiss } from '@/components/keyboard/KeyboardAutoDismiss';
 import { BrandIntro } from '@/components/motion/BrandIntro';
 import { ConfettiHost } from '@/components/motion/Confetti';
 import { store } from '@/store';
@@ -198,6 +199,7 @@ export default function RootLayout() {
                   </SessionBoundary>
                   {/* Sau mọi màn để phủ lên trên — dải offline/kết nối lại ở đầu màn. */}
                   <NetworkBanner />
+                <KeyboardAutoDismiss />
                   <ConfettiHost />
                   {/* Màn chào JS sau splash native, ≤ 900ms, không chặn tải — `BrandIntro`. */}
                   <BrandIntro />

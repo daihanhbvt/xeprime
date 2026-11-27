@@ -16,7 +16,10 @@ export const LinkArrow = memo(function LinkArrow({
   label,
   onPress,
   accessibilityLabel,
+  icon = 'arrow-right',
 }: {
+  /** `chevron-right` - "Lịch xe ›" của thẻ xe chi tiết đơn (Figma `24145:101960`). */
+  icon?: 'arrow-right' | 'chevron-right';
   label: string;
   onPress: () => void;
   accessibilityLabel?: string;
@@ -40,7 +43,7 @@ export const LinkArrow = memo(function LinkArrow({
         >
           {label}
         </Text>
-        <LineIcon name="arrow-right" color={colors.brandLink} size={ICON} />
+        <LineIcon name={icon} color={colors.brandLink} size={ICON} />
       </XStack>
     </Pressable>
   );

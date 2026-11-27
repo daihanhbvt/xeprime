@@ -26,6 +26,7 @@ export function filtersToParams(filters: AdminBookingFilters): QueryParams {
     tenantId: filters.tenantId ?? null,
     vehicleId: filters.vehicleId ?? null,
     status: pickFilter(filters.status),
+    source: filters.source ?? null,
     dateField: pickFilter(filters.dateField),
     // URL giữ `YYYY-MM-DD` (giờ VN) → API nhận mốc tuyệt đối: từ 00:00 ngày đầu đến hết ngày cuối.
     dateFrom: filters.dateFrom ? startOfAppDay(filters.dateFrom).toISOString() : null,

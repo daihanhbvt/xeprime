@@ -22,6 +22,7 @@
     "undo": "Hoàn tác",
     "clear": "Xoá bộ lọc",
     "clearSelection": "Bỏ chọn",
+    "moreSelected": "Còn {count} mục đã chọn",
     "back": "Quay lại",
     "next": "Tiếp tục",
     "previous": "Trước",
@@ -129,7 +130,8 @@
     "pickupWishWindow": "{label}: {start} - {end}",
     "pickupWishShopDecides": "Gian hàng chốt ngày giờ nhận khi duyệt",
     "dateTime": "{date}{sep}{time}",
-    "hourAndMinute": "{hours, plural, other {# giờ}} {minutes, plural, other {# phút}}"
+    "hourAndMinute": "{hours, plural, other {# giờ}} {minutes, plural, other {# phút}}",
+    "millionShort": "{count} triệu"
   },
   "pagination": {
     "total": "{count, plural, other {# mục}}",
@@ -289,6 +291,7 @@
     }
   },
   "filters": {
+    "allOf": "Tất cả {label}",
     "title": "Bộ lọc",
     "activeCount": "{count, plural, other {# bộ lọc đang bật}}",
     "reset": "Xoá lọc",
@@ -305,6 +308,7 @@
     "libraryDenied": "Chưa có quyền đọc thư viện ảnh. Vào Cài đặt → XePrime để bật quyền Ảnh."
   },
   "image": {
+      "sourcePdf": "Chọn tệp PDF",
     "takePhoto": "Chụp ảnh",
     "chooseFromLibrary": "Chọn từ thư viện",
     "changeImage": "Đổi ảnh",

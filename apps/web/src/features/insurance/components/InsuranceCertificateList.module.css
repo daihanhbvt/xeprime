@@ -103,3 +103,88 @@
   font-size: var(--xp-font-size-sm);
   color: var(--xp-color-text-secondary);
 }
+
+/*
+ * Khổ điện thoại của chi tiết đơn (`phoneCards`, Figma Partner) - tiêu đề ẩn khỏi mắt (vẫn đọc
+ * được bằng trình đọc màn hình), mỗi sản phẩm một thẻ nền xanh nhạt bo 16. Dòng chưa có GCN:
+ * tên + nhãn trạng thái một hàng; dưới là "Phí đã trả" kèm ghi chú trạng thái ở cột trái, số tiền
+ * cột phải. Thẻ GCN đã cấp giữ nguyên nội dung, chỉ đổi khung. Desktop không đổi.
+ */
+@media (max-width: 640px) {
+  .phoneCards .title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .phoneCards .item {
+    gap: var(--xp-space-sm);
+    padding: var(--xp-space-md);
+    border-color: var(--xp-color-info-border);
+    border-radius: var(--xp-border-radius-card);
+    background: var(--xp-color-info-bg);
+  }
+
+  .phoneCards .head {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--xp-space-sm);
+  }
+
+  .phoneCards .product {
+    min-width: 0;
+    font-size: var(--xp-font-size-h4);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-h4);
+  }
+
+  .phoneCards .testTag {
+    flex: none;
+  }
+
+  .phoneCards .coverageItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0 var(--xp-space-sm);
+  }
+
+  .phoneCards .coverageItem .head {
+    grid-column: 1 / -1;
+    margin-bottom: var(--xp-space-sm);
+  }
+
+  .phoneCards .coverageItem .facts,
+  .phoneCards .coverageItem .fact {
+    display: contents;
+  }
+
+  .phoneCards .coverageItem .fact dt {
+    grid-column: 1;
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .phoneCards .coverageItem .fact dd {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    color: var(--xp-color-text);
+    font-size: var(--xp-font-size-body);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-body);
+    white-space: nowrap;
+  }
+
+  .phoneCards .coverageItem .statusNote {
+    grid-column: 1;
+    color: var(--xp-color-text-tertiary);
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+}

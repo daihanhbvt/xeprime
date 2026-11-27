@@ -15,3 +15,7 @@ export type SaveBankAccountInput = Schemas['SaveBankAccountDto'];
 
 /** Hai bề mặt dùng chung một feature — khác nhau đúng ở tiền tố đường dẫn. */
 export type BankAccountScope = 'account' | 'shop';
+
+/** Yêu cầu ĐỔI tài khoản nhận tiền (biên bản họp 19/11/2026) — tài khoản khoá từ lần khai đầu. */
+export type BankAccountChangeRequest = Schemas['BankAccountChangeRequestDto'];
+export type CreateBankAccountChangeRequestInput = Schemas['CreateBankAccountChangeRequestDto'];

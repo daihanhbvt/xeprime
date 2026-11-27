@@ -1,4 +1,5 @@
 import { Ionicons } from '@/components/icons/Ionicons';
+import { ListLoadingFooter } from '@/components/ui/DotsLoader';
 import { CHAT_SIDE, PERMISSION, type ChatSide } from '@xeprime/types';
 import {
   DAY_PARAM_FORMAT,
@@ -12,7 +13,6 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -413,14 +413,7 @@ export function ChatThreadScreen({
               onEndReached={thread.loadOlder}
               // Đảo ngược ⇒ footer nằm ở ĐỈNH luồng tin: vòng quay khi đang nối trang lịch sử.
               ListFooterComponent={
-                thread.loadingOlder ? (
-                  <YStack py={space.md} ai="center">
-                    <ActivityIndicator
-                      color={colors.textMuted}
-                      accessibilityLabel={t('loadingOlder')}
-                    />
-                  </YStack>
-                ) : null
+                thread.loadingOlder ? <ListLoadingFooter /> : null
               }
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"

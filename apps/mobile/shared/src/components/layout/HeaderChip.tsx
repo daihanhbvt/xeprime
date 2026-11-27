@@ -14,6 +14,13 @@ export const HEADER_CHIP_SIZE = 40;
 const GLYPH = 18;
 /** Vùng chạm 48dp (≥ 44dp WCAG) quanh vòng 40dp. */
 const HIT_SLOP = (sizing.touchTarget - HEADER_CHIP_SIZE) / 2;
+/**
+ * Dạng VUÔNG - nút của đầu màn Tổng quan app Partner (Figma Overview MB "Action Icons" `24175:52349`):
+ * ô 42 (đệm 10 + icon 20), bo 12, viền `stroke/gray-low200`, nền trắng, KHÔNG bóng; chấm số cao 12
+ * nằm TRONG góc trên-phải ô (Figma left 20 · top 5), đè lên icon.
+ */
+const SQUARE = { size: 42, glyph: 20, badgeTop: 5, badgeLeft: 20 } as const;
+const SQUARE_HIT_SLOP = Math.max(0, (sizing.touchTarget - SQUARE.size) / 2);
 
 /**
  * Nút tròn của thanh trên — bản native của `HeaderIconButton` web: vòng 40dp nền `surface`
@@ -30,6 +37,7 @@ export function HeaderChip({
   accessibilityHint,
   badgeCount = 0,
   skin,
+  shape = 'round',
 }: {
   /**
    * Biểu tượng: tên trong bộ icon nét design v2 (`{ line }` — web `LineIcon`, dùng ở khu khách) hoặc
@@ -45,17 +53,21 @@ export function HeaderChip({
    * biểu tượng `primary-bright` thay vì vòng `surface` + biểu tượng `text-secondary` chung.
    */
   skin?: { glyph?: string; surface?: string };
+  /** `round` - vòng 40 của thanh trên (mặc định); `square` - ô 42 bo 12 của đầu Tổng quan app Partner. */
+  shape?: 'round' | 'square';
 }) {
   const colors = useColors();
   const styles = useStyles();
+  const square = shape === 'square';
+  const glyph = square ? SQUARE.glyph : GLYPH;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      hitSlop={HIT_SLOP}
-      style={styles.hit}
+      hitSlop={square ? SQUARE_HIT_SLOP : HIT_SLOP}
+      style={square ? styles.hitSquare : styles.hit}
     >
       {/*
         Vòng tròn là một View RIÊNG bên trong; Pressable ngoài không có nền, không bóng. Nếu đặt
@@ -67,20 +79,25 @@ export function HeaderChip({
         <>
           <YStack
             style={[
-              styles.chip,
+              square ? styles.square : styles.chip,
               skin?.surface ? { backgroundColor: skin.surface } : null,
               pressed ? styles.pressed : null,
             ]}
           >
             {typeof icon === 'string' ? (
-              <Ionicons name={icon} size={GLYPH} color={skin?.glyph ?? colors.textMuted} />
+              <Ionicons name={icon} size={glyph} color={skin?.glyph ?? colors.textMuted} />
             ) : (
-              <LineIcon name={icon.line} size={GLYPH} color={skin?.glyph ?? colors.textMuted} />
+              <LineIcon name={icon.line} size={glyph} color={skin?.glyph ?? colors.textMuted} />
             )}
           </YStack>
           {badgeCount > 0 ? (
-            <YStack style={styles.badge}>
-              <CountBadge count={badgeCount} tone="danger" size="sm" max={HEADER_BADGE_MAX} />
+            <YStack style={square ? styles.badgeSquare : styles.badge}>
+              <CountBadge
+                count={badgeCount}
+                tone="danger"
+                size={square ? 'xs' : 'sm'}
+                max={HEADER_BADGE_MAX}
+              />
             </YStack>
           ) : null}
         </>
@@ -102,6 +119,18 @@ const useStyles = makeStyles((colors) => ({
     width: HEADER_CHIP_SIZE,
     ...elevation.card,
   },
+  hitSquare: { height: SQUARE.size, width: SQUARE.size },
+  square: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    height: SQUARE.size,
+    justifyContent: 'center',
+    width: SQUARE.size,
+  },
+  badgeSquare: { left: SQUARE.badgeLeft, position: 'absolute', top: SQUARE.badgeTop },
   pressed: { borderColor: colors.primary },
   badge: {
     borderColor: colors.surface,

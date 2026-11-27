@@ -1,25 +1,18 @@
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  FINANCE_CATEGORY_TYPE_META,
-  PERMISSION,
-  PLAN_FEATURE,
-  RECEIPT_TYPE,
-  RECEIPT_TYPE_VALUES,
-  STATUS_COLOR,
-} from '@xeprime/types';
-import { metaColor } from '@/lib/status-meta';
-import { AlertDialog } from '@/components/ui/AlertDialog';
+import { PERMISSION, PLAN_FEATURE, RECEIPT_TYPE, RECEIPT_TYPE_VALUES } from '@xeprime/types';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { IconButton } from '@/components/ui/IconButton';
+import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { Pill } from '@/components/ui/Pill';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TextControl } from '@/components/ui/TextControl';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -27,7 +20,8 @@ import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import {
   useCreateCategory,
   useDeleteCategory,
@@ -36,42 +30,45 @@ import {
 } from '../hooks/use-finance';
 import type { CreateCategoryInput, FinanceCategory } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
-import { layout } from '@/theme/layout';
-
-/**
- * Bề rộng hai cột nhãn của một hàng danh mục.
- *
- * Đủ ôm chuỗi DÀI NHẤT của cả hai ngôn ngữ ở cỡ `sm` ("Hệ thống", "Tự tạo" / "System",
- * "Custom") cộng lề của viên. Cột cố định là thứ giữ cho hai dải nhãn thẳng hàng suốt danh
- * sách — chữ trong viên vốn dài ngắn khác nhau theo từng hàng.
- */
-const TYPE_COL_WIDTH = 56;
-const SOURCE_COL_WIDTH = 84;
 
 /** Trần tên danh mục — khớp `maxLength={255}` của ô nhập bên web và DTO backend. */
 const NAME_MAX = 255;
 
+/** Chip lọc của tấm: tất cả, hoặc đúng một chiều tiền. */
+const FILTER_ALL = 'all';
+type CategoryFilter = typeof FILTER_ALL | (typeof RECEIPT_TYPE_VALUES)[number];
+
+/** Khoảng đệm/cách của một dòng danh mục - Figma `24512:129050`: đệm 12, cách 12. */
+const ROW_PAD = 12;
+/** Icon 16 trong nút vuông 32 (Figma "Edit 1" / "Delete 1"). */
+const ROW_ICON = 16;
+
 /**
- * Quản lý danh mục thu/chi (FIN-03) — bản native của `CategoryManagerModal`.
+ * Quản lý danh mục thu/chi (FIN-03) — bản native của `CategoryManagerModal`, giao diện theo Figma
+ * Partner-XePrime `24512:128393` ("Wallet Management / Category").
  *
  * Mở từ CHÍNH sổ Thu-Chi (đúng lối vào duy nhất của web), không phải một mục menu riêng: danh
  * mục chỉ có nghĩa khi đang nhìn vào sổ.
  *
- * Ba luật giữ nguyên từ web:
- *  1. **Danh mục HỆ THỐNG không xoá được** — chúng là đích của phiếu tự động (`system_key`), xoá
- *     một cái là mọi phiếu bảo dưỡng sau đó mất danh mục.
- *  2. **KHÔNG có đổi tên**, dù backend có `PATCH /finance/categories/:id`: web chưa mở luồng đó,
- *     và app đi trước web là hai sản phẩm khác nhau.
- *  3. Thêm/xoá cần `receipt.create` + feature gate `finance` — cùng bộ guard backend đang gác.
+ * Luật giữ nguyên từ web:
+ *  1. **Danh mục HỆ THỐNG không sửa/xoá được** — chúng là đích của phiếu tự động (`system_key`).
+ *     Dòng của nó không có nút nào và mang chữ "Hệ thống" cạnh tên (Figma vẽ nút trên mọi dòng;
+ *     người dùng chốt 26/11/2026 giữ cách của web thay vì hai nút bấm vào là lỗi).
+ *  2. **Lưu TỪNG DÒNG** bằng ✓ của chính dòng đó; chân tấm chỉ có "Đóng" (Figma vẽ Hủy + Xác
+ *     nhận - người dùng chốt 26/11/2026 giữ một nút như web, không có gì để "xác nhận").
+ *  3. Thêm/sửa/xoá cần `receipt.create` + feature gate `finance` — cùng bộ guard backend đang gác.
  *
- * Khác web đúng một chỗ: xoá có bước XÁC NHẬN. Web gọi mutation ngay khi bấm; trên native thì
- * nút xoá là một biểu tượng 24dp cạnh mép ngón tay, và một cú chạm nhầm ở đó xoá mất một danh
- * mục của gian hàng mà không có đường hoàn tác.
+ * "+ Thêm danh mục" mở một dòng nhập ở CUỐI danh sách (tên + loại + ✓/✕), như dòng thêm mới của
+ * web. Chip "Tất cả · Thu · Chi" chỉ lọc danh sách đã tải trên máy, không gọi API.
+ *
+ * Khác web đúng một chỗ: xoá có bước XÁC NHẬN bằng hộp thoại riêng — trên native nút xoá nằm
+ * sát mép ngón tay, một cú chạm nhầm xoá mất danh mục của gian hàng mà không có đường hoàn tác.
  */
 export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const colors = useColors();
   const t = useTranslations('Finance.receipts.categories');
   const tActions = useTranslations('Common.actions');
+  const tLabels = useTranslations('Common.labels');
   const tStates = useTranslations('Common.states');
   const tFeature = useTranslations('ManageCommon.feature');
   const domainLabel = useDomainLabel();
@@ -81,6 +78,10 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
 
   const canManage = permissions.has(PERMISSION.RECEIPT_CREATE) && finance.canWrite;
 
+  const [filter, setFilter] = useState<CategoryFilter>(FILTER_ALL);
+  const [adding, setAdding] = useState(false);
+  /** Tăng mỗi lần mở thẻ thêm - khoá để tấm cuộn xuống đáy đúng một lần mỗi lượt mở. */
+  const [addSeq, setAddSeq] = useState(0);
   const [type, setType] = useState<string>(RECEIPT_TYPE.EXPENSE);
   const [name, setName] = useState('');
   const [removing, setRemoving] = useState<FinanceCategory | null>(null);
@@ -93,16 +94,65 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
   const remove = useDeleteCategory();
   const rename = useRenameCategory();
 
+  /** Xếp như web: Chi trước Thu, trong cùng loại theo tên. */
+  const all = useMemo(
+    () =>
+      [...(query.data ?? [])].sort(
+        (a, b) => b.type.localeCompare(a.type) || a.name.localeCompare(b.name, 'vi'),
+      ),
+    [query.data],
+  );
+  const list = useMemo(
+    () => (filter === FILTER_ALL ? all : all.filter((c) => c.type === filter)),
+    [all, filter],
+  );
+
+  const chips = useMemo<ChipTabItem<CategoryFilter>[]>(
+    () => [
+      { value: FILTER_ALL, label: tLabels('all'), count: all.length },
+      ...RECEIPT_TYPE_VALUES.map((value) => ({
+        value,
+        label: domainLabel('financeCategoryType', value),
+        count: all.filter((c) => c.type === value).length,
+      })),
+    ],
+    [all, domainLabel, tLabels],
+  );
+
+  const typeOptions = useMemo(
+    () =>
+      // "Phiếu thu"/"Phiếu chi" như viên loại trên từng dòng và Figma `24512:129578` - không phải "Thu"/"Chi" của chip lọc.
+      RECEIPT_TYPE_VALUES.map((value) => ({
+        value,
+        label: value === RECEIPT_TYPE.INCOME ? t('typeBadge.income') : t('typeBadge.expense'),
+      })),
+    [t],
+  );
+
   const trimmed = name.trim();
 
+  const openAdd = useCallback(() => {
+    // Đang lọc một loại thì dòng mới mặc định đúng loại đó - người dùng vừa nói họ đang làm việc với nó.
+    setType(filter === FILTER_ALL ? RECEIPT_TYPE.EXPENSE : filter);
+    setAdding(true);
+    setAddSeq((n) => n + 1);
+  }, [filter]);
+
+  const cancelAdd = useCallback(() => {
+    setName('');
+    setAdding(false);
+  }, []);
+
   const add = () => {
-    if (!trimmed) return;
+    if (!trimmed || create.isPending) return;
     create.mutate(
       { type: type as CreateCategoryInput['type'], name: trimmed },
       {
         onSuccess: () => {
           setName('');
+          // Đóng thẻ thêm - danh mục mới hiện ngay trong danh sách (chốt 26/11/2026).
           toast.showSuccess(t('added'));
+          setAdding(false);
         },
         onError: (error) => toast.showError(getErrorMessage(error)),
       },
@@ -144,38 +194,77 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
     });
   };
 
-  const list = query.data ?? [];
+  const startEdit = useCallback((category: FinanceCategory) => {
+    setEditing({ id: category.id, name: category.name });
+  }, []);
+
+  const loaded = !query.isPending && !query.isError;
+  const showList = loaded && list.length > 0;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={t('title')}>
-      {canManage ? (
-        <YStack gap={space.sm}>
-          <SelectControl
-            label={t('typeLabel')}
-            value={type}
-            options={RECEIPT_TYPE_VALUES.map((value) => ({
-              value,
-              label: domainLabel('financeCategoryType', value),
-            }))}
-            onChange={setType}
-          />
-          <TextControl
-            label={t('nameLabel')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('namePlaceholder')}
-            maxLength={NAME_MAX}
-          />
-          <Button
-            label={tActions('add')}
-            icon="add"
-            loading={create.isPending}
-            disabled={!trimmed}
-            onPress={add}
-          />
-        </YStack>
-      ) : finance.isVisible && !finance.canWrite ? (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={t('title')}
+      chrome="v2"
+      headerDivider
+      /*
+        Chân tấm (chốt 26/11/2026):
+        - bình thường: nút vàng "+ Thêm danh mục";
+        - đang thêm: "Hủy" + "Thêm danh mục" - hành động của thẻ thêm nằm ở chân tấm (luôn thấy, kể
+          cả khi bàn phím mở), thẻ chỉ còn hai ô nhập. Đóng tấm bằng dấu X ở đầu.
+      */
+      {...(canManage && loaded
+        ? {
+            footer: adding ? (
+              /* "Huỷ" vừa chữ, phần còn lại cho nút chính (như `SheetConfirmFooter`). */
+              <XStack gap={space.md}>
+                <YStack>
+                  <Button
+                    label={tActions('cancel')}
+                    variant="secondary"
+                    shape="square"
+                    disabled={create.isPending}
+                    onPress={cancelAdd}
+                  />
+                </YStack>
+                <YStack f={1}>
+                  <Button
+                    label={t('addSubmit')}
+                    variant="gradient"
+                    shape="square"
+                    loading={create.isPending}
+                    disabled={!trimmed}
+                    onPress={add}
+                  />
+                </YStack>
+              </XStack>
+            ) : (
+              <Button
+                label={t('addRow')}
+                variant="gradient"
+                shape="square"
+                lineIcon="add"
+                onPress={openAdd}
+              />
+            ),
+          }
+        : {})}
+      /* Mở thẻ thêm ⇒ cuộn xuống đáy cho thấy ngay thẻ (nó nằm sau danh sách). */
+      scrollToEndKey={adding ? addSeq : null}
+    >
+      {!canManage && finance.isVisible && !finance.canWrite ? (
         <Callout tone="warning">{tFeature('appReadOnlyTooltip')}</Callout>
+      ) : null}
+
+      {loaded && all.length > 0 ? (
+        <ChipTabs
+          label={t('title')}
+          items={chips}
+          value={filter}
+          onSelect={setFilter}
+          gutter={0}
+        />
       ) : null}
 
       {query.isPending ? (
@@ -186,140 +275,194 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
           title={tStates('loadError')}
           onRetry={() => void query.refetch()}
         />
-      ) : list.length === 0 ? (
-        <ScreenMessage icon="pricetags-outline" title={tStates('empty')} />
+      ) : !showList ? (
+        adding ? null : <ScreenMessage icon="pricetags-outline" title={t('empty')} />
       ) : (
-        <YStack gap={space.xs}>
-          {list.map((category) => (
-            /*
-              Hàng cao ĐÚNG một vùng chạm, ở cả hai nhánh.
-
-              Đệm của `Card` cộng với nút xoá (một ô 48pt) làm hàng "danh mục tự thêm" cao 80pt,
-              trong khi hàng "hệ thống" — chỉ có một nhãn chữ — cao 60pt. Xen kẽ hai loại thì cả
-              danh sách so le và viên nhãn loại nhảy lên nhảy xuống theo từng hàng. Bỏ đệm của thẻ,
-              tự đặt `minHeight` bằng vùng chạm: nhánh nào cũng ra đúng một chiều cao, và nút xoá
-              vẫn giữ nguyên 48pt cho ngón tay.
-            */
-            <Card key={category.id} tone="muted" lift="flat" padded={false}>
-              <XStack
-                ai="center"
+        /* Figma "Category List" `24512:129049`: khung trắng viền `stroke/gray-low200`, bo 12, các
+           dòng ngăn nhau bằng vạch cùng màu. */
+        <YStack bg={colors.surface} bw={1} bc={colors.border} br={radius.control} ov="hidden">
+          {list.map((category, index) => {
+            const last = index === list.length - 1;
+            return editing?.id === category.id ? (
+              <YStack
+                key={category.id}
+                p={ROW_PAD}
                 gap={space.sm}
-                px={layout.padX}
-                py={space.xs}
-                minHeight={sizing.touchTarget}
+                borderBottomWidth={last ? 0 : 1}
+                borderColor={colors.border}
               >
-                {editing?.id === category.id ? (
-                  <YStack f={1} minWidth={0}>
-                    <TextControl
-                      label={t('nameLabel')}
-                      value={editing.name}
-                      onChangeText={(next) => setEditing({ id: category.id, name: next })}
-                      maxLength={NAME_MAX}
-                    />
-                  </YStack>
-                ) : (
-                  <Text
-                    f={1}
-                    minWidth={0}
-                    col={colors.text}
-                    fos={fontSize.bodySm}
-                    fow={fontWeight.medium}
-                    numberOfLines={2}
+                <TextControl
+                  label={t('nameLabel')}
+                  value={editing.name}
+                  onChangeText={(next) => setEditing({ id: category.id, name: next })}
+                  maxLength={NAME_MAX}
+                />
+                <XStack jc="flex-end" gap={space.sm}>
+                  <IconSquareButton
+                    label={t('discard')}
+                    size="sm"
+                    tone="muted"
+                    disabled={rename.isPending}
+                    onPress={() => setEditing(null)}
                   >
-                    {category.name}
-                  </Text>
-                )}
-
-                {/*
-                  Hai viên nhãn trả lời hai câu khác nhau — CHIỀU TIỀN (Thu/Chi) và NGUỒN (hệ
-                  thống hay gian hàng tự thêm) — nên đứng cạnh nhau ở cùng một cột phải, không
-                  cái nào tụt xuống dòng phụ.
-
-                  Mỗi viên nằm trong một ô có bề rộng SÀN và canh giữa: chữ "Thu" ngắn hơn "Chi",
-                  "Tự tạo" ngắn hơn "Hệ thống", thả tự do thì cột nhãn so le theo từng hàng. Sàn
-                  chứ không phải bề rộng cứng — máy đang phóng to cỡ chữ hệ thống thì ô nở ra
-                  theo, không cắt mất chữ.
-                */}
-                <XStack w={TYPE_COL_WIDTH} ai="center" jc="center">
-                  <StatusBadge
-                    label={domainLabel('financeCategoryType', category.type)}
-                    color={metaColor(FINANCE_CATEGORY_TYPE_META, category.type)}
+                    <LineIcon name="close" size={ROW_ICON} color={colors.textMuted} />
+                  </IconSquareButton>
+                  <IconSquareButton
+                    label={t('save')}
                     size="sm"
-                  />
+                    tone="brand"
+                    busy={rename.isPending}
+                    disabled={!editing.name.trim()}
+                    onPress={saveRename}
+                  >
+                    <LineIcon name="check-xs" size={ROW_ICON} color={colors.text} />
+                  </IconSquareButton>
                 </XStack>
+              </YStack>
+            ) : (
+              <CategoryRow
+                key={category.id}
+                category={category}
+                last={last}
+                canManage={canManage}
+                typeLabel={
+                  category.type === RECEIPT_TYPE.INCOME
+                    ? t('typeBadge.income')
+                    : t('typeBadge.expense')
+                }
+                systemLabel={t('system')}
+                editLabel={t('edit')}
+                deleteLabel={t('delete')}
+                onEdit={startEdit}
+                onDelete={setRemoving}
+              />
+            );
+          })}
 
-                {/*
-                  Nguồn có nhãn ở CẢ HAI nhánh. Chỉ gắn viên cho danh mục hệ thống thì hàng trống
-                  đọc ra là "chưa tải xong" chứ không phải "của tôi tự thêm" — mà đó mới là điều
-                  nói cho người dùng biết hàng nào xoá được.
-
-                  Hai màu tách hẳn nhau: hệ thống xám trung tính (thứ có sẵn, không đụng vào
-                  được), tự tạo xanh dương (thứ gian hàng làm chủ).
-                */}
-                <XStack w={SOURCE_COL_WIDTH} ai="center" jc="center">
-                  <StatusBadge
-                    label={category.isSystem ? t('system') : t('custom')}
-                    color={category.isSystem ? STATUS_COLOR.NEUTRAL : STATUS_COLOR.INFO}
-                    size="sm"
-                  />
-                </XStack>
-
-                {/*
-                  Ô CUỐI giữ nút sửa + xoá, bề rộng CỐ ĐỊNH bằng hai vùng chạm — giữ chỗ cả ở hàng hệ
-                  thống (không xoá được) để hai cột nhãn của mọi hàng thẳng nhau. Người không có
-                  quyền sửa thì không có cột này, danh sách khỏi chừa một dải trống.
-                */}
-                {canManage ? (
-                  <XStack w={sizing.touchTarget * 2} ai="center" jc="flex-end">
-                    {category.isSystem ? null : editing?.id === category.id ? (
-                      <>
-                        <IconButton
-                          icon="checkmark"
-                          label={t('save')}
-                          tone="primary"
-                          loading={rename.isPending}
-                          onPress={saveRename}
-                        />
-                        <IconButton
-                          icon="close"
-                          label={t('discard')}
-                          disabled={rename.isPending}
-                          onPress={() => setEditing(null)}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <IconButton
-                          icon="create-outline"
-                          label={t('edit')}
-                          onPress={() => setEditing({ id: category.id, name: category.name })}
-                        />
-                        <IconButton
-                          icon="trash-outline"
-                          label={t('delete')}
-                          tone="danger"
-                          onPress={() => setRemoving(category)}
-                        />
-                      </>
-                    )}
-                  </XStack>
-                ) : null}
-              </XStack>
-            </Card>
-          ))}
         </YStack>
       )}
 
-      <AlertDialog
+      {/*
+        Figma "Inline Add Category Card" `24512:129515`: thẻ nền `bg/primary-25` viền `stroke/primary`
+        bo 12, đầu thẻ "Thêm danh mục mới" + "Đóng", hai ô Tên/Loại, nút vàng trọn bề ngang. Thêm là
+        LƯU NGAY (chốt 25/11/2026) - chân tấm chỉ có "Đóng".
+      */}
+      {canManage && loaded ? (
+        adding ? (
+          <YStack
+            p={ROW_PAD}
+            gap={ROW_PAD}
+            bg={colors.brandWash}
+            bw={1}
+            bc={colors.brandShape}
+            br={radius.control}
+          >
+            <Text
+              col={colors.brandHigh}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fontFamily={FONT_FAMILY.semibold}
+            >
+              {t('addTitle')}
+            </Text>
+            <TextControl
+              label={t('nameLabel')}
+              required
+              value={name}
+              onChangeText={setName}
+              placeholder={t('namePlaceholder')}
+              maxLength={NAME_MAX}
+            />
+            <SelectControl
+              label={t('typeLabel')}
+              required
+              value={type}
+              options={typeOptions}
+              onChange={setType}
+            />
+          </YStack>
+        ) : null
+      ) : null}
+
+      {/* Xác nhận xoá: popup chuẩn app (như "Từ chối đơn thuê") - "Huỷ" + "Xoá" MỘT hàng (chốt 26/11/2026). */}
+      <ConfirmSheet
         open={removing !== null}
         title={t('delete')}
         message={removing ? t('deleteConfirm', { name: removing.name }) : undefined}
         confirmLabel={tActions('delete')}
-        destructive
+        tone="danger"
         loading={remove.isPending}
-        onCancel={() => setRemoving(null)}
+        onClose={() => setRemoving(null)}
         onConfirm={confirmRemove}
       />
     </BottomSheet>
   );
 }
+
+/**
+ * Một dòng danh mục - Figma `24512:129050`: tên 14/20 medium, viên loại dưới tên, hai nút vuông 32
+ * (sửa nền xám, xoá nền đỏ nhạt) ở phải. Danh mục hệ thống không có nút, mang chữ "Hệ thống".
+ */
+const CategoryRow = memo(function CategoryRow({
+  category,
+  last,
+  canManage,
+  typeLabel,
+  systemLabel,
+  editLabel,
+  deleteLabel,
+  onEdit,
+  onDelete,
+}: {
+  category: FinanceCategory;
+  last: boolean;
+  canManage: boolean;
+  typeLabel: string;
+  systemLabel: string;
+  editLabel: string;
+  deleteLabel: string;
+  onEdit: (category: FinanceCategory) => void;
+  onDelete: (category: FinanceCategory) => void;
+}) {
+  const colors = useColors();
+  const edit = useCallback(() => onEdit(category), [category, onEdit]);
+  const del = useCallback(() => onDelete(category), [category, onDelete]);
+  return (
+    <XStack
+      ai="center"
+      gap={ROW_PAD}
+      p={ROW_PAD}
+      borderBottomWidth={last ? 0 : 1}
+      borderColor={colors.border}
+    >
+      <YStack f={1} minWidth={0} gap={space.xs} ai="flex-start">
+        {/* Tên + chip "Hệ thống" (xám) NGANG HÀNG (chốt 26/11/2026). */}
+        <XStack ai="center" gap={space.xs} maxWidth="100%">
+          <Text
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+            numberOfLines={2}
+            flexShrink={1}
+          >
+            {category.name}
+          </Text>
+          {category.isSystem ? <Pill label={systemLabel} tone="neutral" shape="tag" size="sm" /> : null}
+        </XStack>
+        <Pill label={typeLabel} tone={category.type === RECEIPT_TYPE.INCOME ? 'success' : 'danger'} />
+      </YStack>
+
+      {canManage && !category.isSystem ? (
+        <XStack gap={space.sm}>
+          <IconSquareButton label={editLabel} size="sm" tone="muted" onPress={edit}>
+            <LineIcon name="edit-1" size={ROW_ICON} color={colors.textMuted} />
+          </IconSquareButton>
+          <IconSquareButton label={deleteLabel} size="sm" tone="dangerSoft" onPress={del}>
+            <LineIcon name="trash" size={ROW_ICON} color={colors.danger} />
+          </IconSquareButton>
+        </XStack>
+      ) : null}
+    </XStack>
+  );
+});

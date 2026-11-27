@@ -1,4 +1,4 @@
-import { BOOKING_LIST_PRESET, BOOKING_REQUEST_STATUS } from '@xeprime/types';
+import { BOOKING_LIST_PRESET, BOOKING_REQUEST_STATUS, BOOKING_STATUS } from '@xeprime/types';
 
 /**
  * Bốn NHÓM của màn "Đơn thuê xe" gộp — bản native của `constants/rental-stages.ts` web (05/11/2026,
@@ -54,4 +54,33 @@ export function stageFromLegacyRequestStatus(status: string | undefined): Rental
     return RENTAL_STAGE.NEEDS_ACTION;
   }
   return null;
+}
+
+/**
+ * Nhóm của một ĐƠN theo trạng thái — native port of web `rentalStageOfBookingStatus` (lịch v2,
+ * 25/11/2026): `reserved` (và `confirmed` của dữ liệu cũ) là "Chờ giao xe", `active` là "Đang thuê".
+ * Trạng thái đã kết thúc không thuộc nhóm nào (`null`).
+ */
+export function rentalStageOfBookingStatus(status: string | null | undefined): RentalStage | null {
+  switch (status) {
+    case BOOKING_STATUS.RESERVED:
+    case BOOKING_STATUS.CONFIRMED:
+      return RENTAL_STAGE.AWAITING_PICKUP;
+    case BOOKING_STATUS.ACTIVE:
+      return RENTAL_STAGE.RENTING;
+    default:
+      return null;
+  }
+}
+
+/** Nhóm của một YÊU CẦU còn mở — web `rentalStageOfRequestStatus`; yêu cầu đã khép ⇒ `null`. */
+export function rentalStageOfRequestStatus(status: string | null | undefined): RentalStage | null {
+  switch (status) {
+    case BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL:
+      return RENTAL_STAGE.NEEDS_ACTION;
+    case BOOKING_REQUEST_STATUS.AWAITING_HOLD:
+      return RENTAL_STAGE.AWAITING_PAYMENT;
+    default:
+      return null;
+  }
 }

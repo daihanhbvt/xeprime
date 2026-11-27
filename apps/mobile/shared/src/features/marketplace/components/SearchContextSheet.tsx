@@ -54,10 +54,10 @@ export function SearchContextSheet({
       footer={
         <XStack gap={space.sm}>
           <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-            <Button label={tPanel('clear')} icon="refresh-outline" variant="secondary" onPress={clear} />
+            <Button label={tPanel('clear')} variant="secondary" onPress={clear} />
           </YStack>
           <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-            <Button label={tPanel('apply')} icon="checkmark" variant="gradient" onPress={onApply} />
+            <Button label={tPanel('apply')} variant="gradient" onPress={onApply} />
           </YStack>
         </XStack>
       }

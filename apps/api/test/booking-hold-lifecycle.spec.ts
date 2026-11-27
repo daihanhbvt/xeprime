@@ -29,6 +29,9 @@ import {
   PERMISSION,
   PLATFORM_ROLE,
   PLAN_STATUS,
+  RECEIPT_SOURCE,
+  RECEIPT_STATUS,
+  RECEIPT_TYPE,
   SUBSCRIPTION_STATUS,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS,
@@ -43,9 +46,10 @@ import {
   holdPaymentWindowMinutes,
 } from '@xeprime/types';
 import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
+import { BOOKING_MONEY_JOINS, SQL_DEBT, loadCounterDueAmount } from '../src/common/booking-money';
 import { SepayService } from '../src/modules/sepay/sepay.service';
-import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
+import { ScheduledCreditService } from '../src/modules/wallet/scheduled-credit.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { PlatformBookingsService } from '../src/modules/platform-admin/platform-bookings.service';
 import type { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
@@ -60,8 +64,7 @@ import {
   makeBookingsService,
   makeBookingRequestsService,
   makeBookingExtensionsService,
-  makeBankTransactionsService,
-} from './helpers/service-factory';
+  makeBankTransactionsService, makeHoldSettlementService } from './helpers/service-factory';
 import { FEE_POLICY_V2_OFF } from './helpers/fee-snapshot';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
@@ -88,12 +91,7 @@ const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const holds = makeBookingHoldsService(asService);
 const bookings = makeBookingsService(asService);
-const settlement = new HoldSettlementService(
-  asService,
-  audit,
-  notifications,
-  new WalletService(asService),
-);
+const settlement = makeHoldSettlementService(asService, audit, notifications);
 const sepay = new SepayService(asService, makeBillingService(asService), holds, {
   get: (key: string) => (key === 'SEPAY_API_KEY' ? 'test-key-0123456789abcdef' : undefined),
 } as unknown as ConfigService, makeBookingExtensionsService(asService));
@@ -402,6 +400,8 @@ afterAll(async () => {
       tenantIds: [tenantId],
       userIds: [ownerId, customerId],
     });
+    // Phiếu tự động của lượt quyết toán gắn khách của gian hàng - xoá trước khách.
+    await prisma.receipt.deleteMany({ where: { tenantId } });
     await prisma.tenantCustomer.deleteMany({ where: { tenantId } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.plan.deleteMany({ where: { id: planId } });
@@ -1185,6 +1185,96 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
 
       // Bảo hiểm = 0 ở chính sách này ⇒ không có gì hoàn cho khách.
       expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(0);
+
+      // Phần của chủ xe lên sổ Thu-Chi trong CÙNG lượt chốt: một phiếu thu `xeprime_payout`, gắn
+      // đơn và xe; huỷ muộn không có thuế nên không có phiếu chi thuế.
+      const receipts = await prisma.receipt.findMany({
+        where: { tenantId, sourceRefId: holdId },
+        select: { type: true, source: true, amount: true, bookingId: true, status: true },
+      });
+      expect(receipts).toEqual([
+        {
+          type: RECEIPT_TYPE.INCOME,
+          source: RECEIPT_SOURCE.XEPRIME_PAYOUT,
+          amount: new Prisma.Decimal(60_000),
+          bookingId,
+          status: RECEIPT_STATUS.APPROVED,
+        },
+      ]);
+    },
+  );
+
+  /**
+   * Đơn qua sàn: phần `D` khách trả online là "đã thu" của đơn ngay khi tiền giữ chỗ về đủ — công
+   * nợ (bản TS lẫn bản SQL dùng cho /debts và thẻ tổng) không được đòi khách phần đó lần nữa. Lúc
+   * chuyến hoàn thành, phần chủ xe trước thuế thành phiếu thu, thuế khấu trừ thành phiếu chi.
+   */
+  maybe(
+    'đơn qua sàn: công nợ trừ D đã trả online; hoàn thành ⇒ phiếu thu D + phiếu chi thuế',
+    async () => {
+      const { holdId, bookingId } = await paidHold();
+      await prisma.bookingHold.update({
+        where: { id: holdId },
+        data: {
+          depositAmount: new Prisma.Decimal(60_000),
+          serviceFeeAmount: new Prisma.Decimal(40_000),
+        },
+      });
+      const booking = await prisma.booking.findUniqueOrThrow({
+        where: { id: bookingId },
+        select: { totalAmount: true, paidAmount: true },
+      });
+      const expectedDebt = Prisma.Decimal.max(
+        0,
+        booking.totalAmount.minus(booking.paidAmount).minus(60_000),
+      );
+
+      const due = await loadCounterDueAmount(prisma, tenantId, bookingId);
+      expect(due?.toFixed(0)).toBe(expectedDebt.toFixed(0));
+      const [row] = await prisma.$queryRaw<{ debt: string }[]>(Prisma.sql`
+      SELECT trim_scale(${SQL_DEBT})::text AS debt
+      FROM bookings b ${BOOKING_MONEY_JOINS}
+      WHERE b.id = ${bookingId}
+    `);
+      expect(new Prisma.Decimal(row!.debt).toFixed(0)).toBe(expectedDebt.toFixed(0));
+
+      await prisma.$transaction(async (tx) => {
+        await bookings.transitionWithinTx(
+          tx,
+          tenantId,
+          bookingId,
+          ownerId,
+          BOOKING_STATUS.RESERVED,
+          BOOKING_STATUS.ACTIVE,
+        );
+        await bookings.transitionWithinTx(
+          tx,
+          tenantId,
+          bookingId,
+          ownerId,
+          BOOKING_STATUS.ACTIVE,
+          BOOKING_STATUS.COMPLETED,
+        );
+      });
+
+      const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      const income = await prisma.receipt.findFirstOrThrow({
+        where: { tenantId, source: RECEIPT_SOURCE.XEPRIME_PAYOUT, sourceRefId: holdId },
+      });
+      // Phiếu thu = phần chủ xe TRƯỚC thuế; trừ phiếu chi thuế = đúng số vào Ví điểm.
+      expect(income.amount.toFixed(0)).toBe(
+        hold.settledOwnerAmount.plus(hold.settledTaxAmount).toFixed(0),
+      );
+      expect(income.bookingId).toBe(bookingId);
+      const tax = await prisma.receipt.findFirst({
+        where: { tenantId, source: RECEIPT_SOURCE.TAX_WITHHELD, sourceRefId: holdId },
+      });
+      if (hold.settledTaxAmount.gt(0)) {
+        expect(tax?.type).toBe(RECEIPT_TYPE.EXPENSE);
+        expect(tax?.amount.toFixed(0)).toBe(hold.settledTaxAmount.toFixed(0));
+      } else {
+        expect(tax).toBeNull();
+      }
     },
   );
 
@@ -2310,5 +2400,98 @@ describe('Tiền vào ngoại lệ - khớp tay hold còn hạn, ghi có ví ti�
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.BANK_TX_TARGET_STILL_OPEN } });
     const still = await prisma.bankTransaction.findUniqueOrThrow({ where: { id: tx.id } });
     expect(still.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
+  });
+});
+
+/**
+ * Biên bản họp 19/11/2026 (#4) — khách huỷ / không đến (lỗi phía khách) thì tiền hoàn KHÔNG vào ví
+ * ngay mà CHỜ số giờ cấu hình (mặc định 4h) để kịp xử lý tranh chấp; admin tạm giữ được. Ca khách
+ * không có lỗi (chủ xe huỷ…) vẫn vào ví ngay.
+ */
+describe('Chờ hoàn khi lỗi phía khách', () => {
+  const HOUR = 3_600_000;
+  /** Cấu hình cố định 4 giờ — không phụ thuộc dòng cấu hình nền tảng trong DB test. */
+  class FourHourDelay extends ScheduledCreditService {
+    override async delaysWithinTx() {
+      return { refundHours: 4, ownerPayoutHours: 4 };
+    }
+  }
+  const scheduled = new FourHourDelay(asService, new WalletService(asService), audit);
+  const delayed = makeHoldSettlementService(asService, audit, notifications, scheduled);
+
+  async function refundFor(reason: (typeof HOLD_REFUND_REASON)[keyof typeof HOLD_REFUND_REASON]) {
+    const { holdId } = await makeHold();
+    const result = await prisma.$transaction((tx) =>
+      delayed.upsertRefundWithinTx(tx, {
+        holdId,
+        tenantId,
+        customerUserId: customerId,
+        amount: new Prisma.Decimal(50_000),
+        reason,
+        note: null,
+      }),
+    );
+    return { holdId, refundId: result.id };
+  }
+
+  const entryCount = (holdId: string) =>
+    prisma.walletEntry.count({ where: { sourceRefId: holdId, kind: 'hold_refund' } });
+
+  maybe('khách huỷ ⇒ chờ hoàn, chưa vào ví; tới hạn ⇒ vào ví và `credited`', async () => {
+    const before = Date.now();
+    const { holdId, refundId } = await refundFor(HOLD_REFUND_REASON.EARLY_CANCEL);
+
+    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(refund.status).toBe(HOLD_REFUND_STATUS.SCHEDULED);
+    expect(refund.walletEntryId).toBeNull();
+    const credit = await prisma.scheduledWalletCredit.findFirstOrThrow({
+      where: { holdRefundId: refundId },
+    });
+    expect(credit.status).toBe('scheduled');
+    expect(credit.releaseAt.getTime()).toBeGreaterThanOrEqual(before + 4 * HOUR - 1000);
+    expect(await entryCount(holdId)).toBe(0);
+
+    // Chưa tới hạn: vòng quét không đụng.
+    await scheduled.releaseDue(new Date(before + 3 * HOUR));
+    expect(await entryCount(holdId)).toBe(0);
+
+    await scheduled.releaseDue(new Date(before + 5 * HOUR));
+    expect(await entryCount(holdId)).toBe(1);
+    const after = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(after.status).toBe(HOLD_REFUND_STATUS.CREDITED);
+    expect(after.walletEntryId).not.toBeNull();
+
+    // Quét lại không cộng đôi.
+    await scheduled.releaseDue(new Date(before + 6 * HOUR));
+    expect(await entryCount(holdId)).toBe(1);
+  });
+
+  maybe('chủ xe huỷ (khách không có lỗi) ⇒ vẫn vào ví ngay', async () => {
+    const { holdId, refundId } = await refundFor(HOLD_REFUND_REASON.OWNER_CANCEL);
+    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(refund.status).toBe(HOLD_REFUND_STATUS.CREDITED);
+    expect(await entryCount(holdId)).toBe(1);
+  });
+
+  maybe('admin tạm giữ ⇒ tới hạn vẫn không cộng; cho cộng ngay ⇒ vào ví', async () => {
+    const before = Date.now();
+    const { holdId, refundId } = await refundFor(HOLD_REFUND_REASON.NO_SHOW);
+    const credit = await prisma.scheduledWalletCredit.findFirstOrThrow({
+      where: { holdRefundId: refundId },
+    });
+
+    await scheduled.freeze(credit.id, ownerId, 'Khách khiếu nại, chờ xác minh');
+    await scheduled.releaseDue(new Date(before + 5 * HOUR));
+    expect(await entryCount(holdId)).toBe(0);
+    expect(
+      (await prisma.scheduledWalletCredit.findUniqueOrThrow({ where: { id: credit.id } })).status,
+    ).toBe('frozen');
+
+    await scheduled.releaseNow(credit.id, ownerId);
+    expect(await entryCount(holdId)).toBe(1);
+    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { id: refundId } });
+    expect(refund.status).toBe(HOLD_REFUND_STATUS.CREDITED);
+    // Đã cộng rồi thì không thao tác được nữa.
+    await expect(scheduled.releaseNow(credit.id, ownerId)).rejects.toThrow();
   });
 });

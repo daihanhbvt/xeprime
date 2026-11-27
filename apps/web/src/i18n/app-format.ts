@@ -38,6 +38,8 @@ export interface AppFormat {
    * `price: true` cho hai chữ số lẻ ở bậc triệu (`1,05tr` thay vì `1tr`) — bắt buộc khi con
    * số là GIÁ khách dùng để so hai lựa chọn; xem docblock `compactMoneyParts`.
    */
+  // `opts.price` còn để các nơi gọi cũ biên dịch được - KHÔNG còn tác dụng: mọi nơi dùng chung MỘT kiểu
+  // rút gọn (`COMPACT_FRACTION_DIGITS` ở `@xeprime/domain`).
   moneyCompact: (value: MoneyString | null | undefined, opts?: { price?: boolean }) => string;
   /** Tính bằng nghìn: `1.350 K` (vi) · `1,350 K` (en). Dưới 1.000đ rơi về `money`. */
   moneyThousands: (value: MoneyString | null | undefined) => string;
@@ -98,6 +100,8 @@ export interface AppFormat {
    * mà không viết một định dạng thứ hai; `weekday` rỗng nếu message không để thứ ở đầu.
    */
   rentalPointParts: (value: Dayjs) => { weekday: string; rest: string };
+  /** Chỉ GIỜ của một mốc thuê, cùng kiểu với {@link rentalPoint}: `11h00` (vi) · `11:00` (en). */
+  rentalTime: (value: Dayjs) => string;
   /**
    * Mốc thuê xe ở dạng NGẮN NHẤT còn đọc được: `14/09 17:00` (vi) · `09/14 17:00` (en).
    *
@@ -357,9 +361,9 @@ export function createAppFormat(
 
   return {
     money,
-    moneyCompact: (value, opts) => {
+    moneyCompact: (value) => {
       if (value === null || value === undefined || value === '') return empty;
-      const parts = compactMoneyParts(value, separators, opts?.price === true ? 2 : 1);
+      const parts = compactMoneyParts(value, separators);
       if (!parts) return money(wholeUnits(value));
       return t(`units.compact.${parts.unit}`, { value: parts.value });
     },
@@ -389,6 +393,8 @@ export function createAppFormat(
     weekdayLong: (value) => format.dateTime(value.toDate(), 'weekdayLong'),
     rentalPoint: (value, opts) => rentalPointText(value, opts?.withTime !== false),
     rentalPointParts,
+    rentalTime: (value) =>
+      t('units.rentalTime', { hour: value.format('HH'), minute: value.format('mm') }),
     rentalPointCompact: (value) => compactPoint(value),
     rentalAt: (value) => (value ? rentalPointText(toAppTz(value), true) : empty),
     rentalRange: (from, to) =>

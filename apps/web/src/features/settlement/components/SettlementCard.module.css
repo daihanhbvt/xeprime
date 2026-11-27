@@ -162,9 +162,10 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--xp-color-primary-strong);
+  /* Figma `23845:50037`: liên kết hành động vàng `Text/Brand/primary 2`, SemiBold, gạch chân. */
+  color: var(--xp-color-primary-hover);
   font: inherit;
-  font-weight: var(--xp-font-weight-medium);
+  font-weight: var(--xp-font-weight-semibold);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;

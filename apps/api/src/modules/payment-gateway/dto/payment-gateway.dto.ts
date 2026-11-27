@@ -89,7 +89,7 @@ export class PaymentOrderDto {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: PAYMENT_GATEWAY_PROVIDER_VALUES }) provider!: string;
   @ApiProperty({ enum: PAYMENT_ORDER_TARGET_VALUES }) targetType!: string;
-  @ApiProperty({ description: 'Mã đối soát của đích (XPG… / XPH…)' }) targetCode!: string;
+  @ApiProperty({ description: 'Mã đối soát của đích (XPG… / XPC… / XPH…)' }) targetCode!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -102,6 +102,12 @@ export class PaymentOrderDto {
     description: 'Hoá đơn gói - chỉ có ở lượt trả hoá đơn gói',
   })
   invoiceId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Phiếu gộp nhiều gói (ADR 0083) - chỉ có ở lượt trả phiếu gộp',
+  })
+  checkoutId!: string | null;
   @ApiProperty({ description: 'Số tiền đã gửi sang cổng - VND, chuỗi (ADR 0007)' }) amount!: string;
   @ApiProperty({ enum: PAYMENT_ORDER_STATUS_VALUES }) status!: string;
   @ApiProperty({

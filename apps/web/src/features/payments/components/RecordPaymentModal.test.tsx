@@ -34,7 +34,7 @@ describe('RecordPaymentModal', () => {
   it('mặc định điền toàn bộ số tiền còn nợ và định dạng dấu chấm hàng nghìn', () => {
     renderModal();
 
-    expect(screen.getByLabelText<HTMLInputElement>('Số tiền nhận').value).toBe('580.000');
+    expect(screen.getByLabelText<HTMLInputElement>(/^Số tiền nhận/).value).toBe('580.000');
   });
 
   it('cập nhật số gợi ý khi chuyển sang đơn có công nợ khác', async () => {
@@ -47,7 +47,7 @@ describe('RecordPaymentModal', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByLabelText<HTMLInputElement>('Số tiền nhận').value).toBe('1.250.000'),
+      expect(screen.getByLabelText<HTMLInputElement>(/^Số tiền nhận/).value).toBe('1.250.000'),
     );
   });
 
@@ -63,7 +63,7 @@ describe('RecordPaymentModal', () => {
   it('tiền thuê không thu quá số còn phải thu - báo lỗi chỉ sang Sổ Thu-Chi, không gửi', async () => {
     renderModal('980000');
 
-    fireEvent.change(screen.getByLabelText('Số tiền nhận'), { target: { value: '1400000' } });
+    fireEvent.change(screen.getByLabelText(/^Số tiền nhận/), { target: { value: '1400000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ghi nhận' }));
 
     expect(await screen.findByText(/Không thu quá 980\.000/)).toBeTruthy();
@@ -74,7 +74,7 @@ describe('RecordPaymentModal', () => {
   it('thu TỪNG PHẦN vẫn được - số nhỏ hơn số còn phải thu', async () => {
     renderModal('980000');
 
-    fireEvent.change(screen.getByLabelText('Số tiền nhận'), { target: { value: '500000' } });
+    fireEvent.change(screen.getByLabelText(/^Số tiền nhận/), { target: { value: '500000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ghi nhận' }));
 
     await waitFor(() => expect(record.mutate).toHaveBeenCalledTimes(1));
@@ -96,6 +96,6 @@ describe('RecordPaymentModal', () => {
 
     expect(screen.getByText(/Còn phải thu của khách/)).toBeTruthy();
     expect(screen.queryByText(/^Còn nợ/)).toBeNull();
-    expect(screen.getByLabelText<HTMLInputElement>('Số tiền nhận').value).toBe('980.000');
+    expect(screen.getByLabelText<HTMLInputElement>(/^Số tiền nhận/).value).toBe('980.000');
   });
 });

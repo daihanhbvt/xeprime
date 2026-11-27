@@ -57,7 +57,7 @@ interface RegistrationCaptureProps {
 /**
  * Ô "Cà vẹt xe" của hai wizard thêm xe (ADR 0089 · 0099) — bản native của `RegistrationCapture` bên
  * web. Cơ chế như bằng lái: chụp/chọn ảnh ⇒ nén ⇒ tải kho riêng tư ⇒ server đọc. Đọc đủ và biển khớp
- * ⇒ bản tóm tắt; thiếu/lệch ⇒ ô nhập tay. "Nhập tay" mở được bất cứ lúc nào, nhưng ẢNH vẫn bắt buộc.
+ * ⇒ bản tóm tắt; thiếu/lệch ⇒ ô nhập tay. "Nhập tay" mở được bất cứ lúc nào; ảnh TUỲ CHỌN (ADR 0100).
  */
 export function RegistrationCapture({
   state,
@@ -282,6 +282,16 @@ export function RegistrationCapture({
         title={t('title')}
         hint={t('chooseHint')}
         onPick={(source) => void select(source)}
+        {...(state.previewUrl && state.phase !== 'working'
+          ? {
+              // Bỏ ảnh (tuỳ chọn - ADR 0100) chỉ reset phần ẢNH + kết quả đọc, giữ ba ô đã nhập (web).
+              onRemove: () => {
+                setSheetOpen(false);
+                attempt.current += 1;
+                onChange((prev) => ({ ...EMPTY_REGISTRATION, fields: prev.fields, editing: true }));
+              },
+            }
+          : {})}
       />
     </YStack>
   );

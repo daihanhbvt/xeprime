@@ -89,7 +89,7 @@ export function OwnerVehicleEditHubScreen({ vehicleId }: { vehicleId: string }) 
     return (
       <>
         {header}
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('forbiddenTitle')}
@@ -106,7 +106,7 @@ export function OwnerVehicleEditHubScreen({ vehicleId }: { vehicleId: string }) 
     return (
       <>
         {header}
-        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']}>
           <MiniRowsSkeleton rows={8} />
         </Screen>
       </>
@@ -118,7 +118,7 @@ export function OwnerVehicleEditHubScreen({ vehicleId }: { vehicleId: string }) 
     return (
       <>
         {header}
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="alert-circle-outline"
             title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
@@ -138,7 +138,8 @@ export function OwnerVehicleEditHubScreen({ vehicleId }: { vehicleId: string }) 
     <>
       {header}
       <Screen
-        scrollReveal
+        scrollReveal={false}
+        motion={false}
         edges={['left', 'right', 'bottom']}
         refreshing={query.isRefetching}
         onRefresh={() => void query.refetch()}

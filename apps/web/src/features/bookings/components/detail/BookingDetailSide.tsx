@@ -35,6 +35,7 @@ export function VehicleSideCard() {
   const dl = useDomainLabel();
   const { has } = usePermissions();
   const { booking } = useBookingDetailActions();
+  // Nguồn đơn nằm ở đầu trang, cạnh nhãn chặng (`BookingSourceControl`) - không lặp lại ở thẻ này.
   const place = (BOOKING_HANDOVER_PLACE_VALUES as readonly string[]).includes(
     booking.handoverPlaceKind ?? '',
   )
@@ -152,7 +153,9 @@ export function CustomerSideCard() {
         {/* Cùng luật với nhãn "Khách quen" của sổ khách — không suy từ tên/SĐT tự khai. */}
         {booking.customerCompletedRentals != null &&
         booking.customerCompletedRentals >= TENANT_CUSTOMER_RETURNING_MIN_RENTALS ? (
-          <ToneDotBadge color={STATUS_COLOR.SUCCESS}>{t('returningCustomer')}</ToneDotBadge>
+          <ToneDotBadge compact color={STATUS_COLOR.SUCCESS}>
+            {t('returningCustomer')}
+          </ToneDotBadge>
         ) : null}
       </p>
       {booking.customerPhone ? (
@@ -185,7 +188,7 @@ export function CustomerSideCard() {
  * khác, thu vượt, trả trước online) chỉ hiện khi khác 0.
  *
  * Đọc như MỘT phép trừ (06/11/2026, phản hồi "các nguồn tiền khó hiểu"): Tổng tiền chuyến − phần
- * khách đã trả trước qua XePrime − đã thu tại quầy = **Còn phải thu của khách**, ô nổi bật cuối thẻ.
+ * khách đã trả trước qua XePrime − đã thu tại quầy = **Còn lại (phải thu)**, dòng cuối thẻ.
  * Dòng trả trước là `D` (tiền thuê CỦA CHỦ XE trong tiền giữ chỗ), không phải cả khoản giữ chỗ:
  * khoản đó còn gồm phí đặt xe và bảo hiểm — không thuộc tổng của gian hàng, trừ vào là các dòng
  * không còn cộng ra nhau. Số cuối là `counterDueAmount` — cùng phép với "Thu tiền thuê" của Chuẩn bị
@@ -196,6 +199,7 @@ export function PaymentSideCard() {
   const fmt = useAppFormat();
   const { has } = usePermissions();
   const { booking, closed, moneyClosed, openFee } = useBookingDetailActions();
+  const hasDeposit = !isZeroMoney(booking.depositAmount);
   const prepaid = isZeroMoney(booking.ownerShareOnlineAmount)
     ? null
     : booking.ownerShareOnlineAmount;
@@ -207,14 +211,31 @@ export function PaymentSideCard() {
   );
   const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
   const settled = isZeroMoney(booking.counterDueAmount);
+  const dueHint = settled
+    ? t('dueSettled')
+    : booking.actualPickupAt
+      ? t('dueAfterPickup')
+      : t('dueAtPickup');
   const unit = booking.ownerPayout?.unitAmount ?? null;
   const days = booking.ownerPayout?.rentalDays ?? null;
 
   return (
-    <section className={styles.sideCard} aria-label={t('payment')}>
-      <h2 className={styles.sideTitle}>{t('payment')}</h2>
+    <section className={cx(styles.sideCard, styles.paymentCard)} aria-label={t('payment')}>
+      <h2 className={styles.sideTitle}>
+        {t('payment')}
+        {/* "Chưa gồm cọc tài sản…" thành dấu "i" cạnh tiêu đề - rê chuột mới hiện (người dùng 20/11/2026). */}
+        {hasDeposit ? (
+          <>
+            {' '}
+            <InfoHint
+              label={t('payment')}
+              content={t('depositNote', { amount: fmt.money(booking.depositAmount) })}
+            />
+          </>
+        ) : null}
+      </h2>
       <dl className={styles.moneyRows}>
-        <div>
+        <div className={styles.moneyRowRent}>
           <dt>
             {t('rent')}
             {unit && days ? (
@@ -229,7 +250,7 @@ export function PaymentSideCard() {
             <dd className={styles.negative}>−{fmt.money(booking.discountAmount)}</dd>
           </div>
         ) : null}
-        <div>
+        <div className={styles.moneyRowDelivery}>
           <dt>{t('deliveryFee')}</dt>
           <dd className={styles.editable}>
             {isZeroMoney(booking.deliveryFee) ? t('free') : fmt.money(booking.deliveryFee)}
@@ -251,7 +272,7 @@ export function PaymentSideCard() {
             <dd>+{fmt.money(booking.surchargeTotal)}</dd>
           </div>
         ) : null}
-        <div className={styles.moneyStrong}>
+        <div className={cx(styles.moneyStrong, styles.moneyDesktopOnly)}>
           <dt>{t('amountDue')}</dt>
           <dd>{fmt.money(booking.amountDue)}</dd>
         </div>
@@ -301,29 +322,25 @@ export function PaymentSideCard() {
         Đơn huỷ / khách không đến: không còn gì để thu (ADR 0045 điều 1 — đơn đang chạy không huỷ
         được), nên ô "Còn phải thu" vắng hẳn; các dòng trên vẫn là bản ghi số tiền của đơn.
       */}
+      {/*
+        "Còn lại (phải thu)" - Figma `23777:48877`: một dòng sau đường kẻ ở mọi khổ màn hình, cùng số
+        `counterDueAmount`; câu "thu lúc nào" nằm ở dấu "i" cạnh nhãn.
+      */}
       {moneyClosed ? null : (
         <div
-          className={cx(styles.moneyDue, settled && styles.moneyDueSettled)}
+          className={cx(styles.moneyDuePhone, settled && styles.moneyDuePhoneSettled)}
           role="status"
-          aria-label={`${t('dueTitle')}: ${fmt.money(booking.counterDueAmount)}`}
+          aria-label={`${t('partnerApp.due')}: ${fmt.money(booking.counterDueAmount)}`}
         >
-          <span className={styles.moneyDueLabel}>{t('dueTitle')}</span>
-          <strong className={styles.moneyDueAmount}>{fmt.money(booking.counterDueAmount)}</strong>
-          <span className={styles.moneyDueHint}>
-            {settled
-              ? t('dueSettled')
-              : booking.actualPickupAt
-                ? t('dueAfterPickup')
-                : t('dueAtPickup')}
+          <span className={styles.moneyLabel}>
+            {t('partnerApp.due')}
+            <InfoHint label={t('partnerApp.due')} content={dueHint} />
           </span>
+          <strong className={styles.moneyDuePhoneAmount}>
+            {fmt.money(booking.counterDueAmount)}
+          </strong>
         </div>
       )}
-      {/* Cọc tài sản là tiền GIỮ rồi trả lại — không cộng vào số phải thu ở trên. */}
-      {!isZeroMoney(booking.depositAmount) ? (
-        <p className={styles.moneyNote}>
-          {t('depositNote', { amount: fmt.money(booking.depositAmount) })}
-        </p>
-      ) : null}
     </section>
   );
 }

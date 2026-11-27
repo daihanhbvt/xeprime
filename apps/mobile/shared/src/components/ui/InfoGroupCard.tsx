@@ -2,7 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { LinkArrow } from '@/components/ui/LinkArrow';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, radius, typeScale } from '@/theme/tokens';
@@ -109,11 +109,10 @@ export function InfoGroupCard({
               ) : null}
               {headerRight}
               {collapsible ? (
-                <Ionicons
-                  name={open ? 'chevron-up' : 'chevron-down'}
-                  size={CHEVRON}
-                  color={colors.text}
-                />
+                // Figma "Up 2" xám `text/gray/low`; đóng thì xoay 180 (mũi xuống).
+                <YStack style={open ? undefined : ROTATE_DOWN}>
+                  <LineIcon name="chevron-up-2" size={CHEVRON} color={colors.placeholder} />
+                </YStack>
               ) : null}
             </XStack>
             </HeaderPress>
@@ -171,3 +170,5 @@ const HEAD_GAP = 8;
 /** Figma "Up 2"/"Down 2" trong khung 20. */
 const CHEVRON = 20;
 const CHEVRON_SLOP = 8;
+
+const ROTATE_DOWN = { transform: [{ rotate: '180deg' }] } as const;

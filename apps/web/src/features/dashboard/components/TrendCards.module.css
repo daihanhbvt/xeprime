@@ -105,6 +105,145 @@
   background: #f5c33b;
 }
 
+/*
+ * Cột doanh thu CHỒNG theo nguồn (ADR 0110): ba khúc chia chiều cao cột theo `--part`, sàn ở chân.
+ * Bo góc trên nằm ở cột nên khúc trên cùng tự bo theo.
+ */
+.barStack {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column-reverse;
+}
+
+.stackPart {
+  min-height: 0;
+  flex: var(--part, 0) 1 0;
+}
+
+.stack_marketplace {
+  background: var(--xp-color-primary);
+}
+
+.stack_direct {
+  background: var(--xp-color-info-strong);
+}
+
+.stack_unlinked {
+  background: var(--xp-color-viz-1);
+}
+
+/* ─── Doanh thu theo nguồn ──────────────────────────────────────────────────── */
+
+.sources {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sourcesHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sourcesTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.sourcesLink {
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}
+
+.sourcesLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.sourcesError {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.sourceList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sourceRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  color: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.sourceRow:hover .sourceNameText,
+.sourceRow:focus-visible .sourceNameText {
+  text-decoration: underline;
+}
+
+.sourceName {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.sourceDot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.sourceNameText {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--xp-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceTrips {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.sourceAmount {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sourceShare {
+  min-width: 40px;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+}
+
 .barGreen {
   background: var(--xp-color-success);
 }
@@ -134,8 +273,26 @@
   white-space: nowrap;
 }
 
+/*
+ * Đơn & chuyến: hàng cột và hàng nhãn tháng chia CÙNG một lưới cột bằng nhau, nên nhãn luôn đứng
+ * đúng dưới cặp cột của nó. Trước đây nhãn "Tháng 10 năm 2026" `nowrap` rộng hơn `flex-basis 64px`
+ * nên không co được, cả hàng nhãn trôi sang phải và tràn khỏi thẻ (người dùng báo 20/11/2026).
+ * Nhãn dài thì xuống dòng trong cột của nó.
+ */
+.barsGrouped,
+.axisGrouped {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.barsGrouped .pair {
+  min-width: 0;
+}
+
 .axisGrouped .axisLabel {
-  flex-basis: 64px;
+  min-width: 0;
+  white-space: normal;
 }
 
 .legend {

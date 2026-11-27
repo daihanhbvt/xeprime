@@ -30,6 +30,7 @@ import {
   CUSTOMER_TRIP_FILTER,
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_STATUS,
+  HOLD_REFUND_REASON,
   hasFreeCancelWindow,
   type CustomerCancelPreviewKind,
   WALLET_OWNER_TYPE,
@@ -110,6 +111,7 @@ import { InsuranceReadService } from '../insurance/insurance-read.service';
 import { NotificationService } from '../notification/notification.service';
 import { PricingService } from '../pricing/pricing.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
+import { BOOKING_COLLATERAL_ORDER } from '../bookings/booking-collaterals.service';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
 import { VehicleContractsService } from '../vehicles/vehicle-contracts.service';
 import { SupportService } from '../support/support.service';
@@ -584,6 +586,7 @@ export class CustomerTripsService {
           : true,
       deferred: false,
       driverIncident: false,
+      refundDelayHours: 0,
     };
     const result = (
       kind: CustomerCancelPreviewKind,
@@ -623,6 +626,7 @@ export class CustomerTripsService {
           freeCancelUntil: preview.freeCancelUntil?.toISOString() ?? null,
           deferred: preview.deferred,
           driverIncident: driverFault,
+          refundDelayHours: await this.holdSettlement.refundDelayHours(preview.refundReason),
         },
       );
     }
@@ -634,7 +638,14 @@ export class CustomerTripsService {
         ? hold.paidAmount.toFixed(0)
         : '0';
     return Number(paid) > 0
-      ? result(CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND, { paidAmount: paid, refundAmount: paid })
+      ? result(CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND, {
+          paidAmount: paid,
+          refundAmount: paid,
+          // Cùng lý do `cancelForRequestWithinTx` ghi cho khoản hoàn này.
+          refundDelayHours: await this.holdSettlement.refundDelayHours(
+            HOLD_REFUND_REASON.EARLY_CANCEL,
+          ),
+        })
       : result(CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE);
   }
 
@@ -1169,7 +1180,7 @@ export class CustomerTripsService {
    *     Phần khấu trừ vào cọc là CÁCH TRẢ cho phần đó, không phải một khoản thu thêm.
    */
   private async finance(booking: BookingRow): Promise<CustomerTripFinanceDto> {
-    const [settlement, rentalPaidAgg] = await Promise.all([
+    const [settlement, rentalPaidAgg, collaterals] = await Promise.all([
       // Cùng một phép tính với màn chủ xe (Wave 10) — không dựng lại công thức ở đây.
       this.settlement.get(booking.tenantId, booking.id),
       this.prisma.payment.aggregate({
@@ -1180,6 +1191,11 @@ export class CustomerTripsService {
           status: PAYMENT_STATUS.SUCCEEDED,
         },
         _sum: { amount: true },
+      }),
+      this.prisma.bookingCollateral.findMany({
+        where: { tenantId: booking.tenantId, bookingId: booking.id },
+        orderBy: BOOKING_COLLATERAL_ORDER,
+        select: { collateralType: true, returnedAt: true },
       }),
     ]);
 
@@ -1224,6 +1240,10 @@ export class CustomerTripsService {
       refundReference: settlement.refund?.reference ?? null,
       legacyPricing: booking.priceSnapshot === null,
       breakdown: frozenBreakdown(snapshot, rentalTotal),
+      collaterals: collaterals.map((row) => ({
+        collateralType: row.collateralType,
+        returnedAt: row.returnedAt?.toISOString() ?? null,
+      })),
     };
   }
 

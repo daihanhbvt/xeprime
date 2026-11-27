@@ -3,7 +3,13 @@ import {
   BILLING_MODE_VALUES,
   FEE_LINE_VALUES,
   COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_COMBINATION_VALUES,
+  COLLATERAL_MODE_INPUT_VALUES,
   COLLATERAL_MODE_VALUES,
+  POLICY_SECTION_VALUES,
+  type CollateralCombination,
+  type CollateralMode,
+  type PolicySection,
   DELIVERY_DISTANCE_STATUS_VALUES,
   type DeliveryDistanceStatus,
   DELIVERY_MANUAL_REASON_VALUES,
@@ -160,16 +166,40 @@ export class SaveRentalPolicyDto {
   @ApiProperty({
     enum: COLLATERAL_MODE_VALUES,
     description:
-      'Hình thức bảo đảm - ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes ' +
-      'kiểm ở validatePolicy và ràng bằng CHECK ở DB.',
+      'Có yêu cầu thế chấp (`required`) hay Miễn thế chấp (`none`) - ADR 0112 điều 2. App cũ gửi ' +
+      '`cash`/`asset` vẫn được nhận và quy về `required` + đúng một hình thức.',
   })
-  @IsIn(COLLATERAL_MODE_VALUES)
+  @IsIn(COLLATERAL_MODE_INPUT_VALUES)
   collateralMode!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Bật cọc TIỀN (số tiền ở depositAmount). Vắng ⇒ suy từ depositAmount > 0. Tắt ⇒ depositAmount lưu 0.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  collateralCashEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Bật cọc TÀI SẢN (loại ở collateralAssetTypes). Vắng ⇒ suy từ mảng không rỗng. Tắt ⇒ mảng lưu rỗng.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  collateralAssetEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    enum: COLLATERAL_COMBINATION_VALUES,
+    description: 'any_one = khách chọn 1 trong 2, all = bắt buộc cả 2 (chỉ khi bật cả hai). Vắng ⇒ any_one.',
+  })
+  @IsOptional()
+  @IsIn(COLLATERAL_COMBINATION_VALUES)
+  collateralCombination?: CollateralCombination;
 
   @ApiProperty({
     enum: COLLATERAL_ASSET_TYPE_VALUES,
     isArray: true,
-    description: 'Loại tài sản nhận thế chấp - chỉ có nghĩa khi collateralMode = asset',
+    description: 'Loại tài sản nhận thế chấp - chỉ có nghĩa khi collateralAssetEnabled',
   })
   @IsArray()
   @ArrayMaxSize(COLLATERAL_ASSET_TYPE_VALUES.length)
@@ -177,7 +207,7 @@ export class SaveRentalPolicyDto {
   collateralAssetTypes!: string[];
 
   @ApiProperty({
-    description: 'Cọc thế chấp cố định VND (chuỗi) - khác 0 CHỈ khi collateralMode = cash',
+    description: 'Cọc tiền cố định VND (chuỗi) - khác 0 CHỈ khi collateralCashEnabled',
     example: '5000000',
   })
   @IsString()
@@ -289,7 +319,15 @@ export class SaveRentalPolicyDto {
 
 /** Giá trị chính sách trả về — tiers cùng shape với input, tiền là string. */
 export class RentalPolicyValuesDto {
-  @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) collateralMode!: string;
+  @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) collateralMode!: CollateralMode;
+  @ApiProperty({ description: 'Nhận cọc tiền (depositAmount > 0)' }) collateralCashEnabled!: boolean;
+  @ApiProperty({ description: 'Nhận cọc tài sản (collateralAssetTypes không rỗng)' })
+  collateralAssetEnabled!: boolean;
+  @ApiProperty({
+    enum: COLLATERAL_COMBINATION_VALUES,
+    description: 'any_one = "Cọc tiền X hoặc Cọc tài sản", all = "Cọc tiền X và Cọc tài sản"',
+  })
+  collateralCombination!: CollateralCombination;
   @ApiProperty({ enum: COLLATERAL_ASSET_TYPE_VALUES, isArray: true })
   collateralAssetTypes!: string[];
   @ApiProperty() depositAmount!: string;
@@ -411,6 +449,23 @@ export class VehiclePricingDto {
   })
   shopPolicy!: RentalPolicyValuesDto | null;
 
+  @ApiProperty({
+    enum: POLICY_SECTION_VALUES,
+    isArray: true,
+    description:
+      'Mục đang "Áp dụng chính sách của gian hàng" (ADR 0112 điều 1). Xe không có chính sách riêng ⇒ cả năm mục.',
+  })
+  inheritedSections!: PolicySection[];
+
+  @ApiPropertyOptional({
+    type: RentalPolicyValuesDto,
+    nullable: true,
+    description:
+      'Cột của CHÍNH dòng chính sách xe, kể cả mục đang kế thừa (tắt kế thừa là thấy lại cấu hình cũ). ' +
+      'null = xe không có chính sách riêng.',
+  })
+  ownPolicy!: RentalPolicyValuesDto | null;
+
   @ApiPropertyOptional({ type: String, nullable: true }) weekdayPrice!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) weekendPrice!: string | null;
   @ApiPropertyOptional({
@@ -477,6 +532,20 @@ export class SaveVehiclePricingDto {
   })
   @IsIn(POLICY_SOURCE_VALUES)
   source!: string;
+
+  @ApiPropertyOptional({
+    enum: POLICY_SECTION_VALUES,
+    isArray: true,
+    description:
+      'Chỉ khi source = vehicle: các mục đọc từ gian hàng (ADR 0112 điều 1). Vắng ⇒ [] (riêng toàn bộ - ' +
+      'hành vi app cũ). Đủ năm mục ⇒ xoá chính sách riêng, như source = shop. Cột của mục kế thừa vẫn ' +
+      'lưu theo policy gửi lên.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(POLICY_SECTION_VALUES.length)
+  @IsIn(POLICY_SECTION_VALUES, { each: true })
+  inheritedSections?: PolicySection[];
 
   @ApiPropertyOptional({
     description: 'Giá thuê ngày thường VND - độc lập với source (giá luôn sửa được)',
@@ -1118,14 +1187,38 @@ export class BookingRequestDeliveryQuoteDto {
 // ---------------------------------------------------------------------------
 
 /** Bản sao chính sách trong snapshot — thêm nguồn so với RentalPolicyValuesDto. */
-export class SnapshotPolicyDto extends RentalPolicyValuesDto {
+export class SnapshotPolicyDto extends OmitType(RentalPolicyValuesDto, [
+  'collateralMode',
+  'collateralCashEnabled',
+  'collateralAssetEnabled',
+  'collateralCombination',
+] as const) {
   @ApiProperty({ enum: POLICY_SOURCE_VALUES }) source!: string;
+  /*
+   * Snapshot là dữ liệu ĐÃ CHỤP: đơn chốt trước ADR 0112 mang `cash`/`asset` và không có ba trường
+   * mới - hiển thị suy từ `depositAmount`/`collateralAssetTypes` (`describeCollateral`).
+   */
+  @ApiProperty({
+    enum: COLLATERAL_MODE_INPUT_VALUES,
+    description: 'required | none; snapshot trước ADR 0112 có thể là cash | asset',
+  })
+  collateralMode!: string;
+  @ApiPropertyOptional({ description: 'Vắng ở snapshot trước ADR 0112' })
+  collateralCashEnabled?: boolean;
+  @ApiPropertyOptional({ description: 'Vắng ở snapshot trước ADR 0112' })
+  collateralAssetEnabled?: boolean;
+  @ApiPropertyOptional({ enum: COLLATERAL_COMBINATION_VALUES, description: 'Vắng ở snapshot trước ADR 0112' })
+  collateralCombination?: CollateralCombination;
 }
 
 export class BookingPriceSnapshotDto {
   @ApiProperty() calculatedAt!: string;
   @ApiProperty({ enum: ['quote', 'manual'] }) source!: string;
   @ApiProperty({ enum: ['VND'] }) currency!: string;
+  @ApiPropertyOptional({
+    description: 'Đơn tự lập bật "Giá thoả thuận" (ADR 0109) - vắng = không bật',
+  })
+  negotiated?: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) days!: number | null;
   @ApiProperty({ type: [PriceBreakdownRowDto] }) rows!: PriceBreakdownRowDto[];
   @ApiProperty() totalAmount!: string;

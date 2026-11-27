@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { Tabs } from 'expo-router';
-import { BottomInsetConsumedContext, TabBarInsetContext } from '@/components/layout/tab-bar-inset';
+import { useEffect, useState } from 'react';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
+import { Tabs, usePathname } from 'expo-router';
+import { BottomInsetConsumedContext, TabBarHideContext, TabBarInsetContext } from '@/components/layout/tab-bar-inset';
+import { useManageTabBarHidden } from '@/features/shell/use-manage-menu';
 import { ManageTabBar } from '@/features/shell/ManageTabBar';
 import { useColors } from '@/theme/ThemeProvider';
 import { duration } from '@/theme/motion';
@@ -28,14 +30,24 @@ export default function ManageTabsLayout() {
   const colors = useColors();
   // Chiều cao thanh tab NỔI - màn bên trong chừa đúng chừng này ở cuối (như app khách).
   const [tabBarHeight, setTabBarHeight] = useState(0);
+  // Màn chi tiết trong tab che thanh (`useHideTabBar`) thì không còn ai đệm vạch điều hướng - màn tự
+  // đệm, không thì thanh nút dính đáy nằm dưới phím điều hướng Android (chi tiết yêu cầu, 20/11/2026).
+  const tabBarHidden = useManageTabBarHidden();
+  // Cuộn xuống ẩn / cuộn lên hiện thanh menu (feedback 20/11/2026); đổi màn thì hiện lại ngay.
+  const tabBarSlide = useSharedValue(0);
+  const pathname = usePathname();
+  useEffect(() => {
+    tabBarSlide.value = withTiming(0, { duration: 200 });
+  }, [pathname, tabBarSlide]);
   return (
+    <TabBarHideContext.Provider value={tabBarSlide}>
     <Tabs
       tabBar={() => <ManageTabBar onHeight={setTabBarHeight} />}
       // Thanh tab NỔI đè nội dung và tự đệm vạch home - màn bên trong không đệm thêm vạch home mà
       // chừa chiều cao thanh qua `TabBarInsetContext`.
       screenLayout={({ children }) => (
         <TabBarInsetContext.Provider value={tabBarHeight}>
-          <BottomInsetConsumedContext.Provider value>{children}</BottomInsetConsumedContext.Provider>
+          <BottomInsetConsumedContext.Provider value={!tabBarHidden}>{children}</BottomInsetConsumedContext.Provider>
         </TabBarInsetContext.Provider>
       )}
       screenOptions={{
@@ -110,5 +122,6 @@ export default function ManageTabsLayout() {
       <Tabs.Screen name="data-protection" />
       <Tabs.Screen name="more" />
     </Tabs>
+    </TabBarHideContext.Provider>
   );
 }

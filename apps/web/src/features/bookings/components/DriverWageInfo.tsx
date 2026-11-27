@@ -18,10 +18,13 @@ export function DriverWageInfo({
   wage,
   canEdit,
   onEdit,
+  hideLine = false,
 }: {
   wage: DriverWage;
   canEdit: boolean;
   onEdit: () => void;
+  /** Hộp lịch sử đã in số ở hàng trên — chỉ còn nút sửa + lịch sử sửa. */
+  hideLine?: boolean;
 }) {
   const t = useTranslations('Drivers.wage');
   const fmt = useAppFormat();
@@ -32,7 +35,7 @@ export function DriverWageInfo({
   return (
     <div className={styles.info}>
       <div className={styles.lineRow}>
-        {line ? (
+        {line && !hideLine ? (
           <span className={line.kind === 'none' ? styles.muted : styles.amount}>
             {t(`line.${line.kind}`, { amount: fmt.money(line.amount), days: wage.days ?? 0 })}
           </span>

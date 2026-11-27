@@ -268,7 +268,7 @@ Bậc sm/lg có HAI lớp, trong khi `apps/mobile/shared/src/theme/elevation.ts`
 | `--xp-container-max-width` | **1280px** | `117:1203`, `127:2060` vẽ 1200 — nới lên 1280 (14/08/2026) cho mọi trang; marketplace bỏ số 1120 gõ tay, dùng chung token này |
 | `--xp-shell-form-max-width` | **1216px** | `60:69` FormColumn thụt 64px so với workspace → đi theo 1280 |
 | `--xp-shell-partner-max-width` | **1560px** | Partner-XePrime Header `23649:27690` (1920 − 2 × 180) — cột chung của header menu ngang và vùng nội dung site partner |
-| `--xp-shell-partner-header-height` | **74px** | Partner-XePrime Header: đệm 16 + nút 42 + đệm 16. Khung partner gán nó cho `--xp-shell-header-offset` (biến cục bộ của khung, không phải token) — phần dính của các màn đọc biến đó, rơi về `--xp-shell-topbar-height` ở site quản trị |
+| `--xp-shell-partner-header-height` | **66px** | Partner-XePrime Header (`24200:99389`, 26/11/2026): đệm 12 + nút 42 + đệm 12, TỔNG chiều cao đã gồm kẻ dưới 1px. Vùng nội dung partner: đệm trên/dưới 20px, các khối cách 20px (`--xp-page-header-gap` cho tiêu đề trang → khối kế; vỏ ≤1024px giữ 16). Khung partner gán nó cho `--xp-shell-header-offset` (biến cục bộ của khung, không phải token) — phần dính của các màn đọc biến đó, rơi về `--xp-shell-topbar-height` ở site quản trị |
 
 ⚠️ **`controlHeight` giữ 32px, KHÔNG đổi thành 40.** Figma `125:1571` (button `padding: 10px 20px`, chữ 15px) và `125:2691` (input `padding: 10px 12px`) đều ra ~40px = AntD `size="large"`. Đổi mặc định sang 40 làm cao lên **mọi** input/button/select ở 37 trang — thuộc wave component, không phải wave token. Ghi ở **P16**.
 

@@ -18,8 +18,6 @@ import {
   type RentalTermsSnapshot,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
-  PAYMENT_KIND,
-  PAYMENT_STATUS,
   RECEIPT_SOURCE,
   RECEIPT_TYPE,
   SURCHARGE_CATEGORY,
@@ -32,7 +30,7 @@ import {
   type DepositStatus,
   type PaymentMethod,
 } from '@xeprime/types';
-import { loadCounterDueAmount } from '../../../common/booking-money';
+import { loadCounterDueAmount, loadNetDepositReceived } from '../../../common/booking-money';
 import { assertBookingMoneyOpenWithinTx } from '../../../common/booking-money-gate';
 import { formatVnd } from '../../../common/money';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -311,7 +309,10 @@ export class SettlementService {
    * SAU khi đã ghi các khoản phát sinh, với `extraSurcharge` = 0 — câu đọc thấy chính các dòng vừa ghi.
    */
   async collectableAmount(
-    db: Pick<Prisma.TransactionClient, 'booking' | 'bookingSurcharge' | 'receipt' | 'payment'>,
+    db: Pick<
+      Prisma.TransactionClient,
+      'booking' | 'bookingSurcharge' | 'receipt' | 'payment' | 'bookingHold'
+    >,
     tenantId: string,
     bookingId: string,
     extraSurcharge: Prisma.Decimal = ZERO,
@@ -787,15 +788,8 @@ export class SettlementService {
     surcharges: SurchargeRow[];
   }> {
     const [deposits, surcharges] = await Promise.all([
-      this.prisma.payment.aggregate({
-        where: {
-          tenantId,
-          bookingId,
-          kind: PAYMENT_KIND.DEPOSIT,
-          status: PAYMENT_STATUS.SUCCEEDED,
-        },
-        _sum: { amount: true },
-      }),
+      // Cọc RÒNG: phần đã trả lại trước quyết toán (lượt sửa tiền cọc) không được hoàn lần nữa.
+      loadNetDepositReceived(this.prisma, tenantId, bookingId),
       this.prisma.bookingSurcharge.findMany({
         where: { tenantId, bookingId, voidedAt: null },
         orderBy: { createdAt: 'asc' },
@@ -810,7 +804,7 @@ export class SettlementService {
 
     return {
       depositRequired,
-      depositReceived: deposits._sum.amount ?? ZERO,
+      depositReceived: deposits,
       surchargeTotal,
       surcharges,
     };

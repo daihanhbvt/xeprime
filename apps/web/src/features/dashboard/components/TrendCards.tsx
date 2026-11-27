@@ -1,6 +1,7 @@
 'use client';
 
 import { Skeleton } from 'antd';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { CSSProperties } from 'react';
 import { useMemo } from 'react';
@@ -10,7 +11,18 @@ import { isZeroMoney, sumMoney } from '@xeprime/domain';
 import { toChartValue } from '@/components/chart/chart-data';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { InfoCard } from '@/components/layout/InfoCard';
-import type { FinanceSeries } from '@/features/finance/types';
+import {
+  RevenueSourceSegment,
+  RevenueSourceTrack,
+} from '@/features/finance/components/RevenueSource';
+import type { FinanceSeries, FinanceSourceBreakdown } from '@/features/finance/types';
+import {
+  REVENUE_SOURCE_VIEW,
+  sharePercent,
+  tripsOf,
+  type RevenueSourceView,
+  type SourceGroup,
+} from '@/features/finance/vehicle-finance';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 import { DASHBOARD_REVENUE_DAYS } from '../api';
@@ -25,13 +37,30 @@ function barStyle(percent: number): CSSProperties {
   return { '--bar': Math.max(0, Math.min(100, percent)) / 100 } as CSSProperties;
 }
 
+/** Ba phần của cột doanh thu, từ chân lên đỉnh - cùng thứ tự với biểu đồ ở màn Tổng quan doanh thu. */
+const STACK_GROUPS: readonly SourceGroup[] = ['marketplace', 'direct', 'unlinked'];
+
 /**
  * "Thu chi 30 ngày gần nhất" — Figma `24138:80477`: ba ô tổng (doanh thu vàng nhạt · chi phí xám
- * · lợi nhuận xanh), rồi năm cột doanh thu vàng có số trên đầu. Cùng cách gom với `RevenueTab` của
+ * · lợi nhuận xanh), rồi năm cột doanh thu có số trên đầu. Cùng cách gom với `RevenueTab` của
  * app: chuỗi ngày chia đều thành `REVENUE_BARS` nhóm, nhãn là ngày đầu nhóm.
+ *
+ * Theo NGUỒN ĐƠN (ADR 0110, 26/11/2026 - như tab Tài chính của hồ sơ xe): dưới ba ô tổng là tỷ trọng
+ * qua sàn XePrime · nguồn ngoài (· thu không gắn đơn khi có), mỗi dòng mở màn Tổng quan doanh thu
+ * đúng góc nhìn đó; mỗi cột doanh thu là cột CHỒNG ba phần, tổng chiều cao vẫn là doanh thu.
  */
-export function RevenueCard({ series }: { series: UseQueryResult<FinanceSeries> }) {
+export function RevenueCard({
+  series,
+  bySource,
+  detailHref,
+}: {
+  series: UseQueryResult<FinanceSeries>;
+  bySource: UseQueryResult<FinanceSourceBreakdown>;
+  /** Màn Tổng quan doanh thu cùng 30 ngày, mở sẵn một góc nhìn nguồn (`null` = mọi nguồn). */
+  detailHref: (view: RevenueSourceView | null) => string;
+}) {
   const t = useTranslations('Dashboard.charts');
+  const tSource = useTranslations('Finance.bySource.chart');
   const fmt = useAppFormat();
   const buckets = useMemo(() => series.data?.buckets ?? [], [series.data]);
 
@@ -47,7 +76,12 @@ export function RevenueCard({ series }: { series: UseQueryResult<FinanceSeries> 
   const groups = useMemo(() => {
     if (buckets.length === 0) return [];
     const size = Math.max(1, Math.ceil(buckets.length / REVENUE_BARS));
-    const list: { key: string; label: string; revenue: string }[] = [];
+    const list: {
+      key: string;
+      label: string;
+      revenue: string;
+      parts: Record<SourceGroup, string>;
+    }[] = [];
     for (let i = 0; i < buckets.length; i += size) {
       const chunk = buckets.slice(i, i + size);
       const head = chunk[0]!;
@@ -55,6 +89,11 @@ export function RevenueCard({ series }: { series: UseQueryResult<FinanceSeries> 
         key: head.bucket,
         label: fmt.dayMonth(head.bucket),
         revenue: sumMoney(chunk.map((b) => b.revenue)),
+        parts: {
+          marketplace: sumMoney(chunk.map((b) => b.marketplaceRevenue)),
+          direct: sumMoney(chunk.map((b) => b.directRevenue)),
+          unlinked: sumMoney(chunk.map((b) => b.unlinkedRevenue)),
+        },
       });
     }
     return list;
@@ -87,6 +126,7 @@ export function RevenueCard({ series }: { series: UseQueryResult<FinanceSeries> 
           <MoneyTile label={t('cost')} value={fmt.money(totals.cost)} tone="gray" />
           <MoneyTile label={t('profit')} value={fmt.money(totals.profit)} tone="green" />
         </div>
+        <SourceSplit query={bySource} detailHref={detailHref} />
         <div
           className={styles.chart}
           role="img"
@@ -97,9 +137,24 @@ export function RevenueCard({ series }: { series: UseQueryResult<FinanceSeries> 
               <div key={group.key} className={styles.barCol}>
                 <span className={styles.barValue}>{fmt.moneyCompact(group.revenue)}</span>
                 <span
-                  className={cx(styles.bar, styles.barGold)}
+                  className={cx(styles.bar, styles.barStack)}
                   style={barStyle((Math.max(0, toChartValue(group.revenue)) / max) * 100)}
-                />
+                  title={STACK_GROUPS.filter((g) => !isZeroMoney(group.parts[g]))
+                    .map((g) => `${tSource(g)}: ${fmt.money(group.parts[g])}`)
+                    .join('\n')}
+                >
+                  {STACK_GROUPS.map((g) => {
+                    const value = Math.max(0, toChartValue(group.parts[g]));
+                    if (value === 0) return null;
+                    return (
+                      <span
+                        key={g}
+                        className={cx(styles.stackPart, styles[`stack_${g}`])}
+                        style={partStyle(value)}
+                      />
+                    );
+                  })}
+                </span>
               </div>
             ))}
           </div>
@@ -121,6 +176,100 @@ export function RevenueCard({ series }: { series: UseQueryResult<FinanceSeries> 
     >
       {body}
     </InfoCard>
+  );
+}
+
+/** Tỷ phần một khúc trong cột chồng - giá trị chỉ biết lúc chạy ⇒ CSS custom property. */
+function partStyle(value: number): CSSProperties {
+  return { '--part': value } as CSSProperties;
+}
+
+/**
+ * Tỷ trọng doanh thu theo nguồn của 30 ngày - thanh tỷ trọng rồi từng dòng (chấm màu · tên · số
+ * chuyến · tiền · %). Số liệu từ `/finance/by-source` cùng cửa sổ, nên tổng khớp ô Doanh thu. Kỳ
+ * chưa có doanh thu thì khối tự vắng: ba dòng 0đ không nói thêm gì.
+ */
+function SourceSplit({
+  query,
+  detailHref,
+}: {
+  query: UseQueryResult<FinanceSourceBreakdown>;
+  detailHref: (view: RevenueSourceView | null) => string;
+}) {
+  const t = useTranslations('Dashboard.charts.sources');
+  const tSource = useTranslations('Finance.bySource.chart');
+  const fmt = useAppFormat();
+  const data = query.data;
+
+  if (query.isPending) return <Skeleton active title={false} paragraph={{ rows: 2 }} />;
+  if (!data) {
+    return query.isError ? <p className={styles.sourcesError}>{t('error')}</p> : null;
+  }
+  if (isZeroMoney(data.total)) return null;
+
+  const rows: {
+    group: SourceGroup;
+    view: RevenueSourceView | null;
+    amount: string;
+    trips: number | null;
+  }[] = [
+    {
+      group: 'marketplace',
+      view: REVENUE_SOURCE_VIEW.MARKETPLACE,
+      amount: data.marketplaceAmount,
+      trips: tripsOf(data.items, REVENUE_SOURCE_VIEW.MARKETPLACE),
+    },
+    {
+      group: 'direct',
+      view: REVENUE_SOURCE_VIEW.DIRECT,
+      amount: data.directAmount,
+      trips: tripsOf(data.items, REVENUE_SOURCE_VIEW.DIRECT),
+    },
+    // Thu không gắn đơn: chỉ hiện khi có, không có chuyến, mở màn ở góc nhìn mọi nguồn.
+    ...(isZeroMoney(data.unlinkedAmount)
+      ? []
+      : [{ group: 'unlinked' as const, view: null, amount: data.unlinkedAmount, trips: null }]),
+  ];
+
+  return (
+    <div className={styles.sources}>
+      <div className={styles.sourcesHead}>
+        <span className={styles.sourcesTitle}>{t('title')}</span>
+        <Link className={styles.sourcesLink} href={detailHref(null)}>
+          {t('detail')}
+        </Link>
+      </div>
+      <RevenueSourceTrack>
+        {rows.map((row) => (
+          <RevenueSourceSegment
+            key={row.group}
+            share={sharePercent(row.amount, data.total)}
+            group={row.group}
+          />
+        ))}
+      </RevenueSourceTrack>
+      <ul className={styles.sourceList} aria-label={t('legend')}>
+        {rows.map((row) => (
+          <li key={row.group}>
+            <Link className={styles.sourceRow} href={detailHref(row.view)}>
+              <span className={styles.sourceName}>
+                <span className={cx(styles.sourceDot, styles[`stack_${row.group}`])} aria-hidden />
+                <span className={styles.sourceNameText}>{tSource(row.group)}</span>
+                {row.trips !== null ? (
+                  <span className={styles.sourceTrips}>{t('trips', { count: row.trips })}</span>
+                ) : null}
+              </span>
+              <span className={styles.sourceAmount}>
+                {fmt.money(row.amount)}
+                <span className={styles.sourceShare}>
+                  {t('share', { percent: sharePercent(row.amount, data.total) })}
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

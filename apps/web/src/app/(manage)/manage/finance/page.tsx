@@ -10,7 +10,10 @@ import {
   PERMISSION,
   RECEIPT_TYPE,
 } from '@xeprime/types';
-import { RevenueTrendChart, RevenueTrendLegend } from '@/components/chart/RevenueTrendChart';
+import {
+  SourceRevenueTrendChart,
+  SourceRevenueTrendLegend,
+} from '@/components/chart/SourceRevenueTrendChart';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { ALL_FILTER } from '@/constants/filters';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -21,15 +24,26 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { DAY_PARAM_FORMAT, buildPeriodRange, dayjs, type PeriodKey } from '@/lib/datetime';
 import { BusinessPerformanceCard } from '@/features/finance/components/BusinessPerformanceCard';
 import { CategoryBreakdown } from '@/features/finance/components/CategoryBreakdown';
+import {
+  FinanceSourcePicker,
+  FinanceSourceRowsCard,
+} from '@/features/finance/components/FinanceSourceDetail';
 import { FinanceOverviewCards } from '@/features/finance/components/FinanceOverviewCards';
 import { FINANCE_OVERVIEW_PERIOD_VALUES } from '@/features/finance/constants';
 import {
   useFinanceByCategory,
+  useFinanceBySource,
   useFinanceSeries,
   useFinanceSummaryOverview,
 } from '@/features/finance/hooks/use-finance-overview';
 import { useFinanceOverviewFilters } from '@/features/finance/hooks/use-finance-overview-filters';
+import {
+  REVENUE_SOURCE_VIEW,
+  parseRevenueSourceView,
+  type RevenueSourceView,
+} from '@/features/finance/vehicle-finance';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { isZeroMoney } from '@/lib/money';
 import type { FinanceCategoryBreakdown, FinanceOverviewFilters } from '@/features/finance/types';
 import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import styles from './finance-page.module.css';
@@ -45,8 +59,13 @@ export default function FinancePage() {
 
 /**
  * Tổng quan doanh thu — design Partner-XePrime "Revenue Overview" (`23813:30723`, `23813:38107`):
- * kỳ xem nhanh + chi nhánh + khoảng ngày · sáu thẻ số · dòng tiền & lợi nhuận theo thời gian ·
- * cơ cấu thu/chi · hiệu suất theo xe/khách · thuế đã khấu trừ. Kiểm kê và quyết định:
+ * kỳ xem nhanh + chi nhánh + khoảng ngày · sáu thẻ số · ba thẻ chọn nguồn doanh thu · doanh thu
+ * theo nguồn & lợi nhuận theo thời gian · chi tiết từng nguồn · cơ cấu thu/chi · hiệu suất theo
+ * xe/khách · thuế đã khấu trừ.
+ *
+ * Phần nguồn (ADR 0110, 26/11/2026) đi y như tab Tài chính của hồ sơ xe: chọn nguồn CHỈ đổi phần
+ * doanh thu (phần được nhấn trên biểu đồ, danh sách nguồn). Sáu thẻ số luôn là của cả gian hàng:
+ * chi phí không thuộc nguồn nào, "doanh thu qua sàn trừ toàn bộ chi phí" là con số vô nghĩa. Kiểm kê và quyết định:
  * `docs/design/09_PARTNER_REDESIGN.md` §3.9.
  */
 function FinanceOverviewView() {
@@ -63,6 +82,12 @@ function FinanceOverviewView() {
   const series = useFinanceSeries(filters);
   const income = useFinanceByCategory(filters, RECEIPT_TYPE.INCOME);
   const expense = useFinanceByCategory(filters, RECEIPT_TYPE.EXPENSE);
+  // Doanh thu theo nguồn đơn (ADR 0110): tổng · qua XePrime · tự khai thác theo từng kênh.
+  const sources = useFinanceBySource(filters);
+  const sourceView = parseRevenueSourceView(filters.revenueSource);
+  // Đổi góc nhìn không đổi trang của hai bảng hiệu suất bên dưới.
+  const changeSourceView = (next: RevenueSourceView | null) =>
+    setFilters({ revenueSource: next ?? undefined }, { resetPage: false });
 
   const periodOptions = useMemo(
     () => FINANCE_OVERVIEW_PERIOD_VALUES.map((value) => ({ value, label: t(`periods.${value}`) })),
@@ -129,7 +154,16 @@ function FinanceOverviewView() {
 
   const seriesEmpty =
     series.data !== undefined &&
-    series.data.buckets.every((b) => b.revenue === '0' && b.cost === '0');
+    series.data.buckets.every((b) => isZeroMoney(b.revenue) && isZeroMoney(b.cost));
+  const showUnlinkedLegend =
+    series.data?.buckets.some((b) => !isZeroMoney(b.unlinkedRevenue)) ?? false;
+  const sourceState = {
+    data: sources.data,
+    loading: sources.isFetching && !sources.data,
+    error: sources.isError && !sources.data,
+    onRetry: () => void sources.refetch(),
+    view: sourceView,
+  };
 
   return (
     <div className={styles.page}>
@@ -169,14 +203,22 @@ function FinanceOverviewView() {
         error={summary.isError}
       />
 
-      <RevenueTrendChart
+      <FinanceSourcePicker {...sourceState} onChange={changeSourceView} />
+
+      <SourceRevenueTrendChart
         className={styles.card}
         points={series.data?.buckets ?? []}
         labelOf={labelOf}
         title={t('chart.title')}
-        legend="none"
-        yAxis="million"
+        description={t('chart.sourceDescription')}
         height={260}
+        highlight={
+          sourceView === REVENUE_SOURCE_VIEW.MARKETPLACE
+            ? 'marketplace'
+            : sourceView === REVENUE_SOURCE_VIEW.DIRECT
+              ? 'direct'
+              : null
+        }
         loading={series.isFetching && !series.data}
         error={
           series.isError && !series.data
@@ -186,9 +228,9 @@ function FinanceOverviewView() {
         empty={seriesEmpty ? { title: t('chart.empty'), description: t('chart.emptyHint') } : null}
         actions={
           <div className={styles.chartActions}>
-            {/* Chú giải đứng cạnh nút độ mịn (chốt 04/11/2026) — design không vẽ, nhưng ba series
+            {/* Chú giải đứng cạnh nút độ mịn (chốt 04/11/2026) — design không vẽ, nhưng các series
                 không chú giải thì màu là thứ người đọc phải tự đoán. */}
-            <RevenueTrendLegend />
+            <SourceRevenueTrendLegend showUnlinked={showUnlinkedLegend} />
             <Segmented
               size="large"
               options={granularityOptions}
@@ -199,6 +241,8 @@ function FinanceOverviewView() {
           </div>
         }
       />
+
+      <FinanceSourceRowsCard {...sourceState} />
 
       <div className={styles.breakdowns}>
         <CategoryBreakdown

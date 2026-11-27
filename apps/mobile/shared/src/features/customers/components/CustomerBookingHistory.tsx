@@ -1,21 +1,19 @@
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_STATUS_META, BOOKING_STATUS_SELECTABLE_VALUES, SERVICE_TYPE } from '@xeprime/types';
-import { isZeroMoney, toAppTz } from '@xeprime/domain';
-import { Ionicons } from '@/components/icons/Ionicons';
-import { BottomSheet } from '@/components/ui/BottomSheet';
+import { BOOKING_STATUS, BOOKING_STATUS_META, BOOKING_STATUS_SELECTABLE_VALUES } from '@xeprime/types';
+import { isZeroMoney, LIST_SEPARATOR } from '@xeprime/domain';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { ChipTabs } from '@/components/ui/ChipTabs';
-import { DateRangeField, type DateRangeValue } from '@/components/ui/DateRangeField';
-import { FactRow } from '@/components/ui/FactRow';
+import type { DateRangeValue } from '@/components/ui/DateRangeField';
+import { activeFilterCount, ManageFilterSheet, type FilterGroup } from '@/features/shell/ManageFilterSheet';
+import { ListSearchBar } from '@/features/shell/ListSearchBar';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
-import { RemoteImage } from '@/components/ui/RemoteImage';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
+import { VehicleThumb } from '@/components/ui/VehicleThumb';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { ListSearchBar } from '@/features/shell/ListSearchBar';
 import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -25,23 +23,28 @@ import { metaColor } from '@/lib/status-meta';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { fontWeight, space, typeScale } from '@/theme/tokens';
 import { useCustomerBookingHistory } from '../hooks/use-customers';
+import { formatDayTime } from '../day-time';
 import type { CustomerBooking } from '../api';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const SKELETON_ROWS = 3;
-/** Sentinel "Tất cả" của dải tab trạng thái - không gửi lên server. */
-const ALL = 'all';
-/** Ảnh xe 80 × 52 - cùng thẻ Lịch sử đơn thuê. */
-const THUMB_W = 80;
-const THUMB_H = 52;
-const body = { fos: typeScale.body.fontSize, lh: typeScale.body.lineHeight } as const;
+/** Figma: đệm/khe 12 (thang `space` không có 12), ô khối xám bo 10. */
+const GAP = 12;
+const BLOCK_RADIUS = 10;
+
+/** Giá trị nội bộ của mục "Tất cả" trong ô trạng thái (không bao giờ gửi lên server). */
+const STATUS_ALL = '__all';
 
 /**
- * Lịch sử thuê của một khách - khuôn danh sách màn Đơn thuê (người dùng 16/11/2026): ô tìm + nút
- * "Lọc" (`ListSearchBar`, tấm Lọc giữ khoảng ngày nhận xe), trạng thái thành dải tab, thẻ đơn như
- * thẻ Lịch sử đơn thuê, tải thêm dồn trang (server vẫn phân trang `limit` 10 như web).
+ * Lịch sử thuê của một khách - Figma Partner-XePrime "Users / Details - Lịch sử" `24494:25402`:
+ * MỘT thẻ bộ lọc (ô tìm · ô chọn "Trạng thái" · ô chọn "Thời gian" mở tấm lịch khoảng ngày), rồi các
+ * thẻ đơn (mã · nhãn chặng, xe, nhận → trả · tổng tiền, tình trạng thu tiền · "Chi tiết →"). Tải thêm
+ * dồn trang (server vẫn phân trang `limit` 10 như web).
+ *
+ * Dòng tài xế, "Đã thu" và "Còn nợ" bằng số trên thẻ Figma không vẽ nên đã bỏ (người dùng chốt
+ * 25/11/2026); tình trạng thu tiền thành MỘT câu ở chân thẻ, số tiền đầy đủ nằm ở chi tiết đơn.
  *
  * Chỉ render khi có `bookings.view` - endpoint trả 403 khi thiếu, nơi gọi gác trước.
  */
@@ -54,21 +57,21 @@ export function CustomerBookingHistory({
 }) {
   const t = useTranslations('Customers.history');
   const tFilter = useTranslations('Customers.profile.history');
-  const tRange = useTranslations('Common.components.dateRange');
+  const tApp = useTranslations('Customers.app.detail.history');
   const tActions = useTranslations('Common.actions');
-  const tFilters = useTranslations('Common.filters');
+  const tLabels = useTranslations('Common.labels');
   const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
 
   const [page, setPage] = useState(FIRST_PAGE);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string>(ALL);
+  const [status, setStatus] = useState('');
   const [range, setRange] = useState<DateRangeValue>({});
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [filtering, setFiltering] = useState(false);
   const q = useDebouncedValue(search, SEARCH_DEBOUNCE_MS).trim();
   const { data, isLoading, isFetching, isError, error, refetch } = useCustomerBookingHistory(customerId, {
     ...(q ? { q } : {}),
-    ...(status !== ALL ? { status } : {}),
+    ...(status ? { status } : {}),
     ...(range.from ? { from: range.from } : {}),
     ...(range.to ? { to: range.to } : {}),
     page,
@@ -77,56 +80,73 @@ export function CustomerBookingHistory({
   const meta = data?.meta;
   const hasMore = meta ? meta.page * meta.limit < meta.total : false;
   const rangeActive = Boolean(range.from || range.to);
-  const filtered = q.length > 0 || status !== ALL || rangeActive;
+  const filtered = q.length > 0 || status !== '' || rangeActive;
 
-  const header = (
-    <YStack gap={space.sm}>
-      <ListSearchBar
-        value={search}
-        onChange={(next) => {
-          setSearch(next);
-          setPage(FIRST_PAGE);
-        }}
-        label={tFilter('searchPlaceholder')}
-        placeholder={tFilter('searchPlaceholder')}
-        filterCount={rangeActive ? 1 : 0}
-        onFilterPress={() => setFilterOpen(true)}
-      />
-      <ChipTabs
-        label={tFilter('status')}
-        items={[
-          { value: ALL, label: tFilter('statusAll') },
+  /*
+   * Bộ lọc kiểu MỌI danh sách của app (người dùng 25/11/2026): ô tìm + nút "Lọc" (huy hiệu số bộ lọc
+   * đang bật) mở tấm lọc chung - chọn ở bản nháp, "Áp dụng" mới lọc. Hai chiều: Trạng thái và
+   * Thời gian (khoảng ngày NHẬN XE).
+   */
+  const groups = useMemo<readonly FilterGroup[]>(
+    () => [
+      {
+        key: 'status',
+        label: tApp('status'),
+        value: status || STATUS_ALL,
+        resetValue: STATUS_ALL,
+        display: 'option' as const,
+        labelAbove: true,
+        options: [
+          { value: STATUS_ALL, label: tLabels('all') },
           ...BOOKING_STATUS_SELECTABLE_VALUES.map((value) => ({
             value: value as string,
             label: domainLabel('bookingStatus', value),
           })),
-        ]}
-        value={status}
-        onSelect={(next) => {
-          setStatus(next);
-          setPage(FIRST_PAGE);
-        }}
-        gutter={0}
-      />
-    </YStack>
+        ],
+      },
+      {
+        kind: 'dateRange' as const,
+        label: tApp('time'),
+        fromKey: 'from',
+        toKey: 'to',
+        from: range.from ?? '',
+        to: range.to ?? '',
+        labelAbove: true,
+        autoAdvance: true,
+      },
+    ],
+    [tApp, tLabels, domainLabel, status, range.from, range.to],
+  );
+
+  const changeFilter = (key: string, value: string) => {
+    if (key === 'status') setStatus(value === STATUS_ALL ? '' : value);
+    else if (key === 'from') setRange((prev) => ({ ...prev, from: value || undefined }));
+    else if (key === 'to') setRange((prev) => ({ ...prev, to: value || undefined }));
+    setPage(FIRST_PAGE);
+  };
+
+  // Cùng `ListSearchBar` với màn danh sách (Figma "Tab List" 24175:57178): ô tìm · nút "Lọc".
+  const filters = (
+    <ListSearchBar
+      value={search}
+      onChange={(next) => {
+        setSearch(next);
+        setPage(FIRST_PAGE);
+      }}
+      label={tApp('searchPlaceholder')}
+      placeholder={tApp('searchPlaceholder')}
+      filterCount={activeFilterCount(groups)}
+      onFilterPress={() => setFiltering(true)}
+    />
   );
 
   const filterSheet = (
-    <BottomSheet
-      open={filterOpen}
-      onClose={() => setFilterOpen(false)}
-      title={tFilters('title')}
-      footer={<Button label={tActions('apply')} variant="gradient" onPress={() => setFilterOpen(false)} />}
-    >
-      <DateRangeField
-        value={range}
-        onChange={(next) => {
-          setRange(next);
-          setPage(FIRST_PAGE);
-        }}
-        labels={{ field: tFilter('time'), from: tRange('fromDate'), to: tRange('toDate'), clear: tActions('clear') }}
-      />
-    </BottomSheet>
+    <ManageFilterSheet
+      open={filtering}
+      groups={groups}
+      onChange={changeFilter}
+      onClose={() => setFiltering(false)}
+    />
   );
 
   let content;
@@ -148,7 +168,13 @@ export function CustomerBookingHistory({
             key={booking.id}
             booking={booking}
             canViewFinance={canViewFinance}
-            onPress={() => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
+            onPress={() =>
+              navigateOnce(
+                ROUTES.manage.bookingDetail(booking.id, {
+                  preview: { code: booking.code, status: booking.status },
+                }),
+              )
+            }
           />
         ))}
         {hasMore ? (
@@ -165,14 +191,15 @@ export function CustomerBookingHistory({
   }
 
   return (
-    <YStack gap={space.md}>
-      {header}
+    <YStack gap={space.lg}>
+      {filters}
       {content}
       {filterSheet}
     </YStack>
   );
 }
 
+/** Thẻ đơn - Figma "Current Order Card" `24486:80904` (đơn đã xong: mã làm tiêu đề, chân thẻ là tình trạng thu tiền). */
 const HistoryCard = memo(function HistoryCard({
   booking,
   canViewFinance,
@@ -183,71 +210,140 @@ const HistoryCard = memo(function HistoryCard({
   onPress: () => void;
 }) {
   const colors = useColors();
-  const t = useTranslations('Customers.history');
-  const tFilter = useTranslations('Customers.profile.history');
-  const tActions = useTranslations('Common.actions');
-  const tDriverTitle = useTranslations('Bookings.driver');
-  const tDriver = useTranslations('Drivers.booking');
+  const tApp = useTranslations('Customers.app.detail');
+  const tProfile = useTranslations('Customers.profile');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const pickup = toAppTz(booking.pickupAt);
-  const dropoff = toAppTz(booking.returnAt);
-  const showDriver = Boolean(booking.driver) || booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
-  const owing = booking.debtAmount != null && !isZeroMoney(booking.debtAmount);
+  const label = {
+    col: colors.placeholder,
+    fos: typeScale.label.fontSize,
+    lh: typeScale.label.lineHeight,
+  } as const;
+  const value = {
+    col: colors.text,
+    fos: typeScale.label.fontSize,
+    lh: typeScale.label.lineHeight,
+    fow: fontWeight.semibold,
+  } as const;
+
+  /*
+   * Câu tình trạng thu tiền ở chân thẻ (chỉ khi được xem tiền, và không phải đơn đã huỷ - đơn huỷ
+   * còn khoản chưa thu nhưng không còn là việc cần thu): chưa thu đồng nào · thu chưa đủ · đủ.
+   */
+  const debt = booking.debtAmount;
+  const cancelled = booking.status === BOOKING_STATUS.CANCELLED;
+  const owing = debt != null && !isZeroMoney(debt);
+  const nothingPaid = booking.paidAmount == null || isZeroMoney(booking.paidAmount);
+  const footer =
+    canViewFinance && debt != null && !cancelled
+      ? owing
+        ? { text: nothingPaid ? tApp('history.unpaid') : tApp('history.partial'), color: colors.danger }
+        : { text: tApp('history.paid'), color: colors.success }
+      : null;
 
   return (
     <Card onPress={onPress} accessibilityLabel={booking.code}>
-      <YStack gap={space.sm}>
+      <YStack gap={GAP}>
         <XStack ai="center" jc="space-between" gap={space.sm}>
-          <Text col={colors.text} {...body} fow={fontWeight.medium} numberOfLines={1} flexShrink={1}>
+          <Text
+            f={1}
+            minWidth={0}
+            col={colors.text}
+            fos={typeScale.title.fontSize}
+            lh={typeScale.title.lineHeight}
+            fow={fontWeight.semibold}
+            numberOfLines={1}
+          >
             {`#${booking.code}`}
           </Text>
           <Pill
             label={domainLabel('bookingStatus', booking.status)}
             tone={pillToneOfStatusColor(metaColor(BOOKING_STATUS_META, booking.status))}
+            size="lg"
           />
         </XStack>
-        <XStack gap={12} ai="center">
-          <YStack w={THUMB_W} h={THUMB_H} br={radius.sm} ov="hidden" bg={colors.surfaceMuted} flexShrink={0}>
-            <RemoteImage
-              uri={booking.vehicleImageUrl}
-              recyclingKey={booking.id}
-              radius={radius.sm}
-              fallback={<Ionicons name="car-outline" size={iconSize.md} color={colors.placeholder} />}
-            />
-          </YStack>
-          <YStack f={1} minWidth={0} gap={2}>
-            <Text col={colors.text} {...body} fow={fontWeight.semibold} numberOfLines={1}>
+
+        <XStack ai="center" gap={GAP}>
+          <VehicleThumb
+            size="card"
+            uri={booking.vehicleImageUrl ?? null}
+            recyclingKey={booking.id}
+            accessibilityLabel={booking.vehicleName}
+          />
+          <YStack f={1} minWidth={0} gap={3}>
+            <Text
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+            >
               {booking.vehicleName}
             </Text>
-            {booking.vehiclePlate ? (
-              <Text col={colors.textMuted} {...body} numberOfLines={1}>
-                {booking.vehiclePlate}
-              </Text>
-            ) : null}
+            <Text {...label} numberOfLines={1}>
+              {[booking.vehiclePlate, domainLabel('serviceType', booking.serviceType)]
+                .filter(Boolean)
+                .join(LIST_SEPARATOR)}
+            </Text>
           </YStack>
         </XStack>
-        <FactRow label={tFilter('colService')}>{domainLabel('serviceType', booking.serviceType)}</FactRow>
-        {showDriver ? (
-          <FactRow label={tDriverTitle('title')}>{booking.driver?.name ?? tDriver('unassigned')}</FactRow>
-        ) : null}
-        <FactRow label={tFilter('colTime')} sub={fmt.rentalDuration(pickup, dropoff)}>
-          {`${fmt.rentalPoint(pickup)} → ${fmt.rentalPoint(dropoff)}`}
-        </FactRow>
-        {canViewFinance ? (
-          <>
-            <FactRow label={t('total')}>{fmt.money(booking.totalAmount)}</FactRow>
-            <FactRow label={tFilter('paid')}>{fmt.money(booking.paidAmount)}</FactRow>
-            {owing ? (
-              <FactRow label={t('debt')} tone={colors.danger}>
-                {fmt.money(booking.debtAmount)}
-              </FactRow>
-            ) : null}
-          </>
-        ) : null}
-        <YStack pt={space.xs}>
-          <Button label={tActions('viewDetail')} variant="gradient" size="compact" onPress={onPress} />
-        </YStack>
+
+        <XStack
+          ai="center"
+          jc="space-between"
+          gap={space.sm}
+          px={GAP}
+          py={BLOCK_RADIUS}
+          br={BLOCK_RADIUS}
+          bg={colors.background}
+        >
+          <YStack gap={2}>
+            <Text {...label}>{tProfile('current.pickup')}</Text>
+            <Text {...value}>{formatDayTime(booking.pickupAt)}</Text>
+          </YStack>
+          <Text
+            col={colors.placeholder}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+          >
+            →
+          </Text>
+          <YStack gap={2}>
+            <Text {...label}>{tProfile('current.return')}</Text>
+            <Text {...value}>{formatDayTime(booking.returnAt)}</Text>
+          </YStack>
+          {canViewFinance ? (
+            <YStack gap={2} ai="flex-end">
+              <Text {...label}>{tApp('overview.total')}</Text>
+              <Text {...value}>{fmt.money(booking.totalAmount)}</Text>
+            </YStack>
+          ) : null}
+        </XStack>
+
+        <XStack ai="center" jc="space-between" gap={space.sm}>
+          <Text
+            f={1}
+            minWidth={0}
+            col={footer?.color ?? colors.placeholder}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            numberOfLines={1}
+          >
+            {footer?.text ?? ''}
+          </Text>
+          <XStack ai="center" gap={6}>
+            <Text
+              col={colors.brandLink}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {tApp('overview.detail')}
+            </Text>
+            <LineIcon name="arrow-right" size={20} color={colors.brandShape} />
+          </XStack>
+        </XStack>
       </YStack>
     </Card>
   );

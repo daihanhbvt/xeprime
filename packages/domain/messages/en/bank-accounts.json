@@ -20,7 +20,8 @@
     "setDefault": "Make default",
     "archive": "Remove",
     "archiveConfirm": "Remove this account?",
-    "archiveHint": "Transfers already made keep their original details."
+    "archiveHint": "Transfers already made keep their original details.",
+    "requestChange": "Request account change"
   },
   "form": {
     "title": "Add payout account",
@@ -29,7 +30,7 @@
     "bankCode": "Bank",
     "bankCodePlaceholder": "Choose a bank",
     "accountNumber": "Account number",
-    "accountName": "Beneficiary full name",
+    "accountName": "Beneficiary name",
     "accountNameHint": "Type it exactly as registered with your bank - a wrong name gets the transfer bounced.",
     "label": "Nickname",
     "labelPlaceholder": "Optional",
@@ -55,7 +56,15 @@
       "changedDetail": "Your payout account has been updated. Future payouts will go to your new account.",
       "createdDetail": "Payout account added. Your withdrawals will be sent to this account."
     },
-    "addSubmit": "Add account"
+    "addSubmit": "Add account",
+    "requestTitle": "Change payout account",
+    "requestIntro": "Account {account} is locked to protect your money. Send the new account and XePrime will call you to verify before switching.",
+    "requestSubmit": "Send request",
+    "requestSentTitle": "Request sent",
+    "requestSent": "Change request sent - XePrime will call you to verify.",
+    "requestNote": "Reason for the change",
+    "requestNotePlaceholder": "e.g. switching to the company account",
+    "replaceIntro": "This account will replace <b>{account}</b>. Withdrawals already in progress will still go to the old account!"
   },
   "refund": {
     "title": "Refund destination",
@@ -65,5 +74,11 @@
     "submit": "Confirm account",
     "saved": "Account saved. XePrime will transfer within the committed time."
   },
-  "emptyHint": "Add a bank account to receive payouts from your rentals and withdrawals"
+  "emptyHint": "Add a bank account to receive payouts from your rentals and withdrawals",
+  "pendingRequest": {
+    "title": "Waiting for verification to switch to {account}",
+    "body": "XePrime will call you to verify it is really you before switching. Until then, money keeps going to your current account.",
+    "cancel": "Cancel request",
+    "cancelled": "Change request cancelled"
+  }
 }

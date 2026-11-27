@@ -15,6 +15,7 @@ import {
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { InsuranceFeeHint } from '@/components/data-display/InsuranceFeeHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { TripDepositHeld } from './TripDepositHeld';
 import { isZeroMoney } from '@/lib/money';
 import { customerFeeLines } from '@/lib/customer-price-view';
 import type { CustomerTripDetail, CustomerTripFinance } from '../types';
@@ -210,6 +211,9 @@ function refundPill(refund: HoldRefund): { key: RefundPillKey; tone: TripRequest
       return { key: 'refundPaid', tone: 'success' };
     case HOLD_REFUND_STATUS.CREDITED:
       return { key: 'refundCredited', tone: 'success' };
+    // Chờ hoàn vào ví (biên bản họp 19/11/2026) — giờ dự kiến nằm ở dòng ghi chú bên dưới.
+    case HOLD_REFUND_STATUS.SCHEDULED:
+      return { key: 'refundScheduled', tone: 'warning' };
     case HOLD_REFUND_STATUS.REJECTED:
       return { key: 'noRefund', tone: 'danger' };
     default:
@@ -223,6 +227,7 @@ type RefundPillKey =
   | 'paid'
   | 'refundPaid'
   | 'refundCredited'
+  | 'refundScheduled'
   | 'refundProcessing'
   | 'refundNeedsAccount'
   | 'noRefund';
@@ -420,6 +425,11 @@ function ClosedInvoice({
         <p className={styles.invoiceNote}>
           {[
             refund.paidAt ? tInv('refundPaidAt', { date: fmt.dateTime(refund.paidAt) }) : null,
+            refund.status === HOLD_REFUND_STATUS.SCHEDULED
+              ? refund.releaseAt
+                ? tInv('refundScheduledAt', { date: fmt.dateTime(refund.releaseAt) })
+                : tInv('refundScheduledReview')
+              : null,
             refund.bankReference ? tInv('refundRef', { reference: refund.bankReference }) : null,
             refund.accountHint ? tInv('refundAccount', { hint: refund.accountHint }) : null,
             needsAccount ? tInv('refundNeedsAccount') : null,
@@ -536,6 +546,8 @@ function DepositBlock({
           )}
         </dl>
       )}
+      {/* Tài sản thế chấp đã để lại - dòng tiền đã có ở trên. */}
+      <TripDepositHeld finance={finance} withCash={false} />
 
       {refunded ? (
         <p className={styles.depositNote}>

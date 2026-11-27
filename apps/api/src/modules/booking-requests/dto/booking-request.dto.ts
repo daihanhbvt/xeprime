@@ -369,10 +369,10 @@ export class CreateBookingRequestDto {
   deliveryLongitude?: number;
 
   /**
-   * Khách đã đọc và đồng ý điều khoản thuê của chủ xe (08/09/2026). BẮT BUỘC `true` khi thiết lập
-   * dịch vụ của xe đòi hỏi — server kiểm, và thời điểm đồng ý được đóng băng vào yêu cầu.
+   * Khách đã đọc và đồng ý điều khoản thuê của GIAN HÀNG (ADR 0112 điều 3 - theo nhóm dịch vụ).
+   * BẮT BUỘC `true` khi gian hàng đòi hỏi - server kiểm, thời điểm đồng ý đóng băng vào yêu cầu.
    */
-  @ApiPropertyOptional({ description: 'Đồng ý điều khoản thuê của chủ xe' })
+  @ApiPropertyOptional({ description: 'Đồng ý điều khoản thuê của gian hàng' })
   @IsOptional()
   @IsBoolean()
   acceptedTerms?: boolean;
@@ -596,8 +596,20 @@ export class BookingRequestListQueryDto {
 export class BookingRequestPricingDto {
   @ApiProperty({ description: 'true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng' })
   isEstimate!: boolean;
-  @ApiProperty({ description: 'Tiền thuê - doanh thu gian hàng, VND string' })
+  @ApiProperty({
+    description:
+      'Tiền thuê - doanh thu gian hàng, ĐÃ GỒM phí giao xe tận nơi `deliveryFee` nếu có, VND string',
+  })
   rentalTotal!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Phí giao xe tận nơi `G` đã chốt (khách trả tận tay chủ xe lúc nhận xe, nằm trong ' +
+      '`rentalTotal` và `remainingAmount`, không vào tiền giữ chỗ - ADR 0064 điều 4). Từ đơn nếu đã ' +
+      'có đơn, từ snapshot giữ chỗ nếu đã duyệt. null khi còn tạm tính (chủ xe nhập lúc duyệt) (VND string)',
+  })
+  deliveryFee!: string | null;
   @ApiProperty({ description: 'Tổng khách phải trả (đã gồm phụ phí nếu có), VND string' })
   customerTotalAmount!: string;
   @ApiPropertyOptional({

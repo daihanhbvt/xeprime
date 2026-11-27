@@ -106,6 +106,11 @@ vi.mock('../hooks/use-platform-money', () => ({
   useSettleHold: idle,
   useMarkRefundPaid: idle,
   useRejectRefund: idle,
+  // Không có khoản chờ cộng ví ⇒ mục đó không vẽ gì (biên bản 19/11/2026).
+  useScheduledCredits: () => ({ data: [], isFetching: false }),
+  useScheduledCreditAction: idle,
+  useBankAccountChangeRequests: () => ({ data: [], isFetching: false }),
+  useDecideBankAccountChange: idle,
   useApproveWithdrawal: idle,
   useRejectWithdrawal: () => rejectWithdrawal,
   useReverseWithdrawal: idle,

@@ -62,6 +62,24 @@ export class PartnerDashboardTodayDto {
       'đếm một lần.',
   })
   returnsDue!: number;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Trong `awaitingPickup`: giờ hẹn giao SỚM NHẤT chưa tới (`pickupAt >= now`) - ISO-8601 UTC. ' +
+      'Lượt đã quá giờ nằm ở `pickupsOverdue`, không ở đây. `null` khi không còn lượt sắp tới.',
+  })
+  nextPickupAt!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Trong `active`: giờ hẹn trả SỚM NHẤT chưa tới (`returnAt >= now`) - ISO-8601 UTC. `null` khi ' +
+      'không còn lượt sắp tới.',
+  })
+  nextReturnAt!: string | null;
 }
 
 /** Hộp thư yêu cầu — cùng phép đếm với hàng đợi vận hành chuyến của nền tảng. */

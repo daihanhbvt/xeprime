@@ -12,10 +12,11 @@ import {
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
   isVehicleFuelTypeAllowed,
+  packageShopListingGapsOf,
   requiredVehicleImageTypes,
   type PublishRequirement,
 } from '@xeprime/types';
-import { vehicleFormWithPhotosSchema, type VehicleFormValues } from '@xeprime/validators';
+import { vehicleCreateFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -25,6 +26,9 @@ import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { TOAST_PRESET } from '@/components/feedback/AppToast';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { LIST_SEPARATOR, isLogoOnlyGate } from '@xeprime/domain';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -61,6 +65,10 @@ import { formValuesToInput } from './mappers';
 import { missingPublishRequirementsForForm } from './publication';
 import { usePublicationLabels } from './hooks/use-publication-labels';
 import { useCreateVehicle } from './hooks/use-vehicle';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
+import { useMyShop } from '@/features/shop/hooks/use-shop';
+import { useApplyRegistrationReading, useComposedVehicleName } from './hooks/use-vehicle-data';
 import { branchLabel, vehiclesApi, type VehicleDetail } from './api';
 // Lỗi hạn mức gói (ADR 0065) nói đúng loại xe + con số thay cho câu chung — như web.
 import { usePlanAwareErrorMessage } from '@/features/subscription/plan-quota-gate';
@@ -205,6 +213,17 @@ export function CreateVehicleScreen() {
   const { formGaps } = usePublicationLabels();
 
   const create = useCreateVehicle();
+  /*
+   * MỘT wizard cho hai tuyến (web 18/11/2026): tuyến hoa hồng dùng chính màn này, ẩn phần chỉ của gian
+   * hàng (chi nhánh khi chỉ có một, nguồn xe, chính sách gian hàng). Server vẫn là cổng thật.
+   */
+  const session = useCurrentUser();
+  const commission = resolvePartnerTrack(session.data) === PARTNER_TRACK.COMMISSION;
+  /** Hồ sơ gian hàng tuyến gói còn thiếu gì để đăng xe (ADR 0040 điều 7) - `null` = không áp. */
+  const shop = useMyShop(true);
+  const shopGaps = useMemo(() => packageShopListingGapsOf(shop.data), [shop.data]);
+  const tShopGate = useTranslations('Shop.listingGate');
+  const navigateOnce = useNavigateOnce();
   const [step, setStep] = useState(0);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
@@ -215,7 +234,8 @@ export function CreateVehicleScreen() {
   } | null>(null);
 
   const resolver = useValidationResolver<VehicleFormValues>(
-    vehicleFormWithPhotosSchema,
+    // Không có ô tên; hãng + mẫu xe BẮT BUỘC kể cả khi lưu nháp - server ghép tên từ đó (ADR 0102).
+    vehicleCreateFormSchema,
     'Vehicles.form.validation',
   );
   const applyApiFieldErrors = useApiFieldErrors();
@@ -275,6 +295,28 @@ export function CreateVehicleScreen() {
   const [registrationShowErrors, setRegistrationShowErrors] = useState(false);
   const plateNumber = useWatch({ control, name: 'plateNumber' });
   const registrationCheck = checkRegistration(registration, plateNumber);
+  // Lượt đọc cà vẹt MỚI điền đè biển số + màu sơn (ADR 0102 điều 6) - đặt ở form gốc, không ở bước.
+  useApplyRegistrationReading(registration.reading, setValue);
+
+  /** Tên xe sẽ lưu - ghép như server, cho tấm xác nhận (ADR 0102). */
+  const [nameBrand, nameModelId, nameVariantId, nameVariantLabel, nameYear] = useWatch({
+    control,
+    name: [
+      'brand',
+      'vehicleCatalogModelId',
+      'vehicleCatalogVariantId',
+      'catalogVariantLabel',
+      'manufactureYear',
+    ],
+  });
+  const autoName = useComposedVehicleName({
+    vehicleType,
+    brand: nameBrand,
+    vehicleCatalogModelId: nameModelId,
+    vehicleCatalogVariantId: nameVariantId,
+    catalogVariantLabel: nameVariantLabel,
+    manufactureYear: nameYear,
+  });
 
   /** Điều kiện lên chợ còn thiếu — CÙNG luật với cổng gửi duyệt ở backend. */
   const [publishMissing, setPublishMissing] = useState<PublishRequirement[]>([]);
@@ -311,6 +353,23 @@ export function CreateVehicleScreen() {
 
   function submitNow(submitForReview: boolean) {
     if (!passesGates()) {
+      setConfirmSubmit(false);
+      return;
+    }
+    /*
+     * Gửi duyệt mà hồ sơ gian hàng (tuyến gói) còn thiếu ⇒ server sẽ từ chối SAU khi đã tạo xe.
+     * Chặn trước, nói rõ thiếu gì + chạm để mở hồ sơ gian hàng; "Lưu nháp" vẫn đi được (web 18/11/2026).
+     */
+    if (submitForReview && shopGaps && shopGaps.length > 0) {
+      const logoOnly = isLogoOnlyGate(shopGaps);
+      toast.showNotice({
+        title: tShopGate('title'),
+        body: logoOnly
+          ? `${tShopGate('logoOnly')} ${tShopGate('ctaLogo')}`
+          : `${shopGaps.map((gap) => tShopGate(`items.${gap}`)).join(LIST_SEPARATOR)}. ${tShopGate('cta')}`,
+        tone: TOAST_PRESET.WARNING,
+        onPress: () => navigateOnce(ROUTES.manage.shop()),
+      });
       setConfirmSubmit(false);
       return;
     }
@@ -390,6 +449,9 @@ export function CreateVehicleScreen() {
   }
 
   /* Mức "Sẵn sàng gửi duyệt" — cùng luật cổng gửi duyệt, chỉ để chủ xe thấy còn thiếu gì. */
+  // Cờ ổn định cho `useMemo` - `errors` là object mới mỗi lượt render.
+  const regPhotoError = Boolean(registrationCheck.errors.photo);
+  const regFieldsOk = Object.keys(registrationCheck.errors).every((key) => key === 'photo');
   const watched = useWatch({ control });
   const readiness = useMemo(() => {
     const values = { ...EMPTY_DEFAULTS, ...watched } as VehicleFormValues;
@@ -399,17 +461,22 @@ export function CreateVehicleScreen() {
       photos:
         requiredVehicleImageTypes(values.vehicleType).every((slot) =>
           media.some((item) => item.type === slot),
-        ) && registrationCheck.ok,
+        ) && !regPhotoError,
+      // Ảnh cà vẹt chỉ cần CÓ - máy đọc ra hay không không tính; tên chủ xe / số khung / số máy là ô
+      // nhập nên thuộc mục thông tin (web 18/11/2026).
       info:
-        Boolean(values.name?.trim() && values.branchId) &&
+        regFieldsOk &&
+        // Tên xe tự ghép từ dòng xe (ADR 0102) - đủ dòng xe là đủ tên.
+        Boolean(values.vehicleCatalogModelId && values.branchId) &&
         !gaps.some((g) => REQUIREMENT_STEP[g] === 'basic' && g !== PUBLISH_REQUIREMENT.PHOTOS),
       pricing:
         (values.serviceTypes ?? []).length > 0 &&
         !gaps.some((g) => REQUIREMENT_STEP[g] === 'pricing'),
+      ...(shopGaps === null ? {} : { shop: shopGaps.length === 0 }),
       features: (values.features ?? []).length > 0 || Boolean(values.description?.trim()),
     };
-  }, [watched, registrationCheck.ok]);
-  const requiredPhotos = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length + 1;
+  }, [watched, regPhotoError, regFieldsOk, shopGaps]);
+  const requiredPhotos = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length;
 
   if (!permissionsLoading && !has(PERMISSION.VEHICLE_CREATE)) {
     return (
@@ -533,9 +600,15 @@ export function CreateVehicleScreen() {
                     branchOptions={branchOptions}
                     branchLoading={branches.isPending}
                     hideServiceTypes
+                    hideBranch={commission && branchOptions.length <= 1}
                   />
-                  <SpecsSection control={control} isCar={isCar} setValue={setValue} />
-                  <SourceTypeSection control={control} />
+                  <SpecsSection
+                    control={control}
+                    isCar={isCar}
+                    setValue={setValue}
+                    registrationReading={registration.reading}
+                  />
+                  {commission ? null : <SourceTypeSection control={control} />}
                 </YStack>
               </Card>
             </>
@@ -545,6 +618,7 @@ export function CreateVehicleScreen() {
               isCar={isCar}
               setValue={setValue}
               autoAccept={{ value: autoAcceptEnabled, onChange: setAutoAcceptEnabled }}
+              shopPolicy={!commission}
             />
           ) : (
             <FeaturesDescriptionCard control={control} title={tSteps('featuresTitle')} />
@@ -583,7 +657,7 @@ export function CreateVehicleScreen() {
       >
         <YStack gap={space.md}>
           <ReviewStep
-            values={getValues()}
+            values={{ ...getValues(), name: autoName }}
             onEditStep={(next) => {
               setConfirmSubmit(false);
               setStep(next);

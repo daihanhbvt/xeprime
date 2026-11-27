@@ -592,6 +592,15 @@ export const API_ERROR_CODE = {
    * chủ chỉ một tài khoản, nên thay vì âm thầm đổi chỗ tiền về, server từ chối.
    */
   BANK_ACCOUNT_REPLACE_NOT_CONFIRMED: 'BANK_ACCOUNT_REPLACE_NOT_CONFIRMED',
+  /**
+   * Tài khoản nhận tiền đã KHOÁ từ lần khai đầu (biên bản họp 19/11/2026): chủ ví không tự đổi / gỡ
+   * được — phải gửi yêu cầu đổi để admin/CSKH gọi xác minh chính chủ.
+   */
+  BANK_ACCOUNT_LOCKED: 'BANK_ACCOUNT_LOCKED',
+  /** Đã có một yêu cầu đổi tài khoản đang chờ xác minh — huỷ nó trước khi gửi yêu cầu mới. */
+  BANK_ACCOUNT_CHANGE_PENDING: 'BANK_ACCOUNT_CHANGE_PENDING',
+  /** Yêu cầu đổi sang ĐÚNG tài khoản đang dùng — không có gì để đổi. */
+  BANK_ACCOUNT_CHANGE_UNCHANGED: 'BANK_ACCOUNT_CHANGE_UNCHANGED',
 
   // Rút tiền (ADR 0033)
   /** Số dư khả dụng không đủ, hoặc ví đang tạm khoá. */
@@ -776,6 +785,11 @@ export const API_ERROR_CODE = {
   DRIVER_LICENCE_IMAGE_INVALID: 'DRIVER_LICENCE_IMAGE_INVALID',
   /** Chạm trần lượt nộp trong 24 giờ (`details.limit`) — mỗi lượt chiếm vài giây CPU của máy chủ. */
   DRIVER_LICENCE_SUBMISSION_LIMIT: 'DRIVER_LICENCE_SUBMISSION_LIMIT',
+  /**
+   * "Đã đối chiếu" bằng lái của một liên kết (25/11/2026) khi tài xế CHƯA có bằng đã xác thực còn
+   * hạn — không có giấy tờ nào để đối chiếu; chờ tài xế nộp bằng.
+   */
+  DRIVER_LICENCE_NOT_VERIFIED: 'DRIVER_LICENCE_NOT_VERIFIED',
 
   /**
    * Xe bỏ một loại dịch vụ khi còn chuyến ĐANG MỞ dùng loại đó (19/10/2026). `details.bookings`
@@ -818,6 +832,22 @@ export const API_ERROR_CODE = {
    * chuyến có tài xế phải do tài xế liên kết chạy.
    */
   EXTERNAL_DRIVER_NOT_SUPPORTED: 'EXTERNAL_DRIVER_NOT_SUPPORTED',
+  /** Danh bạ tài xế nội bộ (ADR 0108): id không thuộc bên thuê / không tồn tại. */
+  INTERNAL_DRIVER_NOT_FOUND: 'INTERNAL_DRIVER_NOT_FOUND',
+  /** Tài xế nội bộ đã lưu trữ — không gán mới, không sửa (khôi phục trước). */
+  INTERNAL_DRIVER_ARCHIVED: 'INTERNAL_DRIVER_ARCHIVED',
+  /** SĐT đã có trong danh bạ tài xế nội bộ đang dùng của bên thuê. */
+  INTERNAL_DRIVER_PHONE_TAKEN: 'INTERNAL_DRIVER_PHONE_TAKEN',
+  /** Ảnh tài xế nội bộ không phải ảnh vừa tải lên kho của chính bên thuê (`/uploads/driver-photos/presign`). */
+  INTERNAL_DRIVER_PHOTO_INVALID: 'INTERNAL_DRIVER_PHOTO_INVALID',
+  /** Đơn tự lập (ADR 0109): giảm giá lớn hơn tiền thuê. */
+  BOOKING_DISCOUNT_EXCEEDS_BASE: 'BOOKING_DISCOUNT_EXCEEDS_BASE',
+  /** Tài sản thế chấp không thuộc đơn này. */
+  BOOKING_COLLATERAL_NOT_FOUND: 'BOOKING_COLLATERAL_NOT_FOUND',
+  /** Không thêm/gỡ tài sản được: đơn đã khép, đã đủ số món, hoặc món đã trả. */
+  BOOKING_COLLATERAL_LOCKED: 'BOOKING_COLLATERAL_LOCKED',
+  /** Đổi nguồn của một đơn QUA SÀN - nguồn `xeprime` do server gắn, không sửa được (ADR 0110). */
+  BOOKING_SOURCE_LOCKED: 'BOOKING_SOURCE_LOCKED',
   /** Nhóm `other` khi rút chuyến mà thiếu ghi chú đủ dài (ADR 0074). */
   DRIVER_DROP_NOTE_REQUIRED: 'DRIVER_DROP_NOTE_REQUIRED',
 

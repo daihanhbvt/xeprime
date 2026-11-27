@@ -1,11 +1,13 @@
 'use client';
 
+import { DollarCircleOutlined, FileTextOutlined, ProfileOutlined } from '@ant-design/icons';
 import { Button, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { SectionCard } from '@/components/layout/SectionCard';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { SettlementCard } from '@/features/settlement/components/SettlementCard';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -16,7 +18,10 @@ import type { BookingDetail } from '../types';
 import { BookingExtensionsPanel } from './BookingExtensionsPanel';
 import { BookingInsuranceCertificatesPanel } from './BookingInsuranceCertificatesPanel';
 import { OwnerPayoutTable } from './OwnerPayoutTable';
-import { BookingDetailActionsProvider, useBookingDetailActions } from './detail/BookingDetailActions';
+import {
+  BookingDetailActionsProvider,
+  useBookingDetailActions,
+} from './detail/BookingDetailActions';
 import {
   BookingOutcomeBanner,
   BookingStepper,
@@ -31,6 +36,7 @@ import {
   SideActions,
   VehicleSideCard,
 } from './detail/BookingDetailSide';
+import { CollateralSideCard } from './detail/CollateralSideCard';
 import styles from './detail/BookingDetail.module.css';
 
 /**
@@ -124,7 +130,11 @@ function BookingDetailBody({
 
   return (
     <div className={styles.page}>
-      {renderHeader ? renderHeader(booking, actions) : <div className={styles.headerActions}>{actions}</div>}
+      {renderHeader ? (
+        renderHeader(booking, actions)
+      ) : (
+        <div className={styles.headerActions}>{actions}</div>
+      )}
       <div className={styles.layout}>
         <div className={styles.main}>
           <BookingStepper />
@@ -143,9 +153,22 @@ function BookingDetailBody({
           </div>
           <HandoverPhotosCard />
           {booking.ownerPayout ? (
-            <SectionCard title={t('detailPage.profit.title')}>
-              <OwnerPayoutTable payout={booking.ownerPayout} label={t('detailPage.profit.title')} />
-              <p className={styles.moneyNote}>{t('money.ownerEconomics.note')}</p>
+            <SectionCard
+              title={t('detailPage.profit.title')}
+              className={styles.profitCard}
+              // "Số đã chốt lúc đặt…" thành dấu "i" cạnh tiêu đề - rê chuột mới hiện (người dùng 20/11/2026).
+              extra={
+                <InfoHint
+                  content={t('money.ownerEconomics.note')}
+                  label={t('detailPage.profit.title')}
+                />
+              }
+            >
+              <OwnerPayoutTable
+                payout={booking.ownerPayout}
+                label={t('detailPage.profit.title')}
+                phoneCard
+              />
             </SectionCard>
           ) : null}
           {/* Bảo hiểm chuyến (ADR 0064) và phụ lục gia hạn (ADR 0077) — tự ẩn khi không có. */}
@@ -156,6 +179,8 @@ function BookingDetailBody({
           <VehicleSideCard />
           <DriverSideCard />
           <CustomerSideCard />
+          {/* Cọc tiền + tài sản thế chấp theo đơn (ADR 0109) — tự ẩn khi không có gì để giữ. */}
+          <CollateralSideCard />
           <PaymentSideCard />
           <SideActions />
         </aside>
@@ -177,13 +202,32 @@ function HeaderActions() {
   return (
     <div className={styles.headerButtons}>
       {can.contract ? (
-        <Button loading={contractPending} onClick={openContract}>
+        <Button
+          className={styles.headerBtn}
+          icon={<FileTextOutlined aria-hidden />}
+          loading={contractPending}
+          onClick={openContract}
+        >
           {contractKnown ? t('viewContract') : t('createContract')}
         </Button>
       ) : null}
-      {can.history ? <Button onClick={openHistory}>{t('moneyHistory')}</Button> : null}
+      {can.history ? (
+        <Button
+          className={styles.headerBtn}
+          icon={<ProfileOutlined aria-hidden />}
+          onClick={openHistory}
+        >
+          {t('moneyHistory')}
+        </Button>
+      ) : null}
       {can.collect ? (
-        <Button type="primary" disabled={!hasDebt} onClick={openPay}>
+        <Button
+          type="primary"
+          className={styles.headerBtn}
+          icon={<DollarCircleOutlined aria-hidden />}
+          disabled={!hasDebt}
+          onClick={openPay}
+        >
           {hasDebt ? t('collect') : t('collected')}
         </Button>
       ) : null}

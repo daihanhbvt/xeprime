@@ -19,9 +19,13 @@ const query = vi.hoisted(() => ({
   isPending: false,
   isError: false,
 }));
+const changeRequest = vi.hoisted(() => ({ data: null as unknown, isPending: false }));
 vi.mock('../hooks/use-bank-accounts', () => ({
   useBankAccounts: () => query,
   useCreateBankAccount: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateChangeRequest: () => ({ mutate: vi.fn(), isPending: false }),
+  useCurrentChangeRequest: () => changeRequest,
+  useCancelChangeRequest: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const ACCOUNT: BankAccount = {
@@ -49,6 +53,7 @@ beforeEach(() => {
   query.data = [];
   query.isPending = false;
   query.isError = false;
+  changeRequest.data = null;
 });
 
 afterEach(cleanup);
@@ -58,17 +63,18 @@ describe('Tài khoản nhận tiền - một tài khoản', () => {
     renderList();
 
     expect(screen.getByRole('button', { name: /Thêm tài khoản/ })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Đổi tài khoản/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Yêu cầu đổi tài khoản/ })).toBeNull();
     expect(screen.getByText('Chưa có tài khoản nào. Thêm một tài khoản để nhận tiền.')).toBeTruthy();
   });
 
-  it('đã có: một thẻ và nút "Đổi tài khoản" - không còn mặc định / bỏ dùng', () => {
+  /** Biên bản họp 19/11/2026: tài khoản KHOÁ — chỉ còn lối "Yêu cầu đổi" qua xác minh. */
+  it('đã có: một thẻ và nút "Yêu cầu đổi tài khoản" - không còn mặc định / bỏ dùng', () => {
     query.data = [ACCOUNT];
     renderList();
 
     expect(screen.getByText('Vietcombank')).toBeTruthy();
     expect(screen.getByText('STK: •••••••••3456')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Đổi tài khoản/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Yêu cầu đổi tài khoản/ })).toBeTruthy();
 
     expect(screen.queryByRole('button', { name: /Thêm tài khoản/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Bỏ dùng/ })).toBeNull();
@@ -76,16 +82,38 @@ describe('Tài khoản nhận tiền - một tài khoản', () => {
     expect(screen.queryByText('Mặc định')).toBeNull();
   });
 
-  it('bấm "Đổi tài khoản": hộp thoại ĐỔI nói rõ tài khoản nào sẽ bị thay', async () => {
+  it('bấm "Yêu cầu đổi": hộp thoại nói tài khoản đã khoá và XePrime sẽ gọi xác minh', async () => {
     query.data = [ACCOUNT];
     renderList();
 
-    fireEvent.click(screen.getByRole('button', { name: /Đổi tài khoản/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Yêu cầu đổi tài khoản/ }));
 
     expect(await screen.findByText('Đổi tài khoản nhận tiền')).toBeTruthy();
-    expect(screen.getByText(/Tài khoản mới sẽ thay cho Vietcombank · •••••••••3456\./)).toBeTruthy();
+    expect(screen.getByText(/Vietcombank · •••••••••3456 đã được khoá/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gửi yêu cầu' })).toBeTruthy();
     // Không còn công tắc "mặc định": tài khoản vừa khai LÀ tài khoản nhận tiền.
     expect(screen.queryByText('Đặt làm tài khoản nhận tiền mặc định')).toBeNull();
+  });
+
+  it('đang có yêu cầu chờ xác minh: hiện yêu cầu + nút huỷ, ẩn nút yêu cầu mới', () => {
+    query.data = [ACCOUNT];
+    changeRequest.data = {
+      id: 'R1',
+      bankCode: 'TCB',
+      accountNumberMasked: '•••••••7888',
+      accountName: 'CONG TY TNHH XEPRIME SAI GON',
+      label: null,
+      note: null,
+      status: 'pending',
+      reviewNote: null,
+      reviewedAt: null,
+      createdAt: '2026-11-20T00:00:00.000Z',
+    };
+    renderList();
+
+    expect(screen.getByText(/Đang chờ xác minh đổi sang/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Huỷ yêu cầu' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Yêu cầu đổi tài khoản/ })).toBeNull();
   });
 
   it.each([
@@ -98,7 +126,7 @@ describe('Tài khoản nhận tiền - một tài khoản', () => {
     renderList();
 
     expect(screen.queryByRole('button', { name: /Thêm tài khoản/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Đổi tài khoản/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Yêu cầu đổi tài khoản/ })).toBeNull();
     if (state.isError) {
       expect(screen.getByText('Không tải được tài khoản nhận tiền.')).toBeTruthy();
     }

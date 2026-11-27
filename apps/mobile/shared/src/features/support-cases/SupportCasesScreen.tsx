@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { RefreshControl } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
@@ -24,9 +24,8 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
-import { FactRow } from '@/components/ui/FactRow';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
-import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { Pill, pillToneOfStatusColor, type PillTone } from '@/components/ui/Pill';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { useResponsive } from '@/theme/use-responsive';
@@ -45,6 +44,7 @@ import { SelectControl } from '@/components/ui/SelectControl';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useRelativeTimeLabel } from '@/i18n/use-relative-time';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
@@ -54,7 +54,7 @@ import { FILTER_ALL } from '@/constants/filters';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import {
   SUPPORT_CASES_PAGE_SIZE,
   SUPPORT_SURFACE,
@@ -486,35 +486,14 @@ function SupportCaseRow({ row, surface }: { row: SupportCase; surface: SupportSu
       : ROUTES.account.supportCase(row.id);
 
   if (surface === SUPPORT_SURFACE.TENANT) {
-    /* Khuôn thẻ Partner (chuẩn Đơn thuê): đầu = tiêu đề + mã, viên trạng thái góc phải; thân = FactRow. */
     return (
-      <Card onPress={() => router.push(detailHref)} accessibilityLabel={row.subject}>
-          <YStack gap={space.sm}>
-            <XStack ai="flex-start" gap={space.sm}>
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text
-                  col={colors.text}
-                  fos={typeScale.body.fontSize}
-                  lh={typeScale.body.lineHeight}
-                  fow={fontWeight.semibold}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                >
-                  {row.subject}
-                </Text>
-                <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
-                  {row.code}
-                </Text>
-              </YStack>
-              <Pill
-                label={domainLabel('supportCaseStatus', row.status, meta?.label)}
-                tone={pillToneOfStatusColor(statusColor)}
-              />
-            </XStack>
-            <FactRow label={t('columns.category')}>{domainLabel('supportCaseCategory', row.category)}</FactRow>
-            <FactRow label={t('columns.updatedAt')}>{fmt.dateTime(row.updatedAt)}</FactRow>
-          </YStack>
-      </Card>
+      <SupportCaseTenantCard
+        row={row}
+        statusLabel={domainLabel('supportCaseStatus', row.status, meta?.label)}
+        statusTone={pillToneOfStatusColor(statusColor)}
+        categoryLabel={domainLabel('supportCaseCategory', row.category)}
+        onPress={() => router.push(detailHref)}
+      />
     );
   }
 
@@ -548,3 +527,105 @@ function SupportCaseRow({ row, surface }: { row: SupportCase; surface: SupportSu
     </Card>
   );
 }
+
+/**
+ * Thẻ yêu cầu của GIAN HÀNG (Figma "Helps / Request" `24232:118613`): đầu = LOẠI yêu cầu + viên
+ * trạng thái góc phải, dòng mã `#…`; thân = tiêu đề một dòng + ô mã chuyến · gian hàng; chân = giờ
+ * cập nhật tương đối + mũi tên. Chỉ dùng dữ liệu danh sách đang có (người dùng chốt 25/11/2026: chưa
+ * thêm xe / tin cuối / tin chưa đọc vào API).
+ */
+const SupportCaseTenantCard = memo(function SupportCaseTenantCard({
+  row,
+  statusLabel,
+  statusTone,
+  categoryLabel,
+  onPress,
+}: {
+  row: SupportCase;
+  statusLabel: string;
+  statusTone: PillTone;
+  categoryLabel: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const timeLabel = useRelativeTimeLabel();
+  const tag = [row.bookingCode ? `#${row.bookingCode}` : null, row.tenantName].filter(
+    (part): part is string => Boolean(part),
+  );
+  return (
+    <Card onPress={onPress} accessibilityLabel={`${categoryLabel}, ${row.subject}`}>
+      <YStack gap={CARD_GAP}>
+        <YStack gap={2}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text
+              f={1}
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+            >
+              {categoryLabel}
+            </Text>
+            <Pill label={statusLabel} tone={statusTone} />
+          </XStack>
+          <Text col={colors.textBody} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
+            {`#${row.code}`}
+          </Text>
+        </YStack>
+
+        <YStack gap={6}>
+          <Text
+            col={colors.textBody}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {row.subject}
+          </Text>
+          {tag.length > 0 ? (
+            <XStack
+              ai="center"
+              gap={space.sm}
+              bg={colors.background}
+              borderWidth={1}
+              borderColor={colors.borderSubtle}
+              br={radius.thumb}
+              px={9}
+              py={5}
+            >
+              {tag.map((part, index) => (
+                <XStack key={part} ai="center" gap={space.sm} flexShrink={index === 0 ? 0 : 1}>
+                  {index > 0 ? <YStack w={6} h={6} br={3} bg={colors.border} /> : null}
+                  <Text
+                    flexShrink={1}
+                    col={index === 0 ? colors.text : colors.placeholder}
+                    fos={typeScale.label.fontSize}
+                    lh={typeScale.label.lineHeight}
+                    fow={index === 0 ? fontWeight.medium : fontWeight.regular}
+                    numberOfLines={1}
+                  >
+                    {part}
+                  </Text>
+                </XStack>
+              ))}
+            </XStack>
+          ) : null}
+        </YStack>
+
+        <YStack h={1} bg={colors.border} />
+
+        <XStack ai="center" jc="flex-end" gap={4}>
+          <Text col={colors.textPlaceholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+            {timeLabel(row.updatedAt)}
+          </Text>
+          <LineIcon name="chevron-right" color={colors.textPlaceholder} size={iconSize.sm} />
+        </XStack>
+      </YStack>
+    </Card>
+  );
+});
+
+/** Khoảng giữa các khối của thẻ (Figma `num/12`). */
+const CARD_GAP = 12;

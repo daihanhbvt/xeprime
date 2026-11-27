@@ -1,8 +1,6 @@
-import { Children, Fragment, useState } from 'react';
-import { Ionicons } from '@/components/icons/Ionicons';
-import { Image } from 'expo-image';
+import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
-import { Linking, Pressable, StyleSheet } from 'react-native';
+import { Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -11,23 +9,22 @@ import {
   RECEIPT_SOURCE_META,
   RECEIPT_STATUS,
   RECEIPT_STATUS_META,
+  STATUS_COLOR,
   RECEIPT_TYPE,
-  RECEIPT_TYPE_META,
   isAutoReceipt,
 } from '@xeprime/types';
-import { vehicleLabel } from '@xeprime/domain';
 import { metaColor } from '@/lib/status-meta';
-import { AlertDialog } from '@/components/ui/AlertDialog';
-import { SectionHeader } from '@/components/ui/CardTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { ReceiptAttachmentRow, isPdfUrl } from './ReceiptAttachmentRow';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { Divider } from '@/components/ui/DataRow';
-import { InlineAction } from '@/components/ui/InlineAction';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useFeature } from '@/features/auth/hooks/use-feature';
@@ -39,34 +36,9 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { space, typeScale } from '@/theme/tokens';
 import { useApproveReceipt, useCancelReceipt, useReceiptDetail } from '../hooks/use-finance';
-import { layout } from '@/theme/layout';
 
-const THUMB = 92;
-
-const styles = StyleSheet.create({
-  thumb: { width: THUMB, height: THUMB, borderRadius: radius.md },
-});
-
-/** Chứng từ là ảnh hay PDF — server không trả MIME, nên đọc từ đuôi URL như web đang làm. */
-const isPdfUrl = (url: string) => url.toLowerCase().split('?')[0]?.endsWith('.pdf') === true;
-
-/**
- * Chi tiết MỘT phiếu thu/chi — bản native của `ReceiptDetailDrawer`.
- *
- * **Một implementation cho MỌI lối vào**: sổ Thu-Chi, tab Thu-Chi của hồ sơ khách, khối tiền của
- * hồ sơ xe. Một bản chi tiết riêng cho từng bề mặt là ba nơi phải nhớ cập nhật cùng lúc, và cái
- * bị bỏ quên sẽ là cái người dùng đang mở.
- *
- * Ba việc thẻ danh sách không làm được: (1) chỉ ra tiền này thuộc đơn/xe/khách nào và **đi sang
- * được**, (2) cho xem chứng từ, (3) nói ai tạo, ai duyệt, lúc nào. Với một sổ tiền thì cả ba đều
- * không phải trang trí — đó là toàn bộ khả năng đối chiếu.
- *
- * Hai hành động (duyệt · huỷ) đứng ở CHÂN tấm trượt, sau `receipt.approve` + feature gate. Phiếu
- * TỰ ĐỘNG không huỷ tay được: backend chặn bằng `RECEIPT_SOURCE_LOCKED`, ẩn nút ở đây chỉ để
- * người dùng không bấm vào một hành động chắc chắn thất bại.
- */
 export function ReceiptDetailSheet({
   receiptId,
   onClose,
@@ -188,33 +160,103 @@ export function ReceiptDetailSheet({
     <BottomSheet
       open={receiptId !== null && focused}
       onClose={onClose}
-      title={data?.receiptNo ? t('titleWithNo', { no: data.receiptNo }) : t('title')}
+      /*
+        Đầu tấm 3 dòng (chốt 26/11/2026):
+          Chi tiết phiếu (!)      - (!) chỉ với phiếu tự động: chạm đọc "phiếu sinh từ ..."
+          #MÃ-PHIẾU  [trạng thái]
+          ngày tạo
+      */
+      title={t('title')}
+      {...(data
+        ? {
+            subtitle: (
+              <YStack gap={2}>
+                <XStack ai="center" gap={space.sm} flexWrap="wrap">
+                  {data.receiptNo ? (
+                    <Text
+                      col={colors.text}
+                      fos={typeScale.body.fontSize}
+                      lh={typeScale.body.lineHeight}
+                      fontFamily={FONT_FAMILY.semibold}
+                      flexShrink={1}
+                    >
+                      {`#${data.receiptNo}`}
+                    </Text>
+                  ) : null}
+                  <Pill
+                    size="sm"
+                    label={domainLabel('receiptStatus', data.status)}
+                    tone={pillToneOfStatusColor(
+                      data.status === RECEIPT_STATUS.CANCELLED
+                        ? STATUS_COLOR.NEUTRAL
+                        : metaColor(RECEIPT_STATUS_META, data.status),
+                    )}
+                  />
+                </XStack>
+                <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={22}>
+                  {fmt.date(data.createdAt)}
+                </Text>
+              </YStack>
+            ),
+            ...(auto
+              ? {
+                  titleAdornment: (
+                    <InfoHint
+                      lineIcon="info-circle-16"
+                      label={t('auto.title')}
+                      content={
+                        <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                          {t('auto.body', { source: domainLabel('receiptSource', data.source) })}
+                          {autoLink ? (
+                            <>
+                              {' ('}
+                              <Text
+                                col={colors.infoStrong}
+                                fos={typeScale.body.fontSize}
+                                fontFamily={FONT_FAMILY.semibold}
+                                accessibilityRole="link"
+                                onPress={autoLink.onPress}
+                              >
+                                {autoLink.label}
+                              </Text>
+                              {')'}
+                            </>
+                          ) : null}
+                          .
+                        </Text>
+                      }
+                    />
+                  ),
+                }
+              : {}),
+          }
+        : {})}
+      chrome="v2"
+      headerDivider
       footer={
         showFooter ? (
-          <XStack gap={space.sm}>
+          /* Figma "Footer cố định" `24512:128037`: "Hủy phiếu" viền đỏ + nút vàng, hai nút chia đôi. */
+          /* Hai nút đúng 50/50: `w="50%"` + đệm 6 mỗi bên (flexBasis không ăn với `Button` - đã thử trên máy). */
+          <XStack mx={-6}>
             {actions?.cancel ? (
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <YStack f={1} px={6}>
                 <Button
                   label={t('cancelAction')}
-                  variant="danger"
-                  icon="close-circle-outline"
+                  variant="dangerOutline"
+                  shape="square"
                   loading={pending}
-                  /*
-                   * Huỷ phiếu là một phép GHI y như duyệt, nên nó khoá cùng lúc với duyệt khi gói
-                   * hết hạn (ADR 0027 điều 3). Bản trước chỉ khoá nút duyệt: câu "đang ở chế độ
-                   * chỉ xem" hiện ngay bên trên một cái nút vẫn bấm được, và cú bấm đó chắc chắn
-                   * ăn 403 từ guard backend.
-                   */
+                  /* Huỷ phiếu là phép GHI như duyệt - khoá cùng khi gói hết hạn (ADR 0027 điều 3). */
                   disabled={!finance.canWrite}
                   onPress={() => setConfirming('cancel')}
                 />
               </YStack>
             ) : null}
             {actions?.approve ? (
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <YStack f={1} px={6}>
                 <Button
                   label={t('approveAction')}
-                  icon="checkmark-circle-outline"
+                  variant="gradient"
+                  shape="square"
                   loading={pending}
                   disabled={!finance.canWrite}
                   onPress={() => setConfirming('approve')}
@@ -235,78 +277,23 @@ export function ReceiptDetailSheet({
         />
       ) : data ? (
         <>
-          {/* Số tiền là thứ TO NHẤT của tấm — mọi thứ còn lại là ngữ cảnh của nó. */}
-          <YStack gap={space.xs}>
-            <XStack ai="center" gap={space.sm}>
-              <Text
-                f={1}
-                minWidth={0}
-                col={data.type === RECEIPT_TYPE.INCOME ? colors.success : colors.danger}
-                fos={fontSize.h2}
-                fow={fontWeight.bold}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {data.type === RECEIPT_TYPE.INCOME ? '+' : '−'} {fmt.money(data.amount)}
-              </Text>
-              <StatusBadge
-                label={domainLabel('receiptStatus', data.status)}
-                color={metaColor(RECEIPT_STATUS_META, data.status)}
-              />
-            </XStack>
-            {/*
-              Số tiền bằng chữ — chỗ duy nhất bắt được lỗi thừa một số 0.
-
-              NGHIÊNG và ở mực mờ nhất, đúng `.words` của web: nó không phải một dữ liệu thứ hai
-              để đọc, nó là chính con số bên trên viết lại bằng chữ. Cùng mực với con số thì mắt
-              phải dừng lại hai lần cho một thông tin.
-            */}
-            <Text col={colors.placeholder} fos={fontSize.bodySm} fontStyle="italic">
+          {/* Figma `24512:128142`: số tiền 24/32 semibold + số bằng chữ nghiêng 14 `text/gray/low`. Không viên trạng thái (chốt 26/11/2026). */}
+          <YStack gap={2}>
+            <Text
+              col={data.type === RECEIPT_TYPE.INCOME ? colors.success : colors.danger}
+              fos={24}
+              lh={32}
+              fontFamily={FONT_FAMILY.semibold}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {`${data.type === RECEIPT_TYPE.INCOME ? '+' : '-'}${fmt.money(data.amount)}`}
+            </Text>
+            <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fontStyle="italic">
               {fmt.moneyWords(data.amount)}
             </Text>
-            <XStack gap={space.xs} flexWrap="wrap">
-              <StatusBadge
-                label={domainLabel('receiptType', data.type)}
-                color={metaColor(RECEIPT_TYPE_META, data.type)}
-                size="sm"
-              />
-              <StatusBadge
-                label={domainLabel('receiptSource', data.source)}
-                color={metaColor(RECEIPT_SOURCE_META, data.source)}
-                size="sm"
-              />
-            </XStack>
           </YStack>
-
-          {auto ? (
-            <Callout tone="info" title={t('auto.title')}>
-              {/*
-                Lối đi nằm TRONG NGOẶC ngay sau câu nghiệp vụ, không phải một dòng riêng bên dưới.
-
-                Câu này nói "muốn sửa thì thao tác ở nghiệp vụ sinh ra phiếu"; cái link CHÍNH LÀ
-                chỗ đó. Tách nó xuống một dòng riêng thì nó đọc như một hành động thứ hai, không
-                liên quan tới câu vừa đọc — đúng lý do web đặt nó trong ngoặc giữa câu.
-              */}
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('auto.body', { source: domainLabel('receiptSource', data.source) })}
-                {autoLink ? (
-                  <>
-                    {' ('}
-                    <Text
-                      col={colors.link}
-                      fow={fontWeight.semibold}
-                      accessibilityRole="link"
-                      onPress={autoLink.onPress}
-                    >
-                      {autoLink.label}
-                    </Text>
-                    {')'}
-                  </>
-                ) : null}
-                .
-              </Text>
-            </Callout>
-          ) : null}
 
           {/* Gói hết hạn: nói RÕ là chế độ chỉ xem, không để nút tắt trông như thiếu quyền. */}
           {showFooter && !finance.canWrite ? (
@@ -314,148 +301,111 @@ export function ReceiptDetailSheet({
           ) : null}
 
           <Section title={t('sections.info')}>
-            <InfoRow label={t('rows.occurredAt')}>
-              <InfoText>{fmt.date(data.occurredAt)}</InfoText>
-            </InfoRow>
-            <InfoRow label={t('rows.category')}>
-              <InfoText>{data.categoryName ?? tLabels('emptyValue')}</InfoText>
-            </InfoRow>
-            <InfoRow label={t('rows.method')}>
-              <InfoText>{domainLabel('paymentMethod', data.paymentMethod)}</InfoText>
-            </InfoRow>
-            <InfoRow label={t('rows.referenceCode')}>
+            <Row label={t('rows.type')}>
+              <Pill
+                label={domainLabel('receiptType', data.type)}
+                tone={data.type === RECEIPT_TYPE.INCOME ? 'success' : 'danger'}
+              />
+            </Row>
+            <Row label={t('rows.source')}>
+              <Pill
+                label={domainLabel('receiptSource', data.source)}
+                tone={pillToneOfStatusColor(metaColor(RECEIPT_SOURCE_META, data.source))}
+              />
+            </Row>
+            <Row label={t('rows.occurredAt')} value={fmt.date(data.occurredAt)} />
+            <Row label={t('rows.category')} value={data.categoryName ?? null} />
+            <Row label={t('rows.method')} value={domainLabel('paymentMethod', data.paymentMethod)} />
+            <Row label={t('rows.referenceCode')}>
               {data.referenceCode ? (
-                /* Nút chép đứng NGAY CẠNH mã: người ta nghĩ tới việc chép khi đang NHÌN cái mã. */
-                <XStack ai="center" gap={space.sm} flexWrap="wrap">
-                  <InfoText>{data.referenceCode}</InfoText>
-                  <InlineAction
-                    label={t('copyReference')}
+                /* Icon chép nhỏ NGAY CẠNH mã (giữ, chốt 26/11/2026). */
+                <XStack ai="center" gap={space.xs} flexShrink={1}>
+                  <Value>{data.referenceCode}</Value>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('copyReference')}
+                    hitSlop={space.sm}
                     onPress={() => void copyReference(data.referenceCode!)}
-                  />
+                  >
+                    <LineIcon name="copy" size={16} color={colors.placeholder} />
+                  </Pressable>
                 </XStack>
               ) : (
-                <InfoText>{tLabels('emptyValue')}</InfoText>
+                <Value muted>{tLabels('emptyValue')}</Value>
               )}
-            </InfoRow>
-            {/*
-              Diễn giải là câu người ghi tự viết — nó xuống DÒNG RIÊNG, chiếm trọn bề ngang.
-
-              Nhét nó vào cột giá trị (rộng ~200dp sau khi trừ cột nhãn) thì một câu bình thường
-              đã thành sáu bảy dòng chữ trong một cột hẹp, và cả khối đọc ra như bị vỡ.
-            */}
-            <InfoBlock label={t('rows.description')}>
-              <InfoText>{data.description ?? tLabels('emptyValue')}</InfoText>
-            </InfoBlock>
+            </Row>
+            <Row label={t('rows.description')} value={data.description ?? null} last />
           </Section>
 
-          {/*
-            Khối LIÊN QUAN: giá trị CHÍNH LÀ cái link, không phải một nút "Xem xe" đứng cạnh.
-
-            Trước đây mỗi hàng có tên xe (mực đen) cộng thêm một nút chữ "Xem xe" — hai thứ cho
-            một việc, và cột giá trị vì thế bị chia đôi rồi xuống dòng. Web tô luôn cái tên thành
-            link: bấm vào chính thứ mình đang đọc, và hàng chỉ còn một cột chữ.
-          */}
           <Section title={t('sections.related')}>
-            <InfoRow label={t('rows.booking')}>
+            <Row label={t('rows.booking')}>
               {data.bookingId && canViewBooking ? (
-                <InfoLink
-                  label={data.bookingCode ?? t('viewBooking')}
-                  onPress={() => goTo(ROUTES.manage.bookingDetail(data.bookingId!))}
-                />
+                <Value link onPress={() => goTo(ROUTES.manage.bookingDetail(data.bookingId!))}>
+                  {data.bookingCode ?? t('viewBooking')}
+                </Value>
               ) : (
-                <InfoText>{data.bookingCode ?? tLabels('emptyValue')}</InfoText>
+                <Value muted={!data.bookingCode}>{data.bookingCode ?? tLabels('emptyValue')}</Value>
               )}
-            </InfoRow>
-            <InfoRow label={t('rows.vehicle')}>
+            </Row>
+            <Row label={t('rows.vehicle')} {...(data.plateNumber ? { sub: data.plateNumber } : {})}>
               {data.vehicleId && canViewVehicle ? (
-                <InfoLink
-                  label={vehicleLabel(data.vehicleName, data.plateNumber) || t('viewVehicle')}
-                  onPress={() => goTo(ROUTES.manage.vehicleDetail(data.vehicleId!))}
-                />
+                <Value link onPress={() => goTo(ROUTES.manage.vehicleDetail(data.vehicleId!))}>
+                  {data.vehicleName ?? t('viewVehicle')}
+                </Value>
               ) : (
-                <InfoText>
-                  {vehicleLabel(data.vehicleName, data.plateNumber) || tLabels('emptyValue')}
-                </InfoText>
+                <Value muted={!data.vehicleName}>{data.vehicleName ?? tLabels('emptyValue')}</Value>
               )}
-            </InfoRow>
-            <InfoRow label={t('rows.customer')}>
+            </Row>
+            <Row label={t('rows.customer')} last>
               {data.tenantCustomerId && canViewCustomer ? (
-                <InfoLink
-                  label={data.customerName ?? t('viewCustomer')}
-                  onPress={() => goTo(ROUTES.manage.customerDetail(data.tenantCustomerId!))}
-                />
+                <Value link onPress={() => goTo(ROUTES.manage.customerDetail(data.tenantCustomerId!))}>
+                  {data.customerName ?? t('viewCustomer')}
+                </Value>
               ) : (
-                <InfoText>{data.customerName ?? tLabels('emptyValue')}</InfoText>
+                <Value muted={!data.customerName}>{data.customerName ?? tLabels('emptyValue')}</Value>
               )}
-            </InfoRow>
+            </Row>
           </Section>
 
+          {/* Figma không vẽ chứng từ - dựng bằng CÙNG dòng tệp của form tạo phiếu, chạm để xem. */}
           {data.attachments.length > 0 ? (
-            <Section title={t('sections.attachments')} rows={false}>
-              <XStack flexWrap="wrap" gap={space.sm}>
-                {data.attachments.map((url) =>
-                  isPdfUrl(url) ? (
-                    /*
-                      PDF không có ảnh thu nhỏ trên native — mở bằng trình duyệt hệ thống. Web
-                      cũng chỉ có một lối "mở ra xem"; ở đây nó là ứng dụng ngoài thay vì overlay.
-                    */
-                    <Pressable
-                      key={url}
-                      onPress={() => void Linking.openURL(url)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('attachmentAlt')}
-                    >
-                      <YStack
-                        w={THUMB}
-                        h={THUMB}
-                        br={radius.md}
-                        bw={1}
-                        bc={colors.border}
-                        bg={colors.surfaceMuted}
-                        ai="center"
-                        jc="center"
-                      >
-                        <Ionicons
-                          name="document-text-outline"
-                          size={iconSize.lg}
-                          color={colors.textMuted}
-                        />
-                      </YStack>
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      key={url}
-                      onPress={() => setViewing(url)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('attachmentAlt')}
-                    >
-                      <Image source={{ uri: url }} style={styles.thumb} contentFit="cover" />
-                    </Pressable>
-                  ),
-                )}
-              </XStack>
-            </Section>
+            <YStack gap={space.sm}>
+              <SectionTitle>{t('sections.attachments')}</SectionTitle>
+              {data.attachments.map((url) => (
+                <ReceiptAttachmentRow
+                  key={url}
+                  url={url}
+                  openLabel={t('attachmentAlt')}
+                  onOpen={(target) =>
+                    isPdfUrl(target) ? void Linking.openURL(target) : setViewing(target)
+                  }
+                />
+              ))}
+            </YStack>
           ) : null}
 
           <Section title={t('sections.trace')}>
-            <InfoRow label={t('rows.createdBy')}>
-              <InfoText>
-                {`${data.requestedByName ?? tLabels('emptyValue')} · ${fmt.dateTime(data.createdAt)}`}
-              </InfoText>
-            </InfoRow>
+            <Row
+              label={t('rows.createdBy')}
+              value={data.requestedByName ?? tLabels('emptyValue')}
+              sub={fmt.dateTime(data.createdAt)}
+              last={!data.approvedAt && !data.cancelledAt}
+            />
             {data.approvedAt ? (
-              <InfoRow label={t('rows.approvedBy')}>
-                <InfoText>
-                  {`${data.approvedByName ?? tLabels('emptyValue')} · ${fmt.dateTime(data.approvedAt)}`}
-                </InfoText>
-              </InfoRow>
+              <Row
+                label={t('rows.approvedBy')}
+                value={data.approvedByName ?? tLabels('emptyValue')}
+                sub={fmt.dateTime(data.approvedAt)}
+                last={!data.cancelledAt}
+              />
             ) : null}
             {data.cancelledAt ? (
-              <InfoRow label={t('rows.cancelledBy')}>
-                <InfoText>
-                  {`${data.cancelledByName ?? tLabels('emptyValue')} · ${fmt.dateTime(data.cancelledAt)}`}
-                </InfoText>
-              </InfoRow>
+              <Row
+                label={t('rows.cancelledBy')}
+                value={data.cancelledByName ?? tLabels('emptyValue')}
+                sub={fmt.dateTime(data.cancelledAt)}
+                last
+              />
             ) : null}
           </Section>
 
@@ -465,10 +415,9 @@ export function ReceiptDetailSheet({
             onClose={() => setViewing(null)}
           />
 
-          {/* Cả hai hành động đụng tiền nên đều phải xác nhận — đúng như web. */}
-          <AlertDialog
+          {/* Xác nhận duyệt / huỷ: popup chuẩn app (ConfirmSheet, hai nút một hàng). */}
+          <ConfirmSheet
             open={confirming !== null}
-            /* Tiêu đề là CÂU HỎI, nút là hành động — đúng cặp `title`/`okText` của Popconfirm web. */
             title={
               confirming === 'approve'
                 ? tTable('actions.approveConfirm')
@@ -477,9 +426,17 @@ export function ReceiptDetailSheet({
             confirmLabel={
               confirming === 'approve' ? tActions('approve') : tTable('actions.cancelOk')
             }
-            destructive={confirming === 'cancel'}
+            /*
+              Luôn có câu hỏi rõ "Bạn có chắc chắn muốn duyệt phiếu chi #…?" (chốt 26/11/2026). Thiếu
+              câu, popup lồng trong tấm chi tiết bị kéo giãn trống hết màn (thấy trên máy).
+            */
+            message={t(confirming === 'cancel' ? 'confirmCancel' : 'confirmApprove', {
+              type: data.type === RECEIPT_TYPE.INCOME ? 'income' : 'expense',
+              no: data.receiptNo ?? '',
+            })}
+            tone={confirming === 'cancel' ? 'danger' : 'primary'}
             loading={pending}
-            onCancel={() => setConfirming(null)}
+            onClose={() => setConfirming(null)}
             onConfirm={() => run(confirming === 'approve' ? 'approve' : 'cancel')}
           />
         </>
@@ -488,145 +445,101 @@ export function ReceiptDetailSheet({
   );
 }
 
-/**
- * Bề rộng cột NHÃN của mọi hàng trong tấm chi tiết.
- *
- * Cố định chứ không theo tỉ lệ: `DataRow` chia 3:7, nghĩa là "Ngày phát sinh" chỉ được ~100dp
- * ở màn 390 — vừa đúng ngưỡng để nó xuống hai dòng trong khi giá trị bên cạnh ("04/09/2026") chỉ
- * chiếm một phần ba cột của nó. Cả khối đọc ra như bị vỡ, và đó chính là hàng bạn thấy hỏng.
- *
- * 108 đủ cho nhãn dài nhất của tấm này ở cả hai ngôn ngữ ("Ngày phát sinh" ~86dp, "Mã tham
- * chiếu" ~80dp) mà vẫn để lại hơn nửa bề ngang cho giá trị. Cùng cách web làm:
- * `grid-template-columns: minmax(96px, max-content) 1fr`.
- */
-const LABEL_WIDTH = 108;
-
-/**
- * Một hàng NHÃN — GIÁ TRỊ của tấm chi tiết: nhãn cột trái cố định, giá trị chiếm phần còn lại và
- * căn TRÁI.
- *
- * Căn trái chứ không căn phải như `DataRow`: ở một bảng tiền thì căn phải giúp dò cột số, còn ở
- * đây giá trị là chữ (tên xe, tên khách, mã tham chiếu, một câu diễn giải) — chữ căn phải thì mỗi
- * dòng bắt đầu ở một chỗ khác nhau và mắt không có mép nào để bám.
- */
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+/** Tiêu đề khối - Figma 14/20 semibold `text/gray/low`, VIẾT HOA, không thẻ. */
+function SectionTitle({ children }: { children: string }) {
   const colors = useColors();
   return (
-    <XStack ai="flex-start" gap={space.sm} px={layout.padX} py={space.sm}>
-      <YStack w={LABEL_WIDTH} flexShrink={0}>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {label}
-        </Text>
-      </YStack>
-      <YStack f={1} minWidth={0}>
-        {children}
+    <Text
+      col={colors.placeholder}
+      fos={typeScale.body.fontSize}
+      lh={typeScale.body.lineHeight}
+      fontFamily={FONT_FAMILY.semibold}
+      textTransform="uppercase"
+    >
+      {children}
+    </Text>
+  );
+}
+
+/** Một khối: tiêu đề + các hàng kẻ chân `stroke/gray-50` (Figma `24512:128165`). */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <YStack gap={space.sm}>
+      <SectionTitle>{title}</SectionTitle>
+      <YStack>{children}</YStack>
+    </YStack>
+  );
+}
+
+/**
+ * Một hàng nhãn - giá trị: nhãn trái 14 regular `text/gray/low`, giá trị PHẢI 14 medium, dòng phụ
+ * (biển số, giờ) dưới giá trị 14 regular `text/gray/low`. Cao tối thiểu 40, kẻ chân trừ hàng cuối.
+ */
+function Row({
+  label,
+  value,
+  sub,
+  last = false,
+  children,
+}: {
+  label: string;
+  value?: string | null;
+  sub?: string;
+  last?: boolean;
+  children?: React.ReactNode;
+}) {
+  const colors = useColors();
+  const tLabels = useTranslations('Common.labels');
+  return (
+    <XStack
+      ai={sub ? 'flex-start' : 'center'}
+      jc="space-between"
+      gap={space.md}
+      minHeight={40}
+      py={sub ? space.md : space.sm}
+      borderBottomWidth={last ? 0 : 1}
+      borderColor={colors.background}
+    >
+      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fontFamily={FONT_FAMILY.body}>
+        {label}
+      </Text>
+      <YStack ai="flex-end" gap={2} flexShrink={1} minWidth={0}>
+        {children ?? (
+          <Value muted={!value}>{value ?? tLabels('emptyValue')}</Value>
+        )}
+        {sub ? (
+          <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fontFamily={FONT_FAMILY.body} ta="right">
+            {sub}
+          </Text>
+        ) : null}
       </YStack>
     </XStack>
   );
 }
 
-/** Hàng có nhãn ĐỨNG TRÊN và giá trị chiếm trọn bề ngang — cho câu dài (diễn giải). */
-function InfoBlock({ label, children }: { label: string; children: React.ReactNode }) {
-  const colors = useColors();
-  return (
-    <YStack gap={2} px={layout.padX} py={space.sm}>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {label}
-      </Text>
-      {children}
-    </YStack>
-  );
-}
-
-/**
- * Giá trị thường.
- *
- * **CÙNG cỡ chữ với nhãn** — cả ba khối của tấm này chỉ có đúng một bậc chữ (`bodySm`), kể cả
- * nút "Sao chép" nằm chung hàng với mã tham chiếu. Thứ bậc trong một hàng do MÀU và ĐỘ ĐẬM làm:
- * nhãn mực mờ thường, giá trị mực đen medium, lối đi màu link, hành động màu gold đậm.
- *
- * Bản trước cho giá trị to hơn nhãn một bậc. Đọc từng hàng riêng thì hợp lý, nhưng nhìn cả vùng
- * — bốn khối, mười mấy hàng — thì nó thành chữ to chữ nhỏ xen kẽ, và cột nhãn 12px đứng cạnh cột
- * giá trị 14px làm hai cột lệch đường chân chữ ở mọi hàng.
- */
-function InfoText({ children }: { children: string }) {
-  const colors = useColors();
-  return (
-    <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-      {children}
-    </Text>
-  );
-}
-
-/**
- * Giá trị LÀ một lối đi — chữ xanh dương như link trên web, không phải một nút chữ đứng cạnh.
- *
- * `colors.link` chứ không `primaryActive` (gold): gold trong app này là màu của HÀNH ĐỘNG (nút
- * chính, viên đang chọn). Một chỗ để đi sang màn khác là link, và người dùng đã học màu link ở
- * mọi phần mềm họ dùng — mượn màu gold ở đây là bắt họ học lại một lần nữa cho đúng một chỗ.
- */
-function InfoLink({ label, onPress }: { label: string; onPress: () => void }) {
+/** Giá trị: đen medium; `link` = xanh `status/information-high` bấm được; `muted` = "-" xám nhạt. */
+function Value({
+  children,
+  link = false,
+  muted = false,
+  onPress,
+}: {
+  children: string;
+  link?: boolean;
+  muted?: boolean;
+  onPress?: () => void;
+}) {
   const colors = useColors();
   return (
     <Text
-      col={colors.link}
-      fos={fontSize.bodySm}
-      fow={fontWeight.medium}
-      accessibilityRole="link"
-      onPress={onPress}
+      col={link ? colors.infoStrong : muted ? colors.textPlaceholder : colors.text}
+      fos={typeScale.body.fontSize}
+      lh={typeScale.body.lineHeight}
+      fontFamily={FONT_FAMILY.medium}
+      ta="right"
+      {...(link && onPress ? { accessibilityRole: 'link' as const, onPress } : {})}
     >
-      {label}
+      {children}
     </Text>
-  );
-}
-
-/**
- * Một khối của tấm chi tiết: tiêu đề chuẩn của app + thẻ có KẺ CHIA giữa các hàng.
- *
- * Bản trước là một mảng nền xám phẳng, tiêu đề chữ nhỏ mờ, các hàng dính nhau cách 4px và không
- * có gì ngăn giữa. Ba lỗi cộng lại ra đúng cảm giác "nhợt và vỡ": nền xám kéo cả khối chìm xuống
- * dưới mọi thứ quanh nó, không có kẻ chia thì bốn cặp nhãn-giá-trị đọc thành một đám chữ, và
- * 4px thì chữ của hàng này chạm chân chữ hàng trên.
- *
- * Giờ nó dùng đúng khuôn đã chốt ở màn Tài chính: `BlockTitle` (vạch gold dẫn + đường kẻ) trên
- * một thẻ TRẮNG, mỗi hàng một vùng đệm thật và ngăn nhau bằng kẻ mảnh. Cùng một app thì một khối
- * nhãn-giá-trị phải trông giống nhau ở mọi màn, không phải mỗi tấm trượt một kiểu.
- *
- * Kẻ chia do CHÍNH khối chèn, không phải nơi gọi tự xen: nơi gọi có những hàng chỉ hiện khi có dữ
- * liệu (`approvedAt`, `cancelledAt`), và tự xen thì sẽ có ngày một đường kẻ đứng trơ ở đáy thẻ.
- * `Children.toArray` bỏ sẵn các nhánh `null` nên đếm ở đây luôn là số hàng THẬT.
- */
-function Section({
-  title,
-  children,
-  rows = true,
-}: {
-  title: string;
-  children: React.ReactNode;
-  /**
-   * `false` = nội dung tự do (dải ảnh chứng từ), thẻ giữ đệm bình thường và không kẻ chia gì cả.
-   */
-  rows?: boolean;
-}) {
-  const items = Children.toArray(children);
-
-  return (
-    <YStack gap={space.sm}>
-      <SectionHeader icon="document-text-outline">{title}</SectionHeader>
-      {rows ? (
-        <Card padded={false}>
-          <YStack>
-            {items.map((item, index) => (
-              <Fragment key={index}>
-                {index > 0 ? <Divider /> : null}
-                {item}
-              </Fragment>
-            ))}
-          </YStack>
-        </Card>
-      ) : (
-        <Card>{children}</Card>
-      )}
-    </YStack>
   );
 }

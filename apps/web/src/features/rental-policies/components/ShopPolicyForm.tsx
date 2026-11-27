@@ -3,12 +3,15 @@
 import { Alert, App, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Control } from 'react-hook-form';
 import * as yup from 'yup';
 import {
   INSURANCE_MODE,
+  RENTAL_TERMS_GROUP,
+  RENTAL_TERMS_GROUP_VALUES,
   TURNAROUND_BUFFER_MAX_MINUTES,
   VEHICLE_TYPE,
+  type RentalTermsGroup,
   type VehicleType,
 } from '@xeprime/types';
 
@@ -20,24 +23,30 @@ import { formToSaveInput, policyToForm } from '../form';
 import {
   useSaveShopOperationDefaults,
   useSaveShopPolicy,
+  useSaveShopRentalTerms,
   useShopInsuranceImpact,
 } from '../hooks/use-shop-policy';
-import { policyFormSchema } from '../schema';
+import { policyFormSchema, type PolicyFormValues } from '../schema';
 import type {
   RentalPolicyValues,
   SaveRentalPolicyInput,
+  SaveTenantRentalTermsInput,
   ShopOperationDefaults,
   ShopRentalPolicy,
+  TenantRentalTerms,
 } from '../types';
 import { InsuranceModeBlock } from './InsuranceModeBlock';
-import { PolicyCard } from './PolicyCard';
 import { PolicyInfoTip } from './PolicyInfoTip';
+import { RENTAL_TERMS_MAX_LENGTH, RentalConditionsCard } from './RentalConditionsCard';
 import {
+  CollateralBadge,
   CollateralBlock,
   DeliveryBlock,
   DiscountBlock,
   LimitBlocks,
+  PolicySectionCard,
   TurnaroundBlock,
+  type RentalTermsFormGroup,
   type ShopPolicyFormValues,
 } from './ShopPolicyBlocks';
 import { PoliciesLayout, POLICY_NAV } from './PoliciesLayout';
@@ -51,19 +60,58 @@ const schema = policyFormSchema.concat(
       .min(0, 'minutesNegative')
       .max(TURNAROUND_BUFFER_MAX_MINUTES, 'minutesMax')
       .required('minutesInteger'),
+    terms: yup.object(
+      Object.fromEntries(
+        RENTAL_TERMS_GROUP_VALUES.map((group) => [
+          group,
+          yup.object({
+            termsText: yup.string().defined().max(RENTAL_TERMS_MAX_LENGTH, 'termsTooLong'),
+            requireTermsAcceptance: yup.boolean().defined(),
+          }),
+        ]),
+      ),
+    ),
   }),
 );
+
+function termsToForm(terms: TenantRentalTerms): Record<RentalTermsGroup, RentalTermsFormGroup> {
+  const of = (group: RentalTermsGroup): RentalTermsFormGroup => {
+    const item = terms.items.find((entry) => entry.serviceType === group);
+    return {
+      termsText: item?.termsText ?? '',
+      requireTermsAcceptance: item?.requireTermsAcceptance ?? false,
+    };
+  };
+  return {
+    [RENTAL_TERMS_GROUP.SELF_DRIVE]: of(RENTAL_TERMS_GROUP.SELF_DRIVE),
+    [RENTAL_TERMS_GROUP.WITH_DRIVER]: of(RENTAL_TERMS_GROUP.WITH_DRIVER),
+  };
+}
+
+function toTermsInput(
+  terms: Record<RentalTermsGroup, RentalTermsFormGroup>,
+): SaveTenantRentalTermsInput {
+  return {
+    items: RENTAL_TERMS_GROUP_VALUES.map((group) => {
+      const text = terms[group].termsText.trim();
+      return {
+        serviceType: group,
+        termsText: text ? text : null,
+        requireTermsAcceptance: terms[group].requireTermsAcceptance,
+      };
+    }),
+  };
+}
 
 function toFormValues(
   policy: RentalPolicyValues | null | undefined,
   defaults: ShopOperationDefaults,
+  terms: TenantRentalTerms,
 ): ShopPolicyFormValues {
-  const base = policyToForm(policy);
   return {
-    ...base,
-    // Công tắc quá giờ chỉ có ở trang này: bật khi đã có phí hoặc thời gian miễn phí.
-    overtimeEnabled: base.overtimeFeePerHour != null || base.overtimeGraceMinutes != null,
+    ...policyToForm(policy),
     turnaroundBufferMinutes: defaults.turnaroundBufferMinutes ?? 0,
+    terms: termsToForm(terms),
   };
 }
 
@@ -77,6 +125,8 @@ interface ShopPolicyFormProps {
   vehicleLabel: string;
   initial: ShopRentalPolicy;
   defaults: ShopOperationDefaults;
+  /** Điều khoản thuê của gian hàng - chung mọi loại xe, lưu cùng nút Lưu của trang. */
+  terms: TenantRentalTerms;
   canEdit: boolean;
   /** Thẻ "Thanh toán & hóa đơn" — lưu ngay, không thuộc form này nhưng đứng đầu cột chính. */
   leading: ReactNode;
@@ -96,6 +146,7 @@ export function ShopPolicyForm({
   vehicleLabel,
   initial,
   defaults,
+  terms,
   canEdit,
   leading,
   onDirtyChange,
@@ -108,7 +159,8 @@ export function ShopPolicyForm({
   const errorMessage = useErrorMessage();
   const savePolicy = useSaveShopPolicy(vehicleType);
   const saveDefaults = useSaveShopOperationDefaults(vehicleType);
-  const submitting = savePolicy.isPending || saveDefaults.isPending;
+  const saveTerms = useSaveShopRentalTerms();
+  const submitting = savePolicy.isPending || saveDefaults.isPending || saveTerms.isPending;
   // Phiên hỗ trợ (ADR 0050 §12): chính sách chỉ đọc — không dựng hai nút lưu.
   const supportReadOnly = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && !canEdit;
   const disabled = !canEdit;
@@ -117,7 +169,10 @@ export function ShopPolicyForm({
     schema,
     'Vehicles.pricing.validation',
   );
-  const values = useMemo(() => toFormValues(initial.policy, defaults), [initial.policy, defaults]);
+  const values = useMemo(
+    () => toFormValues(initial.policy, defaults, terms),
+    [initial.policy, defaults, terms],
+  );
   const { control, handleSubmit, reset, setValue, formState } = useForm<ShopPolicyFormValues>({
     resolver,
     values,
@@ -143,12 +198,15 @@ export function ShopPolicyForm({
     const policyBody = toPolicyInput(next);
     const policyChanged = JSON.stringify(policyBody) !== JSON.stringify(toPolicyInput(values));
     const turnaroundChanged = next.turnaroundBufferMinutes !== values.turnaroundBufferMinutes;
+    const termsBody = toTermsInput(next.terms);
+    const termsChanged = JSON.stringify(termsBody) !== JSON.stringify(toTermsInput(values.terms));
     try {
       const policy = policyChanged ? await savePolicy.mutateAsync(policyBody) : initial;
       const savedDefaults = turnaroundChanged
         ? await saveDefaults.mutateAsync({ turnaroundBufferMinutes: next.turnaroundBufferMinutes })
         : defaults;
-      reset(toFormValues(policy.policy, savedDefaults));
+      const savedTerms = termsChanged ? await saveTerms.mutateAsync(termsBody) : terms;
+      reset(toFormValues(policy.policy, savedDefaults, savedTerms));
       message.success(t('saved', { vehicle: vehicleLabel }));
     } catch (error) {
       message.error(errorMessage(error));
@@ -203,65 +261,99 @@ export function ShopPolicyForm({
       </div>
     ) : null;
 
+  const policyControl = control as unknown as Control<PolicyFormValues>;
+
   return (
-    <PoliciesLayout aside={actions}>
+    <PoliciesLayout aside={actions} hidden={insuranceApplies ? [] : [POLICY_NAV.INSURANCE]}>
       <form id={FORM_ID} className={styles.main} onSubmit={confirmThenSubmit} noValidate>
         {!canEdit && !supportReadOnly ? <Alert type="info" showIcon title={t('readOnly')} /> : null}
         {initial.policy === null ? (
           <Alert type="info" showIcon title={t('emptyTitle')} description={t('emptyBody')} />
         ) : null}
 
-        <div id={POLICY_NAV.RULES} className={styles.navTarget}>
-          {leading}
-          <PolicyCard title={tWorkspace('procedures.title')}>
-            <CollateralBlock
-              control={control}
-              disabled={disabled}
-              inheritingVehicles={initial.inheritingVehicles}
-              overriddenVehicles={initial.overriddenVehicles}
-            />
-            <LimitBlocks control={control} disabled={disabled} />
-            {insuranceApplies ? (
-              <InsuranceModeBlock
-                control={control}
-                disabled={disabled}
-                impact={insuranceImpact.data}
-              />
-            ) : null}
-          </PolicyCard>
-        </div>
+        {leading}
 
-        <div id={POLICY_NAV.DELIVERY} className={styles.navTarget}>
-          <PolicyCard title={tWorkspace('delivery.title')}>
-            <DeliveryBlock control={control} disabled={disabled} />
-            <hr className={styles.divider} />
-            <TurnaroundBlock
-              control={control}
-              disabled={disabled}
-              inheritingVehicles={defaults.inheritingVehicles}
-            />
-          </PolicyCard>
-        </div>
-
-        <div id={POLICY_NAV.LONG_TERM} className={styles.navTarget}>
-          <PolicyCard
-            title={tWorkspace('longTerm.title')}
+        {insuranceApplies ? (
+          <PolicySectionCard
+            id={POLICY_NAV.INSURANCE}
+            title={tWorkspace('insurance.title')}
             titleExtra={
-              <PolicyInfoTip label={tDiscount('tipLabel')}>
-                {tDiscount('hint')} <strong>{tDiscount('formulaTitle')}</strong>{' '}
-                {tDiscount('formula')}
+              <PolicyInfoTip label={tWorkspace('insurance.tipLabel')}>
+                {tWorkspace('insurance.hint')}
               </PolicyInfoTip>
             }
           >
-            <DiscountBlock
+            <InsuranceModeBlock
               control={control}
-              setValue={setValue}
               disabled={disabled}
-              legacyTiers={initial.policy?.legacyDiscountTiers}
-              vehicleType={vehicleType}
+              impact={insuranceImpact.data}
+              bare
             />
-          </PolicyCard>
-        </div>
+          </PolicySectionCard>
+        ) : null}
+
+        <PolicySectionCard
+          id={POLICY_NAV.COLLATERAL}
+          title={tWorkspace('collateral.title')}
+          subtitle={tWorkspace('collateral.subtitle')}
+          badge={<CollateralBadge control={policyControl} />}
+        >
+          <CollateralBlock
+            control={policyControl}
+            disabled={disabled}
+            usage={
+              initial.inheritingVehicles > 0 || initial.overriddenVehicles > 0 ? (
+                <>
+                  {initial.inheritingVehicles > 0
+                    ? t('depositHint', { count: initial.inheritingVehicles })
+                    : null}
+                  {initial.overriddenVehicles > 0 ? (
+                    <PolicyInfoTip
+                      label={tWorkspace('collateral.overriddenTipLabel')}
+                      placement="bottomRight"
+                    >
+                      {t('overridden', { count: initial.overriddenVehicles })}
+                    </PolicyInfoTip>
+                  ) : null}
+                </>
+              ) : null
+            }
+          />
+        </PolicySectionCard>
+
+        <PolicySectionCard id={POLICY_NAV.LIMITS} title={tWorkspace('limits.title')}>
+          <LimitBlocks control={policyControl} disabled={disabled} />
+        </PolicySectionCard>
+
+        <PolicySectionCard id={POLICY_NAV.DELIVERY} title={tWorkspace('delivery.title')}>
+          <DeliveryBlock control={policyControl} disabled={disabled} />
+          <hr className={styles.divider} />
+          <TurnaroundBlock
+            control={control}
+            disabled={disabled}
+            inheritingVehicles={defaults.inheritingVehicles}
+          />
+        </PolicySectionCard>
+
+        <PolicySectionCard
+          id={POLICY_NAV.LONG_TERM}
+          title={tWorkspace('longTerm.title')}
+          titleExtra={
+            <PolicyInfoTip label={tDiscount('tipLabel')}>
+              {tDiscount('hint')} <strong>{tDiscount('formulaTitle')}</strong>{' '}
+              {tDiscount('formula')}
+            </PolicyInfoTip>
+          }
+        >
+          <DiscountBlock
+            control={control}
+            setValue={setValue}
+            disabled={disabled}
+            legacyTiers={initial.policy?.legacyDiscountTiers}
+          />
+        </PolicySectionCard>
+
+        <RentalConditionsCard control={control} disabled={disabled} />
       </form>
     </PoliciesLayout>
   );

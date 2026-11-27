@@ -41,6 +41,7 @@ interface DeleteAccountValues {
 }
 
 const ITEMS = ACCOUNT_DELETION_ITEMS;
+const GAP_12 = 12;
 
 /**
  * "Yêu cầu xoá tài khoản" — một YÊU CẦU đi vào hàng đợi support của nền tảng, không phải nút xoá.
@@ -123,15 +124,45 @@ export function DeleteAccountScreen() {
   });
 
   const pending = pendingQuery.data?.items[0];
+  const goBack = () => goBackOr(router, ROUTES.account.home());
+  /** Form gửi chỉ có khi đã tải xong và CHƯA có yêu cầu đang chờ - lúc đó mới có thanh nút dưới đáy. */
+  const showForm = !pendingQuery.isLoading && !pendingQuery.isError && !pending;
+
+  /*
+   * Hai nút MỘT hàng, ghim dưới đáy (người dùng chốt 26/11/2026): "Huỷ" rời màn, nút gửi lấy phần
+   * còn lại. Nút gửi chỉ sáng khi đã tick xác nhận - đi qua đúng luật cũ (`formState.isValid`).
+   */
+  const footer = showForm ? (
+    <XStack gap={GAP_12}>
+      <YStack flexShrink={0}>
+        <Button
+          label={tCommon('cancel')}
+          variant="neutral"
+          disabled={openCase.isPending}
+          onPress={goBack}
+        />
+      </YStack>
+      <YStack f={1}>
+        <Button
+          label={t('submitShort')}
+          accessibilityLabel={t('submit')}
+          variant="dangerSolid"
+          loading={openCase.isPending}
+          disabled={!formState.isValid}
+          onPress={() => void onSubmit()}
+        />
+      </YStack>
+    </XStack>
+  ) : undefined;
 
   return (
     <>
       <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
+        onBack={goBack}
         title={t('title')}
         subtitle={t('subtitle')}
       />
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']} {...(footer ? { footer } : {})}>
         <YStack gap={space.md}>
           {pendingQuery.isLoading ? (
             <Card>
@@ -253,20 +284,6 @@ export function DeleteAccountScreen() {
                     )}
                   />
 
-                  <Button
-                    label={t('submit')}
-                    variant="danger"
-                    icon="trash-outline"
-                    loading={openCase.isPending}
-                    disabled={!formState.isValid}
-                    onPress={() => void onSubmit()}
-                  />
-                  <Button
-                    label={t('reset')}
-                    variant="ghost"
-                    disabled={!formState.isDirty || openCase.isPending}
-                    onPress={() => reset()}
-                  />
                 </YStack>
               </Card>
             </>

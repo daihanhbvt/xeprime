@@ -273,14 +273,12 @@ function PriceSheetInner({
               // Đồng giá còn TRỐNG: đếm 0, khớp bảng xem trước đang nói "Bỏ qua" ở mọi hàng —
               // không hứa ghi cho N xe rồi khoá nút lại, hứa một đằng khoá một nẻo còn khó đọc hơn.
               label={t('bulkPrice.submit', { count: fixedPriceInvalid ? 0 : targetIds().length })}
-              icon="save-outline"
               onPress={submit}
               loading={save.isPending}
               disabled={preview.isPending || targetIds().length === 0 || fixedPriceInvalid}
             />
             <Button
               label={t('bulkPrice.restore')}
-              icon="refresh-outline"
               variant="danger"
               onPress={() => setConfirmingRestore(true)}
               loading={restore.isPending}

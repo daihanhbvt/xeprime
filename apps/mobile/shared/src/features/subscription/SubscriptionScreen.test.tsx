@@ -107,7 +107,7 @@ describe('SubscriptionWorkspace - Gói & hạn mức', () => {
 
   async function renderWorkspace(isPlanPromotionEnabled: boolean) {
     jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(COMMISSION_USER);
-    jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1 });
+    jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1, supportHotline: null });
     jest.spyOn(subscriptionApi, 'me').mockResolvedValue({
       currentPlan: {
         subscriptionId: 's1',

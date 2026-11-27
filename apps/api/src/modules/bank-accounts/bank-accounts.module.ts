@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AccountBankAccountsController } from './account-bank-accounts.controller';
+import {
+  AccountBankAccountChangeRequestsController,
+  PlatformBankAccountChangeRequestsController,
+  ShopBankAccountChangeRequestsController,
+} from './bank-account-change-requests.controller';
+import { BankAccountChangeRequestsService } from './bank-account-change-requests.service';
 import { BankAccountsService } from './bank-accounts.service';
 import { ShopBankAccountsController } from './shop-bank-accounts.controller';
 
@@ -14,8 +20,14 @@ import { ShopBankAccountsController } from './shop-bank-accounts.controller';
  * ghi SNAPSHOT vào lệnh chuyển — không tự query bảng này.
  */
 @Module({
-  controllers: [AccountBankAccountsController, ShopBankAccountsController],
-  providers: [BankAccountsService],
+  controllers: [
+    AccountBankAccountsController,
+    ShopBankAccountsController,
+    AccountBankAccountChangeRequestsController,
+    ShopBankAccountChangeRequestsController,
+    PlatformBankAccountChangeRequestsController,
+  ],
+  providers: [BankAccountsService, BankAccountChangeRequestsService],
   exports: [BankAccountsService],
 })
 export class BankAccountsModule {}

@@ -12,7 +12,7 @@ import { DAY_PARAM_FORMAT, startOfAppDay, toAppTz } from '@xeprime/domain';
 import { DateField } from '@/components/ui/DateField';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { Callout } from '@/components/ui/Callout';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
@@ -204,23 +204,20 @@ export function MaintenanceRecordSheet({
     : record
       ? t('form.submitEdit')
       : t('form.submitCreate');
-  /* Ba việc khác nhau, ba hình: đóng phiếu · lưu sửa đổi · đặt một mốc lịch mới. */
-  const submitIcon = completing
-    ? 'checkmark-outline'
-    : record
-      ? 'save-outline'
-      : 'calendar-outline';
 
   return (
     <BottomSheet
       open
       onClose={onClose}
       title={title}
+      // Hoàn tất: câu nhắc nằm sau dấu (!) cạnh tiêu đề, không chiếm thân form - người dùng chốt 26/11/2026.
+      {...(completing
+        ? { titleAdornment: <InfoHint label={title} content={tMaintenance('record.completeHint')} /> }
+        : {})}
       footer={
         <Button
           variant="gradient"
           label={submitLabel}
-          icon={submitIcon}
           loading={pending}
           onPress={submit}
         />
@@ -299,12 +296,11 @@ export function MaintenanceRecordSheet({
           control={control}
           name="notes"
           label={t('form.notes')}
-          multiline
+          multiline scrollable
           rows={3}
           maxLength={2000}
         />
 
-        {completing ? <Callout tone="info" title={tMaintenance('record.completeHint')} /> : null}
 
         {/*
           Số chứng từ đính kèm - đúng dòng web đặt ở cuối hộp (`MaintenanceRecordDialog`:321).

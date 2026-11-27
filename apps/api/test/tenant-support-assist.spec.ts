@@ -69,12 +69,14 @@ import { TenantsController } from '../src/modules/tenants/tenants.controller';
 import { TenantsService } from '../src/modules/tenants/tenants.service';
 import { VehicleSettingsController } from '../src/modules/vehicle-settings/vehicle-settings.controller';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { VehicleTripHistoryService } from '../src/modules/vehicle-settings/vehicle-trip-history.service';
 import { VEHICLE_DOCUMENT_OCR_PROVIDER } from '../src/modules/vehicles/documents/ocr-provider';
 import { VehicleDocumentsController } from '../src/modules/vehicles/documents/vehicle-documents.controller';
 import { VehicleDocumentsService } from '../src/modules/vehicles/documents/vehicle-documents.service';
 import { VehicleAlertsService } from '../src/modules/vehicles/vehicle-alerts.service';
+import { VehicleBookingPickerService } from '../src/modules/vehicles/vehicle-booking-picker.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import { VehicleSourceService } from '../src/modules/vehicles/vehicle-source.service';
 import { VehiclesController } from '../src/modules/vehicles/vehicles.controller';
@@ -377,6 +379,8 @@ beforeAll(async () => {
       { provide: VehicleSourceService, useValue: {} },
       { provide: VehicleContractsService, useValue: files },
       { provide: VehicleAlertsService, useValue: {} },
+      // Bộ chọn xe khi lập đơn - không route nào của spec này gọi tới nó.
+      { provide: VehicleBookingPickerService, useValue: {} },
       {
         provide: VehicleDocumentsService,
         useValue: new VehicleDocumentsService(asService, files, vehicles, audit, {} as never),
@@ -394,6 +398,7 @@ beforeAll(async () => {
           occupancy,
           new ListingsService(asService),
           makeDriversService(asService),
+    new TenantRentalTermsService(asService, audit),
         ),
       },
       { provide: VehicleTripHistoryService, useValue: {} },

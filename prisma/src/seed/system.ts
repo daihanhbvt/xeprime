@@ -140,6 +140,11 @@ const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
     name: 'Thanh toán đơn',
     systemKey: SYSTEM_FINANCE_CATEGORY.BOOKING_PAYMENT,
   },
+  {
+    type: FINANCE_CATEGORY_TYPE.INCOME,
+    name: 'Tiền qua XePrime',
+    systemKey: SYSTEM_FINANCE_CATEGORY.XEPRIME_PAYOUT,
+  },
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí quá giờ', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí đền bù va quẹt', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí phạt nguội', requiresVehicle: true },
@@ -161,6 +166,11 @@ const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
     name: 'Sửa chữa sự cố',
     systemKey: SYSTEM_FINANCE_CATEGORY.REPAIR,
     requiresVehicle: true,
+  },
+  {
+    type: FINANCE_CATEGORY_TYPE.EXPENSE,
+    name: 'Thuế khấu trừ',
+    systemKey: SYSTEM_FINANCE_CATEGORY.TAX_WITHHELD,
   },
   { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Mua bảo hiểm', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Rửa xe', requiresVehicle: true },
@@ -717,10 +727,12 @@ async function seedBanners(): Promise<void> {
 }
 
 /**
- * MÃ KHUYẾN MÃI NỀN TẢNG (ADR 0046) — dữ liệu NỀN, không phải demo.
+ * MÃ KHUYẾN MÃI NỀN TẢNG MẪU (ADR 0046) — CHỈ chế độ `demo` (27/11/2026).
  *
- * Ở đây vì ba lý do: chúng không có tên người thật, không thuộc gian hàng nào, và màn quản trị
- * `/manage/admin/promo-codes` cần có nội dung để dùng được ngay sau `SEED_MODE=system`.
+ * Mã do NỀN TẢNG tài trợ: một mã đang bật là XePrime trả tiền thật cho mỗi lượt dùng. Trước ngày
+ * 27/11/2026 bộ này nằm ở `SEED_MODE=system`, tức là dựng production xong đã có 5 chiến dịch
+ * giảm 50.000-200.000đ đang chạy mà không ai quyết định mở. Production không có mã nào cho tới
+ * khi admin tạo chiến dịch thật ở màn quản trị.
  *
  * Bộ này cố ý phủ đủ mọi hình dạng mà giao diện phải vẽ được: mã tiền / mã %, có trần / không
  * trần, đang chạy / sắp diễn ra / sắp hết hạn / đã hết hạn / đã tắt / hết lượt, và mã KHÔNG
@@ -864,7 +876,8 @@ const PROMO_CODES = [
   },
 ] as const;
 
-async function seedPromoCodes(): Promise<void> {
+export async function seedDemoPromoCodes(): Promise<void> {
+  log(`  mã khuyến mãi mẫu: ${PROMO_CODES.length}`);
   for (const promo of PROMO_CODES) {
     const id = seedId(`promo:${promo.key}`);
     await prisma.promoCode.upsert({
@@ -945,11 +958,8 @@ export async function seedSystemData(): Promise<SystemSeedResult> {
   await seedPartnerBanner();
   log(`  banner trang chủ: ${BANNERS.length}`);
 
-  await seedPromoCodes();
-
   // Mẫu email "Hướng dẫn đăng ký và gia hạn gói" — admin quản lý; seed chỉ TẠO MỚI, không ghi đè.
   await seedPlanGuideTemplates();
-  log(`  mã khuyến mãi nền tảng: ${PROMO_CODES.length}`);
 
   // Danh mục sản phẩm bảo hiểm MIC (ADR 0064) — chỉ TẠO MỚI, admin sửa ở màn "Bảo hiểm".
   log(`  sản phẩm bảo hiểm: ${await seedInsuranceProducts()}`);

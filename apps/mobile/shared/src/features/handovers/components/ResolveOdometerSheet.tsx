@@ -15,7 +15,9 @@ import { REASON_MAX } from '@/lib/reason';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { DataRow } from '@/components/ui/DataRow';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { FactRow } from '@/components/ui/FactRow';
+import { FIELD_V2 } from '@/components/ui/Field';
 import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
@@ -177,37 +179,30 @@ export function ResolveOdometerSheet({
       onClose={onClose}
       /* Tiêu đề theo VIỆC, như web: bổ sung một số còn thiếu khác với sửa một số đã ghi. */
       title={handover.odometerMissing ? t('openMissing') : t('openCorrect')}
+      // Cảnh báo "thiếu chỉ số KM" nằm sau dấu (!) cạnh tiêu đề, không chiếm thân form - người dùng chốt 26/11/2026.
+      {...(handover.odometerMissing
+        ? { titleAdornment: <InfoHint label={t('missingTitle')} content={t('missingBody')} /> }
+        : {})}
       footer={
         <Button
           label={t('confirm')}
-          icon="speedometer-outline"
           loading={resolve.isPending}
           onPress={() => submit()}
         />
       }
     >
       <YStack gap={space.sm}>
-        {/* Cùng ba khối mở đầu với web: cảnh báo · ô đối chiếu · form. */}
-        {handover.odometerMissing ? (
-          <Callout tone="warning" title={t('missingTitle')}>
-            {t('missingBody')}
-          </Callout>
-        ) : null}
+        {/* Như web: ô đối chiếu · form; cảnh báo thiếu KM nằm ở dấu (!) cạnh tiêu đề. */}
 
         {/*
           Hai con số để ĐỐI CHIẾU trước khi gõ: KM hiện tại của xe và KM lúc giao. Không có chúng
           thì người dùng nhập một số vào khoảng không và chỉ biết mình sai khi server từ chối.
         */}
-        <YStack
-          p={space.sm}
-          br={radius.md}
-          bg={colors.surfaceMuted}
-          bw={1}
-          bc={colors.borderSubtle}
-        >
-          <DataRow label={t('currentVehicleKm')} value={fmt.km(context.vehicleOdometerKm)} />
+        {/* Ô xám cùng khuôn ô "Chỉ số hiện tại" của tấm hiệu chỉnh KM; `FactRow` giữ nhãn một dòng. */}
+        <YStack gap={6} px={FIELD_V2.padX} py={space.sm} br={radius.control} bg={colors.background}>
+          <FactRow label={t('currentVehicleKm')}>{fmt.km(context.vehicleOdometerKm)}</FactRow>
           {context.pickupOdometerKm == null ? null : (
-            <DataRow label={t('pickupKm')} value={fmt.km(context.pickupOdometerKm)} />
+            <FactRow label={t('pickupKm')}>{fmt.km(context.pickupOdometerKm)}</FactRow>
           )}
         </YStack>
 
@@ -220,7 +215,6 @@ export function ResolveOdometerSheet({
           <Button
             label={t('decreaseOverride')}
             /* Cảnh báo, không phải dấu tích: đây là đường ghi ĐÈ một số đo đã bị chặn một lần. */
-            icon="warning-outline"
             variant="danger"
             loading={resolve.isPending}
             onPress={() => submit(true)}

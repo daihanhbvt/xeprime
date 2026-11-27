@@ -33,10 +33,29 @@ const BADGE_LINE = 18;
  * Bảng TÔNG của ô icon — mỗi mục menu một sắc (Figma Partner-XePrime). Token `@xeprime/ui` khi có
  * đúng sắc đó; giá trị Figma chép nguyên (kèm tên biến Figma) khi token chưa có.
  */
-export type MenuTileTone = 'warning' | 'info' | 'purple' | 'success' | 'pink' | 'rose' | 'gray';
+export type MenuTileTone =
+  | 'warning'
+  | 'orange'
+  | 'primary'
+  | 'info'
+  | 'purple'
+  | 'success'
+  | 'pink'
+  | 'rose'
+  | 'gray';
 
-/** `Status/warning-500` — icon "Đơn thuê xe". Token `color-warning` (#e07b26) là sắc khác. */
-const FIGMA_WARNING_ICON = '#f79009';
+/** `Status/warning-600` — icon "Quản lý ví" (Figma "Menu MB" `24512:134819`). */
+const FIGMA_WARNING_ICON = '#dc6803';
+/** `Status/orange-low` / `Status/orange-high` — ô "Lịch bảo dưỡng"; token chưa có sắc cam này. */
+const FIGMA_ORANGE_TILE = '#fff6ed';
+const FIGMA_ORANGE_ICON = '#ec860a';
+const FIGMA_ORANGE_TILE_DARK = 'rgba(236, 134, 10, 0.14)';
+const FIGMA_ORANGE_ICON_DARK = '#fdb022';
+/** `BG/primary-low` + icon vàng đậm `#996f0e` — ô "Danh sách xe". */
+const FIGMA_PRIMARY_TILE = '#fff9e5';
+const FIGMA_PRIMARY_ICON = '#996f0e';
+const FIGMA_PRIMARY_TILE_DARK = 'rgba(233, 195, 54, 0.14)';
+const FIGMA_PRIMARY_ICON_DARK = '#f0d073';
 /** `Status/information-low` — nền ô "Lịch thuê xe", "Chính sách thuê" (`color-info-bg` là #eff6ff). */
 const FIGMA_INFO_TILE = '#ebf6ff';
 /** `Status/purple-700` — icon "Khách hàng", "Bảo dưỡng", "Nhân viên" (`color-purple` là #6938ef). */
@@ -67,6 +86,14 @@ export function useMenuTileTones(): Readonly<Record<MenuTileTone, TileSkin>> {
       warning: {
         bg: colors.warningSubtle,
         fg: dark ? FIGMA_WARNING_ICON_DARK : FIGMA_WARNING_ICON,
+      },
+      orange: {
+        bg: dark ? FIGMA_ORANGE_TILE_DARK : FIGMA_ORANGE_TILE,
+        fg: dark ? FIGMA_ORANGE_ICON_DARK : FIGMA_ORANGE_ICON,
+      },
+      primary: {
+        bg: dark ? FIGMA_PRIMARY_TILE_DARK : FIGMA_PRIMARY_TILE,
+        fg: dark ? FIGMA_PRIMARY_ICON_DARK : FIGMA_PRIMARY_ICON,
       },
       info: { bg: dark ? colors.infoSurface : FIGMA_INFO_TILE, fg: colors.infoStrong },
       purple: { bg: colors.purpleSurface, fg: dark ? colors.purple : FIGMA_PURPLE_ICON },
@@ -113,22 +140,22 @@ export type MenuDescriptionKey =
  * nhãn và ai thấy vẫn do `manage-nav.ts` quyết. Mục của tuyến hoa hồng mang bản `commission` khi
  * cùng trang mà khác vai (Thông tin cửa hàng ↔ Hồ sơ chủ xe — ADR 0085 điều 2).
  *
- * Figma có: Vận hành (`24175:57561`), Xe & Tài xế (`24238:63687`), Cấu hình + Trợ giúp
- * (`24182:79018`). Doanh thu và các mục riêng tuyến hoa hồng chưa có trong Figma — chọn icon của cây
- * web (`PARTNER_NAV_ICON`) và tông trong cùng bảng.
+ * Nguồn: Figma "Menu MB" `24512:134819` (20/11/2026 - bản mới nhất, phủ cả 5 khối; thay các frame
+ * khối cũ `24175:57561` · `24238:63687` · `24182:79018`). Các mục riêng tuyến hoa hồng chưa có
+ * trong Figma — chọn icon của cây web (`PARTNER_NAV_ICON`) và tông trong cùng bảng.
  */
 const LEAF_LOOK: Readonly<
   Record<string, MenuLeafLook & { readonly commission?: Partial<MenuLeafLook> }>
 > = {
-  bookings: { icon: 'doc-left', tone: 'warning', description: 'bookings' },
-  calendar: { icon: 'calendar-2', tone: 'info', description: 'calendar' },
-  customers: { icon: 'doc-right', tone: 'purple', description: 'customers' },
-  vehicles: { icon: 'car', tone: 'success', description: 'vehicles' },
-  drivers: { icon: 'profile-octagon', tone: 'pink', description: 'drivers' },
-  maintenance: { icon: 'setting', tone: 'purple', description: 'maintenance' },
-  'finance-overview': { icon: 'dollar-circle', tone: 'success', description: 'financeOverview' },
+  bookings: { icon: 'doc-align-left', tone: 'info', description: 'bookings' },
+  calendar: { icon: 'calendar-1', tone: 'purple', description: 'calendar' },
+  customers: { icon: 'users-group', tone: 'success', description: 'customers' },
+  vehicles: { icon: 'car-profile', tone: 'primary', description: 'vehicles' },
+  drivers: { icon: 'user-tag', tone: 'info', description: 'drivers' },
+  maintenance: { icon: 'setting', tone: 'orange', description: 'maintenance' },
+  'finance-overview': { icon: 'chart', tone: 'success', description: 'financeOverview' },
   balance: { icon: 'wallet', tone: 'warning', description: 'balance' },
-  receipts: { icon: 'doc-right', tone: 'info', description: 'receipts' },
+  receipts: { icon: 'dollar-circle', tone: 'info', description: 'receipts' },
   shop: {
     icon: 'bag',
     tone: 'pink',
@@ -257,7 +284,8 @@ export const ManageMenuRow = memo(function ManageMenuRow({
  * Huy hiệu "N cần xử lý" của mục menu — Figma `_Badge` đỏ (`24175:57771`). Ẩn khỏi cây truy cập:
  * tên của dòng đã mang câu đầy đủ (`needsAction` / `needsActionUrgent`).
  */
-export function NeedsActionPill({ count }: { count: number }) {
+/** `flat`: viên của ngăn kéo chức năng (Figma `24512:134819`) - không viền, chữ `Status/error-high`. */
+export function NeedsActionPill({ count, flat = false }: { count: number; flat?: boolean }) {
   const colors = useColors();
   const { scheme } = useAppScheme();
   const t = useTranslations('MobileShell.manageMenu');
@@ -267,13 +295,13 @@ export function NeedsActionPill({ count }: { count: number }) {
       py={BADGE_PAD_Y}
       br={BADGE_RADIUS}
       bg={colors.dangerSurface}
-      bw={1}
+      bw={flat ? 0 : 1}
       bc={colors.dangerBorder}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
       <Text
-        col={scheme === 'dark' ? FIGMA_ERROR_TEXT_DARK : FIGMA_ERROR_TEXT}
+        col={flat ? colors.danger : scheme === 'dark' ? FIGMA_ERROR_TEXT_DARK : FIGMA_ERROR_TEXT}
         fos={fontSize.label}
         lh={BADGE_LINE}
         fow={fontWeight.medium}

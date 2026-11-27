@@ -40,10 +40,28 @@
     "emptySearch": "No vehicle matches that search",
     "emptyBranch": "This branch has no vehicles yet",
     "empty": "This shop has no vehicles yet",
-    "perDay": "{amount}/day",
     "loadingMore": "Loading more vehicles…",
     "appendFailed": "Could not load more vehicles.",
-    "allShown": "All {count, plural, one {# vehicle} other {# vehicles}} shown"
+    "allShown": "All {count, plural, one {# vehicle} other {# vehicles}} shown",
+    "title": "Create a rental for a customer",
+    "subtitle": "Pick a vehicle that is free to continue creating the rental",
+    "branchLabel": "Branch",
+    "typeLabel": "Type",
+    "searchLabel": "Search",
+    "timeLabel": "Pick-up/return time",
+    "timePlaceholder": "Choose pick-up and return time",
+    "timeRequired": "Choose a pick-up/return time to see which vehicles are free",
+    "gridLabel": "Vehicles",
+    "busy": "Booked",
+    "busyHint": "{name} is already booked in this time window",
+    "emptyType": "{type, select, car {This shop has no cars yet} motorbike {This shop has no motorbikes yet} other {This shop has no vehicles yet}}",
+    "estimateDays": "Estimate for {days, plural, one {# day} other {# days}} · <amount>{value}</amount>",
+    "estimate": "Estimate · <amount>{value}</amount>",
+    "estimateLoading": "Calculating price…",
+    "estimateUnavailable": "This vehicle has no price set, enter the amount in the next step",
+    "pickHint": "Pick a vehicle to see the estimate",
+    "plateLabel": "Plate number",
+    "codeLabel": "Vehicle code"
   },
   "customer": {
     "heading": "Customer",
@@ -97,6 +115,21 @@
     "viewBookingFor": "View the booking for {vehicle}"
   },
   "detail": {
+    "partnerApp": {
+      "statusShort": {
+        "pending_host_approval": "Pending",
+        "approved_by_host": "Approved",
+        "rejected_by_host": "You declined",
+        "cancelled_by_customer": "Customer cancelled",
+        "expired": "Expired",
+        "converted_to_booking": "Booked",
+        "awaiting_hold": "Awaiting payment",
+        "hold_paid": "Paid",
+        "hold_expired": "Payment expired",
+        "slot_taken": "Slot taken",
+        "cancelled_by_host": "You cancelled"
+      }
+    },
     "title": "Rental request detail",
     "openVehicle": "View vehicle profile",
     "openCustomer": "View customer profile",
@@ -185,6 +218,9 @@
     "wishLegacy": "Legacy request - the guest did not state a preference"
   },
   "reject": {
+    "partnerApp": {
+      "title": "Decline request"
+    },
     "title": "Decline booking request",
     "context": "{customer} · {vehicle}",
     "reasonLabel": "Note to the customer",
@@ -515,7 +551,8 @@
         "documents": "Documents the owner requires: {documents}",
         "hostTerms": "Owner's rental terms",
         "reminder": "Verification and the exact documents required are explained under the current policy before pick-up.",
-        "licenceRequiredToSubmit": "Add a valid driving licence to send your request."
+        "licenceRequiredToSubmit": "Add a valid driving licence to send your request.",
+        "identity": "Documents at pickup: {documents} - {verify}"
       },
       "costs": {
         "title": "Rental cost",
@@ -644,6 +681,9 @@
     "differentPhone": "The renter left a contact number that differs from their account number. The account number {phone} is verified; the contact number is not."
   },
   "approvalPreview": {
+    "partnerApp": {
+      "paymentWindow": "The customer has <b>{duration}</b> (until {time}) to pay the hold; after that the request is cancelled automatically."
+    },
     "title": "If you approve now",
     "estimate": "Estimate",
     "noHold": "This trip has no online reservation payment - the booking is created as soon as you approve, with no QR code.",
@@ -722,6 +762,35 @@
       "next": {
         "title": "After the booking is created",
         "body": "The vehicle is blocked on the calendar for this customer right away. You collect the rental and the deposit directly from the customer at pick-up."
+      },
+      "negotiated": {
+        "toggle": "Negotiated price",
+        "lead": "The system price is only a suggestion. Edit it to the amounts agreed with the customer; the total updates instantly.",
+        "discount": "Discount",
+        "deliveryFee": "Delivery fee",
+        "deliveryFeeHint": "Paid directly by the customer at pickup.",
+        "extrasTitle": "Extra charges",
+        "extrasHint": "For example a child seat or charger. Each line is printed on the booking and contract.",
+        "extraLabel": "Item",
+        "extraLabelPlaceholder": "Child seat",
+        "extraAmount": "Amount",
+        "addExtra": "Add charge",
+        "removeExtra": "Remove charge"
+      },
+      "collateral": {
+        "title": "Deposit & collateral",
+        "lead": "Fill in only what applies. With no deposit, leave the cash deposit at 0 and add no items.",
+        "cash": "Cash deposit",
+        "cashHint": "Paid to your shop at pickup and returned at drop-off.",
+        "assetsTitle": "Collateral items",
+        "assetsHint": "No items recorded. Use \"Add item\" if the customer leaves an ID card, licence, motorbike…",
+        "type": "Type",
+        "description": "Description",
+        "descriptionPlaceholder": "Document number (optional)",
+        "descriptionMotorbike": "Plate, e.g. 59A1-12345",
+        "descriptionOther": "What it is, e.g. Dell laptop",
+        "add": "Add item",
+        "remove": "Remove item"
       }
     },
     "validation": {
@@ -738,7 +807,13 @@
       "addressMax": "Address can be at most {max} characters",
       "noteMax": "Note can be at most {max} characters",
       "amountMin": "Amount cannot be negative",
-      "baseAmountRequired": "This vehicle has no price - enter the rental amount before creating the booking."
+      "baseAmountRequired": "This vehicle has no price - enter the rental amount before creating the booking.",
+      "extraLabelRequired": "Enter the charge name",
+      "extraLabelMax": "The charge name can be at most {max} characters",
+      "extraAmountPositive": "The amount must be greater than 0",
+      "collateralDescriptionRequired": "Describe the item",
+      "collateralDescriptionMax": "The description can be at most {max} characters",
+      "discountExceedsBase": "The discount cannot be larger than the rental amount."
     },
     "scheduleConflict": "The vehicle was just booked for this time. Click “Edit” to choose another period.",
     "deliveryNoteLine": "Delivery to: {address}",
@@ -773,6 +848,8 @@
     "paymentHeading": "Payment details",
     "rentalTotal": "Rental:",
     "customerTotal": "Customer pays:",
+    "deliveryFee": "Doorstep delivery fee:",
+    "deliveryFeeFree": "Free",
     "holdExpected": "Reservation payment (estimated):",
     "holdAwaiting": "Reservation payment (awaiting customer):",
     "holdPaid": "Reserved:",

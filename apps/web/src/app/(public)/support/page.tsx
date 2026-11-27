@@ -63,12 +63,14 @@ export default async function SupportPage() {
     { key: 'money', href: `${ROUTES.ABOUT}#about-money` },
     { key: 'cancel', href: legalPath.doc(LEGAL_DOC.CANCELLATION) },
     { key: 'privacy', href: legalPath.doc(LEGAL_DOC.PRIVACY) },
+    { key: 'complaints', href: legalPath.doc(LEGAL_DOC.COMPLAINTS) },
   ] as const;
 
   const ownerTopics = [
     { key: 'start', href: ROUTES.LIST_YOUR_VEHICLE.ROOT },
     { key: 'rules', href: legalPath.doc(LEGAL_DOC.MARKETPLACE_RULES) },
     { key: 'terms', href: legalPath.doc(LEGAL_DOC.TERMS) },
+    { key: 'payout', href: legalPath.doc(LEGAL_DOC.PAYMENT) },
     { key: 'manage', href: ROUTES.MANAGE.LOGIN },
   ] as const;
 

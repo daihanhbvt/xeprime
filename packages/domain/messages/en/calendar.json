@@ -16,7 +16,8 @@
     "rangeLength": "Range length",
     "previousRange": "Back {count, plural, one {# day} other {# days}}",
     "nextRange": "Forward {count, plural, one {# day} other {# days}}",
-    "pagerAriaLabel": "Move the visible range"
+    "pagerAriaLabel": "Move the visible range",
+    "rangeLabel": "{from} - {to}"
   },
   "grid": {
     "ariaLabel": "Vehicle rental calendar by day",
@@ -27,7 +28,9 @@
     "availableRow": "Vehicles available",
     "availableRowShort": "Free",
     "availableCell": "Day {day}: {count, plural, one {# vehicle available} other {# vehicles available}}",
-    "availableCellPending": "Day {day}: availability not loaded yet"
+    "availableCellPending": "Day {day}: availability not loaded yet",
+    "resourceTitle": "Vehicles",
+    "resourceCount": "{cars, plural, =0 {} one {# car} other {# cars}}{both, select, yes {, } other {}}{bikes, plural, =0 {} one {# motorbike} other {# motorbikes}}"
   },
   "cell": {
     "action": "Schedule {vehicle} on {date}",
@@ -51,7 +54,16 @@
   "legend": {
     "ariaLabel": "Calendar legend",
     "customPrice": "Custom price",
-    "holiday": "Holiday"
+    "holiday": "Holiday",
+    "title": "Legend",
+    "service": {
+      "self_drive": "Daily rental",
+      "with_driver": "With driver",
+      "long_term": "Long-term rental"
+    },
+    "off": "Blocked/Maintenance",
+    "direct": "Own-channel booking",
+    "paidFull": "Paid in full"
   },
   "vehicleCard": {
     "trigger": "Vehicle details for {vehicle}",
@@ -62,7 +74,8 @@
     "hourlyPrice": "Hourly rate",
     "operationStatus": "Operation",
     "pricePerDay": "{price}/day",
-    "openVehicle": "Open vehicle profile"
+    "openVehicle": "Open vehicle profile",
+    "priceRich": "<b>{price}</b> / day"
   },
   "eventCard": {
     "bookingHeading": "Booking at a glance",
@@ -73,7 +86,16 @@
     "endAt": "Ends",
     "duration": "Duration",
     "openHint": "Click the bar to open full details",
-    "barAriaRange": "from {start} to {end}"
+    "barAriaRange": "from {start} to {end}",
+    "requestHeading": "Request at a glance",
+    "amount": "Booking value",
+    "holdPaid": "Reservation paid",
+    "contact": "Contact renter",
+    "openBooking": "Booking details",
+    "openRequest": "View request",
+    "openDetail": "View details",
+    "source": "Booking source",
+    "payment": "Payment"
   },
   "cellActions": {
     "menuAriaLabel": "Choose an action for this calendar cell",
@@ -85,12 +107,20 @@
     },
     "block": {
       "label": "Block",
-      "hint": "Refuse bookings for a period"
+      "hint": "Stop taking bookings on this day",
+      "hintRange": "Stop taking bookings on these days"
     },
     "price": {
-      "label": "Set price",
-      "hint": "Custom price for this day"
-    }
+      "label": "Set custom price",
+      "hint": "Set a custom price for this day",
+      "hintRange": "Set a custom price for these days"
+    },
+    "singleDate": "{weekday}, {date}",
+    "rangeLabel": "{from} - {to} · {count, plural, one {# day} other {# days}}",
+    "free": "Free",
+    "busy": "Already scheduled",
+    "dateStatus": "{date} - {status}",
+    "bookingFrom": "From {from} → {to}"
   },
   "block": {
     "createTitle": "Block vehicle",
@@ -100,7 +130,7 @@
     "previewConflictTitle": "The vehicle may already be busy in this period",
     "previewConflictDescription": "Early warning - the system checks again when you save.",
     "vehicle": "Vehicle",
-    "period": "Blocked period",
+    "period": "Applies to",
     "periodAriaLabel": "Vehicle block period",
     "periodStart": "Starts",
     "periodEnd": "Ends",
@@ -115,7 +145,8 @@
       "rangeOrder": "The end time must be after the start time"
     },
     "created": "Vehicle blocked",
-    "updated": "Block updated"
+    "updated": "Block updated",
+    "subtitle": "Stop taking bookings for a period"
   },
   "blockDetail": {
     "title": "Vehicle block",
@@ -136,7 +167,7 @@
     "released": "Block released"
   },
   "dailyPrice": {
-    "title": "Set a price by day",
+    "title": "Set custom price",
     "vehicle": "Vehicle",
     "defaultPrice": "Default price",
     "defaultPriceValue": "{daily}/day",
@@ -150,8 +181,8 @@
     "hourlyAddon": "₫/hour",
     "note": "Note",
     "notePlaceholder": "e.g. National Day rate",
-    "restore": "Restore the default price",
-    "submit": "Save price",
+    "restore": "Restore",
+    "submit": "Apply",
     "saved": "Custom price saved",
     "errors": {
       "rangeTooLong": "The range can be at most {max, plural, one {# day} other {# days}}",
@@ -161,7 +192,11 @@
     "confirmRestoreContent": "This removes the custom price for {vehicle} between {from} and {to}. The weekday/weekend rate applies again.",
     "confirmRestoreOk": "Restore",
     "restored": "Default price restored ({count, plural, one {# day} other {# days}})",
-    "restoredNone": "There was no custom price in this range"
+    "restoredNone": "There was no custom price in this range",
+    "subtitle": "Set a special rental price for holidays, weekends and more",
+    "dayCount": "{count, plural, one {# day} other {# days}}",
+    "delta": "{sign}{amount} ({sign}{percent}%)",
+    "hourlyTooltip": "Custom hourly price for exactly these days"
   },
   "maintenance": {
     "title": "Maintenance job",
@@ -251,5 +286,23 @@
     "confirmRestoreContent": "This removes the custom price for {count, plural, one {# vehicle} other {# vehicles}} between {from} and {to}. The weekday/weekend rate applies again.",
     "restored": "Restored {count, plural, one {# vehicle-day} other {# vehicle-days}}",
     "tableMore": "…and {count, plural, one {# more vehicle} other {# more vehicles}}"
+  },
+  "page": {
+    "title": "Rental calendar",
+    "subtitle": "Track every pickup and return, avoid double bookings and make the most of idle time across your fleet.",
+    "create": "Create booking"
+  },
+  "event": {
+    "blocked": "Blocked",
+    "customerHidden": "Renter",
+    "remaining": "Left: <b>{duration}</b>",
+    "timeRange": "{from} → {to}",
+    "paidFull": "Paid in full",
+    "paidPartial": "{percent}% collected",
+    "unpaid": "Not collected",
+    "sourceAria": "source {source}"
+  },
+  "requestDialog": {
+    "loading": "Rental request details"
   }
 }

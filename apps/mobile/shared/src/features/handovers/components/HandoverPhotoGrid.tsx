@@ -14,9 +14,9 @@ import {
   type HandoverType,
 } from '@xeprime/types';
 import { AlertDialog } from '@/components/ui/AlertDialog';
+import { ActionSheetButtons } from '@/components/ui/ActionSheetButtons';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { IconButton } from '@/components/ui/IconButton';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -43,7 +43,8 @@ import { getErrorMessage } from '@/lib/get-error-message';
 /** Ô 96×96: đủ để nhận ra góc chụp, và năm ô vẫn xuống hai hàng trên máy hẹp nhất. */
 const CELL = 96;
 /** Hình mẫu góc chụp trong ô trống (tỉ lệ 120×72 của web). */
-const SAMPLE_WIDTH = 64;
+/** Hình ô trống vuông 66 - đúng khung "Empty State" của Figma (cao bằng ô 66). */
+const SAMPLE_WIDTH = 66;
 
 /*
   Ảnh lấp KÍN ô — `<Image>` không nhận prop style của Tamagui, nên kích thước ở `StyleSheet`.
@@ -125,8 +126,14 @@ export function HandoverPhotoGrid({
   ensureHandover,
   variant = 'grid',
   disabled = false,
+  highlightSlots,
 }: {
   bookingId: string;
+  /**
+   * Góc vừa bị cảnh báo "chưa đủ ảnh" (web `highlightSlots`, 25/11/2026) — ô CÒN TRỐNG trong tập này
+   * viền đỏ cho tới khi chụp.
+   */
+  highlightSlots?: ReadonlySet<string> | undefined;
   /**
    * `grid` (mặc định - màn bổ sung biên bản): hai nhóm có tiêu đề, ngoại thất và đồng hồ KM.
    * `row` (chi tiết đơn - web `variant="row"`): mọi góc của loại xe chung một lưới, nhãn dưới ảnh.
@@ -168,6 +175,9 @@ export function HandoverPhotoGrid({
   const [preview, setPreview] = useState<string | null>(null);
   /** Ô đang chờ xác nhận GỠ — `null` là không hỏi ai cả. */
   const [removingSlot, setRemovingSlot] = useState<HandoverPhotoSlot | null>(null);
+  /** Ô ĐÃ CÓ ẢNH đang mở tấm "Xem / Gỡ / Đổi ảnh" (người dùng 20/11/2026). */
+  const [managingSlot, setManagingSlot] = useState<HandoverPhotoSlot | null>(null);
+  const domainLabel = useDomainLabel();
 
   const canManagePermission = permissions.has(PERMISSION.HANDOVER_MANAGE);
   const canManage = canManagePermission && !disabled;
@@ -251,7 +261,7 @@ export function HandoverPhotoGrid({
   // Chuyển `open` (async) thành một handler void ổn định — `PhotoSlot` chỉ cần bấm-là-chạy.
   const openSlot = useCallback((slot: HandoverPhotoSlot) => void open(slot), [open]);
 
-  const confirmRemove = useCallback((slot: HandoverPhotoSlot) => setRemovingSlot(slot), []);
+  const manageSlot = useCallback((slot: HandoverPhotoSlot) => setManagingSlot(slot), []);
 
   /*
    * Danh sách `fileId` phải ỔN ĐỊNH giữa các lần render: nó là dependency của `useQueries`, và
@@ -277,13 +287,14 @@ export function HandoverPhotoGrid({
       key={slot}
       slot={slot}
       filled={taken.has(slot)}
+      flagged={!taken.has(slot) && busySlot !== slot && Boolean(highlightSlots?.has(slot))}
       busy={busySlot === slot}
       canOpen={canViewFiles && Boolean(taken.get(slot)?.fileId)}
       thumbnailUrl={photoUrls[taken.get(slot)?.fileId ?? '']}
       canManage={canManage}
       onCapture={setPicking}
       onOpen={openSlot}
-      onRemove={confirmRemove}
+      onManage={manageSlot}
       width={rowCellWidth}
       height={rowCellWidth * ROW_RATIO}
       labelBelow
@@ -349,6 +360,57 @@ export function HandoverPhotoGrid({
         </Text>
       </BottomSheet>
 
+      {/*
+        Ô đã có ảnh: chạm mở tấm thao tác - xem ảnh, gỡ ảnh, ĐỔI ảnh (server THAY ảnh cũ của cùng
+        góc khi tải lên lại, nên đổi ảnh = chụp/chọn ảnh mới cho đúng ô đó).
+      */}
+      <BottomSheet
+        open={managingSlot !== null}
+        onClose={() => setManagingSlot(null)}
+        title={managingSlot ? domainLabel('handoverPhotoSlot', managingSlot) : ''}
+        chrome="v2"
+        headerDivider
+      >
+        <ActionSheetButtons
+          actions={
+            managingSlot
+              ? [
+                  ...(canViewFiles && taken.get(managingSlot)?.fileId
+                    ? [
+                        {
+                          key: 'view',
+                          label: t('view'),
+                          onPress: () => {
+                            setManagingSlot(null);
+                            openSlot(managingSlot);
+                          },
+                        },
+                      ]
+                    : []),
+                  {
+                    key: 'remove',
+                    label: t('remove'),
+                    danger: true,
+                    onPress: () => {
+                      setManagingSlot(null);
+                      setRemovingSlot(managingSlot);
+                    },
+                  },
+                  {
+                    key: 'replace',
+                    label: t('replace'),
+                    primary: true,
+                    onPress: () => {
+                      setManagingSlot(null);
+                      setPicking(managingSlot);
+                    },
+                  },
+                ]
+              : []
+          }
+        />
+      </BottomSheet>
+
       <PhotoViewer
         url={preview}
         unavailableLabel={t('unavailable')}
@@ -380,12 +442,12 @@ export function HandoverPhotoGrid({
 /**
  * Một ô góc chụp.
  *
- * Ô ĐÃ CÓ ẢNH mở ảnh khi chạm — không xoá. Xoá là một nút riêng ở góc, và còn hỏi lại: ảnh hiện
- * trạng là bằng chứng, mất nó bằng một cú chạm nhầm là mất thứ không chụp lại được.
+ * Ô ĐÃ CÓ ẢNH: người lập biên bản chạm mở tấm "Xem / Gỡ / Đổi ảnh" (20/11/2026); gỡ vẫn hỏi lại
+ * vì ảnh hiện trạng là bằng chứng. Người chỉ xem thì chạm mở ảnh.
  *
  * MEMO vì lưới re-render mỗi khi `busySlot`/`preview` đổi (một cú bấm ở một ô); không có nó thì
  * cả năm ô dựng lại theo, dù bốn ô còn lại không đổi gì. Ba handler nhận thẳng `slot` và đến từ
- * props ỔN ĐỊNH của cha (`setPicking`/`openSlot`/`confirmRemove`, đều giữ nguyên danh tính giữa
+ * props ỔN ĐỊNH của cha (`setPicking`/`openSlot`/`manageSlot`, đều giữ nguyên danh tính giữa
  * các lần render) — memo chỉ có tác dụng khi props so sánh bằng nhau, và một closure dựng mới
  * mỗi render ở nơi gọi sẽ vô hiệu hoá nó ngay.
  */
@@ -395,19 +457,22 @@ const FLOAT_BTN = 28;
 const PhotoSlot = memo(function PhotoSlot({
   slot,
   filled,
+  flagged = false,
   busy,
   canOpen,
   canManage,
   thumbnailUrl,
   onCapture,
   onOpen,
-  onRemove,
+  onManage,
   width = CELL,
   height = CELL,
   labelBelow = false,
 }: {
   slot: HandoverPhotoSlot;
   filled: boolean;
+  /** Ô trống vừa bị cảnh báo thiếu ảnh — viền đỏ (web `.flagged`). */
+  flagged?: boolean;
   busy: boolean;
   canOpen: boolean;
   canManage: boolean;
@@ -415,7 +480,8 @@ const PhotoSlot = memo(function PhotoSlot({
   thumbnailUrl: string | undefined;
   onCapture: (slot: HandoverPhotoSlot) => void;
   onOpen: (slot: HandoverPhotoSlot) => void;
-  onRemove: (slot: HandoverPhotoSlot) => void;
+  /** Ô đã có ảnh + có quyền lập biên bản: mở tấm "Xem / Gỡ / Đổi ảnh". */
+  onManage: (slot: HandoverPhotoSlot) => void;
   width?: number;
   height?: number;
   /** Dạng `row` của web: nhãn 14 màu chữ nằm DƯỚI ô, ô viền `border-strong` nền `bg-muted`. */
@@ -434,9 +500,11 @@ const PhotoSlot = memo(function PhotoSlot({
   const thumbnail = thumbnailUrl && thumbnailUrl !== brokenUrl ? thumbnailUrl : null;
 
   const press = filled
-    ? canOpen
-      ? () => onOpen(slot)
-      : undefined
+    ? canManage
+      ? () => onManage(slot)
+      : canOpen
+        ? () => onOpen(slot)
+        : undefined
     : canManage
       ? () => onCapture(slot)
       : undefined;
@@ -462,16 +530,9 @@ const PhotoSlot = memo(function PhotoSlot({
             Giữ thêm nền và viền xanh quanh ảnh chỉ làm lưới ồn và làm tấm ảnh trông như một
             nhãn trạng thái thay vì một tấm ảnh.
           */
-          bg={filled && !thumbnail ? colors.successSurface : colors.surfaceMuted}
-          bc={
-            filled && !thumbnail
-              ? colors.success
-              : labelBelow
-                ? thumbnail
-                  ? 'transparent'
-                  : colors.borderInput
-                : colors.border
-          }
+          bg={filled && !thumbnail ? colors.successSurface : colors.background}
+          // Ô trống KHÔNG viền, chỉ nền xám nhạt - Figma `24158:103039` (người dùng 20/11/2026).
+          bc={flagged ? colors.danger : filled && !thumbnail ? colors.success : 'transparent'}
           ai="center"
           jc="center"
           gap={space.xs}
@@ -519,7 +580,7 @@ const PhotoSlot = memo(function PhotoSlot({
                 bw={2}
                 bc={colors.surface}
               >
-                <Ionicons name="eye" size={14} color={colors.onPrimary} />
+                <Ionicons name={canManage ? 'create' : 'eye'} size={14} color={colors.onPrimary} />
               </XStack>
             </>
           ) : (
@@ -536,11 +597,11 @@ const PhotoSlot = memo(function PhotoSlot({
                   color={colors.success}
                 />
               ) : (
-                // Ô trống: hình MẪU góc cần chụp, như web - không phải một icon máy ảnh chung.
-                <HandoverSlotSample slot={slot} color={colors.textMuted} width={SAMPLE_WIDTH} />
+                // Ô trống: hình Figma "Empty State" (khung ảnh + dấu "+") chung mọi góc (20/11/2026).
+                <HandoverSlotSample slot={slot} width={SAMPLE_WIDTH} />
               )}
-              {/* Nút nổi góc ô (như đổi avatar): máy ảnh = tải lên, mắt = xem (người dùng 16/11/2026). */}
-              {(!filled && canManage) || (filled && canOpen) ? (
+              {/* Nút nổi góc ô: mắt = xem. Ô trống không cần máy ảnh - hình đã có dấu "+" (20/11/2026). */}
+              {filled && (canOpen || canManage) ? (
                 <XStack
                   pos="absolute"
                   bottom={6}
@@ -554,7 +615,7 @@ const PhotoSlot = memo(function PhotoSlot({
                   bw={2}
                   bc={colors.surface}
                 >
-                  <Ionicons name={filled ? 'eye' : 'camera'} size={14} color={colors.onPrimary} />
+                  <Ionicons name={canManage ? 'create' : 'eye'} size={14} color={colors.onPrimary} />
                 </XStack>
               ) : null}
               {labelBelow && !(filled && canOpen) ? null : (
@@ -589,16 +650,6 @@ const PhotoSlot = memo(function PhotoSlot({
         </Text>
       ) : null}
 
-      {filled && canManage ? (
-        <XStack pos="absolute" top={-4} right={-4}>
-          <IconButton
-            icon="close"
-            label={t('remove')}
-            onPress={() => onRemove(slot)}
-            size={iconSize.md}
-          />
-        </XStack>
-      ) : null}
     </YStack>
   );
 });

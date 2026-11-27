@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  CameraOutlined,
   CheckCircleFilled,
   CloseOutlined,
   EyeOutlined,
@@ -294,11 +293,8 @@ export function HandoverPhotoGrid({
                 className={styles.slotAction}
                 aria-label={t('uploadSlot', { slot: label })}
               >
+                {/* Hình Figma "Empty State" đã có dấu "+" - không thêm viên "Tải lên" (20/11/2026). */}
                 <HandoverSlotSample slot={slot} className={styles.slotSample} />
-                <span className={styles.slotUploadPill}>
-                  <CameraOutlined aria-hidden="true" />
-                  {t('upload')}
-                </span>
               </button>
             </Upload>
           )}

@@ -52,7 +52,7 @@ export type WalletScope = (typeof WALLET_SCOPE)[keyof typeof WALLET_SCOPE];
 
 const base = (scope: WalletScope) => `/${scope}/wallet`;
 
-/** Cỡ trang bảng tổng hợp — cùng cỡ với web. */
+/** Cỡ trang bảng tổng hợp — cùng cỡ với web (app nối trang bằng cuộn vô hạn). */
 export const WALLET_STATEMENT_PAGE_SIZE = 20;
 
 /** Cỡ trang tab Biến động số dư — cùng cỡ với web. */

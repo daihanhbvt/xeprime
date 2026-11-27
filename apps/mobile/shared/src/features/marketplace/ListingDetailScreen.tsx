@@ -1,3 +1,6 @@
+import { useAppToast } from '@/components/feedback/use-app-toast';
+import { TOAST_PRESET } from '@/components/feedback/AppToast';
+import { useListingTripBlock } from './hooks/use-listing-trip-block';
 import { ScrollReveal } from '@/components/motion/ScrollReveal';
 import { MapLineIcon } from '@/components/icons/BrandIcons';
 import { Ionicons } from '@/components/icons/Ionicons';
@@ -353,6 +356,7 @@ export function ListingDetailScreen({
               shopSlug={listing.data.shopSlug}
               shopChatOpen={listing.data.shopChatOpen}
               trip={current}
+              selfDriveInsuranceBlocked={listing.data.selfDriveInsuranceBlocked === true}
               onNeedInput={(kind) => setInputRequest({ kind, nonce: Date.now() })}
               {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
             />
@@ -463,7 +467,10 @@ function RequestBar({
   trip,
   provinceCode,
   onNeedInput,
+  selfDriveInsuranceBlocked,
 }: {
+  /** Chủ xe đặt bảo hiểm Bắt buộc mà xe chưa đủ dữ liệu (ADR 0091 điều 1) - xem `useListingTripBlock`. */
+  selfDriveInsuranceBlocked: boolean;
   /** Thẻ còn thiếu một ô mở được trên trang ⇒ mở ô đó thay vì sang bước Chuyến đi. */
   onNeedInput: (kind: TripInputKind) => void;
   vehicleId: string;
@@ -478,6 +485,9 @@ function RequestBar({
   const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
   const navigateOnce = useNavigateOnce();
+  const toast = useAppToast();
+  // Cùng hook với cảnh báo trên thẻ đặt xe: không cho đi tiếp một chuyến server sẽ từ chối (web).
+  const tripBlock = useListingTripBlock({ selfDriveInsuranceBlocked }, trip);
   /*
     Hỏi cổng nhắn tin Ở ĐÂY chứ không để nút tự giấu mình: ô `f={1}` bọc ngoài vẫn giữ nửa bề
     ngang kể cả khi ruột nó rỗng, nên nút đặt xe sẽ không bao giờ nở ra hết hàng.
@@ -515,7 +525,9 @@ function RequestBar({
                */
               const missing = missingTripInput(trip);
               if (missing) onNeedInput(missing);
-              else
+              else if (tripBlock.message) {
+                toast.showNotice({ title: tripBlock.message, tone: TOAST_PRESET.WARNING });
+              } else
                 navigateOnce(ROUTES.booking.request(vehicleId, requestPrefill(trip, provinceCode)));
             }}
           />

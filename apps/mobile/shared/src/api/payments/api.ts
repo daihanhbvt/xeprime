@@ -6,6 +6,7 @@ type Schemas = components['schemas'];
 
 export type Payment = Schemas['PaymentDto'];
 export type RecordPaymentInput = Schemas['RecordPaymentDto'];
+export type AdjustDepositCollectedInput = Schemas['AdjustDepositCollectedDto'];
 
 /**
  * Ghi sổ tiền của một đơn (FIN-05, FIN-06). KHÔNG có thanh toán trực tuyến (ADR 0013) — đây là
@@ -19,6 +20,20 @@ export const paymentsApi = {
   record(bookingId: string, body: RecordPaymentInput): Promise<BookingDetail> {
     return getApiClient().post<BookingDetail>(
       `/bookings/${encodeURIComponent(bookingId)}/payments`,
+      body,
+    );
+  },
+
+  /**
+   * Sửa số cọc ĐÃ THU bằng bút toán điều chỉnh - server tính chênh với cọc ròng, ghi thêm một
+   * khoản thu cọc hoặc một khoản trả lại khách (không sửa/xoá khoản cũ). Trả về ĐƠN đầy đủ.
+   */
+  adjustDepositCollected(
+    bookingId: string,
+    body: AdjustDepositCollectedInput,
+  ): Promise<BookingDetail> {
+    return getApiClient().post<BookingDetail>(
+      `/bookings/${encodeURIComponent(bookingId)}/deposit-adjustments`,
       body,
     );
   },

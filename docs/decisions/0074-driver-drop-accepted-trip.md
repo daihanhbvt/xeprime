@@ -7,6 +7,8 @@ thống), [0063](0063-linked-driver-accounts.md) điều 6 (tài xế đã nhậ
 lại) · Giữ nguyên: 0045 (trách nhiệm huỷ suy ở server), 0066 (tiền giữ chỗ, huỷ muộn), 0067 điều 2
 (thiếu tài xế sát giờ KHÔNG tự huỷ đơn), 0072 (huỷ miễn phí tính từ lúc trả đủ)
 
+> 25/11/2026: điều 4 được [ADR 0108](0108-internal-driver-directory.md) nới — tài xế không tài khoản gán được lại, nhưng CHỈ từ danh bạ tài xế nội bộ (chống trùng lịch ở DB); ghi tên + SĐT gõ tay vẫn 422.
+
 ## Bối cảnh
 
 ADR 0063 (sửa 26/10) cho tài xế TRẢ LẠI chuyến đã nhận trong một cửa sổ ngắn sau khi nhận

@@ -94,6 +94,27 @@ export const DRIVER_OPERATION_FILTER_VALUES = Object.values(
  */
 export const DRIVER_LICENCE_CHECK_FILTER = 'needed';
 
+/**
+ * Danh sách GỘP của màn Tài xế (Figma `23737:41945`, 25/11/2026): tài xế LIÊN KẾT (ADR 0063) và tài
+ * xế NỘI BỘ (ADR 0108) chung một lưới. Mỗi dòng mang `kind` để client dựng đúng thẻ.
+ */
+export const DRIVER_ROSTER_KIND = {
+  LINKED: 'linked',
+  INTERNAL: 'internal',
+} as const;
+export type DriverRosterKind = (typeof DRIVER_ROSTER_KIND)[keyof typeof DRIVER_ROSTER_KIND];
+export const DRIVER_ROSTER_KIND_VALUES = Object.values(DRIVER_ROSTER_KIND) as DriverRosterKind[];
+
+/**
+ * Giá trị thêm của lọc "Hình thức" ở danh sách gộp = chỉ tài xế NỘI BỘ. Ba hình thức hợp tác
+ * (`DRIVER_TYPE`) là thuộc tính của liên kết — chọn một trong ba thì danh sách không còn người nội bộ.
+ */
+export const DRIVER_TYPE_FILTER_INTERNAL = DRIVER_ROSTER_KIND.INTERNAL;
+export const DRIVER_ROSTER_TYPE_FILTER_VALUES: readonly string[] = [
+  ...DRIVER_TYPE_VALUES,
+  DRIVER_TYPE_FILTER_INTERNAL,
+];
+
 /** Sắp xếp danh sách tài xế. `status` (lời mời chờ trả lời lên đầu, rồi tên) là mặc định của server. */
 export const DRIVER_LIST_SORT = {
   STATUS: 'status',
@@ -381,13 +402,17 @@ export const DRIVER_REASSIGN_TARGET_MINUTES = 30;
  * Nguồn của tài xế đang phủ một đơn `with_driver` (ADR 0067).
  *
  *  - `linked`   — tài khoản khách đã liên kết với bên thuê (ADR 0063), có lượt gán chờ/đã nhận;
- *  - `external` — tên + SĐT bên thuê ghi trên ĐÚNG đơn đó, không tài khoản, coi là đã nhận ngay.
+ *  - `external` — tên + SĐT bên thuê ghi trên ĐÚNG đơn đó, không tài khoản, coi là đã nhận ngay
+ *    (đơn cũ — ADR 0074 điều 4 đã bỏ ghi mới). Phía KHÁCH cũng đọc giá trị này cho tài xế nội bộ;
+ *  - `internal` — tài xế NỘI BỘ chọn từ danh bạ của bên thuê (ADR 0108), không tài khoản, coi là đã
+ *    nhận ngay; `id` là id trong danh bạ. Chỉ bề mặt BÊN THUÊ thấy giá trị này.
  *
- * Hai nguồn loại trừ nhau trên một đơn (CHECK `bookings_external_driver_exclusive_check`).
+ * Liên kết loại trừ với hai nguồn kia trên một đơn (CHECK `bookings_external_driver_exclusive_check`).
  */
 export const DRIVER_SOURCE = {
   LINKED: 'linked',
   EXTERNAL: 'external',
+  INTERNAL: 'internal',
 } as const;
 
 export type DriverSource = (typeof DRIVER_SOURCE)[keyof typeof DRIVER_SOURCE];
@@ -398,6 +423,14 @@ export const DRIVER_SOURCE_VALUES = Object.values(DRIVER_SOURCE) as DriverSource
  * API, form web và app native; trần khớp `bookings.external_driver_name VARCHAR(120)`.
  */
 export const EXTERNAL_DRIVER_NAME_LENGTH = { MIN: 2, MAX: 120 } as const;
+
+/**
+ * Danh bạ tài xế NỘI BỘ (ADR 0108) — tên dùng cùng luật `EXTERNAL_DRIVER_NAME_LENGTH` (tên được chụp
+ * lên `bookings.external_driver_name`). Ghi chú nội bộ tối đa chừng này ký tự.
+ */
+export const INTERNAL_DRIVER_NOTE_MAX = 500;
+/** Trần một trang danh bạ tài xế nội bộ (phân trang server-side). */
+export const INTERNAL_DRIVER_PAGE_MAX = 100;
 
 /**
  * Còn bấy nhiêu phút tới giờ nhận mà đơn `with_driver` đang `reserved` vẫn KHÔNG có ai phủ — không
@@ -434,6 +467,8 @@ export const DRIVER_ASSIGNMENT_AUDIT_ACTION = {
   EXTERNAL_SET: 'booking.driver_external_set',
   /** Tài xế ngoài hệ thống bị xoá khỏi đơn (bỏ gán, hoặc thay bằng tài xế liên kết — ADR 0067). */
   EXTERNAL_CLEARED: 'booking.driver_external_cleared',
+  /** Bên thuê gán / đổi tài xế NỘI BỘ từ danh bạ (ADR 0108) — tên + SĐT trong audit đã che. Gỡ dùng `EXTERNAL_CLEARED`. */
+  INTERNAL_SET: 'booking.driver_internal_set',
   /** Worker đã báo khẩn "chuyến sắp nhận chưa có tài xế" (ADR 0067 điều 2) — một lần mỗi đơn. */
   MISSING_ALERTED: 'booking.driver_missing_alerted',
   /** Tài xế đã nhận rồi RÚT khỏi chuyến (ADR 0074) — kèm lý do, vùng, hạn điều phối lại. */

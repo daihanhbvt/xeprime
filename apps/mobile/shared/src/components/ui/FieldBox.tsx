@@ -1,6 +1,16 @@
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, YStack } from 'tamagui';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import {
+  FIELD_V2,
+  FieldLabel,
+  FieldMessage,
+  FieldShell,
+  inLabelHint,
+  belowHint,
+  useFieldAppearance,
+  useFieldGap,
+} from './Field';
+import { LineIcon } from '@/components/icons/LineIcon';
 import type { IconName } from './Chip';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontWeight, iconSize, space } from '@/theme/tokens';
@@ -26,10 +36,12 @@ export function FieldBox({
 }) {
   const colors = useColors();
   const filled = value.length > 0;
+  const fieldGap = useFieldGap();
+  const v2 = useFieldAppearance() === 'v2';
 
   return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+    <YStack gap={fieldGap}>
+      <FieldLabel label={label} required={required} hint={inLabelHint(hint)} />
 
       <FieldShell
         onPress={onPress}
@@ -38,19 +50,25 @@ export function FieldBox({
         accessibilityLabel={`${label}: ${filled ? value : placeholder}`}
       >
         {icon ? <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} /> : null}
+        {/* Bộ ô `v2`: chữ + mũi tên "Down 2" Figma y như `SelectControl` - ô mở tấm chọn trông như mọi ô chọn khác. */}
         <Text
           f={1}
           py={space.sm}
-          col={filled ? colors.text : colors.placeholder}
-          fos={fieldFontSize.value}
-          fow={filled ? fontWeight.medium : fontWeight.regular}
+          col={filled ? colors.text : v2 ? colors.textPlaceholder : colors.placeholder}
+          fos={v2 ? FIELD_V2.selectFontSize : fieldFontSize.value}
+          fow={filled && !v2 ? fontWeight.medium : fontWeight.regular}
+          numberOfLines={1}
         >
           {filled ? value : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+        {v2 ? (
+          <LineIcon name="chevron-down-md" size={FIELD_V2.icon} color={colors.placeholder} />
+        ) : (
+          <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+        )}
       </FieldShell>
 
-      <FieldMessage error={error} hint={hint} />
+      <FieldMessage error={error} hint={belowHint(hint)} />
     </YStack>
   );
 }

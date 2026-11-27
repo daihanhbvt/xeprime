@@ -1,11 +1,15 @@
 import { Ionicons } from '@/components/icons/Ionicons';
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import type { InsuranceProductKind } from '@xeprime/types';
+import { sumMoney } from '@xeprime/domain';
+import { INSURANCE_PRODUCT_KIND, type InsuranceProductKind } from '@xeprime/types';
 import type { InsuranceOfferItem, PublicInsuranceProduct } from '@/api/insurance/api';
 import { CheckMark } from '@/components/ui/CheckMark';
+import { InsuranceFeeHint } from '@/components/ui/InsuranceFeeHint';
+import { Pill } from '@/components/ui/Pill';
+import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useLocalizedText } from '@/i18n/localized';
@@ -66,6 +70,18 @@ function InsuranceOption({
   const name = item.product
     ? localized(item.product.nameVi, item.product.nameEn)
     : domainLabel('insuranceProductKind', item.kind);
+  // Chủ xe đặt Bắt buộc (ADR 0091): luôn tích, không bỏ được - server đã cộng phí vào báo giá.
+  const isChecked = item.mandatory || checked;
+  const rate = item.tripAmount
+    ? t('option.tripRate', {
+        // Phí thu hộ GỘP vào giá bảo hiểm khách thấy, ⓘ tách hai số (ADR 0091 điều 3).
+        price: fmt.money(
+          item.serviceFeeAmount ? sumMoney([item.tripAmount, item.serviceFeeAmount]) : item.tripAmount,
+        ),
+      })
+    : item.dailyAmount
+      ? t('option.dailyRate', { price: fmt.pricePerDay(item.dailyAmount) })
+      : null;
 
   return (
     <YStack
@@ -73,27 +89,48 @@ function InsuranceOption({
       py={space.sm}
       px={layout.padX}
       bw={1}
-      bc={checked ? colors.primary : colors.border}
+      bc={isChecked ? colors.primary : colors.border}
       br={radius.md}
       bg={colors.surface}
       minWidth={0}
     >
       <Pressable
         onPress={() => onChange(!checked)}
+        disabled={item.mandatory}
         accessibilityRole="checkbox"
-        accessibilityState={{ checked }}
+        accessibilityState={{ checked: isChecked, disabled: item.mandatory }}
         accessibilityLabel={name ?? undefined}
       >
         <XStack ai="center" gap={space.sm} minWidth={0}>
-          <CheckMark checked={checked} />
-          <Text f={1} minWidth={0} col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
-            {name}
-          </Text>
-          <Text col={colors.primary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {t('option.dailyRate', { price: fmt.pricePerDay(item.dailyAmount) })}
-          </Text>
+          <CheckMark checked={isChecked} />
+          <XStack f={1} minWidth={0} ai="center" gap={space.xs} flexWrap="wrap">
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
+              {name}
+            </Text>
+            {item.mandatory ? <Pill tone="warning" label={t('option.mandatory')} /> : null}
+          </XStack>
+          {rate ? (
+            <Text col={colors.primary} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {rate}
+            </Text>
+          ) : null}
+          {item.tripAmount && item.serviceFeeAmount ? (
+            <InsuranceFeeHint
+              size={fontSize.bodySm}
+              fee={{
+                premiumAmount: item.tripAmount,
+                serviceFeeAmount: item.serviceFeeAmount,
+                serviceFeePercent: null,
+              }}
+            />
+          ) : null}
         </XStack>
       </Pressable>
+      {item.mandatory ? (
+        <Text marginLeft={NAME_INDENT} col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('option.mandatoryNote')}
+        </Text>
+      ) : null}
       {item.product ? (
         <>
           <Pressable
@@ -115,8 +152,20 @@ function InsuranceOption({
             </XStack>
           </Pressable>
           {open ? (
-            <YStack marginLeft={NAME_INDENT}>
+            <YStack marginLeft={NAME_INDENT} gap={space.xs}>
               <InsuranceBenefits product={item.product} />
+              {/* Trang quyền lợi đầy đủ + người chịu khấu trừ (ADR 0091 điều 8) - mở trên web. */}
+              {item.kind === INSURANCE_PRODUCT_KIND.VEHICLE_TRIP ? (
+                <Text
+                  col={colors.primaryActive}
+                  fos={fontSize.bodySm}
+                  fow={fontWeight.semibold}
+                  accessibilityRole="link"
+                  onPress={() => void Linking.openURL(`${resolveWebBaseUrl()}/insurance`)}
+                >
+                  {t('option.benefitsPage')}
+                </Text>
+              ) : null}
             </YStack>
           ) : null}
         </>
@@ -165,6 +214,22 @@ function InsuranceBenefits({ product }: { product: PublicInsuranceProduct }) {
           : t('benefits.noDeductible'),
       )}
       {maxPayout ? fact(t('benefits.maxPayout'), maxPayout) : null}
+      {product.claimHotline ? (
+        <YStack>
+          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {t('benefits.claimHotline')}
+          </Text>
+          <Text
+            col={colors.primaryActive}
+            fos={fontSize.bodySm}
+            accessibilityRole="link"
+            // Tổng đài (1900…) không phải SĐT di động - ghép `tel:` như web, không qua `telHref`.
+            onPress={() => void Linking.openURL(`tel:${product.claimHotline!.replace(/\s/g, '')}`)}
+          >
+            {product.claimHotline}
+          </Text>
+        </YStack>
+      ) : null}
     </YStack>
   );
 }

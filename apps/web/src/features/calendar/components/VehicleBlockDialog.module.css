@@ -20,3 +20,121 @@
 .moneyInput:global(.ant-input-number) {
   width: 100%;
 }
+
+/* Thẻ xe đầu hộp (design `24200:99525`): nền xám, ảnh 82×52, tên + biển số, giá vàng. */
+.vehicle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-12);
+  margin-bottom: var(--xp-space-md);
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-muted);
+}
+
+.vehicleImage,
+.vehicleImageFallback {
+  flex: none;
+  width: 82px;
+  height: 52px;
+  border-radius: var(--xp-border-radius-chip);
+}
+
+.vehicleImage {
+  object-fit: cover;
+}
+
+.vehicleImageFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-placeholder);
+  font-size: 20px;
+}
+
+.vehicleTexts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.vehicleTitle {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--xp-space-12);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.vehicleName {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.vehiclePlate {
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-secondary);
+}
+
+.vehiclePrice {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-primary);
+}
+
+/* Nhãn trường kèm số phụ bên phải (design "Giá theo ngày … +200.000 đ (+25%)"). */
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  width: 100%;
+}
+
+.delta {
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.deltaUp {
+  color: var(--xp-color-success);
+}
+
+.deltaDown {
+  color: var(--xp-color-error);
+}
+
+.rangeDays {
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+/* Chân hộp: hành động phụ bên trái (Khôi phục), Huỷ + hành động chính bên phải. */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--xp-space-sm);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.footerEnd {
+  display: flex;
+  gap: var(--xp-space-12);
+  margin-left: auto;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Nhãn trường dàn hết bề ngang để số phụ (chênh giá, số ngày) nằm sát mép phải như design. */
+.wideLabel :global(.ant-form-item-label > label) {
+  width: 100%;
+}

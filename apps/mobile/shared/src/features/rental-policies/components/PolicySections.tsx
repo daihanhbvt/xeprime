@@ -1,5 +1,5 @@
 import { Ionicons } from '@/components/icons/Ionicons';
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { Pressable, Switch } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -14,12 +14,14 @@ import {
 } from 'react-hook-form';
 import {
   COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_COMBINATION,
+  COLLATERAL_COMBINATION_VALUES,
   COLLATERAL_MODE,
+  type CollateralCombination,
   type CollateralMode,
   COLLATERAL_MODE_VALUES,
   LONG_TERM_PACKAGE_MONTHS,
   MILEAGE_LIMIT,
-  VEHICLE_TYPE,
   type VehicleType,
 } from '@xeprime/types';
 import { deliverySummaryText, isFreeDeliveryFee, LIST_SEPARATOR } from '@xeprime/domain';
@@ -35,6 +37,7 @@ import { IconDisc } from '@/components/ui/IconDisc';
 import { IconLine } from '@/components/ui/IconLine';
 import { NumberField } from '@/components/ui/NumberField';
 import { CheckOption, RadioOption } from '@/components/ui/RadioOption';
+import { ChipTabs } from '@/components/ui/ChipTabs';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
@@ -50,7 +53,6 @@ import {
   space,
 } from '@/theme/tokens';
 import type { PolicyFormValues } from '../schema';
-import { LongTermPackagePreview } from './LongTermPackagePreview';
 
 type PolicyControl = Control<PolicyFormValues>;
 
@@ -463,6 +465,7 @@ export function PolicySections<T extends PolicyFormValues>({
   blocks = ALL_POLICY_BLOCKS,
   shopWorkspace,
   afterDelivery,
+  afterRules,
   onAnchorLayout,
 }: {
   /**
@@ -481,6 +484,8 @@ export function PolicySections<T extends PolicyFormValues>({
   shopWorkspace?: { vehicleType: VehicleType };
   /** Khối đứng ngay sau "Giao nhận xe" — màn gian hàng đặt "Thời gian chết" ở đó, như web. */
   afterDelivery?: ReactNode;
+  /** Khối nối vào CUỐI nhóm quy định (web: bảo hiểm Bắt buộc/Tuỳ chọn sau giới hạn - ADR 0091). */
+  afterRules?: ReactNode;
   /**
    * Đo vị trí ba đích của mục lục (web `POLICY_NAV`: quy định · giao nhận · dài hạn) — toạ độ tương
    * đối với khung của `PolicySections`. Chỉ màn gian hàng dùng.
@@ -499,15 +504,7 @@ export function PolicySections<T extends PolicyFormValues>({
    */
   const tCollateral = useTranslations('Shop.policies.workspace.collateral');
   const tShopWorkspace = useTranslations('Shop.policies.workspace');
-  const shopCollateral = shopWorkspace
-    ? {
-        title: tCollateral('title'),
-        optionDescriptions: {
-          [COLLATERAL_MODE.CASH]: tCollateral('modeCash'),
-          [COLLATERAL_MODE.NONE]: tCollateral('modeNone'),
-        },
-      }
-    : {};
+  const shopCollateral = shopWorkspace ? { title: tCollateral('title') } : {};
   // Đánh số theo khối ĐANG HIỆN — ẩn một khối không để lại một con số bị nhảy cóc (như web).
   const shown = ALL_POLICY_BLOCKS.filter((block) => blocks.includes(block));
   /* Khối con gọi `step(vị trí cố định 1..5, …)`; đổi vị trí đó sang số thứ tự trong `shown`. */
@@ -552,7 +549,8 @@ export function PolicySections<T extends PolicyFormValues>({
       control={control}
       disabled={disabled}
       step={step}
-      withToggle={Boolean(shopWorkspace)}
+      // Công tắc quá giờ ở MỌI màn (web `LimitBlocks`): form suy `overtimeEnabled` từ dữ liệu.
+      withToggle
     />
   ) : null;
   const discount = shown.includes(POLICY_BLOCK.DISCOUNT) ? (
@@ -562,7 +560,6 @@ export function PolicySections<T extends PolicyFormValues>({
       step={step}
       legacyTiers={legacyDiscountTiers}
       byTiers={Boolean(shopWorkspace)}
-      {...(shopWorkspace ? { exampleVehicleType: shopWorkspace.vehicleType } : {})}
     />
   ) : null;
 
@@ -599,6 +596,7 @@ export function PolicySections<T extends PolicyFormValues>({
           collateral,
           mileage,
           overtime,
+          afterRules,
         ])}
         {group(POLICY_ANCHOR.DELIVERY, tShopWorkspace('delivery.title'), [delivery, afterDelivery])}
         {group(POLICY_ANCHOR.LONG_TERM, tShopWorkspace('longTerm.title'), [discount])}
@@ -621,6 +619,7 @@ export function PolicySections<T extends PolicyFormValues>({
       {afterDelivery}
       {mileage}
       {overtime}
+      {afterRules}
       {discount ? (
         <YStack onLayout={(e) => onAnchorLayout?.(POLICY_ANCHOR.LONG_TERM, e.nativeEvent.layout.y)}>
           {discount}
@@ -651,25 +650,21 @@ export type PolicyAnchor = (typeof POLICY_ANCHOR)[keyof typeof POLICY_ANCHOR];
 
 type StepTitle = (index: number, title: string) => string;
 
-/**
- * Chế độ bảo đảm → khoá câu mô tả.
- *
- * Khai tường minh chứ không ghép chuỗi từ mã: ghép chuỗi thì thêm một chế độ mới là khoá thiếu
- * âm thầm, còn bảng này để TypeScript bắt ngay.
- */
-const MODE_HINT_KEY: Record<CollateralMode, 'modeCash' | 'modeAsset' | 'modeNone'> = {
-  [COLLATERAL_MODE.CASH]: 'modeCash',
-  [COLLATERAL_MODE.ASSET]: 'modeAsset',
-  [COLLATERAL_MODE.NONE]: 'modeNone',
-};
+/** Mốc gợi ý số tiền cọc (Figma, như web) - bấm chỉ ĐIỀN số, không phải một mức nền tảng áp đặt. */
+const DEPOSIT_PRESETS = [3_000_000, 5_000_000, 10_000_000, 15_000_000] as const;
 
+/**
+ * Cọc kết hợp (ADR 0112 điều 2) - bản native của web `CollateralBlock`: "Có yêu cầu thế chấp" bật cọc
+ * tiền, cọc tài sản hoặc cả hai, kèm "Khách chọn 1 trong 2" / "Bắt buộc cả 2"; "Miễn thế chấp" không
+ * hỏi gì (khối xanh, không còn +40% hay eKYC). Tắt một hình thức thì ô của nó ẩn - `formToSaveInput`
+ * gửi 0 / rỗng cho hình thức đang tắt.
+ */
 function DepositSection({
   control,
   disabled,
   step,
   hint,
   title,
-  optionDescriptions,
 }: {
   control: PolicyControl;
   disabled: boolean;
@@ -678,115 +673,213 @@ function DepositSection({
   hint?: string;
   /** Xem docblock ở `CollateralPolicySection`. */
   title?: string;
+  /** Giữ chữ ký cũ cho nơi gọi - mô tả lựa chọn nay là câu chung của ADR 0112. */
   optionDescriptions?: Partial<Record<string, string>>;
 }) {
   const colors = useColors();
   const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.deposit');
+  const tc = useTranslations('Shop.policies.workspace.collateral');
+  const tUnits = useTranslations('Common.units');
   const domainLabel = useDomainLabel();
-  const mode = useWatch({ control, name: 'collateralMode' });
+  const { field: modeField } = useController({ control, name: 'collateralMode' });
+  const { field: cashField, fieldState: cashState } = useController({
+    control,
+    name: 'collateralCashEnabled',
+  });
+  const { field: assetField } = useController({ control, name: 'collateralAssetEnabled' });
+  const { field: comboField } = useController({ control, name: 'collateralCombination' });
+  const { field: amountField } = useController({ control, name: 'depositAmount' });
+  const mode = modeField.value as CollateralMode;
+  const cash = cashField.value === true;
+  const asset = assetField.value === true;
+  const both = cash && asset;
+
+  const selectMode = (next: CollateralMode) => {
+    modeField.onChange(next);
+    // Chuyển sang "Có yêu cầu" mà chưa bật hình thức nào ⇒ bật cọc tiền (phổ biến nhất) - như web.
+    if (next === COLLATERAL_MODE.REQUIRED && !cash && !asset) cashField.onChange(true);
+  };
+  const toggle = (which: 'cash' | 'asset') => {
+    const field = which === 'cash' ? cashField : assetField;
+    const next = field.value !== true;
+    field.onChange(next);
+    // "Bắt buộc cả 2" chỉ có nghĩa khi cả hai bật.
+    if (!next) comboField.onChange(COLLATERAL_COMBINATION.ANY_ONE);
+  };
 
   return (
     <SectionShell>
       <YStack gap={space.md}>
-        <SectionHead tone={TONE.deposit} title={step(1, title ?? t('title'))} hint={t('hint')} />
-
-        <Controller
-          control={control}
-          name="collateralMode"
-          render={({ field }) => (
-            <YStack gap={space.xs}>
-              <FieldLabel label={t('mode')} required />
-              {/*
-                Mỗi lựa chọn có MỘT CÂU nói nó là gì — đúng `description` của
-                `COLLATERAL_MODE_OPTIONS` bên web.
-
-                Ba cái tên trần ("Cọc tiền", "Tài sản thế chấp", "Miễn thế chấp") không nói được
-                tiền có hoàn lại không, gian hàng có giữ tiền không, hay xe sẽ mang nhãn gì trên
-                sàn — mà đó mới là thứ chủ xe cần để chọn.
-              */}
-              {COLLATERAL_MODE_VALUES.map((value) => (
-                <RadioOption
-                  key={value}
-                  label={domainLabel('collateralMode', value)}
-                  hint={optionDescriptions?.[value] ?? t(MODE_HINT_KEY[value])}
-                  checked={field.value === value}
-                  disabled={disabled}
-                  onPress={() => field.onChange(value)}
-                />
-              ))}
-            </YStack>
-          )}
+        <SectionHead
+          tone={TONE.deposit}
+          title={step(1, title ?? tc('title'))}
+          hint={tc('subtitle')}
         />
 
-        {mode === COLLATERAL_MODE.CASH ? (
-          <YStack gap={space.xs}>
-            <MoneyField
-              control={control}
-              name="depositAmount"
-              label={t('amount')}
-              hint={t('amountHint')}
-              required
-              editable={!disabled}
+        <YStack gap={space.xs}>
+          <FieldLabel label={tc('modeLabel')} required />
+          {COLLATERAL_MODE_VALUES.map((value) => (
+            <RadioOption
+              key={value}
+              label={domainLabel('collateralMode', value)}
+              hint={value === COLLATERAL_MODE.REQUIRED ? tc('modeRequired') : tc('modeNone')}
+              checked={mode === value}
+              disabled={disabled}
+              onPress={() => selectMode(value)}
             />
-            {/* Màu nhấn thương hiệu, không phải chữ mờ: đây là PHẠM VI ẢNH HƯỞNG của con số vừa
-                gõ (`styles.depositHint` bên web cũng tô `primary-active`), không phải một chú
-                thích để lướt qua. */}
-            {hint ? (
-              <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                {hint}
-              </Text>
-            ) : null}
-          </YStack>
-        ) : null}
+          ))}
+        </YStack>
 
-        {mode === COLLATERAL_MODE.ASSET ? (
-          <Controller
-            control={control}
-            name="collateralAssetTypes"
-            render={({ field, fieldState }) => {
-              const selected = field.value ?? [];
-              return (
+        {mode === COLLATERAL_MODE.REQUIRED ? (
+          <YStack gap={space.sm}>
+            <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+              {tc('methodTitle')}
+            </Text>
+            {/*
+              Chip viên thuốc như web/Figma (`24729:80545`): luôn hiện, chỉ chọn được khi bật cả hai
+              hình thức - một hình thức thì cố định "Khách chọn 1 trong 2".
+            */}
+            <YStack
+              opacity={both && !disabled ? 1 : 0.6}
+              pointerEvents={both && !disabled ? 'auto' : 'none'}
+              accessibilityState={{ disabled: !both || disabled }}
+            >
+              <ChipTabs<CollateralCombination>
+                label={tc('methodTitle')}
+                gutter={0}
+                items={COLLATERAL_COMBINATION_VALUES.map((value) => ({
+                  value,
+                  label: domainLabel('collateralCombination', value),
+                }))}
+                value={
+                  both
+                    ? (comboField.value as CollateralCombination)
+                    : COLLATERAL_COMBINATION.ANY_ONE
+                }
+                onSelect={(value) => comboField.onChange(value)}
+              />
+            </YStack>
+
+            <YStack
+              gap={space.sm}
+              p={space.sm}
+              br={radius.md}
+              bw={1}
+              bc={cash ? colors.primaryHover : colors.borderSubtle}
+            >
+              <CheckOption
+                label={tc('cashTitle')}
+                hint={tc('cashHint')}
+                checked={cash}
+                disabled={disabled}
+                onPress={() => toggle('cash')}
+              />
+              {cash ? (
                 <YStack gap={space.xs}>
-                  <FieldLabel label={t('assetTypes')} required />
-                  {/*
-                    Cùng khung với ba lựa chọn "Hình thức bảo đảm" ngay trên, chỉ khác dấu:
-                    VUÔNG vì chọn được nhiều loại tài sản (web dùng `Checkbox.Group`).
-
-                    Trước đây là dải chip. Chip đọc ra là bộ lọc, và nằm ngay dưới một hàng
-                    lựa chọn khung-viền thì cùng một khối có hai kiểu chọn khác hẳn nhau.
-                  */}
-                  {COLLATERAL_ASSET_TYPE_VALUES.map((value) => (
-                    <CheckOption
-                      key={value}
-                      label={domainLabel('collateralAssetType', value)}
-                      checked={selected.includes(value)}
-                      disabled={disabled}
-                      onPress={() =>
-                        field.onChange(
-                          selected.includes(value)
-                            ? selected.filter((item) => item !== value)
-                            : [...selected, value],
-                        )
-                      }
-                    />
-                  ))}
-                  {/* Lỗi thắng gợi ý — đúng `help` của `CheckboxGroupField` bên web. */}
-                  <FieldMessage
-                    {...(fieldState.error?.message ? { error: fieldState.error.message } : {})}
-                    hint={t('assetTypesHint')}
+                  <MoneyField
+                    control={control}
+                    name="depositAmount"
+                    label={tc('amountLabel')}
+                    hint={t('amountHint')}
+                    required
+                    editable={!disabled}
                   />
+                  <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={tc('presetsLabel')}>
+                    {DEPOSIT_PRESETS.map((amount) => {
+                      const active = Number(amountField.value) === amount;
+                      return (
+                        <Pressable
+                          key={amount}
+                          disabled={disabled}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active, disabled }}
+                          onPress={() => amountField.onChange(amount)}
+                        >
+                          <YStack
+                            px={space.sm}
+                            py={space.xs}
+                            br={radius.md}
+                            bw={1}
+                            bc={active ? colors.primaryHover : colors.borderInput}
+                            bg={active ? colors.primaryLight : colors.surface}
+                            opacity={disabled ? 0.6 : 1}
+                          >
+                            <Text
+                              col={active ? colors.primaryActive : colors.text}
+                              fos={fontSize.bodySm}
+                              fow={fontWeight.semibold}
+                            >
+                              {tUnits('millionShort', { count: amount / 1_000_000 })}
+                            </Text>
+                          </YStack>
+                        </Pressable>
+                      );
+                    })}
+                  </XStack>
+                  {hint ? (
+                    <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                      {hint}
+                    </Text>
+                  ) : null}
                 </YStack>
-              );
-            }}
-          />
-        ) : null}
+              ) : null}
+            </YStack>
 
-        {mode === COLLATERAL_MODE.NONE ? (
-          <Callout tone="info" title={t('noneTitle')}>
-            {t('noneBody')}
+            <YStack
+              gap={space.sm}
+              p={space.sm}
+              br={radius.md}
+              bw={1}
+              bc={asset ? colors.primaryHover : colors.borderSubtle}
+            >
+              <CheckOption
+                label={tc('assetTitle')}
+                hint={tc('assetHint')}
+                checked={asset}
+                disabled={disabled}
+                onPress={() => toggle('asset')}
+              />
+              {asset ? (
+                <Controller
+                  control={control}
+                  name="collateralAssetTypes"
+                  render={({ field, fieldState }) => {
+                    const selected = field.value ?? [];
+                    return (
+                      <YStack gap={space.xs}>
+                        <FieldLabel label={t('assetTypes')} required />
+                        {COLLATERAL_ASSET_TYPE_VALUES.map((value) => (
+                          <CheckOption
+                            key={value}
+                            label={domainLabel('collateralAssetType', value)}
+                            checked={selected.includes(value)}
+                            disabled={disabled}
+                            onPress={() =>
+                              field.onChange(
+                                selected.includes(value)
+                                  ? selected.filter((item) => item !== value)
+                                  : [...selected, value],
+                              )
+                            }
+                          />
+                        ))}
+                        {fieldState.error?.message ? (
+                          <FieldMessage error={fieldState.error.message} />
+                        ) : null}
+                      </YStack>
+                    );
+                  }}
+                />
+              ) : null}
+            </YStack>
+            {cashState.error?.message ? <FieldMessage error={cashState.error.message} /> : null}
+          </YStack>
+        ) : (
+          <Callout tone="success" title={tc('noneBadgeTitle')}>
+            {tc('noneBadgeBody')}
           </Callout>
-        ) : null}
+        )}
       </YStack>
     </SectionShell>
   );
@@ -1162,7 +1255,6 @@ function LongTermDiscountSection({
   step,
   legacyTiers,
   byTiers,
-  exampleVehicleType,
 }: {
   control: PolicyControl;
   disabled: boolean;
@@ -1173,8 +1265,6 @@ function LongTermDiscountSection({
    * tắt (`discountEnabled` đi theo số mốc). Màn ghi đè theo xe giữ công tắc như web.
    */
   byTiers?: boolean;
-  /** Có ⇒ khung "Khách sẽ thấy trên sàn" với giá tháng VÍ DỤ của loại xe này (web `ExamplePreview`). */
-  exampleVehicleType?: VehicleType;
 }) {
   const colors = useColors();
   const TONE = useTone();
@@ -1300,7 +1390,7 @@ function LongTermDiscountSection({
                     editable={!disabled}
                   />
                   {/* Ghi chú: chỗ gian hàng nhớ VÌ SAO đặt mốc này — web có, đừng bỏ. */}
-                  <TextField
+                  <TextField multiline scrollable rows={3}
                     control={control}
                     name={`discountTiers.${index}.note`}
                     label={t('tierNote')}
@@ -1346,9 +1436,6 @@ function LongTermDiscountSection({
               title={t('formulaTitle')}
               body={t('formula')}
             />
-            {exampleVehicleType ? (
-              <ExamplePackagePreview control={control} vehicleType={exampleVehicleType} />
-            ) : null}
           </>
         ) : (
           <IconLine icon="power-outline">{t('disabledNote')}</IconLine>
@@ -1358,27 +1445,6 @@ function LongTermDiscountSection({
   );
 }
 
-/**
- * Giá tháng VÍ DỤ của khung xem trước trên màn chính sách gian hàng — gian hàng không có một giá
- * chung, nên preview cần một con số để hình dung. Chỉ là trạng thái hiển thị (không lưu, không gửi);
- * chủ xe sửa được ngay trong khung. Cùng số với web.
- */
-const EXAMPLE_MONTHLY_PRICE: Readonly<Record<VehicleType, number>> = {
-  [VEHICLE_TYPE.CAR]: 15_000_000,
-  [VEHICLE_TYPE.MOTORBIKE]: 3_000_000,
-};
-
-function ExamplePackagePreview({
-  control,
-  vehicleType,
-}: {
-  control: PolicyControl;
-  vehicleType: VehicleType;
-}) {
-  const [monthly, setMonthly] = useState<number | null>(EXAMPLE_MONTHLY_PRICE[vehicleType]);
-  const tiers = useWatch({ control, name: 'discountTiers' });
-  return <LongTermPackagePreview monthly={monthly} onMonthlyChange={setMonthly} tiers={tiers} />;
-}
 
 /**
  * Hai khối của form chính sách dùng LẺ, ngoài bộ bốn khối của `PolicySections`.
@@ -1407,16 +1473,21 @@ type PolicyFormSuperset<T extends PolicyFormValues> = Control<T>;
 export function DeliveryPolicySection<T extends PolicyFormValues>({
   control,
   disabled,
+  bare = false,
 }: {
   control: PolicyFormSuperset<T>;
   disabled: boolean;
+  /** Đã nằm trong một thẻ của nơi gọi (thẻ mục ADR 0112) - không dựng thẻ lồng thẻ. */
+  bare?: boolean;
 }) {
   return (
-    <DeliverySection
-      control={control as unknown as PolicyControl}
-      disabled={disabled}
-      step={PLAIN_STEP}
-    />
+    <SectionShellContext.Provider value={bare}>
+      <DeliverySection
+        control={control as unknown as PolicyControl}
+        disabled={disabled}
+        step={PLAIN_STEP}
+      />
+    </SectionShellContext.Provider>
   );
 }
 
@@ -1425,6 +1496,7 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
   disabled,
   title,
   optionDescriptions,
+  bare = false,
 }: {
   control: PolicyFormSuperset<T>;
   disabled: boolean;
@@ -1435,15 +1507,19 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
   title?: string;
   /** Mô tả từng chế độ do nơi gọi truyền để nói đúng ngữ cảnh (gian hàng vs một xe). */
   optionDescriptions?: Partial<Record<string, string>>;
+  /** Đã nằm trong một thẻ của nơi gọi (thẻ mục ADR 0112) - không dựng thẻ lồng thẻ. */
+  bare?: boolean;
 }) {
   return (
-    <DepositSection
-      control={control as unknown as PolicyControl}
-      disabled={disabled}
-      step={PLAIN_STEP}
-      {...(title === undefined ? {} : { title })}
-      {...(optionDescriptions === undefined ? {} : { optionDescriptions })}
-    />
+    <SectionShellContext.Provider value={bare}>
+      <DepositSection
+        control={control as unknown as PolicyControl}
+        disabled={disabled}
+        step={PLAIN_STEP}
+        {...(title === undefined ? {} : { title })}
+        {...(optionDescriptions === undefined ? {} : { optionDescriptions })}
+      />
+    </SectionShellContext.Provider>
   );
 }
 

@@ -111,7 +111,9 @@
       "attachmentAlt": "Ảnh minh chứng",
       "cancelAction": "Huỷ phiếu",
       "titleWithNo": "Chi tiết phiếu #{no}",
-      "approveAction": "Duyệt phiếu"
+      "approveAction": "Duyệt phiếu",
+      "confirmApprove": "Bạn có chắc chắn muốn duyệt {type, select, income {phiếu thu} other {phiếu chi}} #{no}?",
+      "confirmCancel": "Bạn có chắc chắn muốn huỷ {type, select, income {phiếu thu} other {phiếu chi}} #{no}?"
     },
     "form": {
       "title": "Tạo phiếu thu/chi",
@@ -129,7 +131,7 @@
       "method": "Hình thức",
       "amount": "Số tiền",
       "referenceCode": "Mã giao dịch",
-      "referenceCodePlaceholder": "VD: FT212001...",
+      "referenceCodePlaceholder": "VD: FT212001",
       "description": "Diễn giải",
       "attachments": {
         "label": "Đính kèm chứng từ",
@@ -141,7 +143,10 @@
         "tooMany": "Tối đa {max} tệp",
         "sourceCamera": "Chụp ảnh",
         "sourceLibrary": "Chọn từ thư viện",
-        "sourcePdf": "Chọn tệp PDF"
+        "sourcePdf": "Chọn tệp PDF",
+        "uploadCta": "Nhấn để tải lên Chứng từ đính kèm",
+        "uploadHint": "JPG, PNG, PDF (<{maxMb}Mb), nên đính kèm hóa đơn",
+        "uploadingFile": "Đang tải lên..."
       },
       "submit": {
         "income": "Tạo phiếu thu",
@@ -170,7 +175,8 @@
         "bookingRequired": "Chọn đơn thuê để gắn phiếu",
         "vehicleRequired": "Chọn xe để gắn phiếu",
         "description": "Nhập diễn giải / lý do",
-        "branchRequired": "Chọn chi nhánh phát sinh"
+        "branchRequired": "Chọn chi nhánh phát sinh",
+        "category": "Chọn danh mục"
       },
       "link": {
         "label": "Liên kết với",
@@ -188,7 +194,16 @@
       "typeExpense": "Phiếu chi",
       "bookingField": "Đơn hàng liên kết",
       "vehicleField": "Phương tiện liên kết",
-      "descriptionPlaceholder": "Nhập nội dung"
+      "descriptionPlaceholder": "Nhập nội dung",
+      "typeTab": {
+        "income": "Phiếu thu",
+        "expense": "Phiếu chi"
+      },
+      "linkChip": {
+        "none": "Khoản chung",
+        "booking": "Đơn thuê",
+        "vehicle": "Phương tiện"
+      }
     },
     "summary": {
       "error": "Không tải được số tổng - danh sách bên dưới vẫn đúng",
@@ -217,6 +232,8 @@
         "actions": "Thao tác"
       },
       "addRow": "Thêm danh mục",
+      "addTitle": "Thêm danh mục mới",
+      "addSubmit": "Thêm vào danh sách",
       "edit": "Sửa tên danh mục",
       "save": "Lưu danh mục",
       "discard": "Bỏ thay đổi",
@@ -225,7 +242,11 @@
       "deleteConfirm": "Xoá danh mục \"{name}\"?",
       "systemHint": "Danh mục hệ thống - không sửa hoặc xoá được",
       "empty": "Chưa có danh mục nào",
-      "done": "Đóng"
+      "done": "Đóng",
+      "typeBadge": {
+        "income": "Phiếu thu",
+        "expense": "Phiếu chi"
+      }
     },
     "uncategorized": "Chưa phân loại",
     "booking": {
@@ -239,6 +260,7 @@
       "label": "Số liệu thu chi",
       "income": "Tổng thu",
       "incomeHint": "Tiền mặt {cash} · CK {transfer}",
+      "incomeHintCompact": "TM {cash} · CK {transfer}",
       "expense": "Tổng chi",
       "balance": "Cân đối",
       "balanceHint": "Thu - Chi",
@@ -343,6 +365,26 @@
       "surcharge": "Chi phí phát sinh",
       "none": "Không có",
       "errorTitle": "Không tải được đơn thuê"
+    },
+    "partnerApp": {
+      "tiles": {
+        "within": "Trong hạn",
+        "withinHint": "{count, plural, other {# đơn thanh toán}}",
+        "unpaid": "Chưa thu",
+        "unpaidHint": "{count, plural, =0 {Đơn nào cũng đã thu một phần} other {Chưa thu phần nào}}"
+      },
+      "upcoming": "Sắp hạn",
+      "card": {
+        "dueAt": "Hạn: {date}",
+        "overdueAt": "Quá hạn: {date}",
+        "paid": "Đã thu: {amount}",
+        "debt": "Còn nợ: {amount}",
+        "more": "Thao tác đơn #{code}"
+      },
+      "detail": {
+        "title": "Đơn #{code}",
+        "vehicle": "Xe & Giao nhận"
+      }
     }
   },
   "overview": {
@@ -415,7 +457,9 @@
       "businessInfoLabel": "Giải thích về doanh thu và chi phí",
       "businessNote": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ - chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
       "cashInfoLabel": "Giải thích về dòng tiền ròng",
-      "cashNote": "Tiền vào trừ tiền ra của mọi phiếu đã duyệt, gồm cả tiền cọc thu và hoàn - đây là số tiền thực sự đi qua tay trong kỳ."
+      "cashNote": "Tiền vào trừ tiền ra của mọi phiếu đã duyệt, gồm cả tiền cọc thu và hoàn - đây là số tiền thực sự đi qua tay trong kỳ.",
+      "profitMonth": "Lợi nhuận tháng {month}",
+      "netCashShort": "Ròng trong kỳ"
     },
     "chart": {
       "title": "Dòng tiền & Lợi nhuận theo thời gian",
@@ -435,7 +479,9 @@
       "yAxisUnit": "Đơn vị: triệu đồng",
       "legend": "Chú giải biểu đồ",
       "weekRange": "{from} - {to}",
-      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc."
+      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc.",
+      "sourceDescription": "Cột chồng là doanh thu theo nguồn đơn, cột đỏ là chi phí, đường xanh là lợi nhuận. Đã loại tiền cọc.",
+      "titleShort": "Dòng tiền & Lợi nhuận"
     },
     "categories": {
       "incomeTitle": "Cơ cấu doanh thu",
@@ -451,7 +497,9 @@
         "deposit": "Tiền cọc",
         "deposit_refund": "Hoàn cọc",
         "maintenance": "Bảo dưỡng/Thay nhớt",
-        "repair": "Sửa chữa sự cố"
+        "repair": "Sửa chữa sự cố",
+        "xeprime_payout": "Tiền qua XePrime",
+        "tax_withheld": "Thuế khấu trừ"
       },
       "row": "{name} · {count, plural, other {# phiếu}}"
     },
@@ -503,7 +551,8 @@
         "label": "Sắp xếp",
         "revenue": "Doanh thu cao nhất",
         "trips": "Nhiều chuyến nhất"
-      }
+      },
+      "shareOfPeriod": "{value}% doanh thu kỳ"
     },
     "performance": {
       "title": "Hiệu suất kinh doanh",
@@ -512,7 +561,15 @@
         "vehicles": "Theo xe",
         "customers": "Theo khách"
       },
-      "sortValue": "Sắp xếp: {label}"
+      "sortValue": "Sắp xếp: {label}",
+      "top": {
+        "vehicles": "Top {count} theo lợi nhuận",
+        "customers": "Top {count} theo doanh thu"
+      }
+    },
+    "periodSheet": {
+      "title": "Chọn kỳ",
+      "custom": "Khoảng ngày tự chọn"
     }
   },
   "entity": {
@@ -593,6 +650,126 @@
       "label": "Xem theo",
       "ledger": "Giao dịch thu chi",
       "debts": "Công nợ"
+    }
+  },
+  "vehicle": {
+    "title": "Hiệu quả tài chính của xe",
+    "subtitle": "Doanh thu theo nguồn, chi phí vận hành và lợi nhuận của xe theo kỳ",
+    "openLedger": "Xem sổ Thu-Chi",
+    "createReceipt": "Tạo phiếu thu/chi",
+    "kpi": {
+      "revenue": {
+        "all": "Doanh thu",
+        "xeprime": "Doanh thu qua sàn",
+        "direct": "Doanh thu nguồn ngoài"
+      },
+      "revenueHint": "{count, plural, other {# chuyến}} · TB {avg}/chuyến",
+      "revenueHintNoTrips": "Chưa có chuyến nhận xe trong kỳ",
+      "changeSuffix": "so với cùng kỳ trước",
+      "changeNone": "Chưa có số cùng kỳ để so",
+      "cost": "Chi phí vận hành",
+      "costHint": "{count, plural, =0 {Chưa có phiếu chi} other {# phiếu chi}}",
+      "costInfo": "Chi phí của cả xe (bảo dưỡng, rửa xe, sửa chữa...), không chia theo nguồn doanh thu.",
+      "costInfoLabel": "Cách tính chi phí",
+      "profit": "Lợi nhuận tiền mặt",
+      "profitInfo": "Doanh thu cả xe trừ chi phí cả xe, cộng trên phiếu đã duyệt và đã loại tiền cọc. Chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
+      "profitInfoLabel": "Cách tính lợi nhuận",
+      "debt": "Công nợ & cọc đang giữ",
+      "debtHint": "{count, plural, =0 {Không đơn nào còn nợ} other {# đơn còn nợ}} · Cọc giữ {deposit}",
+      "debtInfo": "Tính tới thời điểm hiện tại, không theo kỳ đang chọn.",
+      "debtInfoLabel": "Công nợ tính tới khi nào",
+      "revenueInfo": "Tiền đã thu trong kỳ, đã loại tiền cọc. Gồm tiền thu tay và phần khách trả trước qua XePrime (đơn qua sàn, ghi vào sổ khi chuyến được quyết toán). Số chuyến là các chuyến có giờ nhận xe trong kỳ, kể cả chuyến đang chạy và sắp nhận, không tính đơn huỷ.",
+      "revenueInfoLabel": "Cách tính doanh thu"
+    },
+    "chart": {
+      "description": "Cột chồng là doanh thu theo nguồn đơn, cột đỏ là chi phí, đường xanh là lợi nhuận của cả xe."
+    },
+    "costTitle": "Cơ cấu chi phí của xe",
+    "capital": {
+      "title": "Nghĩa vụ nguồn xe",
+      "configure": "Cấu hình nguồn",
+      "add": "Khai nguồn xe",
+      "missing": "Chưa khai hồ sơ nguồn xe. Khai để đối chiếu xe này có tự nuôi được khoản vay, tiền thuê xe hay phần chia cho chủ xe hay không.",
+      "error": "Không tải được hồ sơ nguồn xe",
+      "profit": "Lợi nhuận kỳ này",
+      "needsDay": "Khai ngày đóng tiền hằng tháng để tính số phải đóng trong kỳ.",
+      "financed": {
+        "bank": "Ngân hàng",
+        "monthly": "Gốc + lãi mỗi tháng",
+        "monthlyDay": "Gốc + lãi mỗi tháng (ngày {day})",
+        "due": "Đã tới hạn đóng trong kỳ ({count, plural, other {# kỳ}})",
+        "net": "Dư sau trả góp"
+      },
+      "rented": {
+        "owner": "Chủ xe cho thuê",
+        "monthly": "Tiền thuê xe mỗi tháng",
+        "monthlyDay": "Tiền thuê xe mỗi tháng (ngày {day})",
+        "due": "Đã tới hạn trả trong kỳ ({count, plural, other {# kỳ}})",
+        "net": "Dư sau tiền thuê xe"
+      },
+      "partnership": {
+        "owner": "Chủ xe ký gửi",
+        "ownerNamed": "Chủ xe ký gửi: {name}",
+        "ownerPercent": "{percent, number}% doanh thu",
+        "ownerShare": "Phần chia chủ xe (ước tính)",
+        "shopShare": "Phần gian hàng giữ lại ({percent, number}%)",
+        "info": "Ước tính trên doanh thu cả xe của kỳ. Hợp đồng chia trên tiền thuê sau giảm giá, không gồm tiền cọc, phí giao nhận, phí quá giờ, phạt/bồi thường, nên số đối soát thật có thể thấp hơn.",
+        "infoLabel": "Cách ước tính phần chia"
+      },
+      "owned": {
+        "purchaseDate": "Ngày mua",
+        "purchasePrice": "Giá mua",
+        "roi": "Lợi nhuận kỳ / giá mua",
+        "roiValue": "{percent, number}%",
+        "noPrice": "Khai giá mua để tính tỷ suất lợi nhuận trên vốn.",
+        "noObligation": "Không có khoản trả góp hay phần chia phải trả"
+      },
+      "profitAll": "Lợi nhuận toàn bộ"
+    },
+    "allTime": "Toàn bộ"
+  },
+  "bySource": {
+    "cards": {
+      "label": "Xem theo nguồn doanh thu",
+      "viewing": "Đang xem: <b>{name}</b>",
+      "all": "Tất cả nguồn",
+      "xeprime": "Qua sàn XePrime",
+      "direct": "Nguồn ngoài (tự khai thác)",
+      "trips": "{count, plural, other {# chuyến}}",
+      "split": "Sàn {marketplace, number}% · Ngoài {direct, number}%",
+      "xeprimeHint": "Đơn khách đặt qua XePrime",
+      "directHint": "Khách quen, vãng lai, mạng xã hội...",
+      "share": "{percent, number}%",
+      "error": "Không tải được doanh thu theo nguồn"
+    },
+    "rows": {
+      "title": "Chi tiết doanh thu từng nguồn",
+      "subtitle": "Tiền đã thu trong kỳ, chia theo nguồn của đơn",
+      "total": "Tổng: {amount}",
+      "tag": {
+        "marketplace": "Sàn",
+        "direct": "Tự khai thác",
+        "unlinked": "Phiếu lẻ"
+      },
+      "trips": "{count, plural, other {# chuyến}}",
+      "booked": "Giá trị chuyến {amount}",
+      "bookedInfo": "Giá trị chuyến là tổng tiền thuê đã chốt của các chuyến nhận xe trong kỳ. Số đã thu có thể khác vì tiền có thể về trước hoặc sau kỳ.",
+      "bookedInfoLabel": "Giá trị chuyến là gì",
+      "share": "{percent, number}% tổng thu",
+      "empty": "Kỳ này chưa có doanh thu từ nguồn này",
+      "emptyHint": "Chọn kỳ khác, hoặc chọn \"Tất cả nguồn\".",
+      "error": "Không tải được chi tiết theo nguồn",
+      "unlinkedName": "Thu khác không gắn đơn",
+      "unlinkedHint": "Phiếu thu nhập tay, không thuộc chuyến nào"
+    },
+    "chart": {
+      "title": "Doanh thu theo nguồn & lợi nhuận",
+      "marketplace": "Qua XePrime",
+      "direct": "Nguồn ngoài",
+      "unlinked": "Thu khác (không qua đơn)",
+      "cost": "Chi phí",
+      "profit": "Lợi nhuận",
+      "legend": "Chú giải biểu đồ"
     }
   }
 }

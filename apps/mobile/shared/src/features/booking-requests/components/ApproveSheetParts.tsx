@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { LIST_SEPARATOR, toAppTz } from '@xeprime/domain';
+import { toAppTz } from '@xeprime/domain';
 import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
 import { LinkArrow } from '@/components/ui/LinkArrow';
 import { Pill, type PillTone } from '@/components/ui/Pill';
@@ -23,9 +23,10 @@ import type { RequestPaymentRow } from './BookingRequestCard';
  */
 
 const HOLD_STATE_TONE: Record<NonNullable<RequestPaymentRow['state']>, PillTone> = {
-  expected: 'neutral',
-  awaiting: 'warning',
-  unpaid: 'warning',
+  // Figma tấm duyệt: tiền giữ chỗ chưa về = viên CAM "Chưa thanh toán" (người dùng 20/11/2026).
+  expected: 'orange',
+  awaiting: 'orange',
+  unpaid: 'orange',
   paid: 'success',
 };
 
@@ -48,7 +49,8 @@ export const ApprovalTripCard = memo(function ApprovalTripCard({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
-  const plateLine = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
+  // Viên chỉ mang BIỂN SỐ như Figma; xe chưa có biển thì rơi về mã xe (20/11/2026).
+  const plateLine = request.vehiclePlate || request.vehicleCode || '';
   const { pickupAt, returnAt, deliveryRequested, deliveryAddress } = request;
   const timeline = useMemo<TimelineItem[]>(() => {
     if (longTerm || !pickupAt || !returnAt) return [];
@@ -59,7 +61,8 @@ export const ApprovalTripCard = memo(function ApprovalTripCard({
       {
         key: 'pickup',
         dot: 'pickup',
-        title: `${fmt.rentalPoint(pickup)}${LIST_SEPARATOR}${handover}`,
+        // Figma "T6, 20/11  17h00 - Giao xe tận nơi": gạch ngắn như màn chi tiết đơn.
+        title: `${fmt.rentalPoint(pickup)} - ${handover}`,
         ...(deliveryRequested && deliveryAddress ? { lines: [deliveryAddress] } : {}),
         meta: fmt.rentalDuration(pickup, dropoff),
       },
@@ -87,16 +90,20 @@ export const ApprovalTripCard = memo(function ApprovalTripCard({
             >
               {request.vehicleName}
             </Text>
-            {plateLine ? <Pill label={plateLine} tone="neutral" size="md" /> : null}
+            {/* "Lịch xe ›" cùng hàng biển số - tên xe được cả bề ngang, không bị che (20/11/2026). */}
+            <XStack ai="center" jc="space-between" gap={GAP}>
+              {plateLine ? <Pill label={plateLine} tone="neutral" size="md" /> : <YStack />}
+              {onOpenSchedule ? (
+                <LinkArrow
+                  label={t('approve.scheduleLink')}
+                  icon="chevron-right"
+                  accessibilityLabel={t('vehicle.viewScheduleFor', { vehicle: request.vehicleName })}
+                  onPress={onOpenSchedule}
+                />
+              ) : null}
+            </XStack>
           </YStack>
         </XStack>
-        {onOpenSchedule ? (
-          <LinkArrow
-            label={t('approve.scheduleLink')}
-            accessibilityLabel={t('vehicle.viewScheduleFor', { vehicle: request.vehicleName })}
-            onPress={onOpenSchedule}
-          />
-        ) : null}
       </XStack>
 
       <YStack gap={DETAILS_GAP}>
@@ -151,17 +158,7 @@ export const ApprovalTripCard = memo(function ApprovalTripCard({
                   </Text>
                 ) : null}
               </XStack>
-              {/* Như web: số tài khoản đã xác minh đi kèm khi khách để lại số liên hệ khác nó. */}
-              {request.customerAccountPhone ? (
-                <Text
-                  col={colors.textMuted}
-                  fos={typeScale.label.fontSize}
-                  lh={typeScale.label.lineHeight}
-                  ta="right"
-                >
-                  {t('customer.accountPhone', { phone: request.customerAccountPhone })}
-                </Text>
-              ) : null}
+              {/* "SĐT tài khoản" gỡ khỏi tấm duyệt của app như Figma (20/11/2026); hồ sơ khách vẫn có. */}
               {request.customerIsRegular ? (
                 <YStack alignSelf="flex-end">
                   <Pill label={t('detail.regular')} tone="success" size="md" />
@@ -178,7 +175,6 @@ export const ApprovalTripCard = memo(function ApprovalTripCard({
 /** Nhóm "Thanh toán" thu/mở được (Figma `24145:96810`; thu gọn `24145:96950`). */
 export const ApprovalPaymentGroup = memo(function ApprovalPaymentGroup({
   rows,
-  isEstimate,
   payout,
 }: {
   rows: readonly RequestPaymentRow[];
@@ -231,7 +227,8 @@ export const ApprovalPaymentGroup = memo(function ApprovalPaymentGroup({
               ? {
                   labelExtra: (
                     <Pill
-                      label={t(`approve.payment.holdState.${row.state}`)}
+                      // Lúc DUYỆT khách chưa trả gì: "Dự kiến" đọc thành "Chưa thanh toán" như Figma.
+                      label={t(`approve.payment.holdState.${row.state === 'expected' ? 'unpaid' : row.state}`)}
                       tone={HOLD_STATE_TONE[row.state]}
                       size="md"
                     />
@@ -273,9 +270,7 @@ export const ApprovalPaymentGroup = memo(function ApprovalPaymentGroup({
     <InfoGroupCard
       title={t('detail.paymentHeading')}
       collapsible
-      {...(isEstimate
-        ? { headerRight: <Pill label={t('card.estimate')} tone="warning" size="md" /> }
-        : {})}
+      // Figma không có viên "Tạm tính" (người dùng gỡ 20/11/2026).
       collapsedContent={last ? renderRow(last) : null}
     >
       <YStack gap={ROWS_GAP}>{rows.map(renderRow)}</YStack>

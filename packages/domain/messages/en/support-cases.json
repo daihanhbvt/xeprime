@@ -108,6 +108,9 @@
       "revertsHandover": "The owner already confirmed the handover: this verdict removes the handover record and reverses the trip tax before closing the booking.",
       "keepsActive": "The owner already confirmed the handover: this verdict keeps the trip running.",
       "insuranceIssued": "The insurance certificate has been issued: the customer is still refunded the insurance, and XePrime bears the premium owed to the insurer - tell the insurance team to follow up with the insurer."
-    }
+    },
+    "composerPlaceholder": "Type a message",
+    "moreActions": "More actions",
+    "actionsTitle": "Actions"
   }
 }

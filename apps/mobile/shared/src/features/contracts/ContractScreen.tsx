@@ -91,6 +91,7 @@ function ContractBody({
   onBack: () => void;
 }) {
   const colors = useColors();
+  const tDoc = useTranslations('Bookings.contractDocument');
   const t = useTranslations('Bookings.contract');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -235,6 +236,14 @@ function ContractBody({
               <SectionTitle>{t('pricingHeading')}</SectionTitle>
               <DataRow label={t('baseAmount')} value={fmt.money(s.pricing.baseAmount)} />
               <DataRow label={t('deliveryFee')} value={fmt.money(s.pricing.deliveryFee)} />
+              {/* Phụ phí theo dòng (ADR 0109) — chỉ hợp đồng lập từ 25/11/2026 có khoá này. */}
+              {(s.pricing.extraCharges ?? []).map((charge, index) => (
+                <DataRow
+                  key={`${charge.label}-${index}`}
+                  label={charge.label}
+                  value={fmt.money(charge.amount)}
+                />
+              ))}
               <DataRow
                 label={t('discountAmount')}
                 value={`−${fmt.money(s.pricing.discountAmount)}`}
@@ -252,6 +261,27 @@ function ContractBody({
               />
             </YStack>
           </Card>
+
+          {/*
+            Tài sản thế chấp (ADR 0109) — web `ContractDocument`; hợp đồng cũ không có khoá này.
+          */}
+          {(s.collaterals ?? []).length > 0 ? (
+            <Card>
+              <YStack gap={space.sm}>
+                <SectionTitle>{tDoc('collateral.title')}</SectionTitle>
+                {(s.collaterals ?? []).map((item, index) => (
+                  <Text key={`${item.collateralType}-${index}`} col={colors.text} fos={fontSize.bodySm}>
+                    {`• ${domainLabel('bookingCollateralType', item.collateralType)}${
+                      item.description ? `: ${item.description}` : ''
+                    }`}
+                  </Text>
+                ))}
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {tDoc('collateral.note')}
+                </Text>
+              </YStack>
+            </Card>
+          ) : null}
 
           {/* Điều khoản */}
           <Card>

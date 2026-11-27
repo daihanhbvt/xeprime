@@ -46,6 +46,14 @@
 }
 
 /* Mốc thuê đọc như MỘT cụm — xuống dòng giữa "10:00 ·" và "21/09" là mất nghĩa. */
+/* Trạng thái + nguồn đơn xếp dọc trong một ô. */
+.statusCell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+}
+
 .period {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;

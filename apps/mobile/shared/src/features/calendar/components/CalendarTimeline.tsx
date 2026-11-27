@@ -11,7 +11,19 @@ import Animated, {
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { OCCUPANCY_SOURCE_TYPE_META, type OccupancySourceType } from '@xeprime/types';
+import {
+  OCCUPANCY_SOURCE_TYPE,
+  OCCUPANCY_SOURCE_TYPE_META,
+  VEHICLE_TYPE,
+  type OccupancySourceType,
+} from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
+import {
+  RENTAL_STAGE_TONE,
+  rentalStageOfBookingStatus,
+  rentalStageOfRequestStatus,
+  type RentalStage,
+} from '@/features/bookings/rental-stages';
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -33,7 +45,6 @@ import { layoutEventBars } from '../utils/calendar-position.util';
  */
 const HEADER_H = 52;
 const ROW_H = 56;
-const SUMMARY_H = 34;
 
 /**
  * Bề ngang cột xe — đủ cho BIỂN SỐ đọc trọn.
@@ -62,7 +73,6 @@ const MIN_DAY_W = 46;
 export const GRID_METRICS = {
   headerHeight: HEADER_H,
   rowHeight: ROW_H,
-  summaryHeight: SUMMARY_H,
   resourceWidth: RESOURCE_W,
   minDayWidth: MIN_DAY_W,
 } as const;
@@ -156,7 +166,6 @@ interface TimelineProps extends TimelineHandlers {
   resources: readonly CalendarResource[];
   eventsByResource: ReadonlyMap<string, CalendarEvent[]>;
   priceMarkers: ReadonlyMap<string, PriceMarker>;
-  availableByDay: ReadonlyMap<string, number>;
   holidaysByDay: ReadonlyMap<string, Holiday>;
   days: readonly DayCell[];
   range: CalendarRange;
@@ -198,7 +207,6 @@ export function CalendarTimeline({
   resources,
   eventsByResource,
   priceMarkers,
-  availableByDay,
   holidaysByDay,
   days,
   range,
@@ -216,13 +224,16 @@ export function CalendarTimeline({
   const t = useTranslations('Calendar');
 
   const resourceW = collapsed ? RESOURCE_W_COLLAPSED : RESOURCE_W;
+  const carCount = resources.filter((r) => r.vehicleType === VEHICLE_TYPE.CAR).length;
+  const bikeCount = resources.filter((r) => r.vehicleType === VEHICLE_TYPE.MOTORBIKE).length;
   const trackViewportW = Math.max(0, viewport.width - resourceW);
   const dayWidth = Math.max(
     MIN_DAY_W,
     trackViewportW > 0 ? Math.floor(trackViewportW / days.length) : MIN_DAY_W,
   );
   const trackWidth = days.length * dayWidth;
-  const listHeight = Math.max(0, viewport.height - HEADER_H - SUMMARY_H);
+  // Hàng "Xe còn trống" đã gỡ (web 25/11/2026) — danh sách xe chiếm trọn phần còn lại.
+  const listHeight = Math.max(0, viewport.height - HEADER_H);
 
   /**
    * Vị trí cuộn DỌC của dải ngày — nguồn chuyển động của cột xe, sống trên luồng UI.
@@ -311,15 +322,19 @@ export function CalendarTimeline({
             borderColor={GRID_LINE}
           >
             {collapsed ? null : (
-              <Text
-                f={1}
-                col={colors.textMuted}
-                fos={fontSize.meta}
-                fow={fontWeight.semibold}
-                numberOfLines={2}
-              >
-                {t('grid.resourceHeader', { count: resources.length })}
-              </Text>
+              /* Góc cột xe (lịch v2, web `grid.resourceTitle` + `grid.resourceCount`). */
+              <YStack f={1} minWidth={0}>
+                <Text col={colors.textMuted} fos={fontSize.meta} fow={fontWeight.semibold} numberOfLines={1}>
+                  {t('grid.resourceTitle')}
+                </Text>
+                <Text col={colors.placeholder} fos={fontSize.meta} numberOfLines={1}>
+                  {t('grid.resourceCount', {
+                    cars: carCount,
+                    bikes: bikeCount,
+                    both: carCount > 0 && bikeCount > 0 ? 'yes' : 'no',
+                  })}
+                </Text>
+              </YStack>
             )}
             <Ionicons
               name={collapsed ? 'chevron-forward' : 'chevron-back'}
@@ -337,23 +352,6 @@ export function CalendarTimeline({
           onPress={onResourcePress}
         />
 
-        <XStack
-          h={SUMMARY_H}
-          ai="center"
-          px={space.xs}
-          bg={colors.surfaceElevated}
-          borderTopWidth={1}
-          borderColor={GRID_LINE}
-        >
-          <Text
-            col={colors.textMuted}
-            fos={fontSize.meta}
-            fow={fontWeight.semibold}
-            numberOfLines={1}
-          >
-            {t(collapsed ? 'grid.availableRowShort' : 'grid.availableRow')}
-          </Text>
-        </XStack>
       </YStack>
 
       {/* ── Dải ngày: cuộn NGANG theo thời gian, cuộn DỌC theo xe ────────── */}
@@ -387,52 +385,6 @@ export function CalendarTimeline({
             showsVerticalScrollIndicator={false}
           />
 
-          {/* Nét ngăn do từng Ô vẽ, không do hàng — xem docblock `GRID_LINE`. */}
-          <XStack h={SUMMARY_H} bg={colors.surfaceElevated}>
-            {days.map((day) => {
-              const count = availableByDay.get(day.key);
-              return (
-                <YStack
-                  key={day.key}
-                  w={dayWidth}
-                  ai="center"
-                  jc="center"
-                  /* Hôm nay THẮNG ngày lễ — nó là mốc điều hướng, ngày lễ chỉ là ngữ cảnh
-                     (web xếp cùng thứ tự ưu tiên ở CSS). */
-                  bg={
-                    day.isToday
-                      ? CAL_SURFACE.todayBg
-                      : holidaysByDay.has(day.key)
-                        ? CAL_SURFACE.holidayBg
-                        : 'transparent'
-                  }
-                  borderRightWidth={1}
-                  borderTopWidth={1}
-                  borderColor={GRID_LINE}
-                  accessibilityLabel={
-                    count === undefined
-                      ? t('grid.availableCellPending', { day: day.dayOfMonth })
-                      : t('grid.availableCell', { day: day.dayOfMonth, count })
-                  }
-                >
-                  {/*
-                    Xanh LÁ, không phải màu chữ thường — web đặt `color: var(--xp-color-success)`
-                    thẳng trên `.summaryCell`. Con số này trả lời "còn nhận đơn được không", nên
-                    nó là một tín hiệu trạng thái chứ không phải một ô dữ liệu; hết xe thì đổi
-                    sang đỏ (`.summaryNone`) và VẪN in số 0 — màu không bao giờ là tín hiệu duy
-                    nhất.
-                  */}
-                  <Text
-                    col={count === 0 ? colors.danger : colors.success}
-                    fos={fontSize.meta}
-                    fow={fontWeight.semibold}
-                  >
-                    {count ?? '-'}
-                  </Text>
-                </YStack>
-              );
-            })}
-          </XStack>
         </YStack>
       </ScrollView>
     </XStack>
@@ -838,11 +790,22 @@ const EventBar = memo(function EventBar({
   onPress: () => void;
 }) {
   const t = useTranslations('Calendar');
+  const tBoard = useTranslations('Bookings.board');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
   const colors = useColors();
   const tone = eventTone(event, colors);
+  const stageColor = (value: RentalStage) => {
+    const key = RENTAL_STAGE_TONE[value];
+    return key === 'danger'
+      ? colors.danger
+      : key === 'warning'
+        ? colors.warning
+        : key === 'info'
+          ? colors.infoStrong
+          : colors.success;
+  };
   const typeMeta = OCCUPANCY_SOURCE_TYPE_META[event.type as OccupancySourceType];
   const icon = EVENT_ICON[event.type as OccupancySourceType];
   /*
@@ -854,17 +817,44 @@ const EventBar = memo(function EventBar({
 
   /* Bỏ chữ chỉ được phép khi có icon đứng thay — xem `eventBarShowsLabel`. */
   const showLabel = eventBarShowsLabel(width, icon);
-  /* Nét ĐỨT cho chỗ bị giữ mà chưa phải chuyến đang chạy — xem `isDashedEvent`. */
-  const dashed = isDashedEvent(event.type);
+  /* Nét ĐỨT: khoá xe và yêu cầu chưa chiếm lịch (chờ duyệt) — xem `isDashedEvent`. */
+  const dashed = isDashedEvent(event);
+  const isTrip =
+    event.type === OCCUPANCY_SOURCE_TYPE.BOOKING || event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST;
+  /* Nhóm giai đoạn của đơn / yêu cầu (lịch v2, web `eventStage`) — viên chữ trên thanh của web. */
+  const stage =
+    event.type === OCCUPANCY_SOURCE_TYPE.BOOKING
+      ? rentalStageOfBookingStatus(event.status)
+      : event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST
+        ? rentalStageOfRequestStatus(event.status)
+        : null;
+  /*
+   * Chữ trên thanh của đơn / yêu cầu (web `CalendarEventBar`): mã đơn · tiền đã chốt · tên khách
+   * (khách ẩn khi không có quyền xem yêu cầu). Khoá xe / bảo dưỡng giữ tiêu đề server.
+   */
+  const barText = isTrip
+    ? [
+        event.code ? `#${event.code}` : null,
+        event.amount ? fmt.moneyCompact(event.amount) : null,
+        event.customerName ?? t('event.customerHidden'),
+      ]
+        .filter(Boolean)
+        .join(LIST_SEPARATOR)
+    : event.title;
 
   const label = [
-    domainLabel('occupancySourceType', event.type, typeMeta?.label ?? event.type),
-    event.title,
+    stage
+      ? tBoard(`stage.${stage}`)
+      : domainLabel('occupancySourceType', event.type, typeMeta?.label ?? event.type),
+    isTrip ? event.customerName : event.title,
+    event.code,
+    isTrip && event.serviceType ? domainLabel('serviceType', event.serviceType) : null,
+    event.amount ? fmt.money(event.amount) : null,
     t('eventCard.barAriaRange', {
       start: fmt.dateTime(event.startAt),
       end: fmt.dateTime(event.endAt),
     }),
-    statusGroup ? domainLabel(statusGroup, event.status) : null,
+    !stage && statusGroup ? domainLabel(statusGroup, event.status) : null,
   ]
     .filter(Boolean)
     .join(', ');
@@ -901,10 +891,12 @@ const EventBar = memo(function EventBar({
         borderBottomRightRadius={clippedEnd ? 0 : radius.sm}
         ov="hidden"
       >
+        {/* Chấm giai đoạn (web viên "Cần xử lý / Chờ thanh toán / Chờ giao xe / Đang thuê"). */}
+        {stage ? <YStack w={6} h={6} br={3} flexShrink={0} bg={stageColor(stage)} /> : null}
         {icon ? <Ionicons name={icon} size={iconSize.xs} color={tone.fg} /> : null}
         {showLabel ? (
           <Text f={1} col={tone.fg} fos={fontSize.meta} fow={fontWeight.semibold} numberOfLines={1}>
-            {event.title}
+            {barText}
           </Text>
         ) : null}
       </XStack>

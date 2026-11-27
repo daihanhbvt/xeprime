@@ -1,0 +1,278 @@
+/*
+ * Tab Tài chính của hồ sơ xe. Bố cục đo BỀ RỘNG THẬT của tab (`@container vehicle-finance`), không
+ * đo viewport: cùng component chạy trong trang và trong modal hồ sơ xe, vốn hẹp hơn.
+ */
+.root {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  container: vehicle-finance / inline-size;
+}
+
+/* ─── Khối đầu: hai lối đi + kỳ ─────────────────────────────────────────────── */
+
+/*
+ * Đầu thẻ (`Panel`: tiêu đề · phần bên phải) được phép XUỐNG DÒNG khi hẹp - hai nút hay tổng tiền
+ * không được ép tiêu đề thành cột chữ một từ mỗi dòng. Chọn con đầu tiên vì `Panel` không nhận lớp
+ * riêng cho phần đầu.
+ */
+.wrapHead > :first-child {
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+.ghostAction,
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--xp-control-height-sm);
+  padding: 0 var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}
+
+.ghostAction {
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+}
+
+.ghostAction:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.primaryAction {
+  border: 1px solid var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.primaryAction:hover {
+  border-color: var(--xp-color-primary-hover);
+  background: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary-contrast);
+}
+
+.ghostAction:focus-visible,
+.primaryAction:focus-visible {
+  outline: 2px solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+/* Sáu kỳ không đứng vừa ở bề ngang hẹp - cuộn ngang thay vì xuống dòng lởm chởm. */
+.periods {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.granularity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ─── Bốn ô số ──────────────────────────────────────────────────────────────── */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--xp-space-12);
+}
+
+.hintStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+}
+
+/* ─── Biểu đồ: cùng khuôn thẻ với `Panel` ───────────────────────────────────── */
+
+.chartCard {
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: 0 0 6px 0 rgba(10, 13, 18, 0.04);
+}
+
+/* ─── Hai cột: chi tiết nguồn · chi phí + nguồn vốn ─────────────────────────── */
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.rowsPanel {
+  min-width: 0;
+}
+
+.titleWithInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+.rowsTotal {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ─── Nghĩa vụ nguồn xe ─────────────────────────────────────────────────────── */
+
+.capitalTitle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.capitalTag {
+  padding: 1px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-caption);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-caption);
+}
+
+.capitalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.capitalLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.muted {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.capitalLines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.capitalLine {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.capitalLabel {
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.capitalValue {
+  flex: none;
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Dòng chốt ("Dư sau trả góp", "Phần gian hàng giữ lại"...) - vạch ngăn trên, chữ đậm hơn. */
+.capitalTotal {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.capitalTotal .capitalLabel {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.capitalTotal .capitalValue {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.capitalNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-caption);
+  line-height: var(--xp-line-height-caption);
+}
+
+.gain {
+  color: var(--xp-color-success);
+}
+
+.loss {
+  color: var(--xp-color-error);
+}
+
+.warn {
+  color: var(--xp-color-warning-strong);
+}
+
+/* ─── Bề ngang hẹp ──────────────────────────────────────────────────────────── */
+
+@container vehicle-finance (max-width: 880px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container vehicle-finance (max-width: 420px) {
+  .kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

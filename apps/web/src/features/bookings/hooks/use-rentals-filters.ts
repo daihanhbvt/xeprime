@@ -1,6 +1,6 @@
 'use client';
 
-import { BOOKING_STATUS } from '@xeprime/types';
+import { BOOKING_SOURCE_FILTER_VALUES, BOOKING_STATUS } from '@xeprime/types';
 import { BOOKINGS_GROUP_PARAM } from '@/constants/routes';
 import {
   LEGACY_REQUEST_TAB_STAGE,
@@ -29,6 +29,10 @@ export interface RentalsFilters {
   serviceType?: string;
   /** Lọc theo một xe — lối vào từ hồ sơ xe (`?vehicleId=`). */
   vehicleId?: string;
+  /** Nguồn đơn (ADR 0110) — mã nguồn hoặc `direct`; loại trừ với `sourceLabel`. */
+  source?: string;
+  /** Một nhãn nguồn tự nhập cụ thể (tên nền tảng / tên nguồn). */
+  sourceLabel?: string;
   /** Sắp xếp của hai nhóm ĐƠN; hai nhóm yêu cầu xếp theo hạn đang chạy (server). */
   sort?: BookingSort;
   page?: number;
@@ -60,6 +64,8 @@ export function useRentalsFilters() {
       vehicleId: sp.get('vehicleId') ?? undefined,
       serviceType: sp.get('serviceType') ?? undefined,
       branchId: sp.get('branchId') ?? undefined,
+      source: enumParam(sp, 'source', BOOKING_SOURCE_FILTER_VALUES),
+      sourceLabel: sp.get('sourceLabel') ?? undefined,
       sort: (sp.get('sort') as BookingSort | null) ?? undefined,
       page: positiveIntParam(sp, 'page'),
       limit: positiveIntParam(sp, 'limit'),

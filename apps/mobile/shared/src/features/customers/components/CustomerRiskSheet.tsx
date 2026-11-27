@@ -133,7 +133,7 @@ export function CustomerRiskSheet({
           <YStack flexShrink={0}>
             <Button
               label={tCommon('close')}
-              variant="ghost"
+              variant="neutral"
               disabled={mutation.isPending}
               onPress={onClose}
             />
@@ -141,7 +141,6 @@ export function CustomerRiskSheet({
           <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tCommon('save')}
-              icon="checkmark-outline"
               variant={blocked ? 'danger' : 'primary'}
               loading={mutation.isPending}
               onPress={() => void submit()}

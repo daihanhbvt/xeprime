@@ -19,14 +19,15 @@
   color: var(--xp-color-info-strong);
 }
 
+/* Có tài xế hồng, dài hạn tím - như Figma "Order Done" (người dùng chốt 20/11/2026, web + app). */
 .withDriver {
-  border-color: var(--xp-color-warning-border);
-  background: var(--xp-color-warning-bg);
-  color: var(--xp-color-warning-strong);
-}
-
-.longTerm {
   border-color: var(--xp-color-pink-border);
   background: var(--xp-color-pink-bg);
   color: var(--xp-color-pink);
+}
+
+.longTerm {
+  border-color: var(--xp-color-purple-border);
+  background: var(--xp-color-purple-bg);
+  color: var(--xp-color-purple);
 }

@@ -7,28 +7,27 @@ import {
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
   vehicleFeatureAppliesTo,
+  type VehicleRegistrationReading,
 } from '@xeprime/types';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { FieldLabel } from '@/components/ui/Field';
-import { InlineAction } from '@/components/ui/InlineAction';
 import { NumberField } from '@/components/ui/NumberField';
 import { RadioOption } from '@/components/ui/RadioOption';
 import { TextField } from '@/components/ui/TextField';
 import { useCatalog } from '@/features/catalog/use-catalog';
-import { useCatalogModels } from '@/features/catalog/use-catalog-models';
 import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
 import {
   VehicleEnergyFields,
   useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleEnergyFields';
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
+import { RegistrationTextField } from '@/features/vehicles/components/RegistrationTextField';
 import { BodyTypePicker } from '@/features/vehicles/components/VehicleFormSteps';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, space } from '@/theme/tokens';
-import { suggestVehicleName } from '../quick-mappers';
 import type { QuickVehicleValues } from '../quick-schema';
 
 /** Trần mô tả — khớp `vehicleFormSchema.description` và `maxLength={4000}` của web. */
@@ -45,40 +44,28 @@ const DESCRIPTION_MAX = 4000;
  * `vehicleEnergySpecPolicy`. Không có bộ form thứ hai cho luồng nhanh: một chiếc xe đăng nhanh
  * rồi vào sửa lại phải thấy đúng những ô đó, hỏi đúng cách đó.
  *
- * Tên hiển thị có nút gợi ý từ hãng + mẫu + năm, nhưng vẫn là một ô người dùng nhìn thấy và sửa
- * được: hệ thống không lưu một cái tên mà chủ xe không biết mình đang đặt.
+ * Không có ô tên (ADR 0102): server ghép "Hãng Dòng Phiên bản Năm"; tấm xác nhận hiện đúng tên đó.
  */
 export function QuickVehicleInfoStep({
   control,
   setValue,
+  registrationReading,
 }: {
   control: Control<QuickVehicleValues>;
   setValue: UseFormSetValue<QuickVehicleValues>;
+  /** Lượt đọc cà vẹt mới nhất - biển số/màu khớp nó thì khoá (ADR 0102 điều 6). */
+  registrationReading?: VehicleRegistrationReading | null;
 }) {
   const colors = useColors();
   const t = useTranslations('ListYourVehicle.info');
   const tForm = useTranslations('Vehicles.form');
   const domainLabel = useDomainLabel();
-  const { catalog } = useCatalog();
 
   const vehicleType = useWatch({ control, name: 'vehicleType' }) || VEHICLE_TYPE.CAR;
   const fuelType = useWatch({ control, name: 'fuelType' });
-  const brand = useWatch({ control, name: 'brand' });
-  const modelId = useWatch({ control, name: 'vehicleCatalogModelId' });
-  const manufactureYear = useWatch({ control, name: 'manufactureYear' });
 
   const transmissionOptions = useTransmissionOptions(vehicleType, fuelType);
 
-  // Tên mẫu để gợi ý tên xe lấy từ DANH MỤC — ô "Mẫu xe" là select, không còn chữ tự do.
-  const { models } = useCatalogModels({ vehicleType, brandKey: brand, includeId: modelId });
-  const model = models.find((m) => m.id === modelId)?.label ?? null;
-
-  const brandLabel = useMemo(() => {
-    const items = catalog[CATALOG_TYPE.VEHICLE_BRAND] ?? [];
-    return items.find((item) => item.key === brand)?.label ?? brand;
-  }, [catalog, brand]);
-
-  const suggestedName = suggestVehicleName({ brandLabel, model, manufactureYear });
 
   return (
     <YStack gap={space.md}>
@@ -122,9 +109,10 @@ export function QuickVehicleInfoStep({
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('plateHint')}
           </Text>
-          <TextField
-            control={control}
+          <RegistrationTextField
+            control={control as never}
             name="plateNumber"
+            reading={registrationReading}
             label={tForm('specs.plateNumber')}
             placeholder={tForm('specs.platePlaceholder')}
             autoCapitalize="characters"
@@ -162,30 +150,14 @@ export function QuickVehicleInfoStep({
             min={1980}
             max={new Date().getFullYear() + 1}
           />
-          <TextField
-            control={control}
+          <RegistrationTextField
+            control={control as never}
             name="color"
+            reading={registrationReading}
             label={tForm('specs.color')}
             placeholder={tForm('specs.colorPlaceholder')}
           />
-
-          <YStack gap={space.xs}>
-            <TextField
-              control={control}
-              name="name"
-              label={t('nameLabel')}
-              placeholder={t('namePlaceholder')}
-              {...(suggestedName ? {} : { hint: t('nameHelp') })}
-              required
-            />
-            {/* Gợi ý là một nút BẤM ĐƯỢC, không phải một dòng chữ để gõ lại bằng tay. */}
-            {suggestedName ? (
-              <InlineAction
-                label={t('nameSuggestion', { name: suggestedName })}
-                onPress={() => setValue('name', suggestedName, { shouldValidate: true })}
-              />
-            ) : null}
-          </YStack>
+          {/* Không có ô tên xe: server ghép "Hãng Dòng Phiên bản Năm" (ADR 0102). */}
         </YStack>
       </Card>
 

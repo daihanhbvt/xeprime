@@ -15,19 +15,19 @@ import {
   TENANT_CUSTOMER_RETURNING_MIN_RENTALS,
   type BookingStatus,
 } from '@xeprime/types';
-import { isNegativeMoney, isZeroMoney, subtractMoney, telHref, toAppTz } from '@xeprime/domain';
+import { isNegativeMoney, isZeroMoney, subtractMoney, sumMoney, telHref, toAppTz } from '@xeprime/domain';
 import { AntIcon } from '@/components/icons/AntIcon';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { VehicleThumb } from '@/components/ui/VehicleThumb';
 import { Pill } from '@/components/ui/Pill';
-import { IconSquareButton } from '@/components/ui/IconSquareButton';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LinkArrow } from '@/components/ui/LinkArrow';
 import { Timeline, type TimelineItem } from '@/components/ui/Timeline';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { ToneDotBadge } from '@/components/ui/ToneDotBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { BookingDetail } from '../api';
 
 /*
@@ -67,40 +67,19 @@ export function SideCard({ children, label }: { children: ReactNode; label?: str
   );
 }
 
-/** Tiêu đề thẻ cột phải - web `.sideTitle`: 16 đậm vừa. */
-function SideTitle({ children }: { children: string }) {
+/** Tiêu đề thẻ cột phải - CÙNG cỡ/độ đậm với tiêu đề `SectionCard` ("Lợi nhuận chuyến"…, 20/11/2026). */
+export function SideTitle({ children }: { children: string }) {
   const colors = useColors();
   return (
-    <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} accessibilityRole="header">
+    <Text
+      col={colors.text}
+      fos={fontSize.h4}
+      fow={fontWeight.bold}
+      lh={Math.round(fontSize.h4 * 1.4)}
+      accessibilityRole="header"
+    >
       {children}
     </Text>
-  );
-}
-
-/** Nút chữ của thẻ - web `.textAction`/`.textLink`: 12/500 vàng đậm, icon cách 6. */
-function TextAction({
-  label,
-  icon,
-  onPress,
-  role = 'button',
-}: {
-  label: string;
-  icon?: boolean;
-  onPress: () => void;
-  role?: 'button' | 'link';
-}) {
-  const colors = useColors();
-  return (
-    <Pressable onPress={onPress} accessibilityRole={role} accessibilityLabel={label} hitSlop={space.sm}>
-      {({ pressed }) => (
-        <XStack ai="center" gap={GAP_6} opacity={pressed ? 0.7 : 1}>
-          {icon ? <AntIcon icon={EditOutlined} size={fontSize.bodySm} color={colors.primaryStrong} /> : null}
-          <Text col={colors.primaryStrong} fos={fontSize.body} fow={fontWeight.medium}>
-            {label}
-          </Text>
-        </XStack>
-      )}
-    </Pressable>
   );
 }
 
@@ -142,8 +121,11 @@ export function VehicleSideCard({
   booking,
   onOpenVehicle,
   onOpenSchedule,
+  title,
 }: {
   booking: BookingDetail;
+  /** Tiêu đề thẻ - chỉ tấm chi tiết công nợ có ("Xe & Giao nhận", Figma `24512:133583`). */
+  title?: string | undefined;
   /** Vắng khi không có quyền xem xe - tên là chữ thường. */
   onOpenVehicle?: (() => void) | undefined;
   /** Link "Lịch xe" (Figma) - vắng khi không có quyền xem xe. */
@@ -153,6 +135,7 @@ export function VehicleSideCard({
   const colors = useColors();
   const styles = useStyles();
   const t = useTranslations('Bookings.detailPage.side');
+  const tApp = useTranslations('Bookings.detailPage.partnerApp');
   const dl = useDomainLabel();
   const place = (BOOKING_HANDOVER_PLACE_VALUES as readonly string[]).includes(
     booking.handoverPlaceKind ?? '',
@@ -166,8 +149,9 @@ export function VehicleSideCard({
    */
   const pickup = toAppTz(booking.pickupAt);
   const dropoff = toAppTz(booking.returnAt);
+  // App: "Trả tại chi nhánh" như Figma (Figma ghi "đại lý" - app dùng "chi nhánh"); web giữ câu cũ.
   const returnLabel =
-    place === BOOKING_HANDOVER_PLACE.BRANCH ? t('returnBranch') : t('returnAgreed');
+    place === BOOKING_HANDOVER_PLACE.BRANCH ? tApp('returnBranch') : t('returnAgreed');
   const timeline: TimelineItem[] = [
     {
       key: 'pickup',
@@ -188,6 +172,7 @@ export function VehicleSideCard({
 
   return (
     <SideCard>
+      {title ? <SideTitle>{title}</SideTitle> : null}
       <XStack ai="center" gap={GAP_12}>
         <VehicleThumb uri={booking.vehicleImageUrl ?? null} accessibilityLabel={booking.vehicleName} />
         <YStack f={1} minWidth={0} gap={space.xs} ai="flex-start">
@@ -202,13 +187,14 @@ export function VehicleSideCard({
           >
             {booking.vehicleName}
           </Text>
-          {booking.vehiclePlate ? <Pill label={booking.vehiclePlate} tone="neutral" /> : null}
+          {/* Figma "_Badge" biển số: nền `gray-50`, bo 16, KHÔNG viền. */}
+          {booking.vehiclePlate ? <Pill label={booking.vehiclePlate} tone="neutral" borderless /> : null}
         </YStack>
         {onOpenSchedule ? (
-          // Nút lịch gọn (icon) thay "Lịch xe →" để không che tên xe (người dùng 16/11/2026).
-          <IconSquareButton label={t('schedule')} onPress={onOpenSchedule}>
-            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-          </IconSquareButton>
+          // Figma `24145:101960`: chữ "Lịch xe ›" ở góc phải thẻ xe (người dùng chốt 20/11/2026).
+          <YStack als="flex-start">
+            <LinkArrow label={t('schedule')} onPress={onOpenSchedule} icon="chevron-right" />
+          </YStack>
         ) : null}
       </XStack>
 
@@ -245,17 +231,18 @@ export function VehicleSideCard({
   );
 }
 
-/** Thẻ khách - "Chỉnh sửa" = form Sửa đơn; hồ sơ khách + giấy tờ khi có quyền. */
+/**
+ * Thẻ khách (Figma `24145:102920`) - tên (bấm mở hồ sơ khách khi có quyền) · "Khách quen" · SĐT ·
+ * bút "Chỉnh sửa" = form Sửa đơn. Không còn hàng link: hồ sơ qua tên, giấy tờ qua tab Chuẩn bị.
+ */
 export function CustomerSideCard({
   booking,
   onEdit,
   onViewProfile,
-  onDocuments,
 }: {
   booking: BookingDetail;
   onEdit?: (() => void) | undefined;
   onViewProfile?: (() => void) | undefined;
-  onDocuments?: (() => void) | undefined;
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.detailPage.side');
@@ -267,7 +254,15 @@ export function CustomerSideCard({
       <XStack ai="center" gap={space.sm}>
         <YStack f={1} minWidth={0} gap={6}>
           <XStack ai="center" flexWrap="wrap" gap={space.sm}>
-            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+            <Text
+              col={colors.text}
+              fos={fontSize.body}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+              {...(onViewProfile
+                ? { onPress: onViewProfile, accessibilityRole: 'link' as const, accessibilityHint: t('viewProfile') }
+                : {})}
+            >
               {booking.customerName}
             </Text>
             {booking.customerCompletedRentals != null &&
@@ -291,17 +286,12 @@ export function CustomerSideCard({
           )}
         </YStack>
         {onEdit ? (
+          // Figma "Edit 2" vàng thương hiệu (bộ `LineIcon`).
           <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel={t('edit')} hitSlop={space.sm}>
-            <AntIcon icon={EditOutlined} size={20} color={colors.primary} />
+            <LineIcon name="edit" size={20} color={colors.primary} />
           </Pressable>
         ) : null}
       </XStack>
-      {booking.tenantCustomerId && (onViewProfile || onDocuments) ? (
-        <XStack flexWrap="wrap" gap={space.md}>
-          {onViewProfile ? <TextAction label={t('viewProfile')} role="link" onPress={onViewProfile} /> : null}
-          {onDocuments ? <TextAction label={t('documents')} onPress={onDocuments} /> : null}
-        </XStack>
-      ) : null}
     </SideCard>
   );
 }
@@ -372,10 +362,16 @@ export function PaymentSideCard({
 }) {
   const colors = useColors();
   const t = useTranslations('Bookings.detailPage.side');
+  const tApp = useTranslations('Bookings.detailPage.side.partnerApp');
   const fmt = useAppFormat();
-  const excess = subtractMoney(booking.collectedAmount, booking.amountDue);
-  const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
   const prepaid = isZeroMoney(booking.ownerShareOnlineAmount) ? null : booking.ownerShareOnlineAmount;
+  // Thu vượt = (trả trước qua XePrime + đã thu tại quầy) − tổng chuyến (web `PaymentSideCard`). Bỏ `D`
+  // là nói "không vượt" với một đơn đã thu trọn tiền thuê ở quầy khi khách đã trả trước một phần.
+  const excess = subtractMoney(
+    sumMoney([booking.collectedAmount, booking.ownerShareOnlineAmount]),
+    booking.amountDue,
+  );
+  const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
   const settled = isZeroMoney(booking.counterDueAmount);
   const unit = booking.ownerPayout?.unitAmount ?? null;
   const days = booking.ownerPayout?.rentalDays ?? null;
@@ -383,8 +379,23 @@ export function PaymentSideCard({
 
   return (
     <SideCard label={t('payment')}>
-      <SideTitle>{t('payment')}</SideTitle>
-      <YStack gap={GAP_12}>
+      {/* "Chưa gồm cọc tài sản…" thành dấu "i" cạnh tiêu đề (người dùng 20/11/2026). */}
+      <XStack ai="center" gap={GAP_4}>
+        <SideTitle>{t('payment')}</SideTitle>
+        {isZeroMoney(booking.depositAmount) ? null : (
+          <InfoHint
+            label={t('payment')}
+            size={fontSize.body}
+            content={t('depositNote', { amount: fmt.money(booking.depositAmount) })}
+          />
+        )}
+      </XStack>
+      {/*
+        Figma "Thanh toán" `24512:130949` (người dùng chốt 20/11/2026): các dòng cách 8 (dòng
+        "Tổng tiền chuyến" bỏ ngày 20/11 đã bổ sung lại 26/11/2026); đọc thẳng một phép trừ xuống "Còn lại (phải thu)" dưới vạch kẻ. Nhãn
+        "Trả trước qua XePrime" giữ đúng nghĩa (là phần `D`, không phải cả tiền giữ chỗ).
+      */}
+      <YStack gap={space.sm}>
         <MoneyRow
           label={t('rent')}
           detail={unit && days ? t('rentDetail', { days, unit: fmt.money(unit) }) : null}
@@ -407,7 +418,13 @@ export function PaymentSideCard({
         {isZeroMoney(booking.surchargeTotal) ? null : (
           <MoneyRow label={t('surcharge')} value={`+${fmt.money(booking.surchargeTotal)}`} />
         )}
+        {/*
+          Web `PaymentSideCard`: "Tổng tiền chuyến" đậm, đứng trước phần trừ (trả trước · đã thu).
+          Người dùng bổ sung lại 26/11/2026 - thiếu nó thì "Đã trả x / y" của tấm Công nợ không có
+          con số y để đối chiếu.
+        */}
         <MoneyRow label={t('amountDue')} value={fmt.money(booking.amountDue)} strong />
+
         {prepaid ? (
           <MoneyRow
             label={
@@ -445,50 +462,46 @@ export function PaymentSideCard({
       </YStack>
 
       {/*
-        Đơn huỷ / khách không đến: không còn gì để thu, nên ô "Còn phải thu" vắng hẳn. Web
-        `.moneyDue`: viền vàng (`primary-border`), bo `border-radius`, đệm 12/`space-md`, cách trên
-        `space-md`; thu đủ ⇒ viền xanh + nền `success-subtle`, số xanh.
+        Đơn huỷ / khách không đến: không còn gì để thu, nên dòng "Còn lại" vắng hẳn. Figma: vạch kẻ,
+        rồi nhãn xám + số 18 vàng; thu đủ ⇒ số xanh. Câu "thu khi giao xe…" vào dấu "i".
       */}
       {moneyClosed ? null : (
-        <YStack
-          mt={space.md}
-          px={space.md}
-          py={GAP_12}
-          gap={GAP_4}
-          bw={1}
-          bc={settled ? colors.successBorder : colors.primaryBorder}
-          br={radius.md}
-          bg={settled ? colors.successSubtle : colors.surface}
-          accessibilityRole="text"
-          accessibilityLabel={`${t('dueTitle')}: ${fmt.money(booking.counterDueAmount)}`}
-        >
-          <XStack ai="baseline" jc="space-between" gap={space.md}>
-            <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-              {t('dueTitle')}
-            </Text>
+        <YStack gap={space.sm}>
+          <YStack h={1} bg={colors.borderSubtle} />
+          <XStack
+            ai="center"
+            jc="space-between"
+            gap={space.md}
+            accessibilityRole="text"
+            accessibilityLabel={`${tApp('due')}: ${fmt.money(booking.counterDueAmount)}`}
+          >
+            <XStack f={1} minWidth={0} ai="center" gap={GAP_4}>
+              <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                {tApp('due')}
+              </Text>
+              <InfoHint
+                label={tApp('due')}
+                size={fontSize.bodySm}
+                content={
+                  settled
+                    ? t('dueSettled')
+                    : booking.actualPickupAt
+                      ? t('dueAfterPickup')
+                      : t('dueAtPickup')
+                }
+              />
+            </XStack>
             <Text
               col={settled ? colors.success : colors.brandLink}
-              fos={fontSize.h3}
-              fow={fontWeight.bold}
+              fos={typeScale.heading.fontSize}
+              lh={typeScale.heading.lineHeight}
+              fow={fontWeight.semibold}
               numberOfLines={1}
             >
               {fmt.money(booking.counterDueAmount)}
             </Text>
           </XStack>
-          <Text col={colors.textMuted} fos={fontSize.body}>
-            {settled
-              ? t('dueSettled')
-              : booking.actualPickupAt
-                ? t('dueAfterPickup')
-                : t('dueAtPickup')}
-          </Text>
         </YStack>
-      )}
-      {/* Cọc tài sản là tiền GIỮ rồi trả lại - không cộng vào số phải thu ở trên. */}
-      {isZeroMoney(booking.depositAmount) ? null : (
-        <Text col={colors.placeholder} fos={fontSize.label}>
-          {t('depositNote', { amount: fmt.money(booking.depositAmount) })}
-        </Text>
       )}
     </SideCard>
   );

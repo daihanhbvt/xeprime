@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignLanes, assignPixelLanes, computeEventPosition } from './calendar-position.util';
+import { assignLanes, assignPixelLanes, computeDaySnap } from './calendar-position.util';
 import type { CalendarRange } from '../types/calendar.types';
 
 /** 01/07 → 08/07 UTC, 7 ngày. */
@@ -8,69 +8,6 @@ const RANGE: CalendarRange = {
   endAt: new Date('2026-07-08T00:00:00.000Z'),
   dayCount: 7,
 };
-
-describe('computeEventPosition', () => {
-  it('event nằm gọn trong khoảng', () => {
-    const pos = computeEventPosition(
-      { startAt: '2026-07-02T00:00:00.000Z', endAt: '2026-07-04T00:00:00.000Z' },
-      RANGE,
-    );
-    expect(pos).toEqual({ offsetDays: 1, spanDays: 2, clippedStart: false, clippedEnd: false });
-  });
-
-  it('nửa ngày ra phần thập phân, không làm tròn', () => {
-    const pos = computeEventPosition(
-      { startAt: '2026-07-02T12:00:00.000Z', endAt: '2026-07-03T06:00:00.000Z' },
-      RANGE,
-    );
-    expect(pos?.offsetDays).toBeCloseTo(1.5);
-    expect(pos?.spanDays).toBeCloseTo(0.75);
-  });
-
-  it('event bắt đầu trước khoảng thì bị clamp và đánh dấu clippedStart', () => {
-    const pos = computeEventPosition(
-      { startAt: '2026-06-28T00:00:00.000Z', endAt: '2026-07-03T00:00:00.000Z' },
-      RANGE,
-    );
-    expect(pos).toEqual({ offsetDays: 0, spanDays: 2, clippedStart: true, clippedEnd: false });
-  });
-
-  it('event kết thúc sau khoảng thì bị clamp và đánh dấu clippedEnd', () => {
-    const pos = computeEventPosition(
-      { startAt: '2026-07-06T00:00:00.000Z', endAt: '2026-07-20T00:00:00.000Z' },
-      RANGE,
-    );
-    expect(pos).toEqual({ offsetDays: 5, spanDays: 2, clippedStart: false, clippedEnd: true });
-  });
-
-  it('event dài hơn cả khoảng vẫn phủ kín, không biến mất', () => {
-    const pos = computeEventPosition(
-      { startAt: '2026-06-01T00:00:00.000Z', endAt: '2026-09-01T00:00:00.000Z' },
-      RANGE,
-    );
-    expect(pos).toEqual({ offsetDays: 0, spanDays: 7, clippedStart: true, clippedEnd: true });
-  });
-
-  it('nửa mở: event kết thúc đúng lúc khoảng bắt đầu thì không hiện', () => {
-    const pos = computeEventPosition(
-      { startAt: '2026-06-25T00:00:00.000Z', endAt: '2026-07-01T00:00:00.000Z' },
-      RANGE,
-    );
-    expect(pos).toBeNull();
-  });
-
-  it('nửa mở: event bắt đầu đúng lúc khoảng kết thúc thì không hiện', () => {
-    const pos = computeEventPosition(
-      { startAt: '2026-07-08T00:00:00.000Z', endAt: '2026-07-10T00:00:00.000Z' },
-      RANGE,
-    );
-    expect(pos).toBeNull();
-  });
-
-  it('ngày không hợp lệ trả null thay vì NaN lan ra CSS', () => {
-    expect(computeEventPosition({ startAt: 'khong-phai-ngay', endAt: 'x' }, RANGE)).toBeNull();
-  });
-});
 
 describe('assignLanes', () => {
   it('các event không chồng nhau dùng chung một tầng', () => {
@@ -145,5 +82,56 @@ describe('assignPixelLanes - xếp tầng theo vị trí PIXEL đã nới', () =
         { left: 46, width: 46 },
       ]),
     ).toEqual([0, 0]);
+  });
+});
+
+describe('computeDaySnap - thẻ chiếm trọn ô ngày, giờ chỉ quyết mức hở (26/11/2026)', () => {
+  const snap = (startAt: string, endAt: string) => computeDaySnap({ startAt, endAt }, RANGE);
+
+  it('hai chuyến CÙNG một ngày (08h-12h và 13h-17h) nằm cùng một ô, không lệch sang ngày kế', () => {
+    const morning = snap('2026-07-02T08:00:00.000Z', '2026-07-02T12:00:00.000Z');
+    const afternoon = snap('2026-07-02T13:00:00.000Z', '2026-07-02T17:00:00.000Z');
+    expect(morning).toMatchObject({ startDay: 1, endDay: 1, startGap: 1, endGap: 2 });
+    expect(afternoon).toMatchObject({ startDay: 1, endDay: 1, startGap: 2, endGap: 1 });
+  });
+
+  it('mốc nhận: trước 07h khít · 07h-12h hở ít · từ 12h hở nhiều', () => {
+    expect(snap('2026-07-02T06:59:00.000Z', '2026-07-04T23:00:00.000Z')?.startGap).toBe(0);
+    expect(snap('2026-07-02T07:00:00.000Z', '2026-07-04T23:00:00.000Z')?.startGap).toBe(1);
+    expect(snap('2026-07-02T11:59:00.000Z', '2026-07-04T23:00:00.000Z')?.startGap).toBe(1);
+    expect(snap('2026-07-02T12:00:00.000Z', '2026-07-04T23:00:00.000Z')?.startGap).toBe(2);
+  });
+
+  it('mốc trả: sau 19h khít · 12h-19h hở ít · từ 12h trở về trước hở nhiều', () => {
+    expect(snap('2026-07-02T06:00:00.000Z', '2026-07-04T19:30:00.000Z')?.endGap).toBe(0);
+    expect(snap('2026-07-02T06:00:00.000Z', '2026-07-04T19:00:00.000Z')?.endGap).toBe(1);
+    expect(snap('2026-07-02T06:00:00.000Z', '2026-07-04T17:30:00.000Z')?.endGap).toBe(1);
+    expect(snap('2026-07-02T06:00:00.000Z', '2026-07-04T12:30:00.000Z')?.endGap).toBe(1);
+    expect(snap('2026-07-02T06:00:00.000Z', '2026-07-04T12:00:00.000Z')?.endGap).toBe(2);
+  });
+
+  it('trả đúng 00h hôm sau thuộc ngày hôm trước, khít mép phải', () => {
+    expect(snap('2026-07-02T00:00:00.000Z', '2026-07-04T00:00:00.000Z')).toMatchObject({
+      startDay: 1,
+      endDay: 2,
+      startGap: 0,
+      endGap: 0,
+    });
+  });
+
+  it('bị cắt ở mép khoảng xem thì mép đó khít', () => {
+    expect(snap('2026-06-29T15:00:00.000Z', '2026-07-09T09:00:00.000Z')).toMatchObject({
+      startDay: 0,
+      endDay: 6,
+      startGap: 0,
+      endGap: 0,
+      clippedStart: true,
+      clippedEnd: true,
+    });
+  });
+
+  it('ngoài khoảng xem hoặc thời gian hỏng thì không vẽ', () => {
+    expect(snap('2026-07-09T08:00:00.000Z', '2026-07-10T08:00:00.000Z')).toBeNull();
+    expect(snap('x', '2026-07-03T08:00:00.000Z')).toBeNull();
   });
 });

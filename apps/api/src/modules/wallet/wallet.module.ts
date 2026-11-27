@@ -8,6 +8,9 @@ import { PlatformWithdrawalsController } from './platform-withdrawals.controller
 import { AccountWalletController, ShopWalletController } from './wallet.controller';
 import { WalletReadService } from './wallet-read.service';
 import { WalletStatementService } from './wallet-statement.service';
+import { ScheduledCreditService } from './scheduled-credit.service';
+import { ScheduledCreditSweeper } from './scheduled-credit.sweeper';
+import { PlatformScheduledCreditsController } from './platform-scheduled-credits.controller';
 import { WalletService } from './wallet.service';
 import { WithdrawalService } from './withdrawal.service';
 
@@ -31,6 +34,7 @@ import { WithdrawalService } from './withdrawal.service';
     ShopWalletController,
     PlatformWithdrawalsController,
     PlatformWalletsController,
+    PlatformScheduledCreditsController,
   ],
   providers: [
     WalletService,
@@ -39,7 +43,9 @@ import { WithdrawalService } from './withdrawal.service';
     WithdrawalService,
     PlatformWithdrawalService,
     PlatformWalletReadService,
+    ScheduledCreditService,
+    ScheduledCreditSweeper,
   ],
-  exports: [WalletService],
+  exports: [WalletService, ScheduledCreditService],
 })
 export class WalletModule {}

@@ -56,6 +56,8 @@ const SUPPORT_PAGES: readonly RegExp[] = [
   /^shop\/branches$/,
   /^shop\/policies$/,
   /^drivers$/,
+  new RegExp(`^drivers/internal/${ID}$`),
+  new RegExp(`^drivers/${ID}$`),
   /^members$/,
   /^members\/roles$/,
   /^support\/cases$/,

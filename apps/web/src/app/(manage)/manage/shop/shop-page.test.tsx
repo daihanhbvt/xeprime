@@ -669,8 +669,22 @@ describe('Trang Thông tin cửa hàng - tiêu đề và quyền', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Việt Car Hà Nội');
     expect(screen.getByText('Chủ gian hàng', { selector: 'span' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Xem gian hàng/ }).getAttribute('href')).toBe(
-      '/shops/viet-car-ha-noi',
+      '/viet-car-ha-noi',
     );
+  });
+
+  /* QC 27/11/2026: trên partner-stg, `/<slug>` trần rơi vào khu partner - phải dẫn sang site khách. */
+  it('chế độ host: "Xem gian hàng" dẫn sang site khách, không ở lại host partner', () => {
+    vi.stubEnv('NEXT_PUBLIC_XP_ZONE_MODE', 'host');
+    vi.stubEnv('NEXT_PUBLIC_WEB_MARKET_URL', 'https://stg.xeprime.vn');
+    try {
+      renderPage();
+      expect(screen.getByRole('link', { name: /Xem gian hàng/ }).getAttribute('href')).toBe(
+        'https://stg.xeprime.vn/viet-car-ha-noi',
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   /* Đã xác minh xong = không có tin gì, không có việc gì. Nhãn trạng thái đã nói điều đó. */

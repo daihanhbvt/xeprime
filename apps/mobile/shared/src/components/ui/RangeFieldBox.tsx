@@ -1,7 +1,7 @@
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
 import { useColors } from '@/theme/ThemeProvider';
 import { fieldFontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
@@ -44,7 +44,7 @@ export function RangeFieldBox({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} hint={inLabelHint(hint)} />
 
       <FieldShell
         onPress={onPress}
@@ -80,7 +80,7 @@ export function RangeFieldBox({
         </YStack>
       </FieldShell>
 
-      <FieldMessage error={error} hint={hint} />
+      <FieldMessage error={error} hint={belowHint(hint)} />
     </YStack>
   );
 }
