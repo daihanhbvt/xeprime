@@ -5,6 +5,7 @@ import {
   shopPoliciesApi,
   type SaveRentalPolicyInput,
   type SaveShopOperationDefaultsInput,
+  type SaveTenantRentalTermsInput,
 } from '../api';
 
 /**
@@ -78,6 +79,27 @@ export function useSaveShopOperationDefaults(vehicleType: string) {
       shopOperationDefaultsApi.save(vehicleType, body),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.rentalPolicies.operationDefaults(vehicleType), data);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+    },
+  });
+}
+
+/** Điều khoản thuê của gian hàng (ADR 0112 điều 3) - một bộ cho mọi xe, cùng key với web. */
+export function useShopRentalTerms(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.rentalPolicies.terms,
+    queryFn: () => shopPoliciesApi.terms(),
+    enabled,
+  });
+}
+
+/** Lưu điều khoản - trang xe công khai đọc điều khoản gian hàng nên nhánh xe cũng đọc lại (web). */
+export function useSaveShopRentalTerms() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SaveTenantRentalTermsInput) => shopPoliciesApi.saveTerms(body),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.rentalPolicies.terms, data);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
     },
   });

@@ -5,3 +5,4 @@ type Schemas = components['schemas'];
 
 export type Payment = Schemas['PaymentDto'];
 export type RecordPaymentInput = Schemas['RecordPaymentDto'];
+export type AdjustDepositCollectedInput = Schemas['AdjustDepositCollectedDto'];

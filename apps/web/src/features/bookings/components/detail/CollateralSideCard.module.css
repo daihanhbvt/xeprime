@@ -31,6 +31,23 @@
   color: var(--xp-color-success);
 }
 
+/* Thu dư: tiền thật đang nằm thừa trong tay chủ xe - không được trông giống "đã đủ". */
+.cashOver {
+  color: var(--xp-color-error);
+}
+
+.cashAdjustNote {
+  margin: calc(-1 * var(--xp-space-xs)) 0 var(--xp-space-md);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-caption);
+  line-height: var(--xp-line-height-caption);
+}
+
+.cashSummary {
+  margin: 0;
+  font-weight: var(--xp-font-weight-medium);
+}
+
 /* `textLink` của trang (vàng như "Chỉnh sửa"), thu về cỡ 12 của dòng trạng thái. */
 .cashAction.cashAction {
   font-size: var(--xp-font-size-body-sm);
@@ -113,7 +130,28 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: var(--xp-space-xs);
+  /* Thẳng hàng với dòng tên món (đầu dòng), không trôi xuống giữa khi có mô tả / người trả. */
+  align-self: flex-start;
+  gap: 2px;
+}
+
+/* Bốn thao tác (trả lại · hoàn tác · sửa · gỡ) cùng khuôn ô vuông, màu chữ phụ - gỡ giữ màu nguy hiểm. */
+.itemActions :global(.ant-btn-icon-only) {
+  width: 28px;
+  height: 28px;
+  color: var(--xp-color-text-secondary);
+}
+
+.itemActions :global(.ant-btn-icon-only.ant-btn-dangerous) {
+  color: var(--xp-color-error);
+}
+
+.accepted {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  overflow-wrap: anywhere;
 }
 
 .addForm {

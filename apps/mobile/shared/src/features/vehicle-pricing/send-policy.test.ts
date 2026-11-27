@@ -11,7 +11,7 @@ const base = {
 
 /**
  * Luật "có ghi bộ chính sách riêng không" — chép nguyên `sendPolicy` của web
- * `VehiclePricingWorkspace`: `overriding || (showPolicy && (direct ? policyDirty : editMode))`.
+ * `buildBody` (ADR 0112): `showPolicy ? (direct ? overriding || policyDirty : editMode) : overriding`.
  */
 describe('shouldSendPolicy - đúng luật của web', () => {
   it('direct (khu tài khoản): sửa MỖI giá ⇒ không ghi chính sách', () => {
@@ -29,6 +29,11 @@ describe('shouldSendPolicy - đúng luật của web', () => {
   it('xe ĐANG ghi đè ⇒ luôn gửi lại bộ chính sách đang có', () => {
     expect(shouldSendPolicy({ ...base, direct: true, overriding: true })).toBe(true);
     expect(shouldSendPolicy({ ...base, overriding: true, showPolicy: false })).toBe(true);
+  });
+
+  it('switch: xe đang ghi đè mà bật kế thừa đủ năm mục ⇒ về `shop` (ADR 0112)', () => {
+    expect(shouldSendPolicy({ ...base, overriding: true, editMode: false })).toBe(false);
+    expect(shouldSendPolicy({ ...base, overriding: true, editMode: true })).toBe(true);
   });
 
   it('switch (cổng quản lý): theo công tắc tuỳ chỉnh', () => {

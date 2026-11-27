@@ -26,6 +26,7 @@ import {
   SQL_BOOKING_SCOPE,
   SQL_DEBT_SCOPE,
   SQL_HAS_DEBT,
+  SQL_NET_DEPOSIT_SUM,
 } from '../../common/booking-money';
 import { dayRangeFilter } from '../../common/day-range';
 import {
@@ -443,10 +444,10 @@ export class FinanceOverviewService {
         SELECT GREATEST(dep.total - COALESCE(s.refund_amount, 0), 0) AS held
         FROM bookings b
         LEFT JOIN LATERAL (
-          SELECT COALESCE(SUM(p.amount), 0) AS total
+          SELECT ${SQL_NET_DEPOSIT_SUM} AS total
           FROM payments p
           WHERE p.booking_id = b.id
-            AND p.kind = ${PAYMENT_KIND.DEPOSIT}
+            AND p.kind IN (${PAYMENT_KIND.DEPOSIT}, ${PAYMENT_KIND.DEPOSIT_RETURN})
             AND p.status = ${PAYMENT_STATUS.SUCCEEDED}
         ) dep ON TRUE
         LEFT JOIN booking_deposit_settlements s ON s.booking_id = b.id

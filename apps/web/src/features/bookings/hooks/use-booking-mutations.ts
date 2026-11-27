@@ -39,6 +39,21 @@ function invalidateAfterBookingChange(queryClient: ReturnType<typeof useQueryCli
   void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
 }
 
+/**
+ * Response của các lượt sửa đơn là `toDetail` THUẦN - không kèm `handoverPrep` /
+ * `customerCompletedRentals` (chỉ `GET /bookings/:id` dựng hai phần đó). Ghi đè thẳng vào cache làm
+ * thẻ "Chuẩn bị bàn giao" biến mất rồi hiện lại khi refetch xong (nháy). Giữ phần cũ tới khi
+ * refetch (do `invalidateAfterBookingChange` kích) mang số mới về.
+ */
+function keepDetailExtras(prev: BookingDetail | undefined, next: BookingDetail): BookingDetail {
+  if (!prev) return next;
+  return {
+    ...next,
+    handoverPrep: next.handoverPrep ?? prev.handoverPrep,
+    customerCompletedRentals: next.customerCompletedRentals ?? prev.customerCompletedRentals,
+  };
+}
+
 export function useCreateBooking() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -52,7 +67,9 @@ export function useUpdateBooking(id: string) {
   return useMutation({
     mutationFn: (body: UpdateBookingInput) => updateBooking(id, body),
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, updated),
+      );
       invalidateAfterBookingChange(queryClient);
     },
   });
@@ -64,7 +81,9 @@ export function useUpdateBookingSource(id: string) {
   return useMutation({
     mutationFn: (body: UpdateBookingSourceInput) => updateBookingSource(id, body),
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, updated),
+      );
       invalidateAfterBookingChange(queryClient);
     },
   });
@@ -79,7 +98,9 @@ export function useUpdateBookingDeliveryFee(id: string) {
   return useMutation({
     mutationFn: (body: UpdateDeliveryFeeInput) => updateBookingDeliveryFee(id, body),
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, updated),
+      );
       invalidateAfterBookingChange(queryClient);
     },
   });
@@ -94,7 +115,9 @@ export function useAssignBookingDriver(id: string) {
   return useMutation({
     mutationFn: (body: AssignBookingDriverInput) => assignBookingDriver(id, body),
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, updated),
+      );
       invalidateAfterBookingChange(queryClient);
       // Số "đơn đang gán" trên trang Tài xế đổi theo.
       void queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all });
@@ -124,7 +147,9 @@ export function useTransitionBooking(id: string) {
   return useMutation({
     mutationFn: (body: TransitionInput) => transitionBooking(id, body),
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, updated),
+      );
       invalidateAfterBookingChange(queryClient);
     },
   });

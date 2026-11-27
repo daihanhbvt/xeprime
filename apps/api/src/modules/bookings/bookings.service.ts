@@ -42,8 +42,6 @@ import {
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
-  PAYMENT_KIND,
-  PAYMENT_STATUS,
   PRICE_ROW,
   canTransitionBooking,
   isBookingFinal,
@@ -70,6 +68,7 @@ import {
   bookingMoney,
   emptyMoneySides,
   loadBookingMoneySides,
+  loadNetDepositReceived,
   ownerShareHeldOnline,
 } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
@@ -512,15 +511,8 @@ export class BookingsService {
             select: { id: true },
           })
         : null,
-      this.prisma.payment.aggregate({
-        where: {
-          tenantId,
-          bookingId: detail.id,
-          kind: PAYMENT_KIND.DEPOSIT,
-          status: PAYMENT_STATUS.SUCCEEDED,
-        },
-        _sum: { amount: true },
-      }),
+      // Cọc RÒNG (đã trừ phần trả lại qua lượt sửa tiền cọc) - cùng phép với `bookingMoney`.
+      loadNetDepositReceived(this.prisma, tenantId, detail.id),
       this.prisma.contract.findFirst({
         where: { tenantId, bookingId: detail.id, status: { not: CONTRACT_STATUS.VOID } },
         orderBy: { createdAt: 'desc' },
@@ -553,7 +545,7 @@ export class BookingsService {
       // Phần khách đưa TAY lúc nhận xe — công nợ đã trừ `D` nằm ở XePrime (`bookingMoney`).
       rentDueAmount: new Prisma.Decimal(detail.debtAmount).toFixed(0),
       depositRequired: detail.depositAmount,
-      depositReceived: (deposits._sum.amount ?? new Prisma.Decimal(0)).toFixed(0),
+      depositReceived: deposits.toFixed(0),
       contractId: contract?.id ?? null,
       contractSigned:
         contract !== null &&

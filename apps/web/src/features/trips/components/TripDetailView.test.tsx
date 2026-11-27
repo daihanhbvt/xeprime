@@ -191,6 +191,7 @@ const TRIP: CustomerTripDetail = {
     refundedAt: null,
     refundReference: null,
     legacyPricing: false,
+    collaterals: [],
   },
 };
 

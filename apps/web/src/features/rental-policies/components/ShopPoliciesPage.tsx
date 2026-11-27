@@ -15,7 +15,11 @@ import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
-import { useShopOperationDefaults, useShopPolicy } from '../hooks/use-shop-policy';
+import {
+  useShopOperationDefaults,
+  useShopPolicy,
+  useShopRentalTerms,
+} from '../hooks/use-shop-policy';
 import { PoliciesLayout } from './PoliciesLayout';
 import { ShopPaymentCard } from './ShopPaymentCard';
 import { ShopPolicyForm } from './ShopPolicyForm';
@@ -74,6 +78,7 @@ function PoliciesWorkspace({ canEdit }: { canEdit: boolean }) {
   const motorbike = useShopPolicy(VEHICLE_TYPE.MOTORBIKE);
   const policy = vehicleType === VEHICLE_TYPE.CAR ? car : motorbike;
   const defaults = useShopOperationDefaults(vehicleType);
+  const terms = useShopRentalTerms();
 
   const label = (type: VehicleType) => domainLabel('vehicleType', type);
   const count = (data: typeof car.data) =>
@@ -107,7 +112,10 @@ function PoliciesWorkspace({ canEdit }: { canEdit: boolean }) {
   }, []);
 
   const leading = <ShopPaymentCard canEditVat={canEdit} />;
-  const failed = (policy.isError && !policy.data) || (defaults.isError && !defaults.data);
+  const failed =
+    (policy.isError && !policy.data) ||
+    (defaults.isError && !defaults.data) ||
+    (terms.isError && !terms.data);
 
   return (
     <div className={styles.page}>
@@ -128,7 +136,7 @@ function PoliciesWorkspace({ canEdit }: { canEdit: boolean }) {
         }
       />
 
-      {policy.data && defaults.data ? (
+      {policy.data && defaults.data && terms.data ? (
         <ShopPolicyForm
           // Đổi loại xe là một form khác — không để RHF mang giá trị loại này sang loại kia.
           key={vehicleType}
@@ -136,6 +144,7 @@ function PoliciesWorkspace({ canEdit }: { canEdit: boolean }) {
           vehicleLabel={label(vehicleType)}
           initial={policy.data}
           defaults={defaults.data}
+          terms={terms.data}
           canEdit={canEdit}
           leading={leading}
           onDirtyChange={onDirtyChange}
@@ -155,6 +164,7 @@ function PoliciesWorkspace({ canEdit }: { canEdit: boolean }) {
                       onClick={() => {
                         if (policy.isError) void policy.refetch();
                         if (defaults.isError) void defaults.refetch();
+                        if (terms.isError) void terms.refetch();
                       }}
                     >
                       {tCommon('actions.retry')}

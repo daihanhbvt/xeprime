@@ -133,14 +133,15 @@
     "archived": "Archived"
   },
   "collateralAssetType": {
-    "vehicle_registration": "Motorbike registration papers",
-    "motorbike": "Motorbike",
-    "passport": "Passport"
+    "vehicle_registration": "Vehicle registration papers (vehicle worth over 10 million VND)",
+    "motorbike": "Motorbike registered in the renter's name",
+    "passport": "Valid passport"
   },
   "collateralMode": {
     "cash": "Cash deposit",
     "asset": "Asset or document held",
-    "none": "No collateral required"
+    "none": "No collateral required",
+    "required": "Collateral required"
   },
   "identityVerifyMethod": {
     "vneid": "Checked via VNeID",
@@ -431,7 +432,8 @@
   },
   "paymentKind": {
     "rental": "Rental fee",
-    "deposit": "Deposit"
+    "deposit": "Deposit",
+    "deposit_return": "Deposit returned"
   },
   "paymentMethod": {
     "cash": "Cash",
@@ -1797,5 +1799,32 @@
     "motorbike": "Motorbike",
     "vehicle_registration": "Motorbike registration",
     "other": "Other"
+  },
+  "collateralCombination": {
+    "any_one": "Renter picks one",
+    "all": "Both required"
+  },
+  "collateralSummary": {
+    "none": "No collateral",
+    "cash": "Cash deposit {amount}",
+    "cashNoAmount": "Cash deposit",
+    "asset": "Asset deposit ({assets})",
+    "assetOneOf": "Asset deposit (one of: {assets})",
+    "assetNoTypes": "Asset deposit",
+    "anyOne": "{cash} or {asset}",
+    "all": "{cash} and {asset}"
+  },
+  "rentalConditionDocument": {
+    "citizen_id": "Valid ID card",
+    "passport": "Valid passport",
+    "driver_licence": "Valid driving licence",
+    "other": "Other document"
+  },
+  "rentalConditionVerify": {
+    "vneid": "via VNeID",
+    "in_person": "against the original in person"
+  },
+  "rentalConditions": {
+    "verify": "Checked {methods}"
   }
 }

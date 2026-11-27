@@ -4,7 +4,8 @@ import {
   APPROVAL_REASON_MAX_LENGTH,
   APPROVAL_STATUS_VALUES,
   COLLATERAL_ASSET_TYPE_VALUES,
-  COLLATERAL_MODE_VALUES,
+  COLLATERAL_COMBINATION_VALUES,
+  COLLATERAL_MODE_INPUT_VALUES,
   POLICY_SOURCE_VALUES,
   PUBLISH_REQUIREMENT_VALUES,
   SERVICE_TYPE_VALUES,
@@ -237,7 +238,17 @@ export class VehicleApprovalDiscountTierDto {
 
 export class VehicleApprovalPolicyDto {
   @ApiProperty({ enum: POLICY_SOURCE_VALUES }) source!: string;
-  @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) collateralMode!: string;
+  @ApiProperty({
+    enum: COLLATERAL_MODE_INPUT_VALUES,
+    description: 'required | none; phiếu chụp trước ADR 0112 có thể là cash | asset',
+  })
+  collateralMode!: string;
+  @ApiPropertyOptional({ description: 'Vắng ở phiếu chụp trước ADR 0112' })
+  collateralCashEnabled?: boolean;
+  @ApiPropertyOptional({ description: 'Vắng ở phiếu chụp trước ADR 0112' })
+  collateralAssetEnabled?: boolean;
+  @ApiPropertyOptional({ enum: COLLATERAL_COMBINATION_VALUES })
+  collateralCombination?: string;
   @ApiProperty({ enum: COLLATERAL_ASSET_TYPE_VALUES, isArray: true })
   collateralAssetTypes!: string[];
   @ApiProperty() depositAmount!: string;

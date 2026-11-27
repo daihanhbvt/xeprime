@@ -484,7 +484,8 @@ describe('2. Snapshot v2: đủ dữ liệu lúc gửi, bất biến sau đó', 
       {
         serviceType: SERVICE_TYPE.SELF_DRIVE,
         autoAcceptEnabled: true,
-        termsText: 'Xuất trình giấy phép lái xe khi nhận xe',
+        // ADR 0112: điều khoản là của gian hàng - phiếu duyệt xe không chụp điều khoản theo xe.
+        termsText: null,
       },
     ]);
     expect(detail.policy).toMatchObject({

@@ -8,7 +8,9 @@ export type {
   DiscountTier,
   LegacyDiscountTier,
   SaveShopOperationDefaultsInput,
+  SaveTenantRentalTermsInput,
   ShopOperationDefaults,
+  TenantRentalTerms,
 } from '@/api/rental-policies/api';
 export type {
   RentalPolicyValues,

@@ -113,37 +113,55 @@ describe('pickupChecklistItems - checklist nhận xe', () => {
     expect(pickupChecklistItems(base)).toContainEqual({ key: 'inspect', energy: 'other' });
   });
 
-  it('cọc TIỀN của đơn thắng tài sản thế chấp', () => {
+  it('chỉ cọc TIỀN ⇒ dặn nộp cọc theo số của đơn', () => {
     const items = pickupChecklistItems({
       ...base,
       depositRequired: '3000000',
-      collateral: { mode: COLLATERAL_MODE.ASSET, assetTypes: ['motorbike'] },
+      collateral: { mode: COLLATERAL_MODE.REQUIRED, cashEnabled: true, assetTypes: [] },
     });
     expect(items.at(-1)).toEqual({ key: 'deposit', amount: '3000000' });
-    expect(items.map((i) => i.key)).not.toContain('asset');
   });
 
-  it('không cọc tiền + thế chấp tài sản có loại ⇒ dặn để lại tài sản', () => {
+  it('cọc tiền + tài sản cùng bật (ADR 0112) ⇒ MỘT mục "collateral"', () => {
     const items = pickupChecklistItems({
       ...base,
-      collateral: { mode: COLLATERAL_MODE.ASSET, assetTypes: ['motorbike'] },
+      depositRequired: '3000000',
+      collateral: {
+        mode: COLLATERAL_MODE.REQUIRED,
+        cashEnabled: true,
+        assetEnabled: true,
+        combination: 'any_one',
+        assetTypes: ['motorbike'],
+      },
+    });
+    expect(items.at(-1)?.key).toBe('collateral');
+    expect(items.map((i) => i.key)).not.toContain('asset');
+    expect(items.map((i) => i.key)).not.toContain('deposit');
+  });
+
+  it('chỉ cọc tài sản có loại ⇒ dặn để lại tài sản (cả mã cũ `asset`)', () => {
+    const items = pickupChecklistItems({
+      ...base,
+      collateral: { mode: COLLATERAL_MODE.REQUIRED, assetEnabled: true, assetTypes: ['motorbike'] },
     });
     expect(items.at(-1)).toEqual({ key: 'asset', assets: ['motorbike'] });
+    const legacy = pickupChecklistItems({
+      ...base,
+      collateral: { mode: 'asset', assetTypes: ['motorbike'] },
+    });
+    expect(legacy.at(-1)).toEqual({ key: 'asset', assets: ['motorbike'] });
   });
 
-  it('thế chấp tài sản nhưng chưa khai loại nào ⇒ không dặn gì', () => {
+  it('cọc tài sản nhưng chưa khai loại nào ⇒ không dặn gì', () => {
     const items = pickupChecklistItems({
       ...base,
-      collateral: { mode: COLLATERAL_MODE.ASSET, assetTypes: [] },
+      collateral: { mode: COLLATERAL_MODE.REQUIRED, assetEnabled: true, assetTypes: [] },
     });
     expect(items.map((i) => i.key)).not.toContain('asset');
   });
 
-  it('giấy tờ chủ xe yêu cầu đi kèm mục định danh', () => {
-    expect(pickupChecklistItems({ ...base, documents: ['cccd'] })).toContainEqual({
-      key: 'identity',
-      documents: ['cccd'],
-    });
+  it('mục định danh theo luật chuẩn nền tảng - không mang giấy tờ theo chủ xe', () => {
+    expect(pickupChecklistItems(base)).toContainEqual({ key: 'identity' });
   });
 });
 

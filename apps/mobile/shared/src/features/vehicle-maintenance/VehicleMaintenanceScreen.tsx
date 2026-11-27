@@ -100,8 +100,9 @@ export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
         title={tEdit('title')}
         onBack={back}
       />
-      <Screen scrollReveal
+      <Screen scrollReveal={false} motion={false}
         edges={['left', 'right', 'bottom']}
+        {...(saveBar ? { footer: saveBar } : {})}
         refreshing={profile.isRefetching}
         onRefresh={() => {
           void profile.refetch();

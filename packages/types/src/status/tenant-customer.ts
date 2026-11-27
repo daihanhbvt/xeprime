@@ -270,6 +270,41 @@ export function requiredIdentityDocuments(serviceType: string): CustomerDocument
 }
 
 /**
+ * Điều kiện thuê CHUẨN của nền tảng (ADR 0112 điều 3) - một luật cho mọi gian hàng, mọi xe, mọi
+ * dịch vụ; gian hàng và chủ xe chỉ XEM, không sửa. Giấy tờ: CCCD/CMND còn hạn HOẶC hộ chiếu còn
+ * hạn. Đối chiếu danh tính: qua VNeID HOẶC bản gốc trực tiếp. Bằng lái của khách tự lái vẫn đi
+ * cổng riêng (ADR 0057). Các cột theo xe `vehicle_service_settings.{required_documents,
+ * identity_verify_method, terms_text, require_terms_acceptance}` thôi được đọc/ghi.
+ */
+export const PLATFORM_RENTAL_CONDITIONS = {
+  /** Khách xuất trình MỘT trong các giấy tờ này. */
+  identityDocuments: [CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID, CUSTOMER_DOCUMENT_TYPE.PASSPORT],
+  /** Chủ xe đối chiếu bằng MỘT trong các cách này. */
+  verifyMethods: [IDENTITY_VERIFY_METHOD.VNEID, IDENTITY_VERIFY_METHOD.IN_PERSON],
+} as const satisfies {
+  identityDocuments: readonly CustomerDocumentType[];
+  verifyMethods: readonly IdentityVerifyMethod[];
+};
+
+/**
+ * Nhóm điều khoản thuê của GIAN HÀNG (ADR 0112 điều 3, bảng `tenant_rental_terms`): `self_drive`
+ * phủ cả Tự lái lẫn Thuê dài hạn; `with_driver` là Có tài xế. Mã trùng mã dịch vụ.
+ */
+export const RENTAL_TERMS_GROUP = {
+  SELF_DRIVE: 'self_drive',
+  WITH_DRIVER: 'with_driver',
+} as const;
+export type RentalTermsGroup = (typeof RENTAL_TERMS_GROUP)[keyof typeof RENTAL_TERMS_GROUP];
+export const RENTAL_TERMS_GROUP_VALUES = Object.values(RENTAL_TERMS_GROUP) as RentalTermsGroup[];
+
+/** Nhóm điều khoản của một dịch vụ: có tài xế ⇒ `with_driver`, còn lại (tự lái, dài hạn) ⇒ `self_drive`. */
+export function rentalTermsGroupOf(serviceType: string): RentalTermsGroup {
+  return serviceType === RENTAL_TERMS_GROUP.WITH_DRIVER
+    ? RENTAL_TERMS_GROUP.WITH_DRIVER
+    : RENTAL_TERMS_GROUP.SELF_DRIVE;
+}
+
+/**
  * Nhóm quan hệ được phép CHỌN với bộ quyền hiện tại.
  *
  * Bỏ các nhóm TÀI CHÍNH khi người dùng không có `finance.view` — backend từ chối chúng bằng 403,

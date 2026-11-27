@@ -1,10 +1,9 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   AUTO_ACCEPT_BLOCKER_VALUES,
   BOOKING_REQUEST_DECISION_SOURCE_VALUES,
   BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_STATUS_VALUES,
-  CONFIGURABLE_CUSTOMER_DOCUMENT_TYPES,
   CUSTOMER_TRIP_STAGE_LIVE_VALUES,
   DRIVER_DEPOSIT_MODE_SUPPORTED,
   DRIVER_DEPOSIT_MODE_VALUES,
@@ -12,9 +11,7 @@ import {
   DRIVER_SURCHARGE_THRESHOLD_MAX,
   DRIVER_SURCHARGE_UNIT_VALUES,
   HANDOVER_WINDOW_MAX_PER_KIND,
-  IDENTITY_VERIFY_METHOD_VALUES,
   MIN_RENTAL_MINUTES_RANGE,
-  RENTAL_TERMS_MAX_LENGTH,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE_VALUES,
   TURNAROUND_BUFFER_MAX_MINUTES,
@@ -26,6 +23,7 @@ import {
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
+  Allow,
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
@@ -36,7 +34,6 @@ import {
   IsString,
   Matches,
   Max,
-  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -213,19 +210,6 @@ export class VehicleServiceSettingDto {
   minRentalMinutes!: number | null;
   @ApiProperty({ enum: ROUTE_TYPE_VALUES, isArray: true }) preferredRouteTypes!: string[];
   @ApiProperty({
-    type: [String],
-    description: 'Giấy tờ chủ xe cấu hình (rỗng = bộ tối thiểu theo luật)',
-  })
-  requiredDocuments!: string[];
-  @ApiProperty({
-    type: [String],
-    description: 'Bộ giấy tờ HIỆU LỰC = tối thiểu theo luật ∪ cấu hình - thứ khách nhìn thấy',
-  })
-  effectiveRequiredDocuments!: string[];
-  @ApiProperty({ enum: IDENTITY_VERIFY_METHOD_VALUES }) identityVerifyMethod!: string;
-  @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
-  @ApiProperty() requireTermsAcceptance!: boolean;
-  @ApiProperty({
     enum: DRIVER_DEPOSIT_MODE_VALUES,
     deprecated: true,
     description: 'NGỪNG DÙNG (29/10/2026) - tiền giữ chỗ do nền tảng thu cho mọi đơn; giữ cho app đã phát hành',
@@ -281,31 +265,26 @@ export class PatchVehicleServiceSettingDto {
   @IsIn(ROUTE_TYPE_VALUES, { each: true })
   preferredRouteTypes?: string[];
 
-  @ApiPropertyOptional({
-    type: [String],
-    description: 'Tập con của citizen_id | driver_licence | passport',
-  })
-  @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @IsIn(CONFIGURABLE_CUSTOMER_DOCUMENT_TYPES, { each: true })
-  requiredDocuments?: string[];
+  /*
+   * Bốn trường điều kiện thuê theo xe đã gỡ (ADR 0112 điều 3) - luật chuẩn nền tảng thay thế. App
+   * đã phát hành còn gửi thì NHẬN rồi BỎ QUA (pipe toàn cục `forbidNonWhitelisted` sẽ 400 nếu xoá
+   * hẳn); ẩn khỏi OpenAPI để client mới không gửi.
+   */
+  @ApiHideProperty()
+  @Allow()
+  requiredDocuments?: unknown;
 
-  @ApiPropertyOptional({ enum: IDENTITY_VERIFY_METHOD_VALUES })
-  @IsOptional()
-  @IsIn(IDENTITY_VERIFY_METHOD_VALUES)
-  identityVerifyMethod?: string;
+  @ApiHideProperty()
+  @Allow()
+  identityVerifyMethod?: unknown;
 
-  @ApiPropertyOptional({ type: String, nullable: true, maxLength: RENTAL_TERMS_MAX_LENGTH })
-  @IsOptional()
-  @IsString()
-  @MaxLength(RENTAL_TERMS_MAX_LENGTH)
-  termsText?: string | null;
+  @ApiHideProperty()
+  @Allow()
+  termsText?: unknown;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  requireTermsAcceptance?: boolean;
+  @ApiHideProperty()
+  @Allow()
+  requireTermsAcceptance?: unknown;
 
   /**
    * NGỪNG DÙNG (29/10/2026): web đã gỡ ô cọc giữ chuyến — tiền giữ chỗ do nền tảng thu. Chỉ còn nhận

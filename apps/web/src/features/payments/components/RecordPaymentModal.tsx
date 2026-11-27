@@ -5,7 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
-import { PAYMENT_KIND, type PaymentKind } from '@xeprime/types';
+import { PAYMENT_KIND, type RecordablePaymentKind } from '@xeprime/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
@@ -53,7 +53,7 @@ interface RecordPaymentModalProps {
    * Đây không phải một nhãn: cọc **không** cộng vào `paidAmount` và **không** làm giảm công nợ
    * (nó là tài sản giữ hộ, sẽ trả lại khách). Chọn nhầm là ghi sai sổ ở hai chỗ cùng lúc.
    */
-  kind?: PaymentKind;
+  kind?: RecordablePaymentKind;
   /**
    * `debtAmount` là phần khách còn đưa TẬN TAY (`counterDueAmount` = công nợ − `D` đã nằm ở XePrime)
    * chứ không phải cả công nợ. Chỉ đổi nhãn dòng dẫn cho khớp khung "Còn phải thu của khách" của

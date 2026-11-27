@@ -14,6 +14,11 @@ import {
   ShopRentalPolicyDto,
 } from './dto/pricing.dto';
 import { PricingService } from './pricing.service';
+import {
+  SaveTenantRentalTermsDto,
+  TenantRentalTermsDto,
+} from '../vehicle-settings/dto/tenant-rental-terms.dto';
+import { TenantRentalTermsService } from '../vehicle-settings/tenant-rental-terms.service';
 
 /**
  * Chính sách thuê MẶC ĐỊNH của gian hàng (Wave 2 — B2; tách theo LOẠI XE 17/08). Áp cho mọi
@@ -27,7 +32,35 @@ import { PricingService } from './pricing.service';
 @TenantScoped()
 @Realms(ACCOUNT_REALM.PARTNER)
 export class ShopPoliciesController {
-  constructor(private readonly pricing: PricingService) {}
+  constructor(
+    private readonly pricing: PricingService,
+    private readonly rentalTerms: TenantRentalTermsService,
+  ) {}
+
+  /*
+   * Điều khoản thuê của GIAN HÀNG theo nhóm dịch vụ (ADR 0112 điều 3). Cùng quyền với chính sách
+   * thuê mặc định; khai TRƯỚC `@Get()` gốc không cần - đường dẫn khác hẳn.
+   */
+  @Get('terms')
+  @RequirePermissions(PERMISSION.TENANT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.RENTAL_POLICY_VIEW)
+  @ApiOperation({ summary: 'Điều khoản thuê của gian hàng (Tự lái & Dài hạn · Có tài xế)' })
+  @ApiOkResponse({ type: TenantRentalTermsDto })
+  getTerms(@CurrentTenant() tenant: TenantContext): Promise<TenantRentalTermsDto> {
+    return this.rentalTerms.get(tenant.tenantId);
+  }
+
+  @Put('terms')
+  @RequirePermissions(PERMISSION.TENANT_UPDATE)
+  @ApiOperation({ summary: 'Lưu điều khoản thuê của gian hàng theo nhóm dịch vụ (upsert, audit)' })
+  @ApiOkResponse({ type: TenantRentalTermsDto })
+  saveTerms(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SaveTenantRentalTermsDto,
+  ): Promise<TenantRentalTermsDto> {
+    return this.rentalTerms.save(tenant.tenantId, user.id, dto);
+  }
 
   @Get()
   @RequirePermissions(PERMISSION.TENANT_VIEW)

@@ -14,6 +14,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
@@ -51,6 +52,7 @@ const vehicleSettings = new VehicleSettingsService(
   new OccupancyService(asService),
   listings,
   makeDriversService(asService),
+    new TenantRentalTermsService(asService, audit),
 );
 
 /**

@@ -25,6 +25,7 @@ import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { Button } from '@/components/ui/Button';
 import type { CustomerTripDetail, CustomerTripFinance } from '../api';
 import { RefundAccountSheet } from './RefundAccountSheet';
+import { TripDepositHeld } from './TripDepositHeld';
 import { TripRequestPill, type TripRequestTone } from './TripRequestCards';
 
 /**
@@ -291,6 +292,8 @@ function DepositBlock({
           )}
         </>
       )}
+      {/* Tài sản thế chấp đã để lại - dòng tiền đã có ở trên. */}
+      <TripDepositHeld finance={finance} withCash={false} />
 
       {tail ? (
         <Text col={colors.textMuted} fos={fontSize.label}>

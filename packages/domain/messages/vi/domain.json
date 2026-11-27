@@ -133,14 +133,15 @@
     "archived": "Đã lưu trữ"
   },
   "collateralAssetType": {
-    "vehicle_registration": "Cà vẹt (đăng ký xe máy)",
-    "motorbike": "Xe máy",
-    "passport": "Hộ chiếu"
+    "vehicle_registration": "Cà vẹt xe (có giá trị trên 10 triệu đồng)",
+    "motorbike": "Xe máy chính chủ",
+    "passport": "Hộ chiếu còn hiệu lực"
   },
   "collateralMode": {
     "cash": "Cọc tiền",
     "asset": "Cọc tài sản",
-    "none": "Miễn thế chấp"
+    "none": "Miễn thế chấp",
+    "required": "Có yêu cầu thế chấp"
   },
   "identityVerifyMethod": {
     "vneid": "Đối chiếu qua VNeID",
@@ -431,7 +432,8 @@
   },
   "paymentKind": {
     "rental": "Tiền thuê",
-    "deposit": "Tiền cọc"
+    "deposit": "Tiền cọc",
+    "deposit_return": "Trả lại cọc"
   },
   "paymentMethod": {
     "cash": "Tiền mặt",
@@ -1797,5 +1799,32 @@
     "motorbike": "Xe máy",
     "vehicle_registration": "Cà vẹt xe máy",
     "other": "Khác"
+  },
+  "collateralCombination": {
+    "any_one": "Khách chọn 1 trong 2",
+    "all": "Bắt buộc cả 2"
+  },
+  "collateralSummary": {
+    "none": "Miễn thế chấp",
+    "cash": "Cọc tiền {amount}",
+    "cashNoAmount": "Cọc tiền",
+    "asset": "Cọc tài sản ({assets})",
+    "assetOneOf": "Cọc tài sản (một trong: {assets})",
+    "assetNoTypes": "Cọc tài sản",
+    "anyOne": "{cash} hoặc {asset}",
+    "all": "{cash} và {asset}"
+  },
+  "rentalConditionDocument": {
+    "citizen_id": "CMND/CCCD còn hạn",
+    "passport": "Hộ chiếu còn hạn",
+    "driver_licence": "Giấy phép lái xe còn hạn",
+    "other": "Giấy tờ khác"
+  },
+  "rentalConditionVerify": {
+    "vneid": "qua VNeID",
+    "in_person": "bản gốc trực tiếp"
+  },
+  "rentalConditions": {
+    "verify": "Đối chiếu {methods}"
   }
 }

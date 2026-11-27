@@ -1,14 +1,14 @@
 'use client';
 
 import {
-  CheckOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
+  RollbackOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
-import { App, Button, Input, Popconfirm, Select, Tag } from 'antd';
-import { useState } from 'react';
+import { App, Button, Input, Popconfirm, Select, Tag, Tooltip } from 'antd';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BOOKING_COLLATERAL_DESCRIPTION_MAX,
@@ -22,6 +22,8 @@ import {
   isBookingCollateralEditable,
   type BookingCollateralType,
 } from '@xeprime/types';
+import { normalizeCollateral } from '@xeprime/domain';
+import { policyCollateral } from '@/features/rental-policies/collateral-text';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { useSettlement } from '@/features/settlement/hooks';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
@@ -30,7 +32,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
+import { absoluteMoney, isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import {
   useAddBookingCollateral,
   useRemoveBookingCollateral,
@@ -67,7 +69,14 @@ export function CollateralSideCard() {
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
   const { has } = usePermissions();
-  const { booking, moneyClosed, can } = useBookingDetailActions();
+  const {
+    booking,
+    moneyClosed,
+    can,
+    collateralAddRequest,
+    cashEditRequest,
+  } = useBookingDetailActions();
+  const cardRef = useRef<HTMLElement>(null);
   const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.SETTLEMENT);
   // Cùng khoá cache với thẻ Phát sinh - không thêm request nào.
   const settlement = useSettlement(booking.id, !inSupport).data;
@@ -82,6 +91,13 @@ export function CollateralSideCard() {
   const [cashOpen, setCashOpen] = useState(false);
 
   const items = booking.collaterals ?? [];
+  // Chính sách cọc ĐÓNG BĂNG của đơn (ADR 0112 điều 2): nhận tài sản mà chưa ghi món nào ⇒ nhắc
+  // các loại được chấp nhận (khách đưa MỘT loại).
+  const policy = normalizeCollateral(policyCollateral(booking.priceSnapshot?.policy ?? null));
+  const acceptedAssets =
+    policy?.asset && policy.assetTypes.length > 0 && items.length === 0
+      ? policy.assetTypes.map((code) => dl('collateralAssetType', code)).join(', ')
+      : null;
   const canUpdate = has(PERMISSION.BOOKING_UPDATE);
   const editable = canUpdate && isBookingCollateralEditable(booking.status);
   const hasCash = !isZeroMoney(booking.depositAmount);
@@ -93,6 +109,16 @@ export function CollateralSideCard() {
     ? subtractMoney(settlement.depositRequired, settlement.depositReceived)
     : '0';
   const depositShort = !isNegativeMoney(depositOutstanding) && !isZeroMoney(depositOutstanding);
+  // Thu DƯ (đã thu > phải thu): tiền thật đang thừa trong tay chủ xe - phải hiện, không gộp vào "đủ".
+  const depositOver = isNegativeMoney(depositOutstanding);
+  const hasReceived = settlement ? !isZeroMoney(settlement.depositReceived) : false;
+  // Sửa số đã thu chỉ trước chặng hoàn cọc - sau đó sửa ở phần hoàn cọc (server cũng chặn).
+  const canAdjustCollected =
+    has(PERMISSION.PAYMENT_RECORD) &&
+    (depositStatus === DEPOSIT_STATUS.NONE ||
+      depositStatus === DEPOSIT_STATUS.NOT_RECEIVED ||
+      depositStatus === DEPOSIT_STATUS.RECEIVED ||
+      depositStatus === DEPOSIT_STATUS.AWAITING_REFUND);
   // Chỉ mời thu khi còn thiếu VÀ chưa sang giai đoạn hoàn: sau khi đã hoàn thì "thu thêm" là một
   // nghiệp vụ khác hẳn. Ghi tiền MỚI đóng trên đơn huỷ / khách không đến (server: BOOKING_MONEY_CLOSED).
   const canTakeDeposit =
@@ -100,6 +126,30 @@ export function CollateralSideCard() {
     !moneyClosed &&
     depositShort &&
     (depositStatus === DEPOSIT_STATUS.NOT_RECEIVED || depositStatus === DEPOSIT_STATUS.RECEIVED);
+
+  /*
+   * Dòng "Nhận tài sản thế chấp" của Chuẩn bị bàn giao gọi `openAddCollateral` ⇒ mở ô thêm món và
+   * đưa thẻ vào tầm mắt. Bỏ qua giá trị đầu (0) - vào trang không mở sẵn.
+   */
+  // Chỉnh state ngay lúc render khi có lượt yêu cầu mới (không setState trong effect); effect chỉ cuộn.
+  const [seenAddRequest, setSeenAddRequest] = useState(collateralAddRequest);
+  if (collateralAddRequest !== seenAddRequest) {
+    setSeenAddRequest(collateralAddRequest);
+    if (collateralAddRequest && editable) {
+      setEditingId(null);
+      setAdding(true);
+    }
+  }
+  useEffect(() => {
+    if (!collateralAddRequest) return;
+    cardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [collateralAddRequest]);
+  // "Chỉnh sửa" ở dòng "Thu cọc tiền" của Chuẩn bị bàn giao ⇒ mở đúng hộp Sửa tiền cọc này.
+  const [seenCashRequest, setSeenCashRequest] = useState(cashEditRequest);
+  if (cashEditRequest !== seenCashRequest) {
+    setSeenCashRequest(cashEditRequest);
+    if (cashEditRequest && can.edit) setCashOpen(true);
+  }
 
   if (!hasCash && items.length === 0 && !editable) return null;
 
@@ -131,7 +181,7 @@ export function CollateralSideCard() {
   }
 
   return (
-    <section className={detailStyles.sideCard} aria-label={t('title')}>
+    <section ref={cardRef} className={detailStyles.sideCard} aria-label={t('title')}>
       <div className={detailStyles.sideCardHead}>
         <h2 className={detailStyles.sideTitle}>{t('title')}</h2>
         {items.length > 0 ? (
@@ -157,24 +207,33 @@ export function CollateralSideCard() {
             ) : null}
           </span>
         </div>
-        {hasCash && settlement ? (
+        {(hasCash || hasReceived) && settlement ? (
           <div className={styles.cashStatus}>
             <span
               className={cx(
                 depositStatus === DEPOSIT_STATUS.NOT_RECEIVED && styles.cashPending,
-                depositStatus === DEPOSIT_STATUS.RECEIVED && !depositShort && styles.cashDone,
+                depositStatus === DEPOSIT_STATUS.RECEIVED &&
+                  !depositShort &&
+                  !depositOver &&
+                  styles.cashDone,
+                depositOver && styles.cashOver,
               )}
             >
-              {depositStatus === DEPOSIT_STATUS.NOT_RECEIVED
-                ? t('cashNotReceived')
-                : depositStatus === DEPOSIT_STATUS.RECEIVED
-                  ? depositShort
-                    ? t('cashPartial', {
-                        received: fmt.money(settlement.depositReceived),
-                        amount: fmt.money(depositOutstanding),
-                      })
-                    : t('cashReceived')
-                  : dl('depositStatus', settlement.depositStatus)}
+              {depositOver && depositStatus === DEPOSIT_STATUS.RECEIVED
+                ? t('cashOver', {
+                    received: fmt.money(settlement.depositReceived),
+                    amount: fmt.money(absoluteMoney(depositOutstanding) ?? '0'),
+                  })
+                : depositStatus === DEPOSIT_STATUS.NOT_RECEIVED
+                  ? t('cashNotReceived')
+                  : depositStatus === DEPOSIT_STATUS.RECEIVED
+                    ? depositShort
+                      ? t('cashPartial', {
+                          received: fmt.money(settlement.depositReceived),
+                          amount: fmt.money(depositOutstanding),
+                        })
+                      : t('cashReceived')
+                    : dl('depositStatus', settlement.depositStatus)}
             </span>
             {canTakeDeposit ? (
               <button
@@ -190,7 +249,16 @@ export function CollateralSideCard() {
       </div>
 
       {items.length === 0 ? (
-        <p className={styles.empty}>{t('empty')}</p>
+        <>
+          <p className={styles.empty}>{t('empty')}</p>
+          {acceptedAssets ? (
+            <p className={styles.accepted}>
+              {policy && policy.assetTypes.length > 1
+                ? t('acceptedMany', { assets: acceptedAssets })
+                : t('acceptedOne', { assets: acceptedAssets })}
+            </p>
+          ) : null}
+        </>
       ) : (
         <ul className={styles.list}>
           {items.map((item) => {
@@ -234,45 +302,53 @@ export function CollateralSideCard() {
                 </div>
                 {canUpdate ? (
                   <div className={styles.itemActions}>
+                    {/*
+                      Ba thao tác cùng MỘT khuôn: nút biểu tượng nhỏ không viền + tooltip (Trả lại /
+                      Hoàn tác / Sửa / Gỡ) - nhãn đọc màn hình qua `aria-label`.
+                    */}
                     {returned ? (
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<UndoOutlined />}
-                        loading={setReturned.isPending && setReturned.variables?.id === item.id}
-                        onClick={() =>
-                          setReturned.mutate({ id: item.id, returned: false }, { onError })
-                        }
-                      >
-                        {tCommon('actions.undo')}
-                      </Button>
+                      <Tooltip title={t('undoReturn')}>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<UndoOutlined />}
+                          aria-label={t('undoReturn')}
+                          loading={setReturned.isPending && setReturned.variables?.id === item.id}
+                          onClick={() =>
+                            setReturned.mutate({ id: item.id, returned: false }, { onError })
+                          }
+                        />
+                      </Tooltip>
                     ) : (
-                      <Button
-                        size="small"
-                        icon={<CheckOutlined />}
-                        loading={setReturned.isPending && setReturned.variables?.id === item.id}
-                        onClick={() =>
-                          setReturned.mutate(
-                            { id: item.id, returned: true },
-                            { onSuccess: () => message.success(t('returnedToast')), onError },
-                          )
-                        }
-                      >
-                        {t('markReturned')}
-                      </Button>
+                      <Tooltip title={t('markReturned')}>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<RollbackOutlined />}
+                          aria-label={t('markReturned')}
+                          loading={setReturned.isPending && setReturned.variables?.id === item.id}
+                          onClick={() =>
+                            setReturned.mutate(
+                              { id: item.id, returned: true },
+                              { onSuccess: () => message.success(t('returnedToast')), onError },
+                            )
+                          }
+                        />
+                      </Tooltip>
                     )}
                     {editable && !returned ? (
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<EditOutlined />}
-                        aria-label={t('edit')}
-                        title={t('edit')}
-                        onClick={() => {
-                          setAdding(false);
-                          setEditingId(item.id);
-                        }}
-                      />
+                      <Tooltip title={t('edit')}>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<EditOutlined />}
+                          aria-label={t('edit')}
+                          onClick={() => {
+                            setAdding(false);
+                            setEditingId(item.id);
+                          }}
+                        />
+                      </Tooltip>
                     ) : null}
                     {editable && !returned ? (
                       <Popconfirm
@@ -330,6 +406,8 @@ export function CollateralSideCard() {
         <CollateralCashDialog
           bookingId={booking.id}
           current={booking.depositAmount}
+          received={settlement ? settlement.depositReceived : null}
+          collectedEditable={canAdjustCollected}
           open={cashOpen}
           onClose={() => setCashOpen(false)}
         />

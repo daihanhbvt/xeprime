@@ -18,6 +18,11 @@ import { ShopPolicyScreen } from './ShopPolicyScreen';
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useLocalSearchParams: () => ({}),
+  usePathname: () => '/manage/shop/policies',
+  useSegments: () => [],
+  useFocusEffect: () => undefined,
+  Link: ({ children }: { children: unknown }) => children,
 }));
 
 jest.mock('@/features/shell/ManageHeader', () => ({ ManageHeader: () => null }));
@@ -60,7 +65,10 @@ function policy(overrides: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
   return {
     policy: {
       insuranceMode: 'optional',
-      collateralMode: COLLATERAL_MODE.CASH,
+      collateralMode: COLLATERAL_MODE.REQUIRED,
+      collateralCashEnabled: true,
+      collateralAssetEnabled: false,
+      collateralCombination: 'any_one',
       collateralAssetTypes: [],
       depositAmount: '3000000',
       deliveryEnabled: false,
@@ -84,6 +92,12 @@ async function renderScreen(permissions: Permission[], data: ShopRentalPolicy = 
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(currentUser(permissions));
   const getSpy = jest.spyOn(shopPoliciesApi, 'get').mockResolvedValue(data);
   const saveSpy = jest.spyOn(shopPoliciesApi, 'save').mockResolvedValue(data);
+  jest.spyOn(shopPoliciesApi, 'terms').mockResolvedValue({
+    items: [
+      { serviceType: 'self_drive', termsText: null, requireTermsAcceptance: false, updatedAt: null },
+      { serviceType: 'with_driver', termsText: null, requireTermsAcceptance: false, updatedAt: null },
+    ],
+  } as never);
   jest.spyOn(tenantsApi, 'vatInvoiceSetting').mockResolvedValue({ vatInvoiceSupported: false });
 
   const queryClient = new QueryClient({

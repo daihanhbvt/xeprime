@@ -6,6 +6,7 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import { queryKeys } from '@/queries/query-keys';
+import { bookingsApi, type BookingDetail } from '@/features/bookings/api';
 import {
   paymentsApi,
   settlementApi,
@@ -141,6 +142,61 @@ export function useRecordPayment(bookingId: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.payments.history(bookingId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.settlement(bookingId) });
       invalidateMoneyBranches(queryClient);
+    },
+  });
+}
+
+/** Sửa số cọc ĐÃ THU (thu dư / thu thiếu) bằng bút toán điều chỉnh - response là đơn đầy đủ. */
+export type SaveDepositEditInput = {
+  /** Mức cọc phải thu mới - `null` = không đổi. */
+  depositAmount: string | null;
+  /** Số đã thu mới - `null` = không đổi. */
+  collectedAmount: string | null;
+};
+
+export class DepositRequiredSavedError extends Error {
+  constructor(override readonly cause: unknown) {
+    super('deposit required saved, adjustment failed');
+  }
+}
+
+/**
+ * Hộp "Sửa tiền cọc" - port của web `useSaveDepositEdit`: mức phải thu (PATCH đơn) + số đã thu
+ * (phiếu điều chỉnh) trong MỘT mutation, ghi cache chi tiết đơn MỘT lần bằng bản cuối (có
+ * `handoverPrep` mới) - ghi từng bước làm thẻ "Chuẩn bị bàn giao" nhảy qua trạng thái trung gian.
+ */
+export function useSaveDepositEdit(bookingId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: SaveDepositEditInput): Promise<BookingDetail> => {
+      if (input.depositAmount !== null) {
+        await bookingsApi.update(bookingId, { depositAmount: input.depositAmount });
+      }
+      if (input.collectedAmount !== null) {
+        try {
+          return await paymentsApi.adjustDepositCollected(bookingId, {
+            collectedAmount: input.collectedAmount,
+          });
+        } catch (err) {
+          if (input.depositAmount !== null) throw new DepositRequiredSavedError(err);
+          throw err;
+        }
+      }
+      // PATCH không trả `handoverPrep` - đọc lại bản đủ để ghi cache một lần.
+      return bookingsApi.detail(bookingId);
+    },
+    onSuccess: (booking) => {
+      queryClient.setQueryData(queryKeys.bookings.detail(bookingId), booking);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.payments.history(bookingId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.settlement(bookingId) });
+      invalidateMoneyBranches(queryClient);
+    },
+    onError: (err) => {
+      if (err instanceof DepositRequiredSavedError) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(bookingId) });
+        invalidateMoneyBranches(queryClient);
+      }
     },
   });
 }

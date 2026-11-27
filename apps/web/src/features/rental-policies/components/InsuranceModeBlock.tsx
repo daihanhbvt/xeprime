@@ -58,9 +58,12 @@ export function InsuranceModeBlock<T extends PolicyFormValues>({
   disabled,
   impact,
   vehicle,
+  bare = false,
 }: {
   control: Control<T>;
   disabled: boolean;
+  /** Không khung + tiêu đề riêng - nơi gọi đã đặt khối trong thẻ "Bảo hiểm vật chất xe" của nó. */
+  bare?: boolean;
   impact?: ShopInsuranceImpact | null;
   vehicle?: VehicleInsuranceReadiness | null;
 }) {
@@ -78,11 +81,13 @@ export function InsuranceModeBlock<T extends PolicyFormValues>({
   const vehicleGaps = required && vehicle ? vehicle.gaps : [];
 
   return (
-    <div className={styles.subCard}>
-      <h3 className={styles.subTitle}>
-        {t('title')}
-        <PolicyInfoTip label={t('tipLabel')}>{t('hint')}</PolicyInfoTip>
-      </h3>
+    <div className={bare ? styles.bareBlock : styles.subCard}>
+      {bare ? null : (
+        <h3 className={styles.subTitle}>
+          {t('title')}
+          <PolicyInfoTip label={t('tipLabel')}>{t('hint')}</PolicyInfoTip>
+        </h3>
+      )}
 
       <Radio.Group
         value={mode}

@@ -257,7 +257,7 @@ describe('"Chuẩn bị bàn giao"', () => {
     finance.visible = false;
     renderDetail();
     expect(screen.queryByText('Thu tiền thuê')).toBeNull();
-    expect(screen.queryByText('Thu cọc tài sản')).toBeNull();
+    expect(screen.queryByText('Thu cọc tiền')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Thu tiền' })).toBeNull();
   });
 
@@ -279,7 +279,7 @@ describe('"Chuẩn bị bàn giao"', () => {
       checked: true,
     });
     expect(screen.queryByLabelText(/Đánh dấu “Thu tiền thuê”/)).toBeNull();
-    expect(screen.queryByLabelText(/Đánh dấu “Thu cọc tài sản”/)).toBeNull();
+    expect(screen.queryByLabelText(/Đánh dấu “Thu cọc tiền”/)).toBeNull();
   });
 
   it('dấu tay tính vào tiến độ, ghi rõ ai đánh dấu và bỏ được', () => {

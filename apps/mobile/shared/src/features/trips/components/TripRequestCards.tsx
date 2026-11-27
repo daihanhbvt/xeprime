@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { Linking, Pressable, type ImageSourcePropType } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useRentalConditionsText } from '@/features/rental-policies/rental-conditions';
 import {
   ROUTE_TYPE,
   SERVICE_TYPE,
@@ -782,13 +783,13 @@ export function TripRequirementsCard({
   const colors = useColors();
   const t = useTranslations('BookingRequests.flow.reviewPage.requirements');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const me = useCurrentUser().data ?? null;
   const required = serviceRequiresDriverLicence(trip.serviceType);
   const licenceQ = useDriverLicence({ enabled: required && me !== null });
   const verified = required ? (licenceQ.data?.verified ?? null) : null;
   const terms = listing?.rentalTerms?.find((term) => term.serviceType === trip.serviceType) ?? null;
-  const documents = terms?.requiredDocuments ?? [];
+  // Giấy tờ tuỳ thân là luật chuẩn nền tảng (ADR 0112 điều 3), listing trả kèm (web).
+  const rules = useRentalConditionsText(listing?.rentalConditions);
 
   const licenceMeta = verified
     ? [
@@ -830,15 +831,9 @@ export function TripRequirementsCard({
             </Text>
           </XStack>
         ) : null}
-        {documents.length > 0 ? (
-          <CardLead>
-            {t('documents', {
-              documents: documents
-                .map((doc) => domainLabel('customerDocumentType', doc))
-                .join(', '),
-            })}
-          </CardLead>
-        ) : null}
+        <CardLead>
+          {t('identity', { documents: rules.documents, verify: rules.verify })}
+        </CardLead>
         {terms?.termsText ? (
           <YStack gap={2} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
             <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
@@ -867,12 +862,15 @@ export function TripCostsCard({
   isDelivery,
   frozen = false,
   holdTag,
+  depositDetail,
   ...breakdown
 }: ReviewCostsBreakdown & {
   listing: PublicListingDetail | null;
   isDelivery: boolean;
   frozen?: boolean;
   holdTag?: { tone: TripRequestTone; label: string } | null;
+  /** Cọc khách đã giao (`TripDepositHeld`) - chỉ chuyến đã có đơn. */
+  depositDetail?: ReactNode;
 }) {
   const t = useTranslations('Trips.detail');
   return (
@@ -888,6 +886,7 @@ export function TripCostsCard({
       emptyNote={t('priceEmpty')}
       surface="trip"
       frozen={frozen}
+      depositDetail={depositDetail}
     />
   );
 }

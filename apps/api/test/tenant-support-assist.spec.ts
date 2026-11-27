@@ -69,6 +69,7 @@ import { TenantsController } from '../src/modules/tenants/tenants.controller';
 import { TenantsService } from '../src/modules/tenants/tenants.service';
 import { VehicleSettingsController } from '../src/modules/vehicle-settings/vehicle-settings.controller';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { VehicleTripHistoryService } from '../src/modules/vehicle-settings/vehicle-trip-history.service';
 import { VEHICLE_DOCUMENT_OCR_PROVIDER } from '../src/modules/vehicles/documents/ocr-provider';
@@ -394,6 +395,7 @@ beforeAll(async () => {
           occupancy,
           new ListingsService(asService),
           makeDriversService(asService),
+    new TenantRentalTermsService(asService, audit),
         ),
       },
       { provide: VehicleTripHistoryService, useValue: {} },

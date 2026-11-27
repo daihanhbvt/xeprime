@@ -269,6 +269,16 @@ export {
 /** Ký hiệu trình bày dùng chung - không phải chữ, nên không nằm trong bó message. */
 export { DATE_TIME_SEPARATOR, LIST_SEPARATOR, vehicleLabel } from './display';
 
+/** Mô tả cọc kết hợp tiền + tài sản (ADR 0112 điều 2) - một câu cho web và app. */
+export {
+  describeAssetTypes,
+  describeCollateral,
+  normalizeCollateral,
+  type CollateralCopy,
+  type CollateralLike,
+  type NormalizedCollateral,
+} from './collateral';
+
 export {
   deliverySummaryText,
   deliveryTierFee,

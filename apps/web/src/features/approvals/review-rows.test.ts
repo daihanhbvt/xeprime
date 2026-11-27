@@ -154,14 +154,43 @@ describe('pricingPolicyRows - chỉ giá của dịch vụ xe đăng, chỉ chí
     }
   });
 
-  it('cọc tiền: có dòng tiền cọc; miễn thế chấp: không', () => {
+  it('cọc: MỘT dòng mô tả cọc kết hợp (ADR 0112), chịu cả phiếu cũ cash/asset', () => {
     const detail = carReview();
-    const cash = pricingPolicyRows({
+    const combined = pricingPolicyRows({
+      ...detail,
+      policy: {
+        ...detail.policy!,
+        collateralMode: 'required',
+        collateralCashEnabled: true,
+        collateralAssetEnabled: true,
+        collateralCombination: 'all',
+        collateralAssetTypes: ['passport'],
+        depositAmount: '5000000',
+      },
+    });
+    expect(valueOf(combined, 'collateral')).toEqual({
+      kind: 'collateral',
+      collateral: {
+        mode: 'required',
+        cashEnabled: true,
+        assetEnabled: true,
+        combination: 'all',
+        assetTypes: ['passport'],
+        depositAmount: '5000000',
+      },
+    });
+    // Phiếu chụp trước ADR 0112: mã cũ đi nguyên vào bộ mô tả (describeCollateral quy đổi).
+    const legacy = pricingPolicyRows({
       ...detail,
       policy: { ...detail.policy!, collateralMode: 'cash', depositAmount: '5000000' },
     });
-    expect(valueOf(cash, 'deposit')).toEqual({ kind: 'money', amount: '5000000' });
-    expect(labels(pricingPolicyRows(detail))).not.toContain('deposit');
+    expect(valueOf(legacy, 'collateral')).toMatchObject({
+      kind: 'collateral',
+      collateral: { mode: 'cash', depositAmount: '5000000' },
+    });
+    // Không còn dòng tiền cọc / tài sản tách rời.
+    expect(labels(combined)).not.toContain('deposit');
+    expect(labels(combined)).not.toContain('collateralAssets');
   });
 });
 

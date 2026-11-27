@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  COLLATERAL_MODE,
   FEE_LINE,
   PRICE_ROW,
   type PublicListingDetail,
@@ -62,6 +61,7 @@ export function BookingReviewCosts({
   surface = 'review',
   frozen = false,
   showDeposit = true,
+  depositDetail,
 }: {
   listing: PublicListingDetail | null;
   breakdown: ReviewCostsBreakdown | null;
@@ -80,6 +80,8 @@ export function BookingReviewCosts({
   showDeposit?: boolean;
   /** Số đã CHỐT — tổng không còn "dự kiến", không còn câu "giá chốt khi duyệt". */
   frozen?: boolean;
+  /** Màn chuyến đã có đơn: cọc khách ĐÃ giao (tiền + tài sản) ngay dưới dòng cọc (web). */
+  depositDetail?: ReactNode;
 }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.flow');
@@ -122,9 +124,20 @@ export function BookingReviewCosts({
       hint?: { content: string; label: string } | null;
       /** Dòng IV đã gộp phí thu hộ - ⓘ tách hai số (ADR 0091 điều 3). */
       includedServiceFee?: IncludedInsuranceServiceFee | null;
+      /**
+       * Giá trị là một CÂU (mô tả cọc - ADR 0112) chứ không phải một con số: nhãn ở trên, giá trị
+       * xuống dòng bên dưới - không bóp nhãn, không tràn thẻ.
+       */
+      stacked?: boolean;
     } = {},
   ) => (
-    <XStack key={key} ai="flex-start" jc="space-between" gap={space.sm}>
+    <XStack
+      key={key}
+      fd={opts.stacked ? 'column' : 'row'}
+      ai={opts.stacked ? 'stretch' : 'flex-start'}
+      jc="space-between"
+      gap={opts.stacked ? 2 : space.sm}
+    >
       <YStack f={1} gap={2}>
         <XStack ai="center" gap={4}>
           <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
@@ -143,6 +156,7 @@ export function BookingReviewCosts({
         col={opts.tone === 'discount' ? colors.danger : colors.text}
         fos={fontSize.bodySm}
         fow={fontWeight.semibold}
+        flexShrink={1}
       >
         {amount}
       </Text>
@@ -249,11 +263,13 @@ export function BookingReviewCosts({
                 {row(
                   'deposit',
                   tPrice('deposit'),
-                  deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
-                    ? fmt.money(deposit.amount)
-                    : dl('collateralMode', deposit.mode),
-                  { hint: { content: deposit.note, label: tPrice('depositHintLabel') } },
+                  deposit.display,
+                  {
+                    hint: { content: deposit.note, label: tPrice('depositHintLabel') },
+                    stacked: deposit.textual,
+                  },
                 )}
+                {depositDetail}
               </YStack>
             ) : null}
           </YStack>

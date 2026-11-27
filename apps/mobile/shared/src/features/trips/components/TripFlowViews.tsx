@@ -4,6 +4,8 @@ import { useRef, useState, type RefObject } from 'react';
 import { Pressable, View, type ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useDescribeCollateral } from '@/features/rental-policies/collateral-text';
+import { useRentalConditionsText } from '@/features/rental-policies/rental-conditions';
 import {
   BOOKING_HOLD_STATUS,
   DEPOSIT_COLLECTION_MODE,
@@ -44,6 +46,7 @@ import {
 import { FreeCancelCountdown } from './FreeCancelCountdown';
 import { TripDriverCard } from './TripDriverCard';
 import { TripExtensionPanel } from './TripExtensionPanel';
+import { TripDepositHeld } from './TripDepositHeld';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHandoverWord } from './TripHandoverWord';
 import { TripNotReceivedReport } from './TripNotReceivedReport';
@@ -494,7 +497,9 @@ export function TripConfirmedView({ trip, scrollRef, onCancel }: FlowViewProps) 
           frozen
           rows={frozen.rows}
           totalAmount={finance.rentalTotal}
-          depositAmount={frozen.depositAmount}
+          depositDetail={<TripDepositHeld finance={finance} />}
+          // Mức cọc HIỆN HÀNH của đơn (chủ xe sửa được) - không phải số chụp lúc tạo.
+          depositAmount={finance.depositRequired}
           fees={frozen.fees ?? null}
           // Số của một đơn là số THU — không bao giờ "tạm tính" (ADR 0024).
           estimateNote={null}
@@ -528,12 +533,13 @@ function PickupChecklist({
   const fmt = useAppFormat();
   const dl = useDomainLabel();
   const { checked, toggle } = usePickupChecklist(trip.id);
-  const terms = listing?.rentalTerms?.find((term) => term.serviceType === trip.serviceType) ?? null;
+  const describeCollateral = useDescribeCollateral();
+  // Giấy tờ tuỳ thân là luật chuẩn nền tảng (ADR 0112 điều 3) - như nhau ở mọi xe (web).
+  const rules = useRentalConditionsText(listing?.rentalConditions);
 
   const items = pickupChecklistItems({
     serviceType: trip.serviceType,
     fuelType: trip.vehicle.fuelType,
-    documents: terms?.requiredDocuments ?? [],
     depositRequired: trip.finance?.depositRequired ?? null,
     collateral: listing?.collateral ?? null,
   });
@@ -542,15 +548,11 @@ function PickupChecklist({
     switch (item.key) {
       case 'licence':
         return { title: t('licence.title'), body: t('licence.body') };
-      case 'identity': {
-        const documents = item.documents
-          .map((doc) => dl('customerDocumentType', doc, doc))
-          .join(', ');
+      case 'identity':
         return {
           title: t('identity.title'),
-          body: documents ? t('identity.bodyDocuments', { documents }) : t('identity.body'),
+          body: t('identity.bodyRules', { documents: rules.documents, verify: rules.verify }),
         };
-      }
       case 'inspect':
         return { title: t('inspect.title'), body: t('inspect.body', { energy: item.energy }) };
       case 'sign':
@@ -566,6 +568,11 @@ function PickupChecklist({
           body: t('asset.body', {
             assets: item.assets.map((asset) => dl('collateralAssetType', asset)).join(', '),
           }),
+        };
+      case 'collateral':
+        return {
+          title: t('collateral.title'),
+          body: describeCollateral(item.collateral) ?? '',
         };
     }
   };

@@ -66,7 +66,7 @@ export async function buildVehicleReviewSnapshot(
     }),
     db.vehicleServiceSetting.findMany({
       where: { vehicleId: args.vehicleId },
-      select: { serviceType: true, autoAcceptEnabled: true, termsText: true },
+      select: { serviceType: true, autoAcceptEnabled: true },
     }),
   ]);
   if (!vehicle) return null;
@@ -295,7 +295,6 @@ function serviceSnapshots(
   settings: ReadonlyArray<{
     serviceType: string;
     autoAcceptEnabled: boolean;
-    termsText: string | null;
   }>,
 ): VehicleReviewServiceSnapshot[] {
   return serviceTypes
@@ -305,7 +304,8 @@ function serviceSnapshots(
       return {
         serviceType,
         autoAcceptEnabled: row?.autoAcceptEnabled ?? false,
-        termsText: row?.termsText?.trim() ? row.termsText : null,
+        // Điều khoản tự soạn đã gỡ (ADR 0112 điều 3) - phiếu mới không chụp nữa.
+        termsText: null,
       };
     });
 }
@@ -315,6 +315,9 @@ function policySnapshot(policy: EffectivePolicy): VehicleReviewPolicySnapshot {
   return {
     source: policy.source,
     collateralMode: v.collateralMode,
+    collateralCashEnabled: v.collateralCashEnabled,
+    collateralAssetEnabled: v.collateralAssetEnabled,
+    collateralCombination: v.collateralCombination,
     collateralAssetTypes: [...v.collateralAssetTypes],
     depositAmount: v.depositAmount,
     deliveryEnabled: v.deliveryEnabled,

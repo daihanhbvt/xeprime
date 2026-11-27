@@ -3,25 +3,18 @@ import { Pressable, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  COLLATERAL_ASSET_TYPE_LABEL,
-  COLLATERAL_MODE,
-  CUSTOMER_DOCUMENT_TYPE_LABEL,
   HOLD_DYNAMIC_WINDOW,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_PAYMENT_WINDOW_MINUTES,
-  IDENTITY_VERIFY_METHOD,
   SERVICE_TYPE,
   appliesExcessMileage,
-  requiredIdentityDocuments,
   serviceRequiresDriverLicence,
-  type CollateralAssetType,
-  type CustomerDocumentType,
   type PublicListingDetail,
 } from '@xeprime/types';
-import { isZeroMoney } from '@xeprime/domain';
+import { useDescribeCollateral } from '@/features/rental-policies/collateral-text';
+import { useRentalConditionsText } from '@/features/rental-policies/rental-conditions';
 import { Card } from '@/components/ui/Card';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
@@ -49,37 +42,25 @@ export function ListingPoliciesTabs({
   const t = useTranslations('Listings.detail.policies');
   const tDetail = useTranslations('Listings.detail');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
+  const describeCollateral = useDescribeCollateral();
   const [tab, setTab] = useState<PolicyTab>('general');
 
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
-  const requiredDocs =
-    activeTerms?.requiredDocuments && activeTerms.requiredDocuments.length > 0
-      ? activeTerms.requiredDocuments
-      : requiredIdentityDocuments(activeService);
-  const docLabel = (doc: string) =>
-    domainLabel(
-      'customerDocumentType',
-      doc,
-      CUSTOMER_DOCUMENT_TYPE_LABEL[doc as CustomerDocumentType] ?? doc,
-    );
+  // Giấy tờ + cách đối chiếu: luật chuẩn nền tảng (ADR 0112 điều 3), listing trả kèm (như web).
+  const rules = useRentalConditionsText(listing.rentalConditions);
 
-  const collateralMode = (() => {
-    const collateral = listing.collateral;
-    if (!collateral) return null;
-    if (collateral.mode === COLLATERAL_MODE.CASH) return t('collateral.modeCash');
-    const types = (collateral.assetTypes ?? []).map((type) =>
-      domainLabel(
-        'collateralAssetType',
-        type,
-        COLLATERAL_ASSET_TYPE_LABEL[type as CollateralAssetType] ?? type,
-      ),
-    );
-    return types.length > 0
-      ? t('collateral.modeAssetTypes', { types: types.join(', ') })
-      : t('collateral.modeAsset');
-  })();
+  // "Cọc tiền X hoặc Cọc tài sản (…)" - một câu chung mọi bề mặt (ADR 0112 điều 2).
+  const collateralMode = listing.collateral
+    ? describeCollateral({
+        mode: listing.collateral.mode,
+        cashEnabled: listing.collateral.cashEnabled,
+        assetEnabled: listing.collateral.assetEnabled,
+        combination: listing.collateral.combination,
+        assetTypes: listing.collateral.assetTypes,
+        depositAmount: listing.collateral.depositAmount,
+      })
+    : null;
 
   const strong = (chunks: ReactNode) => (
     <Text col={colors.text} fow={fontWeight.semibold}>
@@ -193,18 +174,8 @@ export function ListingPoliciesTabs({
                 {activeTerms.instantBookEnabled ? (
                   <Rule>{`${tDetail('terms.instantBook')} · ${tDetail('terms.instantBookHint')}`}</Rule>
                 ) : null}
-                <Rule>
-                  {tDetail('terms.documents', {
-                    documents: requiredDocs.map(docLabel).join(', '),
-                  })}
-                </Rule>
-                {/* Nhãn `identityVerifyMethod` đã là cả câu; chưa khai ⇒ đối chiếu bản gốc tại chỗ. */}
-                <Rule>
-                  {domainLabel(
-                    'identityVerifyMethod',
-                    activeTerms.identityVerifyMethod ?? IDENTITY_VERIFY_METHOD.IN_PERSON,
-                  )}
-                </Rule>
+                <Rule>{tDetail('terms.documents', { documents: rules.documents })}</Rule>
+                <Rule>{rules.verify}</Rule>
                 {activeTerms.termsText ? <Rule>{activeTerms.termsText}</Rule> : null}
                 {activeTerms.requireTermsAcceptance ? (
                   <Rule>{tDetail('terms.acceptanceRequired')}</Rule>
@@ -226,18 +197,7 @@ export function ListingPoliciesTabs({
               {listing.noCollateral ? (
                 <Rule>{t.rich('collateral.none', { strong })}</Rule>
               ) : listing.collateral ? (
-                <>
-                  <Rule>{t.rich('collateral.mode', { strong, mode: collateralMode ?? '' })}</Rule>
-                  {listing.collateral.depositAmount &&
-                  !isZeroMoney(listing.collateral.depositAmount) ? (
-                    <Rule>
-                      {t.rich('collateral.amount', {
-                        strong,
-                        amount: fmt.money(listing.collateral.depositAmount),
-                      })}
-                    </Rule>
-                  ) : null}
-                </>
+                <Rule>{t.rich('collateral.mode', { strong, mode: collateralMode ?? '' })}</Rule>
               ) : (
                 <Rule>{t('collateral.unknown')}</Rule>
               )}

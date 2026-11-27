@@ -20,8 +20,12 @@ import {
   ASSIGNABLE_TENANT_ROLES,
   BODY_TYPE_VALUES,
   COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_COMBINATION,
+  COLLATERAL_COMBINATION_VALUES,
   COLLATERAL_MODE,
   COLLATERAL_MODE_VALUES,
+  POLICY_SECTION,
+  type PolicySection,
   INSURANCE_MODE_VALUES,
   DRIVER_TYPE,
   DRIVER_TYPE_VALUES,
@@ -1600,17 +1604,50 @@ export const discountTierSchema = yup.object({
   note: yup.string().trim().max(255).defined().default(''),
 });
 
+/**
+ * Một mục chính sách có đang SỬA ĐƯỢC không (ADR 0112 điều 1): cả form không khoá
+ * (`$policyEditable !== false`) VÀ mục đó không kế thừa gian hàng (`$inheritedSections`). Form không
+ * truyền `$inheritedSections` (app native cũ, trang gian hàng) thì chỉ `$policyEditable` quyết.
+ */
+const sectionEditable = (
+  section: PolicySection,
+  editable: boolean | undefined,
+  inherited: readonly string[] | undefined,
+): boolean => editable !== false && !(inherited ?? []).includes(section);
+
 export const policyFormSchema = yup.object({
   /*
-   * Ba chế độ bảo đảm LOẠI TRỪ nhau - cùng luật với CHECK `rental_policies_collateral_scope_check`
-   * và `PricingService.validatePolicy`. Ba lớp nói cùng một điều để người dùng không gặp hai
-   * kiểu thông báo khác nhau cho cùng một sai sót.
+   * Cọc kết hợp (ADR 0112 điều 2) - cùng luật với CHECK `rental_policies_collateral_scope_check` và
+   * `PricingService.validatePolicy`: `required` cần ít nhất MỘT hình thức; cọc tiền cần số > 0; cọc
+   * tài sản cần ít nhất một loại. `none` không hỏi gì - `formToSaveInput` ép phần còn lại về 0/rỗng.
    */
   collateralMode: yup
     .string()
     .oneOf([...COLLATERAL_MODE_VALUES])
     .defined()
-    .default(COLLATERAL_MODE.CASH),
+    .default(COLLATERAL_MODE.REQUIRED),
+  collateralCashEnabled: yup
+    .boolean()
+    .defined()
+    .default(true)
+    .when(['collateralMode', 'collateralAssetEnabled', '$policyEditable', '$inheritedSections'], {
+      is: (
+        mode: string,
+        asset: boolean,
+        editable?: boolean,
+        inherited?: readonly string[],
+      ) =>
+        mode === COLLATERAL_MODE.REQUIRED &&
+        !asset &&
+        sectionEditable(POLICY_SECTION.COLLATERAL, editable, inherited),
+      then: (s) => s.oneOf([true], 'collateralFormRequired'),
+    }),
+  collateralAssetEnabled: yup.boolean().defined().default(false),
+  collateralCombination: yup
+    .string()
+    .oneOf([...COLLATERAL_COMBINATION_VALUES])
+    .defined()
+    .default(COLLATERAL_COMBINATION.ANY_ONE),
   collateralAssetTypes: yup
     .array()
     .of(
@@ -1621,19 +1658,27 @@ export const policyFormSchema = yup.object({
     )
     .defined()
     .default([])
-    .when(['collateralMode', '$policyEditable'], {
-      is: (mode: string, editable?: boolean) =>
-        mode === COLLATERAL_MODE.ASSET && editable !== false,
+    .when(['collateralMode', 'collateralAssetEnabled', '$policyEditable', '$inheritedSections'], {
+      is: (mode: string, asset: boolean, editable?: boolean, inherited?: readonly string[]) =>
+        mode === COLLATERAL_MODE.REQUIRED &&
+        asset === true &&
+        sectionEditable(POLICY_SECTION.COLLATERAL, editable, inherited),
       then: (s) => s.min(1, 'assetTypesRequired'),
     }),
-  // Chỉ bắt buộc ở chế độ "Cọc tiền"; hai chế độ kia không thu tiền nên ô này biến mất khỏi form.
-  depositAmount: optionalPolicyMoney().when(['collateralMode', '$policyEditable'], {
-    is: (mode: string, editable?: boolean) => mode === COLLATERAL_MODE.CASH && editable !== false,
-    then: (s) =>
-      s
-        .test('required', 'depositRequired', (value) => value != null)
-        .moreThan(0, 'depositPositive'),
-  }),
+  // Chỉ bắt buộc khi bật cọc tiền; tắt thì `formToSaveInput` gửi '0'.
+  depositAmount: optionalPolicyMoney().when(
+    ['collateralMode', 'collateralCashEnabled', '$policyEditable', '$inheritedSections'],
+    {
+      is: (mode: string, cash: boolean, editable?: boolean, inherited?: readonly string[]) =>
+        mode === COLLATERAL_MODE.REQUIRED &&
+        cash === true &&
+        sectionEditable(POLICY_SECTION.COLLATERAL, editable, inherited),
+      then: (s) =>
+        s
+          .test('required', 'depositRequired', (value) => value != null)
+          .moreThan(0, 'depositPositive'),
+    },
+  ),
   deliveryEnabled: yup.boolean().defined().default(false),
   deliveryMaxRadiusKm: yup
     .number()
@@ -1643,8 +1688,9 @@ export const policyFormSchema = yup.object({
     .max(KM_MAX, 'kmMax')
     .moreThan(0, 'radiusPositive')
     .test(maxDecimalsTest(KM_DECIMALS, 'kmDecimals'))
-    .when(['deliveryEnabled', '$policyEditable'], {
-      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+    .when(['deliveryEnabled', '$policyEditable', '$inheritedSections'], {
+      is: (enabled: boolean, editable?: boolean, inherited?: readonly string[]) =>
+        enabled && sectionEditable(POLICY_SECTION.DELIVERY, editable, inherited),
       then: (s) => s.test('required', 'radiusRequired', (value) => value != null),
     }),
   deliveryTiers: yup
@@ -1652,8 +1698,9 @@ export const policyFormSchema = yup.object({
     .of(deliveryTierSchema)
     .defined()
     .default([])
-    .when(['deliveryEnabled', '$policyEditable'], {
-      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+    .when(['deliveryEnabled', '$policyEditable', '$inheritedSections'], {
+      is: (enabled: boolean, editable?: boolean, inherited?: readonly string[]) =>
+        enabled && sectionEditable(POLICY_SECTION.DELIVERY, editable, inherited),
       then: (s) => s.min(1, 'tiersRequired'),
     })
     .test('ascending', 'tiersAscending', (tiers) => {
@@ -1702,14 +1749,16 @@ export const policyFormSchema = yup.object({
     .integer('mileageInteger')
     .min(MILEAGE_LIMIT.minKmPerDay, 'mileageMin')
     .max(MILEAGE_LIMIT.maxKmPerDay, 'mileageMax')
-    .when(['mileageLimitEnabled', '$policyEditable'], {
-      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+    .when(['mileageLimitEnabled', '$policyEditable', '$inheritedSections'], {
+      is: (enabled: boolean, editable?: boolean, inherited?: readonly string[]) =>
+        enabled && sectionEditable(POLICY_SECTION.USAGE_LIMITS, editable, inherited),
       then: (s) => s.test('required', 'mileageRequired', (value) => value != null),
     }),
   excessDistanceFeePerKm: optionalPolicyMoney()
     .max(MILEAGE_LIMIT.maxFeePerKm, 'excessFeeMax')
-    .when(['mileageLimitEnabled', '$policyEditable'], {
-      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+    .when(['mileageLimitEnabled', '$policyEditable', '$inheritedSections'], {
+      is: (enabled: boolean, editable?: boolean, inherited?: readonly string[]) =>
+        enabled && sectionEditable(POLICY_SECTION.USAGE_LIMITS, editable, inherited),
       then: (s) => s.test('required', 'excessFeeRequired', (value) => value != null),
     }),
   /*
@@ -1726,8 +1775,9 @@ export const policyFormSchema = yup.object({
     .string()
     .oneOf([...INSURANCE_MODE_VALUES])
     .optional(),
-  overtimeFeePerHour: optionalPolicyMoney().when(['overtimeEnabled', '$policyEditable'], {
-    is: (enabled?: boolean, editable?: boolean) => enabled === true && editable !== false,
+  overtimeFeePerHour: optionalPolicyMoney().when(['overtimeEnabled', '$policyEditable', '$inheritedSections'], {
+    is: (enabled?: boolean, editable?: boolean, inherited?: readonly string[]) =>
+      enabled === true && sectionEditable(POLICY_SECTION.USAGE_LIMITS, editable, inherited),
     then: (s) => s.test('required', 'overtimeFeeRequired', (value) => value != null),
   }),
   overtimeGraceMinutes: yup
@@ -1752,8 +1802,9 @@ export const policyFormSchema = yup.object({
     .of(discountTierSchema)
     .defined()
     .default([])
-    .when(['discountEnabled', '$policyEditable'], {
-      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+    .when(['discountEnabled', '$policyEditable', '$inheritedSections'], {
+      is: (enabled: boolean, editable?: boolean, inherited?: readonly string[]) =>
+        enabled && sectionEditable(POLICY_SECTION.LONG_TERM_DISCOUNT, editable, inherited),
       then: (s) => s.min(1, 'discountTiersRequired'),
     })
     .max(LONG_TERM_PACKAGE_MONTHS.length, 'discountTiersMax')

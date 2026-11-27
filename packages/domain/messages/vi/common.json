@@ -130,7 +130,8 @@
     "pickupWishWindow": "{label}: {start} - {end}",
     "pickupWishShopDecides": "Gian hàng chốt ngày giờ nhận khi duyệt",
     "dateTime": "{date}{sep}{time}",
-    "hourAndMinute": "{hours, plural, other {# giờ}} {minutes, plural, other {# phút}}"
+    "hourAndMinute": "{hours, plural, other {# giờ}} {minutes, plural, other {# phút}}",
+    "millionShort": "{count} triệu"
   },
   "pagination": {
     "total": "{count, plural, other {# mục}}",
@@ -307,6 +308,7 @@
     "libraryDenied": "Chưa có quyền đọc thư viện ảnh. Vào Cài đặt → XePrime để bật quyền Ảnh."
   },
   "image": {
+      "sourcePdf": "Chọn tệp PDF",
     "takePhoto": "Chụp ảnh",
     "chooseFromLibrary": "Chọn từ thư viện",
     "changeImage": "Đổi ảnh",

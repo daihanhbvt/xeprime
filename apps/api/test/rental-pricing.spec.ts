@@ -704,6 +704,7 @@ describe('policy mặc định theo LOẠI XE (17/08 — car/motorbike hai bộ 
         vehicleId: null,
         vehicleType: null,
         depositAmount: '2000000',
+        collateralCashEnabled: true,
         deliveryTiers: [],
         discountTiers: [],
       },

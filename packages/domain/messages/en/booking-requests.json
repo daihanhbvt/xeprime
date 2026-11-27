@@ -551,7 +551,8 @@
         "documents": "Documents the owner requires: {documents}",
         "hostTerms": "Owner's rental terms",
         "reminder": "Verification and the exact documents required are explained under the current policy before pick-up.",
-        "licenceRequiredToSubmit": "Add a valid driving licence to send your request."
+        "licenceRequiredToSubmit": "Add a valid driving licence to send your request.",
+        "identity": "Documents at pickup: {documents} - {verify}"
       },
       "costs": {
         "title": "Rental cost",

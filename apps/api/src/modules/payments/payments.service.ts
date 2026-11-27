@@ -3,6 +3,7 @@ import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   PAYMENT_KIND,
+  PAYMENT_METHOD,
   PAYMENT_STATUS,
   type PaymentKind,
   type PaymentMethod,
@@ -13,7 +14,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { ReceiptsService } from '../finance/receipts.service';
 import { BookingDetailDto } from '../bookings/dto/booking.dto';
 import { BookingPaymentWriter } from './booking-payment.writer';
-import { PaymentDto, RecordPaymentDto } from './dto/payment.dto';
+import { AdjustDepositCollectedDto, PaymentDto, RecordPaymentDto } from './dto/payment.dto';
 
 const SELECT = {
   id: true,
@@ -89,6 +90,28 @@ export class PaymentsService {
     return this.bookings.getOne(tenantId, bookingId);
   }
 
+  /**
+   * Sửa số cọc ĐÃ THU (thu dư / thu thiếu) bằng bút toán điều chỉnh - xem
+   * `BookingPaymentWriter.adjustDepositCollectedWithinTx`. MỘT transaction, khoá dòng đơn.
+   */
+  async adjustDepositCollected(
+    tenantId: string,
+    userId: string,
+    bookingId: string,
+    dto: AdjustDepositCollectedDto,
+  ): Promise<BookingDetailDto> {
+    await this.prisma.$transaction((tx) =>
+      this.writer.adjustDepositCollectedWithinTx(tx, {
+        tenantId,
+        userId,
+        bookingId,
+        collectedAmount: new Prisma.Decimal(dto.collectedAmount),
+        method: (dto.method ?? PAYMENT_METHOD.CASH) as PaymentMethod,
+      }),
+    );
+    return this.bookings.getOne(tenantId, bookingId);
+  }
+
   /** Huỷ (hoàn) một lần thu: trừ lại paidAmount + huỷ phiếu thu liên kết, trong 1 transaction. */
   async voidPayment(tenantId: string, userId: string, paymentId: string): Promise<PaymentDto> {
     const payment = await this.prisma.payment.findFirst({
@@ -125,7 +148,7 @@ export class PaymentsService {
       // Đối xứng với `recordForBooking`: chỉ trừ lại thứ đã từng cộng vào. Trừ vô điều kiện sẽ
       // rút `paid_amount` xuống vì một khoản cọc chưa bao giờ nằm trong đó — công nợ phình lên
       // từ hư không ngay lần hoàn cọc đầu tiên.
-      if (payment.bookingId && payment.kind !== PAYMENT_KIND.DEPOSIT) {
+      if (payment.bookingId && payment.kind === PAYMENT_KIND.RENTAL) {
         await tx.booking.update({
           where: { id: payment.bookingId },
           data: { paidAmount: { decrement: payment.amount } },

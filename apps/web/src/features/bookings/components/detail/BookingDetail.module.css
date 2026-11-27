@@ -324,6 +324,25 @@
   padding: 0;
 }
 
+.prepBody {
+  overflow-wrap: anywhere;
+}
+
+/* Dòng "Nhận cọc (tiền hoặc tài sản)": hai lối thu cạnh nhau, xuống dòng khi hẹp. */
+.prepActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+.prepNote {
+  margin: var(--xp-space-sm) 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
 .prepBody b {
   color: var(--xp-color-text);
 }

@@ -1,10 +1,10 @@
+import { SERVICE_TYPE, vehicleFieldPolicy, type VehicleFieldApplicability } from '@xeprime/types';
 import {
-  COLLATERAL_MODE,
-  SERVICE_TYPE,
-  vehicleFieldPolicy,
-  type VehicleFieldApplicability,
-} from '@xeprime/types';
-import { deliveryTierRanges, freeDeliveryWithinKm, type DeliveryTierRange } from '@xeprime/domain';
+  deliveryTierRanges,
+  freeDeliveryWithinKm,
+  type CollateralLike,
+  type DeliveryTierRange,
+} from '@xeprime/domain';
 import type { DomainGroup } from '@/i18n/domain';
 import type { VehicleApprovalDetail } from './types';
 
@@ -35,7 +35,9 @@ export type ReviewValue =
   | { kind: 'measure'; value: string | number; unit: MeasureUnit }
   | { kind: 'deliveryTiers'; tiers: readonly DeliveryTierRange[] }
   | { kind: 'longTermTiers'; tiers: readonly { minMonths: number; percent: number }[] }
-  | { kind: 'unlimited' };
+  | { kind: 'unlimited' }
+  /** Cọc kết hợp (ADR 0112) - câu do `describeCollateral` ghép, chịu cả snapshot cũ `cash`/`asset`. */
+  | { kind: 'collateral'; collateral: CollateralLike };
 
 export type MeasureUnit =
   'seats' | 'cc' | 'litrePer100km' | 'km' | 'kwh' | 'kwhPer100km' | 'kmPerDay' | 'withinKm';
@@ -286,17 +288,21 @@ export function pricingPolicyRows(detail: VehicleApprovalDetail): ReviewRow[] {
       }
     }
 
-    push('collateral', { kind: 'domain', group: 'collateralMode', code: policy.collateralMode });
-    if (policy.collateralMode === COLLATERAL_MODE.CASH) {
-      push('deposit', { kind: 'money', amount: policy.depositAmount });
-    }
-    if (policy.collateralMode === COLLATERAL_MODE.ASSET && policy.collateralAssetTypes.length > 0) {
-      push('collateralAssets', {
-        kind: 'domainList',
-        group: 'collateralAssetType',
-        codes: policy.collateralAssetTypes,
-      });
-    }
+    push(
+      'collateral',
+      {
+        kind: 'collateral',
+        collateral: {
+          mode: policy.collateralMode,
+          cashEnabled: policy.collateralCashEnabled,
+          assetEnabled: policy.collateralAssetEnabled,
+          combination: policy.collateralCombination,
+          assetTypes: policy.collateralAssetTypes,
+          depositAmount: policy.depositAmount,
+        },
+      },
+      { wide: true },
+    );
     if (present(policy.overtimeFeePerHour)) {
       push('overtimeFee', { kind: 'money', amount: policy.overtimeFeePerHour, per: 'hour' });
     }

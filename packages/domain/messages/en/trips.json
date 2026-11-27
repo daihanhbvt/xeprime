@@ -644,7 +644,8 @@
       "identity": {
         "title": "Prepare your ID documents",
         "body": "Bring documents for verification as guided and under the current policy.",
-        "bodyDocuments": "The owner will check: {documents}."
+        "bodyDocuments": "The owner will check: {documents}.",
+        "bodyRules": "Bring a {documents}. {verify}."
       },
       "inspect": {
         "title": "Inspect the vehicle with the owner",
@@ -661,6 +662,9 @@
       "asset": {
         "title": "Leave a collateral item",
         "body": "One of the following: {assets}. You get it back when you return the vehicle."
+      },
+      "collateral": {
+        "title": "Prepare the pickup collateral"
       }
     },
     "costs": {
@@ -709,5 +713,13 @@
       "confirm": "I returned the car",
       "success": "Return reported - the host will confirm"
     }
+  },
+  "depositHeld": {
+    "aria": "Deposit you handed to the owner",
+    "cash": "Cash deposit paid",
+    "cashNone": "Not yet",
+    "assets": "Collateral",
+    "assetHeld": "{type} - held by the owner",
+    "assetReturned": "{type} - returned to you"
   }
 }

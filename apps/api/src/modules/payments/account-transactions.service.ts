@@ -185,8 +185,11 @@ function unionSql(me: string): Prisma.Sql {
 
     UNION ALL
     SELECT p.id, ${K.RENTAL_PAYMENT}::text,
-           CASE p.kind WHEN ${PAYMENT_KIND.DEPOSIT} THEN ${T.DEPOSIT}::text ELSE ${T.RENTAL}::text END,
-           b.code, -p.amount,
+           CASE p.kind WHEN ${PAYMENT_KIND.DEPOSIT} THEN ${T.DEPOSIT}::text
+                       WHEN ${PAYMENT_KIND.DEPOSIT_RETURN} THEN ${T.ADJUSTMENT}::text
+                       ELSE ${T.RENTAL}::text END,
+           -- Cọc chủ xe trả lại (lượt sửa tiền cọc) là tiền VỀ tay khách: dấu dương.
+           b.code, CASE p.kind WHEN ${PAYMENT_KIND.DEPOSIT_RETURN} THEN p.amount ELSE -p.amount END,
            CASE p.status
              WHEN ${PAYMENT_STATUS.SUCCEEDED} THEN ${S.SUCCEEDED}::text
              WHEN ${PAYMENT_STATUS.PENDING} THEN ${S.PENDING}::text

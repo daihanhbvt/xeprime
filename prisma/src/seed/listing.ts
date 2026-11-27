@@ -11,6 +11,8 @@
  */
 import {
   COLLATERAL_MODE,
+  POLICY_SECTION,
+  pickPolicyRowFor,
   LISTING_STATUS,
   REVIEW_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -26,12 +28,10 @@ async function resolveNoCollateral(
 ): Promise<boolean> {
   const rows = await prisma.rentalPolicy.findMany({
     where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
-    select: { vehicleId: true, vehicleType: true, collateralMode: true },
+    select: { vehicleId: true, vehicleType: true, collateralMode: true, inheritedSections: true },
   });
-  const row =
-    rows.find((r) => r.vehicleId === vehicleId) ??
-    rows.find((r) => r.vehicleId === null && r.vehicleType === vehicleType) ??
-    rows.find((r) => r.vehicleId === null && r.vehicleType === null);
+  // Gộp theo mục `collateral` (ADR 0112 điều 1) - cùng luật với ListingsService.
+  const row = pickPolicyRowFor(rows, vehicleId, vehicleType, POLICY_SECTION.COLLATERAL);
 
   // Chưa cấu hình chính sách nào ⇒ false: không hứa miễn cọc khi chưa ai quyết định điều đó.
   return row?.collateralMode === COLLATERAL_MODE.NONE;

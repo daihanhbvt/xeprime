@@ -27,6 +27,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -62,7 +63,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService));
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService), new TenantRentalTermsService(asService, audit));
 
 const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
@@ -613,13 +614,16 @@ describe('Giờ nhận và điều khoản — kiểm ngay lúc gửi, ở SERVE
   maybe(
     'chủ xe bắt đồng ý điều khoản: thiếu tích thì không nhận, có tích thì đóng băng mốc',
     async () => {
-      await settings.patchServiceSetting(
-        tenantId,
-        vehicleId,
-        SERVICE_TYPE.SELF_DRIVE,
-        ownerId,
-        { requireTermsAcceptance: true, termsText: 'Không hút thuốc trong xe.' },
-      );
+      // ADR 0112: điều khoản là của GIAN HÀNG, không còn đặt trên từng xe.
+      await new TenantRentalTermsService(asService, audit).save(tenantId, ownerId, {
+        items: [
+          {
+            serviceType: SERVICE_TYPE.SELF_DRIVE,
+            requireTermsAcceptance: true,
+            termsText: 'Không hút thuốc trong xe.',
+          },
+        ],
+      });
 
       await expect(submit()).rejects.toMatchObject({
         response: { code: API_ERROR_CODE.RENTAL_TERMS_ACCEPTANCE_REQUIRED },
@@ -630,6 +634,10 @@ describe('Giờ nhận và điều khoản — kiểm ngay lúc gửi, ở SERVE
       const terms = row.rentalTerms as { termsText?: string; termsAcceptedAt?: string } | null;
       expect(terms?.termsText).toBe('Không hút thuốc trong xe.');
       expect(terms?.termsAcceptedAt).toBeTruthy();
+      // Điều khoản là của GIAN HÀNG - gỡ để không dính sang các test sau cùng tenant.
+      await new TenantRentalTermsService(asService, audit).save(tenantId, ownerId, {
+        items: [{ serviceType: SERVICE_TYPE.SELF_DRIVE, requireTermsAcceptance: false }],
+      });
     },
   );
 

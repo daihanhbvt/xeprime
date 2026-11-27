@@ -19,6 +19,8 @@ import {
   insuranceEligibilityGaps,
   insuranceRemittanceCommission,
   partnerPremiumProblem,
+  POLICY_SECTION,
+  pickPolicyRowFor,
   insurancePremiumTiersForYear,
   readInsurancePremiumTiers,
   readInsurancePremiumYearBands,
@@ -252,7 +254,13 @@ export class InsuranceInsightsService {
             tenantId: { in: [...new Set(rows.map((r) => r.tenantId))] },
             OR: [{ vehicleId: { in: rows.map((r) => r.id) } }, { vehicleId: null }],
           },
-          select: { tenantId: true, vehicleId: true, vehicleType: true, insuranceMode: true },
+          select: {
+            tenantId: true,
+            vehicleId: true,
+            vehicleType: true,
+            insuranceMode: true,
+            inheritedSections: true,
+          },
         })
       : [];
 
@@ -270,12 +278,12 @@ export class InsuranceInsightsService {
           insuredValue,
           manufactureYear: row.manufactureYear,
           seatCount: row.seatCount,
+          // Gộp theo mục `insurance` (ADR 0112 điều 1) - cùng luật với báo giá.
           insuranceMode: resolveInsuranceMode({
-            override: own.find((p) => p.vehicleId === row.id)?.insuranceMode,
-            typedDefault: own.find((p) => p.vehicleId === null && p.vehicleType === row.vehicleType)
+            override: pickPolicyRowFor(own, row.id, row.vehicleType, POLICY_SECTION.INSURANCE)
               ?.insuranceMode,
-            legacyDefault: own.find((p) => p.vehicleId === null && p.vehicleType === null)
-              ?.insuranceMode,
+            typedDefault: null,
+            legacyDefault: null,
           }),
           eligible: gaps.length === 0,
           gaps,

@@ -73,6 +73,11 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
+/* Figma `24705:27510`: hộp "Công thức tính giá gói" nền xanh nhạt dưới bảng mốc. */
+.formulaCard {
+  background: var(--xp-color-info-bg);
+}
+
 .previewCard {
   display: flex;
   align-items: flex-start;

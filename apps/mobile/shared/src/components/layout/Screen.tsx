@@ -1,3 +1,4 @@
+import { NoMotionScope } from '@/components/motion/no-motion';
 import { PartnerBackdrop } from '@/components/layout/PartnerBackdrop';
 import { useTabBarAutoHide } from '@/hooks/use-tab-bar-auto-hide';
 import { useBottomInsetConsumed, useTabBarInset } from './tab-bar-inset';
@@ -157,6 +158,11 @@ interface ScreenProps {
    * mỗi chiều cao nội dung: phải có trang mới nối vào (nội dung cao thêm) mới gọi lại.
    */
   onNearEnd?: () => void;
+  /**
+   * `false` = TẮT mọi chuyển động của khối con (co khi nhấn, vạch tab trượt, công tắc trượt) qua
+   * `NoMotionScope` - màn người dùng yêu cầu không hiệu ứng (màn sửa xe). Mặc định giữ nguyên.
+   */
+  motion?: boolean;
 }
 
 /**
@@ -180,6 +186,7 @@ export function Screen({
   scrollReveal: scrollRevealProp,
   surface = false,
   onNearEnd,
+  motion = true,
 }: ScreenProps) {
   const scrollRevealDefault = useScrollRevealDefault();
   const scrollReveal = scroll && (scrollRevealProp ?? scrollRevealDefault);
@@ -543,12 +550,14 @@ export function Screen({
         <FocusRevealProvider reveal={revealOnFocus}>
           <KeyboardHoldProvider value={keyboardHold}>
             <ContentColumnContext.Provider value={columnWidth}>
-              {body}
-              {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
-                <View style={[styles.footer, { paddingBottom: footerBottom }]}>
-                  <View style={column}>{footer}</View>
-                </View>
-              ) : null}
+              <NoMotionScope off={!motion}>
+                {body}
+                {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
+                  <View style={[styles.footer, { paddingBottom: footerBottom }]}>
+                    <View style={column}>{footer}</View>
+                  </View>
+                ) : null}
+              </NoMotionScope>
             </ContentColumnContext.Provider>
           </KeyboardHoldProvider>
         </FocusRevealProvider>

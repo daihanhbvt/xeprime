@@ -39,6 +39,7 @@ import styles from './BookingDetail.module.css';
 import {
   depositOutstanding,
   missingPhotoSlots,
+  prepCollateralOf,
   prepRowStates,
   type PrepKey,
 } from './handover-readiness';
@@ -86,6 +87,15 @@ interface BookingDetailActionsValue {
   openPay: () => void;
   /** Thu CỌC (giữ hộ, không giảm công nợ) — cùng hộp thu với khối "Phát sinh". */
   openDeposit: () => void;
+  /**
+   * Mở ô "Thêm tài sản thế chấp" của thẻ Cọc & thế chấp (dòng chuẩn bị bàn giao gọi). Thẻ theo dõi
+   * `collateralAddRequest` - mỗi lần tăng là một lượt mở.
+   */
+  openAddCollateral: () => void;
+  collateralAddRequest: number;
+  /** "Chỉnh sửa" ở dòng "Thu cọc tiền" đã xong ⇒ mở hộp Sửa tiền cọc của thẻ Cọc & thế chấp. */
+  openEditCash: () => void;
+  cashEditRequest: number;
   openHistory: () => void;
   openEdit: () => void;
   openDocuments: () => void;
@@ -155,6 +165,8 @@ export function BookingDetailActionsProvider({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [collateralAddRequest, setCollateralAddRequest] = useState(0);
+  const [cashEditRequest, setCashEditRequest] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [feeOpen, setFeeOpen] = useState(false);
@@ -199,7 +211,7 @@ export function BookingDetailActionsProvider({
       return;
     }
     const prep = booking.handoverPrep
-      ? prepRowStates(booking.handoverPrep, can)
+      ? prepRowStates(booking.handoverPrep, can, prepCollateralOf(booking))
           .filter((row) => !row.done)
           .map((row) => row.key)
       : [];
@@ -250,6 +262,10 @@ export function BookingDetailActionsProvider({
     contractPending: createContract.isPending,
     openPay: () => setPayOpen(true),
     openDeposit: () => setDepositOpen(true),
+    openAddCollateral: () => setCollateralAddRequest((n) => n + 1),
+    collateralAddRequest,
+    openEditCash: () => setCashEditRequest((n) => n + 1),
+    cashEditRequest,
     openHistory: () => setHistoryOpen(true),
     openEdit: () => setEditOpen(true),
     openDocuments: () => setDocumentsOpen(true),

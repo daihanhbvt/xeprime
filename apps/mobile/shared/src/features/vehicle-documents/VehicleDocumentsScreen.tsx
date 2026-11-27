@@ -409,7 +409,7 @@ export function VehicleDocumentsScreen({
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={t('noPermissionTitle')}
@@ -443,20 +443,11 @@ export function VehicleDocumentsScreen({
         />
       )}
       <Screen
-        scrollReveal
+        scrollReveal={false}
+        motion={false}
         edges={['left', 'right', 'bottom']}
         refreshing={documents.isRefetching}
         onRefresh={() => void documents.refetch()}
-        footer={
-          canManage ? (
-            <Button
-              variant="neutral"
-              label={t('addType')}
-              icon="add-outline"
-              onPress={() => setAdding(true)}
-            />
-          ) : undefined
-        }
       >
         {documents.isPending ? (
           <SkeletonText lines={8} />

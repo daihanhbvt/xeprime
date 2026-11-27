@@ -253,6 +253,8 @@
       "consumption": "Mức tiêu thụ nhiên liệu",
       "consumptionPlaceholder": "7.5",
       "consumptionHelp": "Số lít nhiên liệu cho quãng đường 100 km",
+      "consumptionShort": "Tiêu hao trung bình",
+      "consumptionUnit": "L/100km",
       "electricRange": "Quãng đường mỗi lần sạc",
       "electricRangePlaceholder": "350",
       "electricRangeHelp": "Số km đi được trong một lần sạc đầy",
@@ -631,6 +633,8 @@
       "useRent": "Dùng {price}",
       "modelVariant": "Mẫu xe",
       "modelVariantPlaceholder": "Tìm dòng xe, phiên bản",
+      "modelVariantShort": "Dòng xe",
+      "modelVariantPick": "Chọn dòng xe",
       "modelVariantHelp": "Chọn mẫu xe để tự điền thông số",
       "manualEntry": "Nhập tay - xe chưa có trong danh sách",
       "backToList": "Chọn từ danh sách mẫu xe",
@@ -1174,6 +1178,7 @@
       "titleOptional": "Hồ sơ đính kèm (tùy chọn)",
       "title": "Hồ sơ hợp đồng",
       "fileFinanced": "Hợp đồng vay (đã tải lên)",
+      "fileFinancedShort": "Hợp đồng vay",
       "fileRented": "Hợp đồng thuê xe (bản scan)",
       "filePartnership": "Hợp đồng hợp tác kinh doanh (mẫu đã ký)",
       "fileOwned": "Giấy tờ mua bán / hoá đơn (nếu có)",
@@ -1295,6 +1300,8 @@
       "resetBody": "Đặt lại về chính sách gian hàng: toàn bộ tùy chỉnh riêng của xe này sẽ bị xóa và xe quay về kế thừa cấu hình chung.",
       "resetOk": "Đặt lại",
       "resetCancel": "Giữ tùy chỉnh",
+      "sectionResetTitle": "Áp dụng lại chính sách của gian hàng?",
+      "sectionResetBody": "Thiết lập riêng của xe ở mục \"{section}\" sẽ thôi áp dụng sau khi bạn lưu - xe theo chính sách gian hàng cho mục này.",
       "viewShopPolicy": "Xem chính sách gian hàng →",
       "tipLabel": "Giải thích nguồn chính sách",
       "info": "Xe có thể kế thừa cọc, giao nhận và ưu đãi từ gian hàng hoặc lưu một bộ chính sách riêng."
@@ -1575,7 +1582,9 @@
       "excessFeeMax": "Phí vượt km quá lớn",
       "moneyThousandStep": "Số tiền phải là bội của 1.000đ",
       "perKmRequired": "Nhập đơn giá mỗi km lớn hơn 0 - miễn phí thì chọn \"Trọn gói\" 0đ",
-      "overtimeFeeRequired": "Nhập phí mỗi giờ phát sinh, hoặc tắt phí quá giờ"
+      "overtimeFeeRequired": "Nhập phí mỗi giờ phát sinh, hoặc tắt phí quá giờ",
+      "collateralFormRequired": "Chọn ít nhất một hình thức cọc: cọc tiền hoặc cọc tài sản.",
+      "termsTooLong": "Điều khoản tối đa 4.000 ký tự."
     },
     "calendarLink": "Tuỳ chỉnh giá theo lịch",
     "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe - một nguồn giá, không có bảng giá mùa vụ thứ hai.",
@@ -1627,6 +1636,7 @@
       "moreActions": "Thao tác khác",
       "view": "Xem",
       "expiry": "Ngày hết hạn: <b>{value}</b>",
+      "expiryShort": "Hạn: <b>{value}</b>",
       "updatedAt": "Cập nhật: <b>{value}</b>",
       "noExpiry": "Không thời hạn",
       "expiryUnknown": "--/--/----",
@@ -1752,7 +1762,7 @@
     "registrationReminder": "Ô tô cần cà vẹt có tên chủ xe, số khung và số máy để được bán kèm bảo hiểm vật chất xe - tải ảnh và điền thông tin ở dòng Cà vẹt."
   },
   "maintenance": {
-    "app": {"odoTitle": "Chỉ số KM hiện tại (Odo)", "adjust": "Điều chỉnh", "oilTitle": "Theo dõi thay nhớt định kỳ", "intervalKm": "Chu kỳ thay nhớt", "lastServiceKm": "KM thay gần nhất", "nextMilestone": "Mốc tiếp theo:", "add": "Thêm", "cost": "Chi phí: {value}", "odo": "Odo: {value}", "completedCount": "{count, plural, other {# lần hoàn tất}}", "notesPlaceholder": "Nhập ghi chú..."},
+    "app": {"odoTitle": "Chỉ số KM hiện tại (Odo)", "adjust": "Điều chỉnh", "oilTitle": "Chu kỳ thay nhớt", "intervalKm": "Chu kỳ thay nhớt định kỳ", "lastServiceKm": "KM thay nhớt lần gần nhất", "nextMilestone": "Tiếp theo:", "add": "Thêm", "cost": "Chi phí: {value}", "odo": "Odo: {value}", "completedCount": "{count, plural, other {# lần hoàn tất}}", "notesPlaceholder": "Ghi chú", "history": "Lịch sử", "addReading": "Thêm số km mới", "updatedLast": "Cập nhật gần nhất: <b>{value}</b>", "addSchedule": "Thêm lịch bảo dưỡng", "plannedTime": "Thời gian dự kiến", "odoLabel": "Odo bảo dưỡng", "costLabel": "Chi phí", "receiptLabel": "Mã phiếu chi", "notesLabel": "Ghi chú: <b>{value}</b>", "historyTitle": "Lịch sử bảo dưỡng & sửa chữa"},
     "title": "Bảo dưỡng",
     "noPermission": "Không có quyền xem bảo dưỡng",
     "loadError": "Không tải được thông tin bảo dưỡng",
@@ -1943,8 +1953,8 @@
         "media": "Hình ảnh",
         "documents": "Giấy tờ xe",
         "trip-history": "Lịch sử chuyến",
-        "services": "Dịch vụ & giá",
-        "policy": "Chính sách thuê",
+        "services": "Dịch vụ xe",
+        "policy": "Bảo hiểm & Giao nhận xe",
         "maintenance": "Bảo dưỡng & số KM",
         "source": "Nguồn gốc & tài chính xe"
       },
@@ -1979,6 +1989,9 @@
       "general": "Thông tin chung",
       "bodyType": "Kiểu dáng xe",
       "bodyTypeHint": "Chọn đúng kiểu dáng - khách lọc xe theo mục này ngoài chợ.",
+      "bodyTypeSwipe": "Vuốt ngang để xem",
+      "bodyTypePrev": "Xem kiểu dáng trước",
+      "bodyTypeNext": "Xem kiểu dáng sau",
       "energy": "Động cơ & nhiên liệu",
       "features": "Tiện ích xe",
       "advanced": "Thông số nâng cao",
@@ -2010,7 +2023,7 @@
           "title": "Thuê xe dài hạn",
           "target": "khách thuê dài hạn"
         },
-        "hint": "Bật để nhận {service}. Cọc, giao xe và điều khoản ở mục <conditions>Chính sách thuê</conditions>."
+        "hint": "Bật để nhận {service}. Cọc, bảo hiểm và giao xe ở mục <conditions>Bảo hiểm & Giao nhận xe</conditions>."
       },
       "offNote": "Dịch vụ đang tắt - bật ở trên để đặt giá và nhận chuyến cho dịch vụ này.",
       "price": {
@@ -2021,7 +2034,9 @@
         "longTermTitle": "Ưu đãi thuê dài hạn (trên 1 tháng)"
       },
       "extras": "Khác",
-      "policyInvalid": "Mục Chính sách thuê còn ô chưa hợp lệ - mở mục đó để sửa rồi lưu lại."
+      "collateralNow": "Hình thức cọc xe hiện tại: {collateral}",
+      "collateralSetup": "Thiết lập tại Bảo hiểm & Giao nhận",
+      "policyInvalid": "Mục Bảo hiểm & Giao nhận xe còn ô chưa hợp lệ - mở mục đó để sửa rồi lưu lại."
     },
     "policy": {
       "useShop": "Áp dụng chính sách của gian hàng",
@@ -2030,8 +2045,8 @@
       "inheritedElsewhere": "Đang theo <policies>chính sách gian hàng</policies>. Muốn sửa riêng cho xe này, tắt công tắc ở đầu mục <switch>Chính sách thuê</switch>.",
       "deliveryTitle": "Giao xe tận nơi",
       "rulesTitle": "Giao xe, cọc & phụ phí",
-      "pricesInvalid": "Mục Dịch vụ & giá còn ô giá chưa hợp lệ - mở mục đó để sửa rồi lưu lại.",
-      "pricesInvalidFields": "Mục Dịch vụ & giá còn ô chưa hợp lệ: {fields} - mở mục đó để sửa rồi lưu lại.",
+      "pricesInvalid": "Mục Dịch vụ xe còn ô chưa hợp lệ - mở mục đó để sửa rồi lưu lại.",
+      "pricesInvalidFields": "Mục Dịch vụ xe còn ô chưa hợp lệ: {fields} - mở mục đó để sửa rồi lưu lại.",
       "bufferTipLabel": "Thời gian chuẩn bị áp cho lịch nào",
       "savedAll": "Đã lưu chính sách thuê"
     },

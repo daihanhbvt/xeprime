@@ -1,4 +1,4 @@
-import { COLLATERAL_MODE, VEHICLE_TYPE } from '@xeprime/types';
+import { COLLATERAL_COMBINATION, COLLATERAL_MODE, VEHICLE_TYPE } from '@xeprime/types';
 
 import type { CreateVehicleInput } from '@/features/vehicles/types';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from '@/features/rental-policies/types';
@@ -94,6 +94,9 @@ export function quickVehicleToPolicyInput(
     // Khối bảo đảm: giữ NGUYÊN thứ đang hiệu lực. Wizard nhanh không hỏi cọc, nên nó cũng không
     // được quyền đặt lại cọc về 0 cho một gian hàng đang nhận thế chấp.
     collateralMode: base?.collateralMode ?? COLLATERAL_MODE.NONE,
+    collateralCashEnabled: base?.collateralCashEnabled ?? false,
+    collateralAssetEnabled: base?.collateralAssetEnabled ?? false,
+    collateralCombination: base?.collateralCombination ?? COLLATERAL_COMBINATION.ANY_ONE,
     collateralAssetTypes: base?.collateralAssetTypes ?? [],
     depositAmount: base?.depositAmount ?? '0',
 

@@ -26,6 +26,7 @@ import { PromoCodeEvaluatorService } from '../src/modules/promo-codes/promo-code
 import { PromoCodesService } from '../src/modules/promo-codes/promo-codes.service';
 import { PromoQuoteService } from '../src/modules/promo-codes/promo-quote.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { ensureInsuranceProducts } from './helpers/insurance-products';
@@ -67,6 +68,7 @@ const settings = new VehicleSettingsService(
   occupancy,
   new ListingsService(asService),
   makeDriversService(asService),
+    new TenantRentalTermsService(asService, audit),
 );
 const holds = makeBookingHoldsService(asService);
 const pricing = makePricingService(asService);

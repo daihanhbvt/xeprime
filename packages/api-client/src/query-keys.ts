@@ -325,6 +325,8 @@ export const queryKeys = {
     /** Xe kế thừa chính sách mà thiếu dữ liệu bảo hiểm - cảnh báo khi chọn Bắt buộc (ADR 0091). */
     insuranceImpact: (vehicleType: string) =>
       ['rental-policies', 'insurance-impact', vehicleType] as const,
+    /** Điều khoản thuê của gian hàng theo nhóm dịch vụ (ADR 0112 điều 3) - không theo loại xe. */
+    terms: ['rental-policies', 'terms'] as const,
   },
   bookings: {
     all: ['bookings'] as const,

@@ -93,7 +93,8 @@ export function tripFinanceBreakdown(finance: CustomerTripFinance): ReviewCostsB
   return {
     rows: frozen.rows,
     totalAmount: finance.rentalTotal,
-    depositAmount: frozen.depositAmount,
+    // Mức cọc HIỆN HÀNH của đơn - chủ xe sửa được tới lúc bàn giao, snapshot chỉ là số lúc tạo.
+    depositAmount: finance.depositRequired,
     fees: frozen.fees ?? null,
     // Số của một đơn là số THU — không bao giờ "tạm tính" (ADR 0024).
     estimateNote: null,

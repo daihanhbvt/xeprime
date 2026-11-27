@@ -202,7 +202,12 @@
         "label": "Mục lục chính sách thuê",
         "rules": "Chính sách & Quy định cho thuê",
         "delivery": "Giao nhận xe",
-        "longTerm": "Ưu đãi dài hạn"
+        "longTerm": "Ưu đãi dài hạn",
+        "payment": "Thanh toán & hóa đơn",
+        "insurance": "Bảo hiểm vật chất xe",
+        "collateral": "Hình thức cọc xe (Thế chấp)",
+        "limits": "Giới hạn km & Phụ phí quá giờ",
+        "conditions": "Điều kiện cho thuê"
       },
       "actionsLabel": "Lưu chính sách thuê",
       "switchType": {
@@ -219,10 +224,23 @@
         "title": "Thủ tục & Điều khoản cho thuê"
       },
       "collateral": {
-        "title": "Tài sản thế chấp",
+        "title": "Hình thức cọc xe (Thế chấp)",
         "modeCash": "Khách đặt một khoản tiền, chủ xe hoàn lại sau khi khách bàn giao xe xong.",
-        "modeNone": "Tạo điều kiện tối đa thu hút khách đặt thuê xe nhanh chóng.",
-        "overriddenTipLabel": "Xe dùng chính sách riêng"
+        "modeNone": "Không thu tiền cọc hay giữ tài sản - tăng mạnh tỉ lệ khách đặt xe",
+        "overriddenTipLabel": "Xe dùng chính sách riêng",
+        "subtitle": "Chọn Yêu cầu thế chấp (cho phép bật Cọc tiền, Cọc tài sản hoặc cả 2) hoặc Miễn thế chấp.",
+        "modeLabel": "Hình thức cọc xe",
+        "modeRequired": "Bật 1 hoặc đồng thời cả 2 hình thức: Cọc tiền & Cọc tài sản",
+        "bothOn": "Đang bật 2 hình thức cọc",
+        "methodTitle": "Phương thức nhận cọc (Có thể chọn 1 hoặc chọn cả 2)",
+        "cashTitle": "Cọc tiền mặt / Chuyển khoản",
+        "cashHint": "Khách đặt khoản tiền đảm bảo khi nhận xe, hoàn lại sau khi trả xe.",
+        "amountLabel": "Số tiền cọc mặc định",
+        "presetsLabel": "Mức cọc gợi ý",
+        "assetTitle": "Cọc tài sản",
+        "assetHint": "Khách để lại tài sản đảm bảo (giấy tờ gốc, xe máy…), không cần giữ tiền mặt.",
+        "noneBadgeTitle": "Xe được gắn huy hiệu \"Miễn thế chấp\" nổi bật trên XePrime",
+        "noneBadgeBody": "Khách không phải đặt tiền cọc hay để lại tài sản khi nhận xe. Huy hiệu hiện trên thẻ xe, trang xe và trong bộ lọc \"Miễn thế chấp\"."
       },
       "mileage": {
         "hint": "Giới hạn km/ngày và phụ phí vượt mức."
@@ -262,6 +280,33 @@
         "impactTitle": "{count, plural, other {# xe}} chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái",
         "impactNamesMore": "{names} và {count, plural, other {# xe}} khác",
         "vehicleBlockedTitle": "Xe này chưa đủ dữ liệu bảo hiểm nên không nhận đặt tự lái cho tới khi bổ sung:"
+      },
+      "inherit": {
+        "title": "Áp dụng chính sách của gian hàng",
+        "hint": "Khi bật tùy chọn này, xe sẽ tự động đồng bộ theo <policies>chính sách chung</policies> của toàn bộ gian hàng"
+      },
+      "limits": {
+        "title": "Giới hạn quãng đường & Phụ phí quá giờ"
+      },
+      "conditions": {
+        "title": "Điều kiện cho thuê",
+        "groups": {
+          "self_drive": "Thuê xe tự lái & Thuê xe dài hạn",
+          "with_driver": "Xe có tài xế"
+        },
+        "documents": "Giấy tờ thuê xe bắt buộc",
+        "verify": "Phương thức đối chiếu",
+        "platformNote": "Giấy tờ và cách đối chiếu là quy định chung của XePrime cho mọi gian hàng - không chỉnh sửa được.",
+        "acceptTitle": "Khách hàng cần xác nhận đồng ý với điều khoản trước khi gửi yêu cầu đặt xe",
+        "acceptHint": "Thời điểm xác nhận sẽ được ghi nhận và lưu lại trong thông tin yêu cầu và đơn đặt xe để đối chiếu khi cần thiết.",
+        "acceptTitleWithDriver": "Khách hàng cần xác nhận điều khoản thuê xe có tài xế",
+        "acceptHintWithDriver": "Khách hàng cần xác nhận đồng ý trước khi gửi yêu cầu đặt xe; thời điểm xác nhận được lưu lại trong thông tin yêu cầu và đơn đặt xe.",
+        "contractTemplate": "Mẫu hợp đồng có sẵn tại mục <link>Hợp đồng & Chứng từ</link>",
+        "termsTitle": "Điều khoản thuê xe",
+        "termsHint": "Các quy định khách hàng cần tuân thủ trong suốt quá trình thuê và sử dụng xe, nhằm đảm bảo quyền lợi, trách nhiệm và quá trình vận hành minh bạch giữa các bên.",
+        "termsTitleWithDriver": "Điều khoản dịch vụ cho khách thuê xe có tài xế",
+        "termsHintWithDriver": "Quy định nội bộ bắt buộc đối với khách hàng trong quá trình vận hành xe.",
+        "termsPlaceholder": "Nhập điều khoản thuê xe (tối đa {max, number} ký tự)"
       }
     }
   },

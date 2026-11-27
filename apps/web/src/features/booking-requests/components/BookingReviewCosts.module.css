@@ -234,3 +234,28 @@
   align-items: center;
   gap: 4px;
 }
+
+/*
+ * Cọc là một CÂU ("Cọc tiền X và Cọc tài sản (…)", ADR 0112): nhãn ở trên, câu xuống dòng bên dưới -
+ * không để `space-between` + `flex: none` ép nhãn thành cột chữ dọc và câu tràn khỏi thẻ.
+ */
+.rowStacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--xp-space-xs);
+}
+
+.rowStacked > .label {
+  flex: none;
+}
+
+.amountText {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  /* `.amount` là `nowrap` cho số tiền - mô tả cọc dài (ADR 0112) phải xuống dòng. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

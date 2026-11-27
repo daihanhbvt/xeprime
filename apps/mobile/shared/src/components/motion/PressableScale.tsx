@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 import { pressScale, spring } from '@/theme/motion';
+import { useMotionOff } from './no-motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -32,7 +32,7 @@ export const PressableScale = forwardRef<View, PressableScaleProps>(function Pre
   { children, style, scaleTo = pressScale.card, onPressIn, onPressOut, disabled, ...rest },
   ref,
 ) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionOff();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -65,7 +65,7 @@ export const PressableScale = forwardRef<View, PressableScaleProps>(function Pre
  * `Animated.View`. `enabled = false` ⇒ không co (vd. app Partner giữ nguyên hành vi cũ).
  */
 export function usePressScale(enabled = true, scaleTo = 0.98) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionOff();
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const active = enabled && !reduceMotion;

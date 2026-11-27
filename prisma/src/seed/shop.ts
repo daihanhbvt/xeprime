@@ -22,7 +22,9 @@ import {
   WALLET_OWNER_TYPE,
   WALLET_STATUS,
   COLLATERAL_ASSET_TYPE,
+  COLLATERAL_COMBINATION,
   COLLATERAL_MODE,
+  POLICY_SECTION,
   DOCUMENT_STATUS,
   DRIVER_LINK_STATUS,
   DRIVER_TYPE,
@@ -823,9 +825,9 @@ const BANK_CODE_BY_NAME: Record<string, string> = {
  * Ba tầng chính sách, đúng thứ tự ưu tiên mà `PricingService` đọc: ghi đè theo XE → mặc định
  * theo LOẠI XE → mặc định chung của gian hàng.
  *
- * Ba chế độ bảo đảm LOẠI TRỪ nhau và DB canh bằng CHECK `rental_policies_collateral_scope_check`:
- * `cash` phải có tiền cọc > 0 và không có tài sản; `asset` phải cọc = 0 và có ít nhất một loại
- * tài sản; `none` thì cả hai đều rỗng. Seed dựng đủ cả ba để mọi nhánh giao diện có dữ liệu.
+ * Bảo đảm kết hợp (ADR 0112 điều 2), DB canh bằng CHECK `rental_policies_collateral_scope_check`:
+ * cờ tiền ⇔ cọc > 0, cờ tài sản ⇔ có loại tài sản, `none` thì cả hai tắt. Seed dựng cọc tiền, cọc
+ * tài sản và miễn thế chấp để mọi nhánh giao diện có dữ liệu.
  */
 async function buildRentalPolicies(spec: ShopSpec, tenantId: string): Promise<void> {
   const existingDefault = await prisma.rentalPolicy.findFirst({
@@ -833,7 +835,10 @@ async function buildRentalPolicies(spec: ShopSpec, tenantId: string): Promise<vo
     select: { id: true },
   });
   const defaultFields = {
-    collateralMode: COLLATERAL_MODE.CASH,
+    collateralMode: COLLATERAL_MODE.REQUIRED,
+    collateralCashEnabled: true,
+    collateralAssetEnabled: false,
+    collateralCombination: COLLATERAL_COMBINATION.ANY_ONE,
     collateralAssetTypes: [],
     depositAmount: 5_000_000,
     deliveryEnabled: true,
@@ -881,7 +886,10 @@ async function buildRentalPolicies(spec: ShopSpec, tenantId: string): Promise<vo
     select: { id: true },
   });
   const bikeFields = {
-    collateralMode: COLLATERAL_MODE.ASSET,
+    collateralMode: COLLATERAL_MODE.REQUIRED,
+    collateralCashEnabled: false,
+    collateralAssetEnabled: true,
+    collateralCombination: COLLATERAL_COMBINATION.ANY_ONE,
     collateralAssetTypes: [COLLATERAL_ASSET_TYPE.VEHICLE_REGISTRATION],
     depositAmount: 0,
     deliveryEnabled: false,
@@ -923,7 +931,13 @@ async function buildVehicleOverridePolicy(
   if (!target) return;
 
   const fields = {
+    // Kế thừa theo MỤC (ADR 0112 điều 1): riêng cọc (miễn thế chấp) + bảo hiểm, còn lại theo gian
+    // hàng - để màn sửa xe có đủ hai trạng thái công tắc.
+    inheritedSections: [POLICY_SECTION.USAGE_LIMITS, POLICY_SECTION.LONG_TERM_DISCOUNT],
     collateralMode: COLLATERAL_MODE.NONE,
+    collateralCashEnabled: false,
+    collateralAssetEnabled: false,
+    collateralCombination: COLLATERAL_COMBINATION.ANY_ONE,
     collateralAssetTypes: [],
     depositAmount: 0,
     deliveryEnabled: true,

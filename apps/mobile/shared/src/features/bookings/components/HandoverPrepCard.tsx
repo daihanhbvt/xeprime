@@ -5,15 +5,29 @@ import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
 import { CheckMark } from '@/components/ui/CheckMark';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isNegativeMoney, isZeroMoney, subtractMoney, telHref } from '@xeprime/domain';
 import {
+  isNegativeMoney,
+  isZeroMoney,
+  normalizeCollateral,
+  subtractMoney,
+  telHref,
+  type NormalizedCollateral,
+} from '@xeprime/domain';
+import {
+  BOOKING_COLLATERAL_MAX_ITEMS,
+  COLLATERAL_COMBINATION,
   HANDOVER_PREP_ITEM,
+  PERMISSION,
+  isBookingCollateralEditable,
   handoverPhotoSlotsFor,
   PAYMENT_KIND,
   type HandoverPhotoSlot,
   type HandoverPrepItem,
 } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { policyCollateral } from '@/features/rental-policies/collateral-text';
+import { useDomainLabel } from '@/i18n/domain';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -29,7 +43,57 @@ import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useSetHandoverPrepCheck } from '../hooks/use-booking-extensions';
 import type { BookingDetail, BookingHandoverPrep } from '../api';
 
-type PrepKey = 'confirm' | 'documents' | 'rent' | 'deposit' | 'contract' | 'photos' | 'driver';
+export type PrepKey =
+  | 'confirm'
+  | 'documents'
+  | 'rent'
+  | 'deposit'
+  | 'asset'
+  | 'collateralEither'
+  | 'contract'
+  | 'photos'
+  | 'driver';
+
+/** Khoá chữ `Bookings.detailPage.prep.*` của từng dòng (`collateralEither` => `either`). */
+export function prepTitleKey(key: PrepKey) {
+  return key === 'collateralEither' ? 'either' : key;
+}
+
+/**
+ * Cọc của đơn cho khối chuẩn bị bàn giao - web `prepCollateralOf`: chính sách ĐÓNG BĂNG lúc tạo đơn
+ * (`priceSnapshot.policy`, ADR 0112 điều 2, chịu cả mã cũ `cash` / `asset`) + số món tài sản đã ghi
+ * (ADR 0109). Số tiền cọc KHÔNG đọc từ snapshot - đọc `depositRequired` của server.
+ */
+export interface PrepCollateral {
+  policy: NormalizedCollateral | null;
+  recorded: number;
+}
+
+export function prepCollateralOf(booking: {
+  priceSnapshot?: { policy?: Parameters<typeof policyCollateral>[0] } | null;
+  collaterals?: readonly unknown[] | null;
+}): PrepCollateral {
+  return {
+    policy: normalizeCollateral(policyCollateral(booking.priceSnapshot?.policy ?? null)),
+    recorded: booking.collaterals?.length ?? 0,
+  };
+}
+
+/** Việc cọc lúc giao xe - web `collateralPrepPlan` (miễn => none; cả hai => either / both). */
+export type CollateralPrepPlan = 'none' | 'cash' | 'asset' | 'either' | 'both';
+
+export function collateralPrepPlan(
+  prep: Pick<BookingHandoverPrep, 'depositRequired'>,
+  collateral: PrepCollateral | undefined,
+): CollateralPrepPlan {
+  const cash = !isZeroMoney(prep.depositRequired);
+  const asset = collateral?.policy?.asset === true;
+  if (cash && asset) {
+    return collateral?.policy?.combination === COLLATERAL_COMBINATION.ALL ? 'both' : 'either';
+  }
+  if (asset) return 'asset';
+  return cash ? 'cash' : 'none';
+}
 type ManualCheck = BookingHandoverPrep['manualChecks'][number];
 
 interface PrepRowState {
@@ -53,6 +117,7 @@ function depositOutstanding(prep: Pick<BookingHandoverPrep, 'depositRequired' | 
 export function prepRowStates(
   prep: BookingHandoverPrep,
   can: { collect: boolean; contract: boolean },
+  collateral?: PrepCollateral,
 ): PrepRowState[] {
   const manualOf = (item: HandoverPrepItem) =>
     prep.manualChecks.find((check) => check.item === item) ?? null;
@@ -60,13 +125,21 @@ export function prepRowStates(
     const manual = manualItem && !autoDone ? manualOf(manualItem) : null;
     return { key, autoDone, manualItem, manual, done: autoDone || manual !== null };
   };
+  const plan = collateralPrepPlan(prep, collateral);
+  const cashDone = isZeroMoney(depositOutstanding(prep));
+  const assetDone = (collateral?.recorded ?? 0) > 0;
+  const collateralRows: PrepRowState[] = [];
+  if ((plan === 'cash' || plan === 'both') && can.collect) {
+    collateralRows.push(row('deposit', cashDone));
+  }
+  if (plan === 'asset' || plan === 'both') collateralRows.push(row('asset', assetDone));
+  // Một trong hai: tài sản xong được cả khi không ghi sổ thu, nên dòng luôn có.
+  if (plan === 'either') collateralRows.push(row('collateralEither', cashDone || assetDone));
   return [
     row('confirm', true),
     row('documents', prep.documentsReady, HANDOVER_PREP_ITEM.DOCUMENTS),
     ...(can.collect ? [row('rent', isZeroMoney(prep.rentDueAmount))] : []),
-    ...(can.collect && !isZeroMoney(prep.depositRequired)
-      ? [row('deposit', isZeroMoney(depositOutstanding(prep)))]
-      : []),
+    ...collateralRows,
     ...(can.contract
       ? [row('contract', prep.contractId != null, HANDOVER_PREP_ITEM.CONTRACT)]
       : []),
@@ -100,6 +173,8 @@ export function HandoverPrepCard({
   can,
   onDocuments,
   onPhotos,
+  onAddCollateral,
+  onEditCash,
   embedded = false,
 }: {
   booking: BookingDetail;
@@ -110,6 +185,11 @@ export function HandoverPrepCard({
   onDocuments: () => void;
   /** Cuộn tới khối ảnh bàn giao trong trang - khối đó tự tạo nháp biên bản khi chụp (web). */
   onPhotos: () => void;
+  /** Mở ô "Thêm tài sản thế chấp" của thẻ Cọc & thế chấp (web `openAddCollateral`). */
+  onAddCollateral?: () => void;
+  /** "Chỉnh sửa" ở dòng cọc tiền đã xong ⇒ mở hộp Sửa tiền cọc của thẻ Cọc & thế chấp (web). */
+  onEditCash?: () => void;
+
 }) {
   const t = useTranslations('Bookings.detailPage.prep');
   const colors = useColors();
@@ -127,8 +207,32 @@ export function HandoverPrepCard({
   const navigateOnce = useNavigateOnce();
   const createContract = useCreateContract();
   const [collecting, setCollecting] = useState<'rent' | 'deposit' | null>(null);
+  const dl = useDomainLabel();
+  const { has } = usePermissions();
   const prep = booking.handoverPrep;
   if (!prep) return null;
+
+  // Cọc theo chính sách ĐÓNG BĂNG của đơn (ADR 0112 điều 2) + món tài sản đã ghi (ADR 0109).
+  const collateral = prepCollateralOf(booking);
+  const collateralPlan = collateralPrepPlan(prep, collateral);
+  const assetTypes = collateral.policy?.assetTypes ?? [];
+  const assetList = assetTypes.map((code) => dl('collateralAssetType', code)).join(', ');
+  const cashDone = isZeroMoney(depositOutstanding(prep));
+  const canAddAsset =
+    onAddCollateral != null &&
+    has(PERMISSION.BOOKING_UPDATE) &&
+    isBookingCollateralEditable(booking.status) &&
+    (booking.collaterals?.length ?? 0) < BOOKING_COLLATERAL_MAX_ITEMS;
+  const addAssetAction =
+    canAddAsset && onAddCollateral ? (
+      <RowAction label={t('assetAction')} icon="plus" onPress={onAddCollateral} />
+    ) : null;
+
+  // "Chỉnh sửa" ở dòng cọc ĐÃ XONG mở lại đúng chỗ sửa sẵn có (web `HandoverPrepCard`).
+  const editCashAction =
+    onEditCash && has(PERMISSION.BOOKING_UPDATE) ? (
+      <RowAction label={t('editAction')} icon="edit" onPress={onEditCash} />
+    ) : null;
 
   /*
    * Nút cuối dòng mở ĐÚNG lối đã có trên màn đơn (web `HandoverPrepCard`): giấy tờ → sổ khách,
@@ -158,8 +262,19 @@ export function HandoverPrepCard({
           <RowAction label={t('collectAction')} icon="tick" onPress={() => setCollecting('rent')} />
         );
       case 'deposit':
-        return isZeroMoney(depositOutstanding(prep)) ? null : (
+        return isZeroMoney(depositOutstanding(prep)) ? editCashAction : (
           <RowAction label={t('collectAction')} icon="tick" onPress={() => setCollecting('deposit')} />
+        );
+      case 'asset':
+        return collateral.recorded > 0 ? null : addAssetAction;
+      case 'collateralEither':
+        return collateral.recorded > 0 ? null : cashDone ? editCashAction : (
+          <XStack gap={space.xs}>
+            {can.collect ? (
+              <RowAction label={t('deposit')} icon="tick" onPress={() => setCollecting('deposit')} />
+            ) : null}
+            {addAssetAction}
+          </XStack>
         );
       case 'contract':
         return (
@@ -208,6 +323,35 @@ export function HandoverPrepCard({
               b: bold,
             }),
     },
+    asset: {
+      title: t('asset'),
+      body:
+        collateral.recorded > 0
+          ? t('assetDone', { count: collateral.recorded })
+          : assetTypes.length > 1
+            ? t('assetPendingMany', { assets: assetList })
+            : assetTypes.length === 1
+              ? t('assetPendingOne', { assets: assetList })
+              : t('assetPendingAny'),
+    },
+    collateralEither: {
+      title: t('either'),
+      body:
+        collateral.recorded > 0
+          ? t('eitherDoneAsset')
+          : cashDone
+            ? t('eitherDoneCash', { amount: fmt.money(prep.depositReceived) })
+            : t.rich('eitherPending', {
+                amount: fmt.money(prep.depositRequired),
+                assets:
+                  assetTypes.length > 1
+                    ? t('eitherAssetsMany', { assets: assetList })
+                    : assetTypes.length === 1
+                      ? t('eitherAssetsOne', { assets: assetList })
+                      : t('eitherAssetsAny'),
+                b: bold,
+              }),
+    },
     contract: {
       title: t('contract'),
       body: prep.contractSigned
@@ -229,7 +373,7 @@ export function HandoverPrepCard({
     },
   };
 
-  const rows = prepRowStates(prep, can);
+  const rows = prepRowStates(prep, can, collateral);
   const done = rows.filter((row) => row.done).length;
 
   const toggle = (item: HandoverPrepItem, checked: boolean) => {
@@ -302,6 +446,11 @@ export function HandoverPrepCard({
             </XStack>
           );
         })}
+        {collateralPlan === 'none' && collateral.policy?.none ? (
+          <Text col={colors.placeholder} fos={fontSize.label} pt={space.xs}>
+            {t('collateralNone')}
+          </Text>
+        ) : null}
       </YStack>
   );
   const sheet = collecting ? (

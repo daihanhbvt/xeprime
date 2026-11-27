@@ -334,3 +334,36 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* "Hình thức cọc xe hiện tại: … - Thiết lập tại Bảo hiểm & Giao nhận →" (ADR 0112). */
+.collateralStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info-strong);
+  font-size: var(--xp-font-size-sm);
+  line-height: 18px;
+}
+
+.stripLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.stripLink:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--xp-color-primary);
+}

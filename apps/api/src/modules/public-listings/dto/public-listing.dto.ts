@@ -4,7 +4,10 @@ import { LongTermPackageOptionDto } from '../../pricing/dto/pricing.dto';
 import {
   BODY_TYPE_VALUES,
   COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_COMBINATION_VALUES,
   COLLATERAL_MODE_VALUES,
+  CUSTOMER_DOCUMENT_TYPE_VALUES,
+  IDENTITY_VERIFY_METHOD_VALUES,
   DEFAULT_LISTING_SORT,
   FUEL_TYPE_VALUES,
   LISTING_MIN_RATING_VALUES,
@@ -619,9 +622,36 @@ export class PickupPointDto {
  * Điều kiện BẢO ĐẢM công bố cho khách (gap C-04). Mã đi trên dây; nhãn do FE dịch (ADR 0012).
  */
 export class ListingCollateralDto {
-  @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) mode!: string;
+  @ApiProperty({ enum: COLLATERAL_MODE_VALUES, description: 'required | none (ADR 0112 điều 2)' })
+  mode!: string;
+  @ApiProperty({ description: 'Nhận cọc tiền (số tiền ở depositAmount)' }) cashEnabled!: boolean;
+  @ApiProperty({ description: 'Nhận cọc tài sản (loại ở assetTypes)' }) assetEnabled!: boolean;
+  @ApiProperty({
+    enum: COLLATERAL_COMBINATION_VALUES,
+    description: 'any_one = "Cọc tiền X hoặc Cọc tài sản (...)", all = "Cọc tiền X và Cọc tài sản (...)"',
+  })
+  combination!: string;
   @ApiProperty({ enum: COLLATERAL_ASSET_TYPE_VALUES, isArray: true }) assetTypes!: string[];
-  @ApiProperty({ description: 'VND string - chỉ khác 0 khi mode = cash' }) depositAmount!: string;
+  @ApiProperty({ description: 'VND string - chỉ khác 0 khi cashEnabled' }) depositAmount!: string;
+}
+
+/**
+ * Điều kiện thuê CHUẨN của nền tảng (ADR 0112 điều 3) - một luật cho mọi xe, mọi dịch vụ.
+ * Mã đi trên dây, FE dịch nhãn (ADR 0012).
+ */
+export class PlatformRentalConditionsDto {
+  @ApiProperty({
+    enum: CUSTOMER_DOCUMENT_TYPE_VALUES,
+    isArray: true,
+    description: 'Khách xuất trình MỘT trong các giấy tờ (CCCD/CMND còn hạn hoặc hộ chiếu còn hạn)',
+  })
+  identityDocuments!: string[];
+  @ApiProperty({
+    enum: IDENTITY_VERIFY_METHOD_VALUES,
+    isArray: true,
+    description: 'Chủ xe đối chiếu bằng MỘT trong các cách (qua VNeID hoặc bản gốc trực tiếp)',
+  })
+  verifyMethods!: string[];
 }
 
 /**
@@ -631,14 +661,29 @@ export class ListingCollateralDto {
  */
 export class ListingRentalTermsDto {
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
-  @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE - bộ HIỆU LỰC' })
+  /*
+   * Giấy tờ + cách đối chiếu: luật chuẩn nền tảng (ADR 0112 điều 3) - giữ hình dạng cho app đã phát
+   * hành; bề mặt mới đọc `rentalConditions` của trang xe. Điều khoản là của gian hàng.
+   */
+  @ApiProperty({
+    type: [String],
+    deprecated: true,
+    description: 'NGỪNG DÙNG (ADR 0112) - giấy tờ của luật chuẩn nền tảng; đọc rentalConditions',
+  })
   requiredDocuments!: string[];
   @ApiProperty({
-    description: 'IDENTITY_VERIFY_METHOD - đối chiếu TAY, kể cả qua app VNeID của khách',
+    deprecated: true,
+    description: 'NGỪNG DÙNG (ADR 0112) - cách đối chiếu đầu tiên của luật chuẩn; đọc rentalConditions',
   })
   identityVerifyMethod!: string;
-  @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
-  @ApiProperty() requireTermsAcceptance!: boolean;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Điều khoản thuê của GIAN HÀNG cho nhóm dịch vụ này (ADR 0112 điều 3)',
+  })
+  termsText!: string | null;
+  @ApiProperty({ description: 'Gian hàng bắt buộc khách xác nhận điều khoản trước khi gửi yêu cầu' })
+  requireTermsAcceptance!: boolean;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -797,6 +842,12 @@ export class PublicListingDetailDto extends PublicListingDto {
    */
   @ApiPropertyOptional({ type: ListingCollateralDto, nullable: true })
   collateral!: ListingCollateralDto | null;
+
+  @ApiProperty({
+    type: PlatformRentalConditionsDto,
+    description: 'Điều kiện thuê chuẩn của nền tảng (ADR 0112 điều 3) - giống nhau ở mọi xe',
+  })
+  rentalConditions!: PlatformRentalConditionsDto;
 
   /** Một mục cho mỗi dịch vụ xe đăng có thiết lập riêng (tự lái, có tài xế) - 08/09/2026. */
   @ApiProperty({ type: [ListingRentalTermsDto] })

@@ -102,7 +102,7 @@ export function VehicleEditHubScreen({ vehicleId }: { vehicleId: string }) {
     return (
       <>
         <AppHeader title={tPage('title')} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
             title={tPage('forbiddenTitle')}
@@ -128,7 +128,7 @@ ${tPermission('requires')} ${PERMISSION.VEHICLE_UPDATE}`}
     <>
       {/* Tên + biển số đã nằm trên thẻ tóm tắt đầu màn — thanh đầu chỉ còn tiêu đề. */}
       <AppHeader title={t('title')} onBack={back} />
-      <Screen scrollReveal
+      <Screen scrollReveal={false} motion={false}
         edges={['left', 'right', 'bottom']}
         refreshing={query.isRefetching}
         onRefresh={() => {
