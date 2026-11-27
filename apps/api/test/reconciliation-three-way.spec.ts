@@ -844,7 +844,7 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
     );
     const before = (await cards.summary(AT)).tax;
 
-    // Kỳ 1901 nằm ngoài dải kỳ ngẫu nhiên của tax-withholding.spec (1930–1959) — không bị giẫm.
+    // Kỳ 1901 nằm ngoài dải kỳ ngẫu nhiên của tax-withholding.spec (2021–2023) — không bị giẫm.
     await taxOn(await bookingFor(null), 30_000, '1901-01');
 
     const after = (await cards.summary(AT)).tax;
