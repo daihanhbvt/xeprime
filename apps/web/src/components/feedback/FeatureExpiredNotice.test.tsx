@@ -27,7 +27,7 @@ describe('FeatureExpiredNotice - băng gói hết hạn', () => {
     render(<FeatureExpiredNotice feature={PLAN_FEATURE.FINANCE} planEndsAt={null} />);
 
     // Tên tính năng bằng ngôn ngữ người dùng, không phải tên module.
-    expect(screen.getByText(/Sổ thu chi và báo cáo/)).toBeTruthy();
+    expect(screen.getByText(/Sổ thu chi (&|và) báo cáo/)).toBeTruthy();
     expect(screen.getByText(/vẫn còn nguyên/)).toBeTruthy();
   });
 

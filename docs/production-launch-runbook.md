@@ -678,9 +678,10 @@ Một lần, theo thứ tự:
      migrate node_modules/.bin/tsx ./src/seed.ts
    unset PLATFORM_ADMIN_PASSWORD
    ```
-   Seed `system` dựng sẵn 9 mã khuyến mãi MẪU đang bật và công khai (`BANMOI`, `HELLO50`, `VIP20`…
-   — để màn quản trị có đủ mọi hình dạng mã). Bản tạm có tiền thật và mã do NỀN TẢNG tài trợ, nên
-   TẮT hết ngay sau seed; admin bật lại / nhân bản mã nào cần ở `/promo-codes` của site quản trị:
+   Từ 27/11/2026 seed `system` KHÔNG còn tạo mã khuyến mãi (9 mã mẫu `BANMOI`, `VIP20`… chỉ ở
+   `demo`) — mã do NỀN TẢNG tài trợ, một mã đang bật là tiền thật. DB từng seed bằng bản CŨ thì
+   vẫn có 9 mã đó đang bật: kiểm `SELECT code, is_active FROM promo_codes;` và tắt hết; admin
+   bật lại / nhân bản mã nào cần ở `/promo-codes` của site quản trị:
    ```bash
    docker compose -p xeprime-prodtemp --project-directory . -f deploy/prodtemp/docker-compose.yml \
      --env-file .env.prodtemp exec -T db psql -U xeprime -d xeprime \

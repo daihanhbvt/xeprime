@@ -236,6 +236,17 @@ async function expectedDue(field: 'pickupAt' | 'returnAt', status: string[]): Pr
   return rows.filter((r) => vnDateKey(r[field]) <= today).length;
 }
 
+/** Mốc SẮP TỚI gần nhất (chưa tới `NOW`) của tập đó, ISO-8601 — `null` khi không còn lượt nào. */
+async function expectedNext(field: 'pickupAt' | 'returnAt', status: string[]): Promise<string | null> {
+  const rows = await prisma.booking.findMany({
+    where: { tenantId, status: { in: status }, [field]: { gte: NOW } },
+    orderBy: { [field]: 'asc' },
+    take: 1,
+    select: { pickupAt: true, returnAt: true },
+  });
+  return rows[0]?.[field].toISOString() ?? null;
+}
+
 describe('Tổng quan partner — việc trong ngày', () => {
   maybe('chờ giao / đang thuê là đúng tập của hai danh sách; quá giờ tính mọi ngày', async () => {
     const res = await dashboard.overview(context(), {}, NOW);
@@ -249,7 +260,12 @@ describe('Tổng quan partner — việc trong ngày', () => {
       returnsToday: await expectedToday('returnAt', [BOOKING_STATUS.ACTIVE]),
       returnsOverdue: 1,
       returnsDue: await expectedDue('returnAt', [BOOKING_STATUS.ACTIVE]),
+      nextPickupAt: await expectedNext('pickupAt', [BOOKING_STATUS.RESERVED]),
+      nextReturnAt: await expectedNext('returnAt', [BOOKING_STATUS.ACTIVE]),
     });
+    // Spec dựng sẵn lượt giao và lượt trả còn ở phía trước — mốc gần nhất phải có thật.
+    expect(res.today.nextPickupAt).not.toBeNull();
+    expect(res.today.nextReturnAt).not.toBeNull();
   });
 
   maybe('huy hiệu menu: khối hôm nay và khối yêu cầu đứng riêng khớp Tổng quan', async () => {

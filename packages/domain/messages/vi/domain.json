@@ -1197,7 +1197,11 @@
       "internal_note_update": "Cập nhật ghi chú nội bộ phiếu duyệt"
     },
     "bank_account": {
-      "archived": "Lưu trữ tài khoản ngân hàng"
+      "archived": "Lưu trữ tài khoản ngân hàng",
+      "change_requested": "Gửi yêu cầu đổi tài khoản nhận tiền",
+      "change_cancelled": "Huỷ yêu cầu đổi tài khoản nhận tiền",
+      "change_approved": "Duyệt yêu cầu đổi tài khoản nhận tiền",
+      "change_rejected": "Từ chối yêu cầu đổi tài khoản nhận tiền"
     },
     "bank_transaction": {
       "ignore": "Bỏ qua giao dịch ngân hàng",
@@ -1251,6 +1255,9 @@
       "customer_return": {
         "report": "Khách báo đã trả xe",
         "reject": "Gian hàng phản đối lời báo trả xe"
+      },
+      "deposit_collected": {
+        "adjust": "Điều chỉnh cọc thế chấp đã thu"
       }
     },
     "booking_hold": {
@@ -1595,6 +1602,9 @@
     },
     "vehicle_document": {
       "view_registration_image": "Xem ảnh cà vẹt"
+    },
+    "tenant_rental_terms": {
+      "update": "Cập nhật điều khoản thuê của gian hàng"
     }
   },
   "auditTargetType": {
@@ -1654,7 +1664,10 @@
     "insurance_remittance": "Bảng kê trả hãng bảo hiểm",
     "vehicle_catalog_import": "Lượt nhập dữ liệu xe",
     "vehicle_catalog_variant": "Xe chuẩn (dữ liệu xe)",
-    "withdrawal_month": "Tháng rút điểm"
+    "withdrawal_month": "Tháng rút điểm",
+    "bank_account_change_request": "Yêu cầu đổi tài khoản nhận tiền",
+    "internal_driver": "Tài xế nội bộ",
+    "scheduled_wallet_credit": "Khoản chờ cộng ví"
   },
   "auditField": {
     "planCode": "Mã gói",

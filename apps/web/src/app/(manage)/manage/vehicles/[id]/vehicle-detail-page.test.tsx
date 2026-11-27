@@ -939,19 +939,19 @@ describe('/manage/vehicles/[id] - thẻ tổng quan', () => {
     expect(items[0]!.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/cover.jpg');
   });
 
-  it('thư viện ảnh: quá 10 ô thì ô thứ 10 báo "+N", ảnh dư vẫn trong nhóm xem trước', () => {
+  it('thư viện ảnh: ảnh "Khác" KHÔNG vào thư viện - chỉ các ô góc bắt buộc (chốt 26/11/2026)', () => {
     const images = Array.from({ length: 11 }, (_, i) => `https://cdn.test/${i}.jpg`);
     detail.data = vehicle({
-      mainImageUrl: images[0],
+      mainImageUrl: null,
       images,
       media: images.map((url, sortOrder) => ({ url, type: 'other' as const, sortOrder })),
     });
     renderPage();
 
-    // Năm ô góc (trống) + 11 ảnh "Khác" = 16 ô; hiện 10, ô thứ 10 báo phần còn lại.
-    expect(within(galleryCard()).getByText('+6')).toBeTruthy();
-    // Ảnh dư không bị cắt khỏi DOM — trình xem toàn màn hình phải lướt được tới chúng.
-    expect(galleryCard().querySelectorAll('img')).toHaveLength(11);
+    // Năm ô góc (trống), không ô nào cho 11 ảnh "Khác", nên cũng không có ô "+N".
+    expect(within(galleryCard()).getAllByRole('listitem')).toHaveLength(5);
+    expect(galleryCard().querySelectorAll('img')).toHaveLength(0);
+    expect(within(galleryCard()).queryByText(/^\+\d+$/)).toBeNull();
   });
 
   it('thư viện ảnh: chưa có ảnh thì đủ năm ô trống; chỉ người sửa được mới có lối thêm ảnh', () => {
@@ -1110,18 +1110,21 @@ describe('/manage/vehicles/[id] - thẻ tổng quan', () => {
     expect(serviceSettings.patch).toHaveBeenCalledWith({ autoAcceptEnabled: false });
   });
 
-  it('Tối ưu nhận chuyến: hai dịch vụ hai công tắc; có tài xế chưa có tài xế thì không bật được', () => {
+  it('Tối ưu nhận chuyến: xe tự lái + có tài xế vẫn chỉ MỘT công tắc - có tài xế luôn chờ duyệt', () => {
+    // 20/11/2026: chuyến có tài xế luôn chờ chủ xe duyệt nên không có công tắc tự nhận.
     grant(PERMISSION.VEHICLE_UPDATE);
     detail.data = vehicle({ serviceTypes: ['self_drive', 'with_driver'] });
     renderPage();
 
     const card = panel('Tối ưu nhận chuyến');
-    expect(within(card).getByRole('switch', { name: /Tự lái/ })).toBeTruthy();
-    expect(
-      within(card)
-        .getByRole('switch', { name: /Có tài xế/ })
-        .hasAttribute('disabled'),
-    ).toBe(true);
+    expect(within(card).getAllByRole('switch')).toHaveLength(1);
+    expect(within(card).getByRole('switch', { name: 'Tự động đồng ý nhận chuyến' })).toBeTruthy();
+  });
+
+  it('xe chỉ có tài xế: KHÔNG có thẻ Tối ưu nhận chuyến', () => {
+    detail.data = vehicle({ serviceTypes: ['with_driver'] });
+    renderPage();
+    expect(screen.queryByText('Tối ưu nhận chuyến')).toBeNull();
   });
 
   it('xe chỉ cho thuê dài hạn: KHÔNG có thẻ Tối ưu nhận chuyến (gian hàng luôn tự chốt lịch)', () => {

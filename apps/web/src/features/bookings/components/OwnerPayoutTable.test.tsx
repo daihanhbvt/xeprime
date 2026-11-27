@@ -76,11 +76,11 @@ describe('OwnerPayoutTable', () => {
     expect(screen.getByText('Thuế khấu trừ (GTGT 5% + TNCN 2%)')).toBeTruthy();
     expect(screen.getByText(money('54.600', '−'))).toBeTruthy();
 
-    expect(screen.getByText('Thu nhập chủ xe (a)')).toBeTruthy();
+    expect(screen.getByText('Thu nhập chủ xe (A)')).toBeTruthy();
     expect(screen.getByText(money('647.400'))).toBeTruthy();
-    expect(screen.getByText('Khách thanh toán trực tiếp (b)')).toBeTruthy();
+    expect(screen.getByText('Khách thanh toán trực tiếp (B)')).toBeTruthy();
     expect(screen.getByText(money('585.000'))).toBeTruthy();
-    expect(screen.getByText('Số tiền cộng ví (a − b)')).toBeTruthy();
+    expect(screen.getByText('Số tiền cộng ví (A − B)')).toBeTruthy();
     expect(screen.getByText(money('62.400'))).toBeTruthy();
   });
 
@@ -218,16 +218,16 @@ describe('OwnerPayoutTable', () => {
 
   it('không thu tiền giữ chỗ online ⇒ ẩn (b) và số cộng ví, vẫn có thu nhập (a)', () => {
     renderWithIntl(<OwnerPayoutTable payout={{ ...SELF_DRIVE, collectsHold: false }} />);
-    expect(screen.getByText('Thu nhập chủ xe (a)')).toBeTruthy();
-    expect(screen.queryByText('Khách thanh toán trực tiếp (b)')).toBeNull();
-    expect(screen.queryByText('Số tiền cộng ví (a − b)')).toBeNull();
+    expect(screen.getByText('Thu nhập chủ xe (A)')).toBeTruthy();
+    expect(screen.queryByText('Khách thanh toán trực tiếp (B)')).toBeNull();
+    expect(screen.queryByText('Số tiền cộng ví (A − B)')).toBeNull();
   });
 
   it('tiếng Anh: nhãn dịch, số tiền vẫn VND đúng tới đồng', () => {
     renderWithIntl(<OwnerPayoutTable payout={SELF_DRIVE} />, { locale: 'en' });
     expect(screen.getByText('Owner service fee')).toBeTruthy();
     expect(screen.getByText('Tax withheld (VAT 5% + PIT 2%)')).toBeTruthy();
-    expect(screen.getByText('Credited to your wallet (a − b)')).toBeTruthy();
+    expect(screen.getByText('Credited to your wallet (A − B)')).toBeTruthy();
     expect(screen.getByText(/^62,400\s*₫$/)).toBeTruthy();
     expect(
       screen.getByText(

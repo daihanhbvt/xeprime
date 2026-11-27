@@ -60,10 +60,10 @@ describe('ApprovalPreviewSummary', () => {
     expect(screen.getByText('Phí dịch vụ - Chủ xe')).toBeTruthy();
     expect(screen.getByText(/^−200\.000\s*₫$/)).toBeTruthy();
     expect(screen.queryByText(/^Thuế khấu trừ/)).toBeNull();
-    expect(screen.getByText('Thu nhập chủ xe (a)')).toBeTruthy();
-    expect(screen.getByText('Khách thanh toán trực tiếp (b)')).toBeTruthy();
+    expect(screen.getByText('Thu nhập chủ xe (A)')).toBeTruthy();
+    expect(screen.getByText('Khách thanh toán trực tiếp (B)')).toBeTruthy();
     expect(screen.getByText(/^1\.500\.000\s*₫$/)).toBeTruthy();
-    expect(screen.getByText('Số tiền cộng ví (a − b)')).toBeTruthy();
+    expect(screen.getByText('Số tiền cộng ví (A − B)')).toBeTruthy();
     expect(screen.getByText(/^300\.000\s*₫$/)).toBeTruthy();
     expect(screen.getByText(/Khách có 2 giờ để chuyển tiền giữ chỗ/)).toBeTruthy();
     expect(screen.getByText(/huỷ miễn phí trong 4 giờ/)).toBeTruthy();
@@ -81,8 +81,8 @@ describe('ApprovalPreviewSummary', () => {
         }}
       />,
     );
-    expect(screen.queryByText('Khách thanh toán trực tiếp (b)')).toBeNull();
-    expect(screen.queryByText('Số tiền cộng ví (a − b)')).toBeNull();
+    expect(screen.queryByText('Khách thanh toán trực tiếp (B)')).toBeNull();
+    expect(screen.queryByText('Số tiền cộng ví (A − B)')).toBeNull();
     expect(screen.getByText(/không thu tiền giữ chỗ online/)).toBeTruthy();
     expect(screen.queryByText(/để chuyển tiền giữ chỗ/)).toBeNull();
   });
@@ -111,7 +111,7 @@ describe('ApprovalPreviewSummary', () => {
 
   it('showMoney=false (dài hạn LEGACY chưa có gói) ⇒ chỉ còn cửa sổ, không dòng tiền', () => {
     renderWithIntl(<ApprovalPreviewSummary preview={PREVIEW} showMoney={false} />);
-    expect(screen.queryByText('Thu nhập chủ xe (a)')).toBeNull();
+    expect(screen.queryByText('Thu nhập chủ xe (A)')).toBeNull();
     expect(screen.queryByText(/^−200\.000\s*₫$/)).toBeNull();
     expect(screen.getByText(/Khách có 2 giờ để chuyển tiền giữ chỗ/)).toBeTruthy();
   });

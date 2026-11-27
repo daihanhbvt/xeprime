@@ -1197,7 +1197,11 @@
       "internal_note_update": "Update internal review note"
     },
     "bank_account": {
-      "archived": "Archive bank account"
+      "archived": "Archive bank account",
+      "change_requested": "Request payout account change",
+      "change_cancelled": "Cancel payout account change request",
+      "change_approved": "Approve payout account change request",
+      "change_rejected": "Reject payout account change request"
     },
     "bank_transaction": {
       "ignore": "Ignore bank transaction",
@@ -1251,6 +1255,9 @@
       "customer_return": {
         "report": "Customer reported vehicle returned",
         "reject": "Shop disputed return report"
+      },
+      "deposit_collected": {
+        "adjust": "Adjust collected security deposit"
       }
     },
     "booking_hold": {
@@ -1595,6 +1602,9 @@
     },
     "vehicle_document": {
       "view_registration_image": "View registration image"
+    },
+    "tenant_rental_terms": {
+      "update": "Update shop rental terms"
     }
   },
   "auditTargetType": {
@@ -1654,7 +1664,10 @@
     "insurance_remittance": "Insurance remittance statement",
     "vehicle_catalog_import": "Vehicle data import",
     "vehicle_catalog_variant": "Standard vehicle (vehicle data)",
-    "withdrawal_month": "Withdrawal month"
+    "withdrawal_month": "Withdrawal month",
+    "bank_account_change_request": "Payout account change request",
+    "internal_driver": "In-house driver",
+    "scheduled_wallet_credit": "Pending wallet credit"
   },
   "auditField": {
     "planCode": "Plan code",

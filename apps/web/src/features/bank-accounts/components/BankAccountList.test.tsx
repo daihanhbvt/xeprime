@@ -88,7 +88,7 @@ describe('Tài khoản nhận tiền - một tài khoản', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Yêu cầu đổi tài khoản/ }));
 
-    expect(await screen.findByText('Yêu cầu đổi tài khoản nhận tiền')).toBeTruthy();
+    expect(await screen.findByText('Đổi tài khoản nhận tiền')).toBeTruthy();
     expect(screen.getByText(/Vietcombank · •••••••••3456 đã được khoá/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Gửi yêu cầu' })).toBeTruthy();
     // Không còn công tắc "mặc định": tài khoản vừa khai LÀ tài khoản nhận tiền.
