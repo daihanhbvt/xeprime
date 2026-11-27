@@ -316,22 +316,6 @@
 }
 
 
-/* Bảo hiểm chuyến đi MIC */
-.insuranceSection {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--xp-color-border, #e9eaeb);
-}
-
-.insuranceNote {
-  margin: 0;
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary, #717680);
-  font-style: italic;
-}
 
 /* Tiện ích bổ sung */
 .extraSection {

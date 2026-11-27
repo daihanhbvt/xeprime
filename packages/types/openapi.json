@@ -111487,10 +111487,21 @@
             "type": "string"
           },
           "coverageVi": {
-            "type": "string"
+            "type": "string",
+            "description": "Phạm vi bảo vệ - mỗi dòng một mục"
           },
           "coverageEn": {
-            "type": "string"
+            "type": "string",
+            "description": "Phạm vi bảo vệ - mỗi dòng một mục"
+          },
+          "summaryVi": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mô tả một dòng dưới tên sản phẩm. `null` = ghép từ các mục phạm vi"
+          },
+          "summaryEn": {
+            "type": "string",
+            "nullable": true
           },
           "deductibleCar": {
             "type": "string",
@@ -125027,10 +125038,21 @@
             "type": "string"
           },
           "coverageVi": {
-            "type": "string"
+            "type": "string",
+            "description": "Phạm vi bảo vệ - mỗi dòng một mục"
           },
           "coverageEn": {
-            "type": "string"
+            "type": "string",
+            "description": "Phạm vi bảo vệ - mỗi dòng một mục"
+          },
+          "summaryVi": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mô tả một dòng dưới tên sản phẩm. `null` = ghép từ các mục phạm vi"
+          },
+          "summaryEn": {
+            "type": "string",
+            "nullable": true
           },
           "deductibleAmount": {
             "type": "string",
@@ -132757,6 +132779,15 @@
           },
           "coverageEn": {
             "type": "string"
+          },
+          "summaryVi": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mô tả một dòng dưới tên sản phẩm. Rỗng/`null` = ghép từ các mục phạm vi"
+          },
+          "summaryEn": {
+            "type": "string",
+            "nullable": true
           },
           "deductibleCar": {
             "type": "string",

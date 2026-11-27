@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { insuranceCoverageItems } from '@xeprime/domain';
 import { INSURANCE_PRODUCT_KIND, VEHICLE_TYPE } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { ContentSection } from '@/features/content-page/components/ContentSection';
@@ -64,7 +65,14 @@ export default async function InsurancePage() {
             <dl className={styles.facts}>
               <div className={styles.fact}>
                 <dt>{t('benefits.coverage')}</dt>
-                <dd>{coverage}</dd>
+                <dd>
+                  {/* Mỗi dòng phạm vi là một mục (admin sửa dạng danh sách). */}
+                  <ul className={styles.coverageList}>
+                    {insuranceCoverageItems(coverage).map((item, index) => (
+                      <li key={`${index}-${item}`}>{item}</li>
+                    ))}
+                  </ul>
+                </dd>
               </div>
               <div className={styles.fact}>
                 <dt>{t('benefits.deductible')}</dt>

@@ -43,7 +43,7 @@ import {
 } from '@/features/booking-requests/hooks/use-public-quote';
 import { PICKUP_METHOD } from '@/features/booking-requests/schema';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
-import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { InsuranceOfferCard } from '@/features/insurance/components/InsuranceOfferCard';
 import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { InfoHint } from '@/components/data-display/InfoHint';
@@ -744,31 +744,22 @@ export function ListingBookingCard({
 
             </div>
           )}
-
-          {/*
-            Tuỳ chọn bảo hiểm (ADR 0064) — chỉ hiện khi báo giá nói nền tảng ĐANG bán bảo hiểm
-            (có đối tác phát hành) và chính sách phí mở dòng đó. Phí ngày đọc từ báo giá, tên và
-            quyền lợi từ danh mục sản phẩm; không có số nào viết cứng.
-          */}
-          {insuranceOffer.items.length > 0 ? (
-            <div className={styles.insuranceSection}>
-              <h4 className={styles.sectionTitle}>{t('insurance.title')}</h4>
-              <InsuranceOptionList
-                items={insuranceOffer.items}
-                selected={{
-                  [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: vehicleProtectionSelected,
-                  [INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT]: personalAccidentSelected,
-                }}
-                onChange={setInsuranceSelected}
-              />
-              {/* "Tự nguyện" chỉ đúng với ô khách tự tích; dòng bắt buộc (ADR 0088) có câu riêng. */}
-              {insuranceOffer.items.some((item) => !item.mandatory) ? (
-                <p className={styles.insuranceNote}>{t('insurance.note')}</p>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       </div>
+
+      {/*
+        Thẻ "Bảo hiểm chuyến đi" (ADR 0064 · ADR 0091, Figma `22548:36923`) - thẻ RIÊNG giữa thẻ đặt
+        xe và thẻ thành tiền. Chỉ hiện khi báo giá nói nền tảng ĐANG bán bảo hiểm và chính sách phí
+        mở dòng đó; phí đọc từ báo giá, tên và quyền lợi từ danh mục sản phẩm.
+      */}
+      <InsuranceOfferCard
+        items={insuranceOffer.items}
+        selected={{
+          [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: vehicleProtectionSelected,
+          [INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT]: personalAccidentSelected,
+        }}
+        onChange={setInsuranceSelected}
+      />
 
       {/* Thẻ thành tiền */}
       <section className={styles.breakdownCard} aria-labelledby={costsTitleId}>

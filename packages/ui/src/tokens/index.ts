@@ -342,6 +342,17 @@ export const XP_TOKENS = {
   'color-warning-subtle': '#fffaeb', // v2 Status/warning-low - nền hộp lưu ý trang thanh toán
   'color-warning-border': '#fec84b', // v2 Status/warning-300 - viền nhãn trạng thái cam
   'color-info-border': '#84caff', // v2 Status/information-300 - viền nhãn "Tự lái", nút Zalo (partner)
+  // Ô chọn + popup bảo hiểm MIC (Figma `22548:36923` · `22548:38581`, 27/11/2026).
+  'color-success-soft': '#d1fadf', // v2 success/100 - nền huy hiệu khiên, viền ô "Bồi thường tối đa"
+  'color-success-border-subtle': '#a6f4c5', // v2 success/200 - viền thẻ bảo hiểm, viên "MIC"
+  'color-success-text': '#027a48', // v2 success/700 - chữ viên "MIC - Bảo hiểm Quân đội"
+  'color-info-subtle': '#eff8ff', // v2 Status/information-low - nền nhãn MIC, khối hotline
+  'color-info-tint': '#f5faff', // v2 information/25 - nền viên "Hotline 24/7"
+  'color-info-border-subtle': '#b2ddff', // v2 information/200 - viền khối hotline
+  'color-info-text': '#175cd3', // v2 information/700 - chữ viên hotline, tiêu đề khối hotline
+  'color-warning-tint': '#fffcf5', // v2 warning/25 - nền khối "Quyền lợi & người chịu khấu trừ"
+  'color-warning-border-subtle': '#fedf89', // v2 warning/200 - viền khối khấu trừ
+  'color-warning-text': '#b54708', // v2 warning/700 - tiêu đề khối khấu trừ
   'color-pink': '#dd2590', // v2 Status/pink-high - chữ viên "Thuê xe dài hạn" (partner)
   'color-pink-bg': '#fdf2fa', // v2 Status/pink-low - nền viên "Thuê xe dài hạn"
   'color-pink-border': '#faa7e0', // v2 Status/pink-300 - viền viên "Thuê xe dài hạn"
@@ -365,6 +376,11 @@ export const XP_TOKENS = {
   'gradient-gold-soft': 'linear-gradient(90deg, #edd3a4 0.89%, #d6a439 100.89%)',
   'gradient-text-destination': 'linear-gradient(90deg, #fded9d 0%, #f7dd91 52.404%, #f1a940 100%)',
   'gradient-instant-badge': 'linear-gradient(90deg, #a4dded 0.89%, #dfe7f1 100.89%)',
+  // Thẻ bảo hiểm (xanh nhạt phủ nửa trên) + dải đầu popup quyền lợi MIC (Figma 27/11/2026).
+  'gradient-insurance-card':
+    'linear-gradient(180deg, rgba(235, 252, 245, 0.7) 0%, rgba(255, 255, 255, 0) 45%)',
+  'gradient-insurance-hero':
+    'linear-gradient(161deg, #dbfcf0 0%, rgba(240, 250, 255, 0.9) 40.741%, rgba(255, 247, 224, 0.95) 74.074%)',
   // Lớp vàng rất nhạt phủ lên thẻ khi rê chuột (thẻ xe, thẻ gian hàng).
   'gradient-card-highlight':
     'linear-gradient(145deg, rgba(220, 192, 148, 0.2) 24.208%, rgba(237, 233, 219, 0.2) 88.612%)',

@@ -452,6 +452,8 @@ export {
 
 export { customerStatusOf, type CustomerStatusKey } from './customer-status';
 
+export { insuranceCoverageItems, joinInsuranceCoverageItems } from './insurance-coverage';
+
 export {
   customerFeeLines,
   visibleFeeLines,

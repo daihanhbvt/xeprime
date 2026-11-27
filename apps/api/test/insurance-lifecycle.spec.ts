@@ -22,6 +22,7 @@ import {
   INSURANCE_PENDING_CHECK_INTERVAL_SECONDS,
   INSURANCE_PENDING_CHECKS_MAX,
   INSURANCE_PRODUCT_KIND,
+  INSURANCE_PRODUCT_LIMITS,
   insuranceRetryDelayMinutes,
   TENANT_STATUS,
   INSURANCE_PROVIDER,
@@ -969,6 +970,49 @@ describe('ADR 0064 — danh mục sản phẩm', () => {
       }
     },
   );
+
+  /**
+   * Phạm vi bảo vệ là chữ thường MỖI DÒNG MỘT MỤC (ô chọn bảo hiểm tách dòng thành danh sách tích);
+   * mô tả ngắn trống = ghép từ các mục. Chỉ đổi chữ mô tả (không spec nào khác đọc) và trả lại.
+   */
+  maybe('phạm vi lưu dạng chuẩn mỗi dòng một mục; mô tả ngắn trống ⇒ null', async () => {
+    const iv = await prisma.insuranceProduct.findFirstOrThrow({
+      where: { provider: INSURANCE_PROVIDER.MIC, kind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP },
+    });
+    const original = {
+      coverageVi: iv.coverageVi,
+      summaryVi: iv.summaryVi,
+      summaryEn: iv.summaryEn,
+    };
+    try {
+      const saved = await insuranceProducts.update(
+        iv.id,
+        { coverageVi: '  Đâm va \n\n- Hoả hoạn\r\n', summaryVi: '  ', summaryEn: ' Collision ' },
+        ownerId,
+      );
+      expect(saved).toMatchObject({
+        coverageVi: 'Đâm va\nHoả hoạn',
+        summaryVi: null,
+        summaryEn: 'Collision',
+      });
+
+      await expect(
+        insuranceProducts.update(iv.id, { coverageVi: '\n  \n' }, ownerId),
+      ).rejects.toMatchObject({ response: { code: 'VALIDATION_FAILED' } });
+      const tooMany = Array.from(
+        { length: INSURANCE_PRODUCT_LIMITS.coverageItems.max + 1 },
+        (_, i) => `Mục ${i}`,
+      ).join('\n');
+      await expect(
+        insuranceProducts.update(iv.id, { coverageVi: tooMany }, ownerId),
+      ).rejects.toMatchObject({ response: { code: 'VALIDATION_FAILED' } });
+    } finally {
+      await prisma.insuranceProduct.update({ where: { id: iv.id }, data: original });
+      await prisma.auditLog.deleteMany({
+        where: { action: 'insurance_product.update', actorUserId: ownerId },
+      });
+    }
+  });
 
   maybe('số tiền không phải bội số 1.000 bị từ chối trước khi chạm DB', async () => {
     const iv = await prisma.insuranceProduct.findFirstOrThrow({

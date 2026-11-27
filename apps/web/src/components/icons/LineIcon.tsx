@@ -13,7 +13,9 @@ import styles from './LineIcon.module.css';
  */
 export const LINE_ICON = [
   'add-category',
+  'arrow-down',
   'arrow-right',
+  'arrow-up',
   'arrow-sm',
   'award',
   'bag',
@@ -63,6 +65,7 @@ export const LINE_ICON = [
   'search',
   'setting',
   'shield-star',
+  'shield-tick',
   'sun',
   'tick',
   'time-circle',

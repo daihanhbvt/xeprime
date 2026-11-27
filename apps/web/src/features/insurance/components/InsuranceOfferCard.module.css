@@ -1,0 +1,274 @@
+/*
+ * Thẻ "Bảo hiểm chuyến đi" - Figma `22548:36923` (438px): viền success/200, bo 16, đệm 16, khoảng
+ * 16, nền trắng phủ xanh nhạt nửa trên. Ô chọn bên trong: viền success/300, bo 12, đệm 16, khoảng 12.
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-success-border-subtle);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-gradient-insurance-card), var(--xp-color-bg-container);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.shield {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-success-soft);
+  color: var(--xp-color-success);
+  font-size: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
+}
+
+.providerBadge {
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-info-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-info-subtle);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-info-strong);
+  white-space: nowrap;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+}
+
+.option[data-checked] {
+  border-color: var(--xp-color-success-border);
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+/* Cả tên là vùng bấm của ô tích (nhãn AntD), cách ô tích 6px như bản vẽ. */
+.checkbox {
+  align-items: center;
+  min-width: 0;
+}
+
+.checkbox :global(.ant-checkbox-label) {
+  padding-inline: var(--xp-space-6) 0;
+}
+
+.name {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+/* Ô tích 20px bo 6 (Figma "_Checkbox base"): đã tích = nền success-low, viền + dấu success. */
+.checkbox :global(.ant-checkbox-inner) {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.checkbox :global(.ant-checkbox-checked .ant-checkbox-inner) {
+  border-color: var(--xp-color-success);
+  background: var(--xp-color-success-bg);
+}
+
+.checkbox :global(.ant-checkbox-checked .ant-checkbox-inner::after) {
+  inset-inline-start: 30%;
+  border-color: var(--xp-color-success);
+}
+
+/* Bắt buộc: vẫn là dấu tích xanh, chỉ không bấm được - không xám đi như ô bị khoá thường. */
+.checkbox :global(.ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner) {
+  border-color: var(--xp-color-success);
+  background: var(--xp-color-success-bg);
+  opacity: 1;
+}
+
+.checkbox :global(.ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner::after) {
+  border-color: var(--xp-color-success);
+}
+
+.mandatory {
+  margin-inline: 0;
+}
+
+.summary {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.price {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+}
+
+.amount {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-primary-hover);
+}
+
+.unit {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.mandatoryNote {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.divider {
+  height: 1px;
+  background: var(--xp-color-border-subtle);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.pill {
+  padding: 3px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+}
+
+.pillInfo {
+  background: var(--xp-color-info-tint);
+  color: var(--xp-color-info-text);
+}
+
+.pillInfo:hover,
+.pillInfo:focus-visible {
+  color: var(--xp-color-info-strong);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-info-strong);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toggle :global(span[aria-hidden]) {
+  font-size: 16px;
+}
+
+.toggle:hover,
+.toggle:focus-visible {
+  color: var(--xp-color-info-text);
+}
+
+.expanded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+}
+
+.hotlineLine {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-info-text);
+}
+
+.rulesLink {
+  align-self: flex-start;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-info-strong);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}

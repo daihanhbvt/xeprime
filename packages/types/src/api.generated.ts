@@ -19951,8 +19951,13 @@ export interface components {
             partnerProductCode: string;
             nameVi: string;
             nameEn: string;
+            /** @description Phạm vi bảo vệ - mỗi dòng một mục */
             coverageVi: string;
+            /** @description Phạm vi bảo vệ - mỗi dòng một mục */
             coverageEn: string;
+            /** @description Mô tả một dòng dưới tên sản phẩm. `null` = ghép từ các mục phạm vi */
+            summaryVi?: string | null;
+            summaryEn?: string | null;
             /** @description Khấu trừ/vụ - ô tô. `null` = không áp dụng */
             deductibleCar?: string | null;
             /** @description Khấu trừ/vụ - xe máy */
@@ -24036,8 +24041,13 @@ export interface components {
             provider: "mic";
             nameVi: string;
             nameEn: string;
+            /** @description Phạm vi bảo vệ - mỗi dòng một mục */
             coverageVi: string;
+            /** @description Phạm vi bảo vệ - mỗi dòng một mục */
             coverageEn: string;
+            /** @description Mô tả một dòng dưới tên sản phẩm. `null` = ghép từ các mục phạm vi */
+            summaryVi?: string | null;
+            summaryEn?: string | null;
             /** @description Khấu trừ/vụ cho ĐÚNG loại xe đang xem. `null` = không áp dụng khấu trừ */
             deductibleAmount?: string | null;
             /** @description Bồi thường tối đa cho loại xe đang xem. `null` = xem `maxPayoutNote*` */
@@ -26510,6 +26520,9 @@ export interface components {
             nameEn?: string;
             coverageVi?: string;
             coverageEn?: string;
+            /** @description Mô tả một dòng dưới tên sản phẩm. Rỗng/`null` = ghép từ các mục phạm vi */
+            summaryVi?: string | null;
+            summaryEn?: string | null;
             deductibleCar?: string | null;
             deductibleMotorbike?: string | null;
             maxPayoutCar?: string | null;

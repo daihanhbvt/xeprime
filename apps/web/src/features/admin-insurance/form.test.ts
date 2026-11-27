@@ -34,6 +34,7 @@ const schema = buildInsuranceProductSchema({
   serviceFeePercent: (max) => `serviceFeePercent:${max}`,
   serviceFeePercentRequired: 'serviceFeePercentRequired',
   agencyCommissionPercent: (max) => `agencyCommissionPercent:${max}`,
+  coverageItems: (max) => `coverageItems:${max}`,
 });
 
 const PRODUCT = {
@@ -95,6 +96,39 @@ describe('admin-insurance form', () => {
       `tooShort:${min}`,
     );
     expect(await errorsOf({ ...valid(), nameVi: 'x'.repeat(max + 1) })).toContain(`tooLong:${max}`);
+  });
+
+  describe('phạm vi bảo vệ (mỗi dòng một mục) + mô tả ngắn', () => {
+    it('dòng đang lưu ⇒ các hàng; lưu lại ghép mỗi mục một dòng, bỏ hàng trống', () => {
+      const form = {
+        ...insuranceProductFormDefaults({ ...PRODUCT, coverageVi: 'Đâm va\nHoả hoạn' }),
+      };
+      expect(form.coverageVi).toEqual([{ text: 'Đâm va' }, { text: 'Hoả hoạn' }]);
+      const body = toUpdateInsuranceProductBody({
+        ...form,
+        coverageVi: [...form.coverageVi, { text: '  ' }, { text: ' Mất cắp ' }],
+        summaryVi: '  ',
+        summaryEn: ' Collision ',
+      });
+      expect(body.coverageVi).toBe('Đâm va\nHoả hoạn\nMất cắp');
+      // Mô tả ngắn trống = ghép từ các mục (null), không phải một dòng rỗng.
+      expect(body.summaryVi).toBeNull();
+      expect(body.summaryEn).toBe('Collision');
+    });
+
+    it('cần 1..trần mục có chữ; một mục quá dài ⇒ lỗi', async () => {
+      const { coverageItems, coverageItem } = INSURANCE_PRODUCT_LIMITS;
+      expect(await errorsOf({ ...valid(), coverageVi: [{ text: ' ' }] })).toContain(
+        `coverageItems:${coverageItems.max}`,
+      );
+      const many = Array.from({ length: coverageItems.max + 1 }, (_, i) => ({ text: `Mục ${i}` }));
+      expect(await errorsOf({ ...valid(), coverageEn: many })).toContain(
+        `coverageItems:${coverageItems.max}`,
+      );
+      expect(
+        await errorsOf({ ...valid(), coverageVi: [{ text: 'x'.repeat(coverageItem.max + 1) }] }),
+      ).toContain(`tooLong:${coverageItem.max}`);
+    });
   });
 
   it('mẫu URL GCN: phải https và có {certCode}', async () => {
