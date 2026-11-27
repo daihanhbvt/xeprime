@@ -2472,7 +2472,8 @@
               "type": "string",
               "enum": [
                 "rental",
-                "deposit"
+                "deposit",
+                "deposit_return"
               ]
             }
           },
@@ -9484,6 +9485,173 @@
           }
         ],
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/bookings/{id}/deposit-adjustments": {
+      "post": {
+        "operationId": "PaymentsController_adjustDeposit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustDepositCollectedDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BookingDetailDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa số cọc đã thu bằng bút toán điều chỉnh (thu thêm / trả lại khách)",
+        "tags": [
+          "payments"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
     "/bookings/{id}/driver": {
@@ -77465,6 +77633,246 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/shop/rental-policies/terms": {
+      "get": {
+        "operationId": "ShopPoliciesController_getTerms",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TenantRentalTermsDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Điều khoản thuê của gian hàng (Tự lái & Dài hạn · Có tài xế)",
+        "tags": [
+          "rental-policies"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "put": {
+        "operationId": "ShopPoliciesController_saveTerms",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTenantRentalTermsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TenantRentalTermsDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu điều khoản thuê của gian hàng theo nhóm dịch vụ (upsert, audit)",
+        "tags": [
+          "rental-policies"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
     "/shop/tax/summary": {
       "get": {
         "description": "Thuế do CHỦ XE chịu: nó được trừ khỏi khoản XePrime phải trả (`D − T`), KHÔNG cộng vào tổng khách. Chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU - chuyến huỷ trước giờ nhận không có dòng nào ở đây (ADR 0032 điều 3).\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).",
@@ -96271,7 +96679,8 @@
             "type": "string",
             "enum": [
               "rental",
-              "deposit"
+              "deposit",
+              "deposit_return"
             ],
             "description": "Tiền thuê hay tiền cọc"
           },
@@ -96584,6 +96993,30 @@
           "email",
           "displayName",
           "roleKey"
+        ]
+      },
+      "AdjustDepositCollectedDto": {
+        "type": "object",
+        "properties": {
+          "collectedAmount": {
+            "type": "string",
+            "description": "Số cọc đã thu mong muốn, string thập phân - ADR 0007",
+            "example": "150000"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank_transfer",
+              "qr",
+              "card",
+              "other"
+            ],
+            "description": "Bỏ trống = tiền mặt"
+          }
+        },
+        "required": [
+          "collectedAmount"
         ]
       },
       "AdminBannerDto": {
@@ -103169,7 +103602,7 @@
           },
           "acceptedTerms": {
             "type": "boolean",
-            "description": "Đồng ý điều khoản thuê của chủ xe"
+            "description": "Đồng ý điều khoản thuê của gian hàng"
           },
           "promoCode": {
             "type": "string",
@@ -105727,6 +106160,30 @@
           "category"
         ]
       },
+      "CustomerTripCollateralDto": {
+        "type": "object",
+        "properties": {
+          "collateralType": {
+            "type": "string",
+            "enum": [
+              "citizen_id",
+              "driver_licence",
+              "passport",
+              "motorbike",
+              "vehicle_registration",
+              "other"
+            ]
+          },
+          "returnedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC - null = chủ xe đang giữ"
+          }
+        },
+        "required": [
+          "collateralType"
+        ]
+      },
       "CustomerTripContactDto": {
         "type": "object",
         "properties": {
@@ -106302,6 +106759,13 @@
                 "$ref": "#/components/schemas/CustomerTripFinanceBreakdownDto"
               }
             ]
+          },
+          "collaterals": {
+            "description": "Tài sản thế chấp chủ xe đã ghi nhận giữ (cũ → mới)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerTripCollateralDto"
+            }
           }
         },
         "required": [
@@ -106320,7 +106784,8 @@
           "additionalDue",
           "expectedRefund",
           "depositStatus",
-          "legacyPricing"
+          "legacyPricing",
+          "collaterals"
         ]
       },
       "CustomerTripHandoverEvidenceDto": {
@@ -112419,10 +112884,26 @@
           "mode": {
             "type": "string",
             "enum": [
-              "cash",
-              "asset",
+              "required",
               "none"
-            ]
+            ],
+            "description": "required | none (ADR 0112 điều 2)"
+          },
+          "cashEnabled": {
+            "type": "boolean",
+            "description": "Nhận cọc tiền (số tiền ở depositAmount)"
+          },
+          "assetEnabled": {
+            "type": "boolean",
+            "description": "Nhận cọc tài sản (loại ở assetTypes)"
+          },
+          "combination": {
+            "type": "string",
+            "enum": [
+              "any_one",
+              "all"
+            ],
+            "description": "any_one = \"Cọc tiền X hoặc Cọc tài sản (...)\", all = \"Cọc tiền X và Cọc tài sản (...)\""
           },
           "assetTypes": {
             "type": "array",
@@ -112437,11 +112918,14 @@
           },
           "depositAmount": {
             "type": "string",
-            "description": "VND string - chỉ khác 0 khi mode = cash"
+            "description": "VND string - chỉ khác 0 khi cashEnabled"
           }
         },
         "required": [
           "mode",
+          "cashEnabled",
+          "assetEnabled",
+          "combination",
           "assetTypes",
           "depositAmount"
         ]
@@ -112611,7 +113095,8 @@
             ]
           },
           "requiredDocuments": {
-            "description": "CUSTOMER_DOCUMENT_TYPE - bộ HIỆU LỰC",
+            "deprecated": true,
+            "description": "NGỪNG DÙNG (ADR 0112) - giấy tờ của luật chuẩn nền tảng; đọc rentalConditions",
             "type": "array",
             "items": {
               "type": "string"
@@ -112619,14 +113104,17 @@
           },
           "identityVerifyMethod": {
             "type": "string",
-            "description": "IDENTITY_VERIFY_METHOD - đối chiếu TAY, kể cả qua app VNeID của khách"
+            "deprecated": true,
+            "description": "NGỪNG DÙNG (ADR 0112) - cách đối chiếu đầu tiên của luật chuẩn; đọc rentalConditions"
           },
           "termsText": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Điều khoản thuê của GIAN HÀNG cho nhóm dịch vụ này (ADR 0112 điều 3)"
           },
           "requireTermsAcceptance": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Gian hàng bắt buộc khách xác nhận điều khoản trước khi gửi yêu cầu"
           },
           "depositMode": {
             "type": "string",
@@ -117119,28 +117607,6 @@
               ]
             }
           },
-          "requiredDocuments": {
-            "description": "Tập con của citizen_id | driver_licence | passport",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "identityVerifyMethod": {
-            "type": "string",
-            "enum": [
-              "vneid",
-              "in_person"
-            ]
-          },
-          "termsText": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 4000
-          },
-          "requireTermsAcceptance": {
-            "type": "boolean"
-          },
           "depositMode": {
             "type": "string",
             "enum": [
@@ -117191,7 +117657,8 @@
             "type": "string",
             "enum": [
               "rental",
-              "deposit"
+              "deposit",
+              "deposit_return"
             ],
             "description": "Tiền thuê hay tiền cọc"
           },
@@ -121766,6 +122233,39 @@
           "createdAt"
         ]
       },
+      "PlatformRentalConditionsDto": {
+        "type": "object",
+        "properties": {
+          "identityDocuments": {
+            "type": "array",
+            "description": "Khách xuất trình MỘT trong các giấy tờ (CCCD/CMND còn hạn hoặc hộ chiếu còn hạn)",
+            "items": {
+              "type": "string",
+              "enum": [
+                "citizen_id",
+                "driver_licence",
+                "passport",
+                "other"
+              ]
+            }
+          },
+          "verifyMethods": {
+            "type": "array",
+            "description": "Chủ xe đối chiếu bằng MỘT trong các cách (qua VNeID hoặc bản gốc trực tiếp)",
+            "items": {
+              "type": "string",
+              "enum": [
+                "vneid",
+                "in_person"
+              ]
+            }
+          }
+        },
+        "required": [
+          "identityDocuments",
+          "verifyMethods"
+        ]
+      },
       "PlatformSellerProfileDto": {
         "type": "object",
         "properties": {
@@ -125373,6 +125873,14 @@
               }
             ]
           },
+          "rentalConditions": {
+            "description": "Điều kiện thuê chuẩn của nền tảng (ADR 0112 điều 3) - giống nhau ở mọi xe",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformRentalConditionsDto"
+              }
+            ]
+          },
           "rentalTerms": {
             "type": "array",
             "items": {
@@ -125445,6 +125953,7 @@
           "features",
           "longTermPackages",
           "deliveryAvailable",
+          "rentalConditions",
           "rentalTerms",
           "handover",
           "driverSurchargeRules"
@@ -127127,7 +127636,7 @@
               "rental",
               "deposit"
             ],
-            "description": "Bỏ trống = 'rental' (tiền thuê)"
+            "description": "Bỏ trống = 'rental' (tiền thuê). 'deposit_return' chỉ sinh từ lượt sửa tiền cọc"
           },
           "referenceCode": {
             "type": "string",
@@ -127436,10 +127945,25 @@
           "collateralMode": {
             "type": "string",
             "enum": [
-              "cash",
-              "asset",
+              "required",
               "none"
             ]
+          },
+          "collateralCashEnabled": {
+            "type": "boolean",
+            "description": "Nhận cọc tiền (depositAmount > 0)"
+          },
+          "collateralAssetEnabled": {
+            "type": "boolean",
+            "description": "Nhận cọc tài sản (collateralAssetTypes không rỗng)"
+          },
+          "collateralCombination": {
+            "type": "string",
+            "enum": [
+              "any_one",
+              "all"
+            ],
+            "description": "any_one = \"Cọc tiền X hoặc Cọc tài sản\", all = \"Cọc tiền X và Cọc tài sản\""
           },
           "collateralAssetTypes": {
             "type": "array",
@@ -127522,6 +128046,9 @@
         },
         "required": [
           "collateralMode",
+          "collateralCashEnabled",
+          "collateralAssetEnabled",
+          "collateralCombination",
           "collateralAssetTypes",
           "depositAmount",
           "deliveryEnabled",
@@ -128284,15 +128811,30 @@
           "collateralMode": {
             "type": "string",
             "enum": [
-              "cash",
-              "asset",
+              "required",
               "none"
             ],
-            "description": "Hình thức bảo đảm - ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes kiểm ở validatePolicy và ràng bằng CHECK ở DB."
+            "description": "Có yêu cầu thế chấp (`required`) hay Miễn thế chấp (`none`) - ADR 0112 điều 2. App cũ gửi `cash`/`asset` vẫn được nhận và quy về `required` + đúng một hình thức."
+          },
+          "collateralCashEnabled": {
+            "type": "boolean",
+            "description": "Bật cọc TIỀN (số tiền ở depositAmount). Vắng ⇒ suy từ depositAmount > 0. Tắt ⇒ depositAmount lưu 0."
+          },
+          "collateralAssetEnabled": {
+            "type": "boolean",
+            "description": "Bật cọc TÀI SẢN (loại ở collateralAssetTypes). Vắng ⇒ suy từ mảng không rỗng. Tắt ⇒ mảng lưu rỗng."
+          },
+          "collateralCombination": {
+            "type": "string",
+            "enum": [
+              "any_one",
+              "all"
+            ],
+            "description": "any_one = khách chọn 1 trong 2, all = bắt buộc cả 2 (chỉ khi bật cả hai). Vắng ⇒ any_one."
           },
           "collateralAssetTypes": {
             "type": "array",
-            "description": "Loại tài sản nhận thế chấp - chỉ có nghĩa khi collateralMode = asset",
+            "description": "Loại tài sản nhận thế chấp - chỉ có nghĩa khi collateralAssetEnabled",
             "items": {
               "type": "string",
               "enum": [
@@ -128304,7 +128846,7 @@
           },
           "depositAmount": {
             "type": "string",
-            "description": "Cọc thế chấp cố định VND (chuỗi) - khác 0 CHỈ khi collateralMode = cash",
+            "description": "Cọc tiền cố định VND (chuỗi) - khác 0 CHỈ khi collateralCashEnabled",
             "example": "5000000"
           },
           "deliveryEnabled": {
@@ -128458,6 +129000,44 @@
         "required": [
           "category",
           "amount"
+        ]
+      },
+      "SaveTenantRentalTermsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaveTenantRentalTermsItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SaveTenantRentalTermsItemDto": {
+        "type": "object",
+        "properties": {
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver"
+            ]
+          },
+          "termsText": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "requireTermsAcceptance": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "serviceType",
+          "requireTermsAcceptance"
         ]
       },
       "SaveVehicleDataDto": {
@@ -128750,6 +129330,20 @@
               "vehicle"
             ],
             "description": "NGUỒN CHÍNH SÁCH của xe - KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và quay về kế thừa; vehicle = lưu bộ chính sách riêng (phải gửi kèm policy)."
+          },
+          "inheritedSections": {
+            "type": "array",
+            "description": "Chỉ khi source = vehicle: các mục đọc từ gian hàng (ADR 0112 điều 1). Vắng ⇒ [] (riêng toàn bộ - hành vi app cũ). Đủ năm mục ⇒ xoá chính sách riêng, như source = shop. Cột của mục kế thừa vẫn lưu theo policy gửi lên.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "insurance",
+                "collateral",
+                "delivery",
+                "usage_limits",
+                "long_term_discount"
+              ]
+            }
           },
           "weekdayPrice": {
             "type": "string",
@@ -129663,14 +130257,6 @@
       "SnapshotPolicyDto": {
         "type": "object",
         "properties": {
-          "collateralMode": {
-            "type": "string",
-            "enum": [
-              "cash",
-              "asset",
-              "none"
-            ]
-          },
           "collateralAssetTypes": {
             "type": "array",
             "items": {
@@ -129755,10 +130341,35 @@
               "shop",
               "vehicle"
             ]
+          },
+          "collateralMode": {
+            "type": "string",
+            "enum": [
+              "required",
+              "none",
+              "cash",
+              "asset"
+            ],
+            "description": "required | none; snapshot trước ADR 0112 có thể là cash | asset"
+          },
+          "collateralCashEnabled": {
+            "type": "boolean",
+            "description": "Vắng ở snapshot trước ADR 0112"
+          },
+          "collateralAssetEnabled": {
+            "type": "boolean",
+            "description": "Vắng ở snapshot trước ADR 0112"
+          },
+          "collateralCombination": {
+            "type": "string",
+            "enum": [
+              "any_one",
+              "all"
+            ],
+            "description": "Vắng ở snapshot trước ADR 0112"
           }
         },
         "required": [
-          "collateralMode",
           "collateralAssetTypes",
           "depositAmount",
           "deliveryEnabled",
@@ -129768,7 +130379,8 @@
           "discountTiers",
           "legacyDiscountTiers",
           "updatedAt",
-          "source"
+          "source",
+          "collateralMode"
         ]
       },
       "SourceContractDownloadDto": {
@@ -132040,6 +132652,51 @@
             "nullable": true
           }
         }
+      },
+      "TenantRentalTermsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TenantRentalTermsItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "TenantRentalTermsItemDto": {
+        "type": "object",
+        "properties": {
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver"
+            ],
+            "description": "self_drive = Tự lái & Dài hạn, with_driver = Có tài xế"
+          },
+          "termsText": {
+            "type": "string",
+            "nullable": true,
+            "description": "null = chưa có điều khoản"
+          },
+          "requireTermsAcceptance": {
+            "type": "boolean",
+            "description": "Khách phải xác nhận điều khoản trước khi gửi yêu cầu"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO - null khi chưa lưu"
+          }
+        },
+        "required": [
+          "serviceType",
+          "requireTermsAcceptance"
+        ]
       },
       "TenantTaxSummaryDto": {
         "type": "object",
@@ -134786,9 +135443,26 @@
           "collateralMode": {
             "type": "string",
             "enum": [
+              "required",
+              "none",
               "cash",
-              "asset",
-              "none"
+              "asset"
+            ],
+            "description": "required | none; phiếu chụp trước ADR 0112 có thể là cash | asset"
+          },
+          "collateralCashEnabled": {
+            "type": "boolean",
+            "description": "Vắng ở phiếu chụp trước ADR 0112"
+          },
+          "collateralAssetEnabled": {
+            "type": "boolean",
+            "description": "Vắng ở phiếu chụp trước ADR 0112"
+          },
+          "collateralCombination": {
+            "type": "string",
+            "enum": [
+              "any_one",
+              "all"
             ]
           },
           "collateralAssetTypes": {
@@ -137868,6 +138542,30 @@
               }
             ]
           },
+          "inheritedSections": {
+            "type": "array",
+            "description": "Mục đang \"Áp dụng chính sách của gian hàng\" (ADR 0112 điều 1). Xe không có chính sách riêng ⇒ cả năm mục.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "insurance",
+                "collateral",
+                "delivery",
+                "usage_limits",
+                "long_term_discount"
+              ]
+            }
+          },
+          "ownPolicy": {
+            "nullable": true,
+            "description": "Cột của CHÍNH dòng chính sách xe, kể cả mục đang kế thừa (tắt kế thừa là thấy lại cấu hình cũ). null = xe không có chính sách riêng.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalPolicyValuesDto"
+              }
+            ]
+          },
           "weekdayPrice": {
             "type": "string",
             "nullable": true
@@ -137926,6 +138624,7 @@
         },
         "required": [
           "source",
+          "inheritedSections",
           "serviceTypes",
           "isPublic"
         ]
@@ -138211,34 +138910,6 @@
               ]
             }
           },
-          "requiredDocuments": {
-            "description": "Giấy tờ chủ xe cấu hình (rỗng = bộ tối thiểu theo luật)",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "effectiveRequiredDocuments": {
-            "description": "Bộ giấy tờ HIỆU LỰC = tối thiểu theo luật ∪ cấu hình - thứ khách nhìn thấy",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "identityVerifyMethod": {
-            "type": "string",
-            "enum": [
-              "vneid",
-              "in_person"
-            ]
-          },
-          "termsText": {
-            "type": "string",
-            "nullable": true
-          },
-          "requireTermsAcceptance": {
-            "type": "boolean"
-          },
           "depositMode": {
             "type": "string",
             "enum": [
@@ -138281,10 +138952,6 @@
           "serviceType",
           "autoAcceptEnabled",
           "preferredRouteTypes",
-          "requiredDocuments",
-          "effectiveRequiredDocuments",
-          "identityVerifyMethod",
-          "requireTermsAcceptance",
           "depositMode",
           "supportedDepositModes"
         ]

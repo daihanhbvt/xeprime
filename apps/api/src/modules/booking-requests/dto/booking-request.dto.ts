@@ -369,10 +369,10 @@ export class CreateBookingRequestDto {
   deliveryLongitude?: number;
 
   /**
-   * Khách đã đọc và đồng ý điều khoản thuê của chủ xe (08/09/2026). BẮT BUỘC `true` khi thiết lập
-   * dịch vụ của xe đòi hỏi — server kiểm, và thời điểm đồng ý được đóng băng vào yêu cầu.
+   * Khách đã đọc và đồng ý điều khoản thuê của GIAN HÀNG (ADR 0112 điều 3 - theo nhóm dịch vụ).
+   * BẮT BUỘC `true` khi gian hàng đòi hỏi - server kiểm, thời điểm đồng ý đóng băng vào yêu cầu.
    */
-  @ApiPropertyOptional({ description: 'Đồng ý điều khoản thuê của chủ xe' })
+  @ApiPropertyOptional({ description: 'Đồng ý điều khoản thuê của gian hàng' })
   @IsOptional()
   @IsBoolean()
   acceptedTerms?: boolean;

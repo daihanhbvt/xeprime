@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { rentalProgress } from '@xeprime/domain';
 import {
+  BOOKING_COLLATERAL_MAX_ITEMS,
   BOOKING_HISTORY_OUTCOME,
   BOOKING_STATUS,
   CANCELLATION_PARTY,
@@ -18,6 +19,7 @@ import {
   type HandoverPrepManualItem,
   type HandoverType,
   type StatusColor,
+  isBookingCollateralEditable,
 } from '@xeprime/types';
 import { ToneDotBadge } from '@/components/data-display/StatusBadge';
 import { SectionCard } from '@/components/layout/SectionCard';
@@ -43,7 +45,14 @@ import {
   HANDOVER_PREP_ANCHOR,
   useBookingDetailActions,
 } from './BookingDetailActions';
-import { depositOutstanding, prepRowStates, type PrepKey } from './handover-readiness';
+import {
+  collateralPrepPlan,
+  depositOutstanding,
+  depositOverCollected,
+  prepCollateralOf,
+  prepRowStates,
+  type PrepKey,
+} from './handover-readiness';
 import styles from './BookingDetail.module.css';
 
 type Stage = 'awaitingPickup' | 'renting' | 'completed' | 'cancelled' | 'noShow';
@@ -103,46 +112,42 @@ export function BookingStepper() {
     hint: at('confirmed', booking.confirmedAt),
   };
   const steps: { key: string; label: string; hint: string | null; state: StepState }[] = (
-        [
-          confirmed,
-          {
-            key: 'awaitingPickup',
-            label: t('stage.awaitingPickup'),
-            // Kèm SỐ TIỀN đã về (06/11/2026) — số khách thực chuyển cho XePrime, đọc ở thẻ Thanh toán.
-            hint: booking.holdPaidAt
-              ? booking.holdPaidAmount
-                ? t('stepAt.holdPaidAmount', {
-                    amount: fmt.money(booking.holdPaidAmount),
-                    time: fmt.shortDateTime(booking.holdPaidAt),
-                  })
-                : at('holdPaid', booking.holdPaidAt)
-              : null,
-          },
-          {
-            key: 'renting',
-            label: t('stage.renting'),
-            hint: booking.actualPickupAt
-              ? at(pickupByCustomer ? 'pickedUpByCustomer' : 'pickedUp', booking.actualPickupAt)
-              : at('pickupDue', booking.pickupAt),
-          },
-          {
-            key: 'completed',
-            label: t('stage.completed'),
-            hint: booking.actualReturnAt
-              ? at(returnAuto ? 'returnedAuto' : 'returned', booking.actualReturnAt)
-              : at('returnDue', booking.returnAt),
-          },
-        ] as const
-      ).map((step, index) => {
-        const current = { awaitingPickup: 1, renting: 2, completed: 3 }[stage];
-        const state: StepState =
-          index < current || stage === 'completed'
-            ? 'done'
-            : index === current
-              ? 'current'
-              : 'todo';
-        return { ...step, state };
-      });
+    [
+      confirmed,
+      {
+        key: 'awaitingPickup',
+        label: t('stage.awaitingPickup'),
+        // Kèm SỐ TIỀN đã về (06/11/2026) — số khách thực chuyển cho XePrime, đọc ở thẻ Thanh toán.
+        hint: booking.holdPaidAt
+          ? booking.holdPaidAmount
+            ? t('stepAt.holdPaidAmount', {
+                amount: fmt.money(booking.holdPaidAmount),
+                time: fmt.shortDateTime(booking.holdPaidAt),
+              })
+            : at('holdPaid', booking.holdPaidAt)
+          : null,
+      },
+      {
+        key: 'renting',
+        label: t('stage.renting'),
+        hint: booking.actualPickupAt
+          ? at(pickupByCustomer ? 'pickedUpByCustomer' : 'pickedUp', booking.actualPickupAt)
+          : at('pickupDue', booking.pickupAt),
+      },
+      {
+        key: 'completed',
+        label: t('stage.completed'),
+        hint: booking.actualReturnAt
+          ? at(returnAuto ? 'returnedAuto' : 'returned', booking.actualReturnAt)
+          : at('returnDue', booking.returnAt),
+      },
+    ] as const
+  ).map((step, index) => {
+    const current = { awaitingPickup: 1, renting: 2, completed: 3 }[stage];
+    const state: StepState =
+      index < current || stage === 'completed' ? 'done' : index === current ? 'current' : 'todo';
+    return { ...step, state };
+  });
 
   return (
     <ol className={styles.stepper} aria-label={t('stepperLabel')}>
@@ -190,12 +195,36 @@ export function HandoverPrepCard() {
     openDocuments,
     openPay,
     openDeposit,
+    openAddCollateral,
+    openEditCash,
     openContract,
     contractPending,
   } = useBookingDetailActions();
+  const dl = useDomainLabel();
+  const { has } = usePermissions();
   const setCheck = useSetHandoverPrepCheck(booking.id);
   const prep = booking.handoverPrep;
   if (!prep) return null;
+
+  // Cọc theo chính sách ĐÓNG BĂNG của đơn (ADR 0112 điều 2) + món tài sản đã ghi (ADR 0109).
+  const collateral = prepCollateralOf(booking);
+  const collateralPlan = collateralPrepPlan(prep, collateral);
+  const assetTypes = collateral.policy?.assetTypes ?? [];
+  const assetList = assetTypes.map((code) => dl('collateralAssetType', code)).join(', ');
+  const cashDone = isZeroMoney(depositOutstanding(prep));
+  const canAddAsset =
+    has(PERMISSION.BOOKING_UPDATE) &&
+    isBookingCollateralEditable(booking.status) &&
+    (booking.collaterals?.length ?? 0) < BOOKING_COLLATERAL_MAX_ITEMS;
+  const bold = (chunks: React.ReactNode) => <b>{chunks}</b>;
+  // "Chỉnh sửa" ở dòng cọc tiền ĐÃ XONG mở lại hộp Sửa tiền cọc (quyền sửa đơn, như bút ở thẻ
+  // Cọc & thế chấp). Dòng tài sản đã nhận không có nút - sửa từng món ngay ở thẻ Cọc & thế chấp.
+  const editCashButton = can.edit ? (
+    <Button onClick={openEditCash}>{t('editAction')}</Button>
+  ) : null;
+  const addAssetButton = canAddAsset ? (
+    <Button onClick={openAddCollateral}>{t('assetAction')}</Button>
+  ) : null;
 
   const toggle = (item: HandoverPrepManualItem, checked: boolean) => {
     if (setCheck.isPending) return;
@@ -233,21 +262,74 @@ export function HandoverPrepCard() {
     },
     deposit: {
       title: t('deposit'),
-      body: isZeroMoney(depositOutstanding(prep))
-        ? t('depositDone', { amount: fmt.money(prep.depositReceived) })
-        : isZeroMoney(prep.depositReceived)
-          ? t.rich('depositPending', {
-              amount: fmt.money(prep.depositRequired),
-              b: (chunks) => <b>{chunks}</b>,
-            })
-          : t.rich('depositPartial', {
-              received: fmt.money(prep.depositReceived),
-              amount: fmt.money(depositOutstanding(prep)),
-              b: (chunks) => <b>{chunks}</b>,
-            }),
-      action: isZeroMoney(depositOutstanding(prep)) ? null : (
+      body: !isZeroMoney(depositOverCollected(prep))
+        ? t.rich('depositOver', {
+            received: fmt.money(prep.depositReceived),
+            amount: fmt.money(depositOverCollected(prep)),
+            b: (chunks) => <b>{chunks}</b>,
+          })
+        : isZeroMoney(depositOutstanding(prep))
+          ? t('depositDone', { amount: fmt.money(prep.depositReceived) })
+          : isZeroMoney(prep.depositReceived)
+            ? t.rich('depositPending', {
+                amount: fmt.money(prep.depositRequired),
+                b: (chunks) => <b>{chunks}</b>,
+              })
+            : t.rich('depositPartial', {
+                received: fmt.money(prep.depositReceived),
+                amount: fmt.money(depositOutstanding(prep)),
+                b: (chunks) => <b>{chunks}</b>,
+              }),
+      action: isZeroMoney(depositOutstanding(prep)) ? (
+        editCashButton
+      ) : (
         <Button onClick={openDeposit}>{t('collectAction')}</Button>
       ),
+    },
+    asset: {
+      title: t('asset'),
+      body:
+        collateral.recorded > 0
+          ? t('assetDone', { count: collateral.recorded })
+          : assetTypes.length > 1
+            ? t('assetPendingMany', { assets: assetList })
+            : assetTypes.length === 1
+              ? t('assetPendingOne', { assets: assetList })
+              : t('assetPendingAny'),
+      action: collateral.recorded > 0 ? null : addAssetButton,
+    },
+    collateralEither: {
+      title: t('either'),
+      body:
+        collateral.recorded > 0
+          ? t('eitherDoneAsset')
+          : cashDone
+            ? isZeroMoney(depositOverCollected(prep))
+              ? t('eitherDoneCash', { amount: fmt.money(prep.depositReceived) })
+              : t.rich('eitherDoneCashOver', {
+                  received: fmt.money(prep.depositReceived),
+                  amount: fmt.money(depositOverCollected(prep)),
+                  b: (chunks) => <b>{chunks}</b>,
+                })
+            : t.rich('eitherPending', {
+                amount: fmt.money(prep.depositRequired),
+                assets:
+                  assetTypes.length > 1
+                    ? t('eitherAssetsMany', { assets: assetList })
+                    : assetTypes.length === 1
+                      ? t('eitherAssetsOne', { assets: assetList })
+                      : t('eitherAssetsAny'),
+                b: bold,
+              }),
+      action:
+        collateral.recorded > 0 ? null : cashDone ? (
+          editCashButton
+        ) : (
+          <span className={styles.prepActions}>
+            {can.collect ? <Button onClick={openDeposit}>{t('deposit')}</Button> : null}
+            {addAssetButton}
+          </span>
+        ),
     },
     contract: {
       title: t('contract'),
@@ -286,7 +368,7 @@ export function HandoverPrepCard() {
     },
   };
 
-  const rows = prepRowStates(prep, can);
+  const rows = prepRowStates(prep, can, collateral);
   const done = rows.filter((row) => row.done).length;
   const rowsPerColumn = Math.ceil(rows.length / 2);
 
@@ -379,6 +461,9 @@ export function HandoverPrepCard() {
           );
         })}
       </ul>
+      {collateralPlan === 'none' && collateral.policy?.none ? (
+        <p className={styles.prepNote}>{t('collateralNone')}</p>
+      ) : null}
     </SectionCard>
   );
 }

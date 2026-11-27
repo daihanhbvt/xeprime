@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -10,7 +10,7 @@ import {
   type PaymentKind,
   type PaymentMethod,
 } from '@xeprime/types';
-import { loadCounterDueAmount } from '../../common/booking-money';
+import { loadCounterDueAmount, loadNetDepositReceived } from '../../common/booking-money';
 import { assertBookingMoneyOpenWithinTx } from '../../common/booking-money-gate';
 import { AuditService } from '../audit/audit.service';
 import { ReceiptsService } from '../finance/receipts.service';
@@ -27,6 +27,23 @@ export interface RecordBookingPaymentInput {
   referenceCode?: string | null;
   /** Nguồn của lượt ghi trong audit — `payments` (hộp Thu tiền) hay một bước khác gọi vào. */
   via?: string;
+}
+
+export interface AdjustDepositCollectedInput {
+  tenantId: string;
+  userId: string;
+  bookingId: string;
+  /** Số cọc ĐÃ THU mong muốn (ròng) sau lượt điều chỉnh. */
+  collectedAmount: Prisma.Decimal;
+  method: PaymentMethod;
+}
+
+export interface AdjustDepositCollectedResult {
+  previous: Prisma.Decimal;
+  collected: Prisma.Decimal;
+  /** `> 0` thu thêm, `< 0` trả lại khách, `0` không ghi gì. */
+  diff: Prisma.Decimal;
+  paymentId: string | null;
 }
 
 /**
@@ -144,5 +161,118 @@ export class BookingPaymentWriter {
     );
 
     return paymentId;
+  }
+  /**
+   * Sửa số cọc ĐÃ THU bằng bút toán điều chỉnh - không bao giờ sửa/xoá khoản cũ (sổ chỉ thêm).
+   *
+   * Trong transaction của người gọi, khoá dòng đơn rồi đọc cọc ròng hiện tại:
+   *  - chênh dương ⇒ một khoản `deposit` mới (phiếu THU `deposit`), đi qua đúng `recordWithinTx`;
+   *  - chênh âm ⇒ một khoản `deposit_return` (phiếu CHI `deposit_refund`, `source_ref_id` =
+   *    payments.id) - tiền chủ xe trả lại khách trước quyết toán;
+   *  - bằng nhau ⇒ không ghi gì.
+   * Sau khi đã có bản ghi hoàn cọc lúc trả xe thì không điều chỉnh nữa: số ròng đã được chụp vào đó,
+   * sửa tiếp là lệch sổ - dùng chức năng sửa hoàn cọc.
+   */
+  async adjustDepositCollectedWithinTx(
+    tx: Prisma.TransactionClient,
+    input: AdjustDepositCollectedInput,
+  ): Promise<AdjustDepositCollectedResult> {
+    const { tenantId, userId, bookingId, collectedAmount, method } = input;
+    // Khoá dòng đơn trước mọi phép đọc: hai lượt điều chỉnh song song không cùng đọc một số cũ.
+    await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
+    const booking = await tx.booking.findFirst({
+      where: { id: bookingId, tenantId, deletedAt: null },
+      select: { id: true, code: true, vehicleId: true, tenantCustomerId: true },
+    });
+    if (!booking) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy đơn thuê',
+      });
+    }
+    const settled = await tx.bookingDepositSettlement.findFirst({
+      where: { tenantId, bookingId },
+      select: { id: true },
+    });
+    if (settled) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+        message: 'Đơn đã ghi hoàn cọc lúc trả xe - sửa số tiền ở phần hoàn cọc',
+      });
+    }
+
+    const previous = await loadNetDepositReceived(tx, tenantId, bookingId);
+    const diff = collectedAmount.minus(previous);
+    const result = { previous, collected: collectedAmount, diff, paymentId: null as string | null };
+    if (diff.isZero()) return result;
+
+    // Ghi chú mặc định - không hỏi lý do (sản phẩm chốt 27/11/2026); audit giữ số cũ → số mới.
+    const description = `Điều chỉnh số tiền cọc đã thu đơn ${booking.code}`;
+    if (diff.greaterThan(0)) {
+      // Thu thêm = một lần thu cọc bình thường (cổng đơn huỷ, phiếu thu, audit `payment.record`).
+      result.paymentId = await this.recordWithinTx(tx, {
+        tenantId,
+        userId,
+        booking,
+        amount: diff,
+        method,
+        kind: PAYMENT_KIND.DEPOSIT,
+        paidAt: new Date(),
+        description,
+        via: 'deposit_adjustment',
+      });
+    } else {
+      const amount = diff.abs();
+      const paymentId = newId();
+      const now = new Date();
+      const receipt = await this.receipts.createApprovedWithinTx(tx, tenantId, userId, {
+        type: RECEIPT_TYPE.EXPENSE,
+        amount: amount.toFixed(2),
+        paymentMethod: method,
+        source: RECEIPT_SOURCE.DEPOSIT_REFUND,
+        sourceRefId: paymentId,
+        categoryKey: SYSTEM_FINANCE_CATEGORY.DEPOSIT_REFUND,
+        bookingId: booking.id,
+        vehicleId: booking.vehicleId,
+        tenantCustomerId: booking.tenantCustomerId,
+        occurredAt: now,
+        description,
+      });
+      await tx.payment.create({
+        data: {
+          id: paymentId,
+          tenantId,
+          bookingId: booking.id,
+          receiptId: receipt.id,
+          payerUserId: userId,
+          amount,
+          kind: PAYMENT_KIND.DEPOSIT_RETURN,
+          method,
+          status: PAYMENT_STATUS.SUCCEEDED,
+          paidAt: now,
+        },
+      });
+      result.paymentId = paymentId;
+    }
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: userId,
+        actorScope: 'tenant',
+        action: 'booking.deposit_collected.adjust',
+        targetType: 'booking',
+        targetId: bookingId,
+        before: { depositReceived: previous.toFixed(2) },
+        after: {
+          depositReceived: collectedAmount.toFixed(2),
+          diff: diff.toFixed(2),
+          method,
+          paymentId: result.paymentId,
+        },
+      },
+      tx,
+    );
+    return result;
   }
 }

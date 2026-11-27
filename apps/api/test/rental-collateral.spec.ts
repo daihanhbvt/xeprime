@@ -43,7 +43,9 @@ let vOverride: string;
 
 function policyDto(over: Partial<SaveRentalPolicyDto> = {}): SaveRentalPolicyDto {
   return {
-    collateralMode: COLLATERAL_MODE.CASH,
+    collateralMode: COLLATERAL_MODE.REQUIRED,
+    collateralCashEnabled: true,
+    collateralAssetEnabled: false,
     collateralAssetTypes: [],
     depositAmount: '5000000',
     deliveryEnabled: false,
@@ -185,7 +187,11 @@ describe('Chính sách bảo đảm — CHECK ở DB là chốt chặn thật', 
       pricing.saveShopPolicy(
         tenantId,
         ownerId,
-        policyDto({ collateralMode: COLLATERAL_MODE.ASSET, depositAmount: '0' }),
+        policyDto({
+          collateralCashEnabled: false,
+          collateralAssetEnabled: true,
+          depositAmount: '0',
+        }),
         VEHICLE_TYPE.CAR,
       ),
     ).rejects.toThrow(/ít nhất một loại tài sản/);
@@ -222,7 +228,8 @@ describe('Giá theo xe TÁCH khỏi ghi đè chính sách (20/08)', () => {
       source: POLICY_SOURCE.VEHICLE,
       weekdayPrice: '950000',
       policy: policyDto({
-        collateralMode: COLLATERAL_MODE.ASSET,
+        collateralCashEnabled: false,
+        collateralAssetEnabled: true,
         depositAmount: '0',
         collateralAssetTypes: [COLLATERAL_ASSET_TYPE.VEHICLE_REGISTRATION],
       }),
@@ -230,7 +237,9 @@ describe('Giá theo xe TÁCH khỏi ghi đè chính sách (20/08)', () => {
 
     const effective = await pricing.effectivePolicy(tenantId, vOverride);
     expect(effective?.source).toBe(POLICY_SOURCE.VEHICLE);
-    expect(effective?.values.collateralMode).toBe(COLLATERAL_MODE.ASSET);
+    expect(effective?.values.collateralMode).toBe(COLLATERAL_MODE.REQUIRED);
+    expect(effective?.values.collateralAssetEnabled).toBe(true);
+    expect(effective?.values.collateralCashEnabled).toBe(false);
     expect(effective?.values.collateralAssetTypes).toEqual([
       COLLATERAL_ASSET_TYPE.VEHICLE_REGISTRATION,
     ]);

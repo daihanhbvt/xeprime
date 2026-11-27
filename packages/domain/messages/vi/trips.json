@@ -644,7 +644,8 @@
       "identity": {
         "title": "Chuẩn bị giấy tờ định danh",
         "body": "Mang giấy tờ để đối chiếu theo hướng dẫn và chính sách hiện hành.",
-        "bodyDocuments": "Chủ xe yêu cầu đối chiếu: {documents}."
+        "bodyDocuments": "Chủ xe yêu cầu đối chiếu: {documents}.",
+        "bodyRules": "Mang {documents}. {verify}."
       },
       "inspect": {
         "title": "Kiểm tra xe cùng chủ xe",
@@ -661,6 +662,9 @@
       "asset": {
         "title": "Để lại tài sản thế chấp",
         "body": "Một trong các tài sản sau: {assets}. Nhận lại khi trả xe."
+      },
+      "collateral": {
+        "title": "Chuẩn bị cọc khi nhận xe"
       }
     },
     "costs": {
@@ -709,5 +713,13 @@
       "confirm": "Đã trả xe",
       "success": "Đã báo trả xe - chủ xe sẽ xác nhận"
     }
+  },
+  "depositHeld": {
+    "aria": "Cọc bạn đã giao cho chủ xe",
+    "cash": "Đã cọc tiền",
+    "cashNone": "Chưa giao",
+    "assets": "Tài sản thế chấp",
+    "assetHeld": "{type} - chủ xe đang giữ",
+    "assetReturned": "{type} - đã nhận lại"
   }
 }

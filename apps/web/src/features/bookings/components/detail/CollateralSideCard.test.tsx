@@ -123,7 +123,7 @@ describe('CollateralSideCard', () => {
 
   it('đánh dấu đã trả và hoàn tác gọi đúng món', () => {
     renderCard();
-    fireEvent.click(screen.getByRole('button', { name: /^check Trả lại$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Trả lại' }));
     expect(calls.returned.mock.calls[0]![0]).toEqual({ id: 'c1', returned: true });
     fireEvent.click(screen.getByRole('button', { name: /Hoàn tác/ }));
     expect(calls.returned.mock.calls[1]![0]).toEqual({ id: 'c2', returned: false });
@@ -177,7 +177,7 @@ describe('CollateralSideCard', () => {
   it('đơn đã hoàn thành: vẫn đánh dấu trả được nhưng không thêm/gỡ/sửa món', () => {
     state.booking = booking({ status: BOOKING_STATUS.COMPLETED });
     renderCard();
-    expect(screen.getByRole('button', { name: /^check Trả lại$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Trả lại' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Thêm tài sản thế chấp/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Gỡ/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Sửa tài sản' })).toBeNull();

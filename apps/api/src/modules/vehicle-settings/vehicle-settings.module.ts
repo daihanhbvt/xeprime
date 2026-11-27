@@ -4,6 +4,7 @@ import { ListingsSyncModule } from '../public-listings/listings-sync.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { ShopOperationDefaultsController } from './shop-operation-defaults.controller';
 import { VehicleSettingsController } from './vehicle-settings.controller';
+import { TenantRentalTermsService } from './tenant-rental-terms.service';
 import { VehicleSettingsService } from './vehicle-settings.service';
 import { VehicleTripHistoryService } from './vehicle-trip-history.service';
 
@@ -22,7 +23,7 @@ import { VehicleTripHistoryService } from './vehicle-trip-history.service';
   // ListingsSyncModule cũng là module LÁ (chỉ cần PrismaService) nên import nó không dựng vòng.
   imports: [ListingsSyncModule, DriversModule],
   controllers: [VehicleSettingsController, ShopOperationDefaultsController],
-  providers: [VehicleSettingsService, VehicleTripHistoryService, OccupancyService],
-  exports: [VehicleSettingsService],
+  providers: [VehicleSettingsService, TenantRentalTermsService, VehicleTripHistoryService, OccupancyService],
+  exports: [VehicleSettingsService, TenantRentalTermsService],
 })
 export class VehicleSettingsModule {}

@@ -7,7 +7,7 @@ import {
 import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BookingDetailDto } from '../bookings/dto/booking.dto';
-import { PaymentDto, RecordPaymentDto } from './dto/payment.dto';
+import { AdjustDepositCollectedDto, PaymentDto, RecordPaymentDto } from './dto/payment.dto';
 import { PaymentsService } from './payments.service';
 
 /**
@@ -33,6 +33,22 @@ export class PaymentsController {
     @Body() dto: RecordPaymentDto,
   ): Promise<BookingDetailDto> {
     return this.payments.recordForBooking(tenant.tenantId, user.id, bookingId, dto);
+  }
+
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Post('bookings/:id/deposit-adjustments')
+  @RequirePermissions(PERMISSION.PAYMENT_RECORD)
+  @ApiOperation({
+    summary: 'Sửa số cọc đã thu bằng bút toán điều chỉnh (thu thêm / trả lại khách)',
+  })
+  @ApiCreatedResponse({ type: BookingDetailDto })
+  adjustDeposit(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') bookingId: string,
+    @Body() dto: AdjustDepositCollectedDto,
+  ): Promise<BookingDetailDto> {
+    return this.payments.adjustDepositCollected(tenant.tenantId, user.id, bookingId, dto);
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)

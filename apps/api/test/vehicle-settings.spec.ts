@@ -13,6 +13,7 @@ import {
   DRIVER_SURCHARGE_KIND_VALUES,
   DRIVER_SURCHARGE_UNIT,
   IDENTITY_VERIFY_METHOD,
+  RENTAL_TERMS_GROUP,
   MEMBERSHIP_STATUS,
   ROUTE_TYPE,
   SERVICE_TYPE,
@@ -27,6 +28,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { buildVehicleReviewSnapshot } from '../src/modules/vehicles/vehicle-review-snapshot';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -60,6 +62,7 @@ const settings = new VehicleSettingsService(
   new OccupancyService(asService),
   new ListingsService(asService),
   makeDriversService(asService),
+    new TenantRentalTermsService(asService, audit),
 );
 const bookings = makeBookingsService(asService);
 
@@ -422,41 +425,41 @@ describe('Thời gian chết mặc định của gian hàng (06/11/2026)', () =>
 });
 
 describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () => {
-  maybe('bắt đồng ý điều khoản thì phải có nội dung điều khoản', async () => {
+  maybe('điều khoản GIAN HÀNG: bắt xác nhận thì phải có nội dung (ADR 0112 điều 3)', async () => {
+    const rentalTerms = new TenantRentalTermsService(asService, new AuditService(asService));
     await expect(
-      settings.patchServiceSetting(tenantA, vehicleA, SERVICE_TYPE.SELF_DRIVE, ownerA, {
-        requireTermsAcceptance: true,
+      rentalTerms.save(tenantA, ownerA, {
+        items: [{ serviceType: RENTAL_TERMS_GROUP.SELF_DRIVE, requireTermsAcceptance: true }],
       }),
     ).rejects.toMatchObject({ status: 400 });
 
-    const ok = await settings.patchServiceSetting(
-      tenantA,
-      vehicleA,
-      SERVICE_TYPE.SELF_DRIVE,
-      ownerA,
-      { requireTermsAcceptance: true, termsText: 'Không hút thuốc trong xe.' },
-    );
-    expect(ok.requireTermsAcceptance).toBe(true);
+    const ok = await rentalTerms.save(tenantA, ownerA, {
+      items: [
+        {
+          serviceType: RENTAL_TERMS_GROUP.SELF_DRIVE,
+          requireTermsAcceptance: true,
+          termsText: 'Không hút thuốc trong xe.',
+        },
+      ],
+    });
+    expect(
+      ok.items.find((i) => i.serviceType === RENTAL_TERMS_GROUP.SELF_DRIVE)?.requireTermsAcceptance,
+    ).toBe(true);
+    // Dài hạn đọc nhóm tự lái.
+    const longTerm = await rentalTerms.termsFor(asService, tenantA, SERVICE_TYPE.LONG_TERM);
+    expect(longTerm.termsText).toBe('Không hút thuốc trong xe.');
   });
 
-  maybe('"giấy tờ khác" không định danh được ai — không nhận làm yêu cầu bắt buộc', async () => {
-    await expect(
-      settings.patchServiceSetting(tenantA, vehicleA, SERVICE_TYPE.SELF_DRIVE, ownerA, {
-        requiredDocuments: [CUSTOMER_DOCUMENT_TYPE.OTHER],
-      }),
-    ).rejects.toMatchObject({ status: 400 });
-  });
-
-  maybe('hộ chiếu cộng vào bộ giấy tờ HIỆU LỰC, GPLX theo luật vẫn còn', async () => {
+  maybe('trường điều kiện thuê THEO XE của app cũ được nhận rồi bỏ qua (ADR 0112)', async () => {
     const saved = await settings.patchServiceSetting(
       tenantA,
       vehicleA,
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
-      { requiredDocuments: [CUSTOMER_DOCUMENT_TYPE.PASSPORT] },
+      { requiredDocuments: [CUSTOMER_DOCUMENT_TYPE.OTHER], termsText: 'bỏ qua' },
     );
-    expect(saved.effectiveRequiredDocuments).toContain(CUSTOMER_DOCUMENT_TYPE.PASSPORT);
-    expect(saved.effectiveRequiredDocuments).toContain(CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE);
+    expect(saved).not.toHaveProperty('requiredDocuments');
+    expect(saved).not.toHaveProperty('termsText');
   });
 
   maybe('tự lái chuẩn hoá các trường riêng của có tài xế về mặc định', async () => {
@@ -514,8 +517,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
   maybe('PATCH chỉ đụng trường được gửi — phần còn lại giữ nguyên', async () => {
     await settings.patchServiceSetting(tenantA, vehicleA, SERVICE_TYPE.SELF_DRIVE, ownerA, {
       autoAcceptEnabled: false,
-      identityVerifyMethod: IDENTITY_VERIFY_METHOD.VNEID,
-      termsText: 'Điều khoản gốc',
     });
     const patched = await settings.patchServiceSetting(
       tenantA,
@@ -525,8 +526,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       { autoAcceptEnabled: true },
     );
     expect(patched.autoAcceptEnabled).toBe(true);
-    expect(patched.identityVerifyMethod).toBe(IDENTITY_VERIFY_METHOD.VNEID);
-    expect(patched.termsText).toBe('Điều khoản gốc');
   });
 
   maybe('mỗi lần ghi để lại một dòng audit của gian hàng', async () => {
@@ -590,10 +589,12 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
       }),
     ).toBe(AUTO_ACCEPT_BLOCKER.QUOTE_ESTIMATE);
     expect(
-      settings.evaluateAutoAccept(
-        { ...on, requireTermsAcceptance: true, termsText: 'x' },
-        { ...input, pickupAt: at(48), returnAt: at(72), termsAccepted: false },
-      ),
+      settings.evaluateAutoAccept(on, {
+        ...input,
+        pickupAt: at(48),
+        returnAt: at(72),
+        termsAccepted: false,
+      }),
     ).toBe(AUTO_ACCEPT_BLOCKER.TERMS_NOT_ACCEPTED);
     expect(
       settings.evaluateAutoAccept(
@@ -764,10 +765,15 @@ describe('Phụ phí tài xế đã gỡ — ADR 0075 điều 7', () => {
   });
 
   maybe('snapshot điều kiện thuê đóng băng lúc tạo, đổi thiết lập sau không ghi đè', async () => {
-    await settings.patchServiceSetting(tenantA, vehicleA, SERVICE_TYPE.SELF_DRIVE, ownerA, {
-      termsText: 'Bản A',
-      identityVerifyMethod: IDENTITY_VERIFY_METHOD.IN_PERSON,
-    });
+    // ADR 0112: điều khoản là của GIAN HÀNG (`tenant_rental_terms`), không còn đặt trên từng xe.
+    const shopTerms = new TenantRentalTermsService(asService, new AuditService(asService));
+    const saveTerms = (termsText: string) =>
+      shopTerms.save(tenantA, ownerA, {
+        items: [
+          { serviceType: SERVICE_TYPE.SELF_DRIVE, termsText, requireTermsAcceptance: false },
+        ],
+      });
+    await saveTerms('Bản A');
     const frozen = await settings.rentalTermsSnapshotFor(
       prisma,
       vehicleA,
@@ -776,9 +782,7 @@ describe('Phụ phí tài xế đã gỡ — ADR 0075 điều 7', () => {
     );
     expect(frozen?.termsText).toBe('Bản A');
 
-    await settings.patchServiceSetting(tenantA, vehicleA, SERVICE_TYPE.SELF_DRIVE, ownerA, {
-      termsText: 'Bản B',
-    });
+    await saveTerms('Bản B');
     // Bản đã lấy ra vẫn là "Bản A" — snapshot là dữ liệu, không phải con trỏ tới cấu hình.
     expect(frozen?.termsText).toBe('Bản A');
     const now = await settings.rentalTermsSnapshotFor(
@@ -851,8 +855,10 @@ describe('Sửa thiết lập dịch vụ khi phiếu duyệt còn chờ', () =>
       },
     });
 
+    // ADR 0112: điều khoản không còn sửa trên xe - dùng thiết lập còn sửa được (tự nhận chuyến).
+    const before = snapshot!.services.find((s) => s.serviceType === SERVICE_TYPE.SELF_DRIVE);
     await settings.patchServiceSetting(tenantA, vehicleA, SERVICE_TYPE.SELF_DRIVE, ownerA, {
-      termsText: `Không hút thuốc trong xe ${RUN}`,
+      autoAcceptEnabled: !before?.autoAcceptEnabled,
     });
 
     const task = await prisma.approvalTask.findUniqueOrThrow({
@@ -861,9 +867,9 @@ describe('Sửa thiết lập dịch vụ khi phiếu duyệt còn chờ', () =>
     });
     const next = task.snapshot as unknown as NonNullable<typeof snapshot>;
 
-    expect(next.services.find((s) => s.serviceType === SERVICE_TYPE.SELF_DRIVE)?.termsText).toBe(
-      `Không hút thuốc trong xe ${RUN}`,
-    );
+    expect(
+      next.services.find((s) => s.serviceType === SERVICE_TYPE.SELF_DRIVE)?.autoAcceptEnabled,
+    ).toBe(!before?.autoAcceptEnabled);
     // Chính sách mang sang nguyên vẹn — không bị `null` hoá vì đường ghi này không nạp được nó.
     expect(next.policy).toEqual(snapshot!.policy);
     expect(task.logs.map((l) => l.action)).toEqual([APPROVAL_ACTION.PROFILE_UPDATED]);

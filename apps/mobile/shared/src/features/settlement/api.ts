@@ -4,7 +4,11 @@ import '@/lib/api-client';
 export { paymentsApi } from '@/api/payments/api';
 export { settlementApi } from '@/api/settlement/api';
 
-export type { Payment, RecordPaymentInput } from '@/api/payments/api';
+export type {
+  AdjustDepositCollectedInput,
+  Payment,
+  RecordPaymentInput,
+} from '@/api/payments/api';
 export type {
   BookingSettlement,
   BookingSurcharge,

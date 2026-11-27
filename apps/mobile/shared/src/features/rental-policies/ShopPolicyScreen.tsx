@@ -3,13 +3,17 @@ import { ScrollView, type LayoutChangeEvent } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useHideTabBar } from '@/components/layout/tab-bar-visibility';
 import { goBackOr } from '@/navigation/go-back-or';
-import { useForm } from 'react-hook-form';
+import { useForm, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import * as yup from 'yup';
 import { useLocale, useTranslations } from 'use-intl';
 import {
   INSURANCE_MODE,
   PERMISSION,
+  RENTAL_TERMS_GROUP,
+  RENTAL_TERMS_GROUP_VALUES,
+  RENTAL_TERMS_MAX_LENGTH,
+  type RentalTermsGroup,
   TURNAROUND_BUFFER_MAX_MINUTES,
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
@@ -40,21 +44,30 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { POLICY_ANCHOR, PolicySections, type PolicyAnchor } from './components/PolicySections';
 import { TurnaroundBufferField } from './components/TurnaroundBufferField';
+import {
+  RentalConditionsCard,
+  type RentalTermsFormGroup,
+  type RentalTermsFormValues,
+} from './components/RentalConditionsCard';
 import { InsuranceModeBlock } from './components/InsuranceModeBlock';
 import { formToSaveInput, policyToForm } from './form';
 import { policyFormSchema, type PolicyFormValues } from './schema';
 import {
   useSaveShopOperationDefaults,
   useSaveShopPolicy,
+  useSaveShopRentalTerms,
   useShopInsuranceImpact,
   useShopOperationDefaults,
   useShopPolicy,
+  useShopRentalTerms,
 } from './hooks/use-shop-policy';
 import type {
   RentalPolicyValues,
   SaveRentalPolicyInput,
+  SaveTenantRentalTermsInput,
   ShopOperationDefaults,
   ShopRentalPolicy,
+  TenantRentalTerms,
 } from './api';
 
 /**
@@ -115,8 +128,14 @@ export function ShopPolicyScreen() {
   );
 }
 
-/** Form của màn = chính sách + công tắc quá giờ + thời gian chết (web `ShopPolicyFormValues`). */
-type ShopPolicyFormValues = PolicyFormValues & { turnaroundBufferMinutes: number };
+/**
+ * Form của màn = chính sách theo loại xe + thời gian chết + điều khoản thuê của gian hàng (ba API,
+ * một nút Lưu - web `ShopPolicyFormValues`, ADR 0112 điều 3).
+ */
+type ShopPolicyFormValues = PolicyFormValues & {
+  turnaroundBufferMinutes: number;
+  terms: RentalTermsFormValues;
+};
 
 const shopPolicySchema = policyFormSchema.concat(
   yup.object({
@@ -126,19 +145,57 @@ const shopPolicySchema = policyFormSchema.concat(
       .min(0, 'minutesNegative')
       .max(TURNAROUND_BUFFER_MAX_MINUTES, 'minutesMax')
       .required('minutesInteger'),
+    terms: yup.object(
+      Object.fromEntries(
+        RENTAL_TERMS_GROUP_VALUES.map((group) => [
+          group,
+          yup.object({
+            termsText: yup.string().defined().max(RENTAL_TERMS_MAX_LENGTH, 'termsTooLong'),
+            requireTermsAcceptance: yup.boolean().defined(),
+          }),
+        ]),
+      ),
+    ),
   }),
 );
+
+function termsToForm(terms: TenantRentalTerms | undefined): RentalTermsFormValues {
+  const of = (group: RentalTermsGroup): RentalTermsFormGroup => {
+    const item = terms?.items.find((entry) => entry.serviceType === group);
+    return {
+      termsText: item?.termsText ?? '',
+      requireTermsAcceptance: item?.requireTermsAcceptance ?? false,
+    };
+  };
+  return {
+    [RENTAL_TERMS_GROUP.SELF_DRIVE]: of(RENTAL_TERMS_GROUP.SELF_DRIVE),
+    [RENTAL_TERMS_GROUP.WITH_DRIVER]: of(RENTAL_TERMS_GROUP.WITH_DRIVER),
+  };
+}
+
+function toTermsInput(terms: RentalTermsFormValues): SaveTenantRentalTermsInput {
+  return {
+    items: RENTAL_TERMS_GROUP_VALUES.map((group) => {
+      const text = terms[group].termsText.trim();
+      return {
+        serviceType: group,
+        termsText: text ? text : null,
+        requireTermsAcceptance: terms[group].requireTermsAcceptance,
+      };
+    }),
+  };
+}
 
 function toFormValues(
   policy: RentalPolicyValues | null | undefined,
   defaults: ShopOperationDefaults | undefined,
+  terms: TenantRentalTerms | undefined,
 ): ShopPolicyFormValues {
-  const base = policyToForm(policy);
   return {
-    ...base,
-    // Công tắc quá giờ chỉ có ở màn này: bật khi đã có phí hoặc thời gian miễn phí (như web).
-    overtimeEnabled: base.overtimeFeePerHour != null || base.overtimeGraceMinutes != null,
+    // `policyToForm` suy luôn công tắc quá giờ từ dữ liệu (web, ADR 0112).
+    ...policyToForm(policy),
     turnaroundBufferMinutes: defaults?.turnaroundBufferMinutes ?? 0,
+    terms: termsToForm(terms),
   };
 }
 
@@ -184,6 +241,7 @@ function PolicyWorkspace({
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
+  const navigateOnce = useNavigateOnce();
 
   const query = useShopPolicy(vehicleType, canView);
   /*
@@ -220,7 +278,9 @@ function PolicyWorkspace({
   const insuranceImpact = useShopInsuranceImpact(vehicleType, canView && vehicleType === VEHICLE_TYPE.CAR);
   const insuranceApplies = vehicleType === VEHICLE_TYPE.CAR && insuranceImpact.data?.applies === true;
   const saveDefaults = useSaveShopOperationDefaults(vehicleType);
-  const submitting = save.isPending || saveDefaults.isPending;
+  const termsQuery = useShopRentalTerms(canView);
+  const saveTerms = useSaveShopRentalTerms();
+  const submitting = save.isPending || saveDefaults.isPending || saveTerms.isPending;
   const [confirming, setConfirming] = useState<ShopPolicyFormValues | null>(null);
   /** Loại xe người dùng muốn chuyển sang khi form còn thay đổi chưa lưu — chờ xác nhận bỏ. */
   const [pendingType, setPendingType] = useState<VehicleType | null>(null);
@@ -230,8 +290,8 @@ function PolicyWorkspace({
     'Vehicles.pricing.validation',
   );
   const values = useMemo(
-    () => toFormValues(query.data?.policy, defaultsQuery.data),
-    [query.data?.policy, defaultsQuery.data],
+    () => toFormValues(query.data?.policy, defaultsQuery.data, termsQuery.data),
+    [query.data?.policy, defaultsQuery.data, termsQuery.data],
   );
   const { control, handleSubmit, reset, formState } = useForm<ShopPolicyFormValues>({
     resolver,
@@ -254,12 +314,15 @@ function PolicyWorkspace({
     const policyBody = toPolicyInput(next);
     const policyChanged = JSON.stringify(policyBody) !== JSON.stringify(toPolicyInput(values));
     const turnaroundChanged = next.turnaroundBufferMinutes !== values.turnaroundBufferMinutes;
+    const termsBody = toTermsInput(next.terms);
+    const termsChanged = JSON.stringify(termsBody) !== JSON.stringify(toTermsInput(values.terms));
     try {
       const policy = policyChanged ? await save.mutateAsync(policyBody) : query.data;
       const savedDefaults = turnaroundChanged
         ? await saveDefaults.mutateAsync({ turnaroundBufferMinutes: next.turnaroundBufferMinutes })
         : defaultsQuery.data;
-      reset(toFormValues(policy?.policy, savedDefaults));
+      const savedTerms = termsChanged ? await saveTerms.mutateAsync(termsBody) : termsQuery.data;
+      reset(toFormValues(policy?.policy, savedDefaults, savedTerms));
       setConfirming(null);
       toast.showSuccess(t('saved', { vehicle: domainLabel('vehicleType', vehicleType) }));
     } catch (err) {
@@ -272,8 +335,10 @@ function PolicyWorkspace({
     values,
     save,
     saveDefaults,
+    saveTerms,
     query.data,
     defaultsQuery.data,
+    termsQuery.data,
     reset,
     toast,
     t,
@@ -290,8 +355,12 @@ function PolicyWorkspace({
 
   const data = query.data;
   const defaults = defaultsQuery.data;
-  const ready = Boolean(data && defaults);
-  const failed = (query.isError && !data) || (defaultsQuery.isError && !defaults);
+  const terms = termsQuery.data;
+  const ready = Boolean(data && defaults && terms);
+  const failed =
+    (query.isError && !data) ||
+    (defaultsQuery.isError && !defaults) ||
+    (termsQuery.isError && !terms);
   const typeLabel = (type: VehicleType) => domainLabel('vehicleType', type);
 
   return (
@@ -403,18 +472,19 @@ function PolicyWorkspace({
 
           {failed ? (
             <ScreenError
-              error={query.error ?? defaultsQuery.error}
+              error={query.error ?? defaultsQuery.error ?? termsQuery.error}
               title={t('loadError')}
               onRetry={() => {
                 if (query.isError) void query.refetch();
                 if (defaultsQuery.isError) void defaultsQuery.refetch();
+                if (termsQuery.isError) void termsQuery.refetch();
               }}
             />
           ) : null}
 
           {!ready && !failed ? <SkeletonText lines={12} /> : null}
 
-          {data && defaults ? (
+          {data && defaults && terms ? (
             <YStack gap={layout.section}>
               {data.policy === null ? (
                 <Callout tone="info" title={t('emptyTitle')}>
@@ -475,6 +545,12 @@ function PolicyWorkspace({
                 }
               />
               </YStack>
+              {/* Điều kiện cho thuê (ADR 0112 điều 3): luật chuẩn nền tảng + điều khoản gian hàng. */}
+              <RentalConditionsCard
+                control={control as unknown as Control<{ terms: RentalTermsFormValues }>}
+                disabled={!canEdit || submitting}
+                onOpenContracts={() => navigateOnce(ROUTES.manage.contractsDocuments())}
+              />
             </YStack>
           ) : null}
         </YStack>

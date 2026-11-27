@@ -295,20 +295,24 @@
 }
 
 /* Cọc thế chấp khi nhận xe: tên bên trái, số tiền / hình thức bên phải. */
+/*
+ * Cọc giờ là một CÂU mô tả (ADR 0112 - "Cọc tiền X và/hoặc Cọc tài sản (…)") chứ không còn một con số:
+ * xếp dọc nhãn trên - mô tả dưới, mô tả xuống dòng tự nhiên, không đè nhãn.
+ */
 .depositHead {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-md);
+  flex-direction: column;
+  gap: 4px;
   margin: 0;
 }
 
 .depositAmount {
-  flex: none;
+  min-width: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
+  font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-semibold);
-  line-height: var(--xp-line-height-body-lg);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .licenceOk {

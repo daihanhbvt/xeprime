@@ -15,6 +15,7 @@ import {
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { InsuranceFeeHint } from '@/components/data-display/InsuranceFeeHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { TripDepositHeld } from './TripDepositHeld';
 import { isZeroMoney } from '@/lib/money';
 import { customerFeeLines } from '@/lib/customer-price-view';
 import type { CustomerTripDetail, CustomerTripFinance } from '../types';
@@ -545,6 +546,8 @@ function DepositBlock({
           )}
         </dl>
       )}
+      {/* Tài sản thế chấp đã để lại - dòng tiền đã có ở trên. */}
+      <TripDepositHeld finance={finance} withCash={false} />
 
       {refunded ? (
         <p className={styles.depositNote}>

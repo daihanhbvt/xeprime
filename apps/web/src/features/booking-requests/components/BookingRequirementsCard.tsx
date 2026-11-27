@@ -3,11 +3,10 @@
 import { CheckCircleFilled, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { COLLATERAL_MODE, CUSTOMER_DOCUMENT_TYPE } from '@xeprime/types';
 import type { ReactNode } from 'react';
 import type { DriverLicence } from '@/features/driver-licence/types';
+import { useRentalConditionsText } from '@/features/rental-policies/rental-conditions';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { CustomerDepositView } from '../hooks/use-customer-cost-view';
 import styles from './BookingReviewStep.module.css';
 
@@ -23,8 +22,11 @@ interface BookingRequirementsCardProps {
    * Không truyền (chuyến đã gửi) ⇒ chỉ đọc `current` như trước.
    */
   licenceGate?: { ready: boolean; loading: boolean; uploader: ReactNode };
-  /** Điều kiện chủ xe công bố cho đúng dịch vụ của chuyến (giấy tờ, điều khoản). */
-  hostTerms: { text: string | null; documents: string[] } | null;
+  /**
+   * Điều khoản GIAN HÀNG công bố cho nhóm dịch vụ của chuyến (ADR 0112 điều 3). Giấy tờ tuỳ thân là
+   * luật chuẩn của nền tảng - thẻ tự đọc `PLATFORM_RENTAL_CONDITIONS`, không theo từng chủ xe.
+   */
+  hostTerms: { text: string | null } | null;
   /**
    * Cọc thế chấp khi nhận xe (`useCustomerCostView`) — là điều kiện NHẬN XE, trao tay chủ xe, nên nằm
    * ở thẻ này chứ không ở thẻ tiền. Không truyền = không vẽ.
@@ -52,17 +54,13 @@ export function BookingRequirementsCard({
   const tCommon = useTranslations('Common');
   const t = useTranslations('BookingRequests.flow');
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
-  const dl = useDomainLabel();
   const fmt = useAppFormat();
 
   const licenceBlocked = licence.required && licenceGate !== undefined && !licenceGate.ready;
   // Chưa đọc xong bằng thì không vẽ trạng thái rỗng - tránh nháy "chưa có bằng" với người đã có.
   const showLicenceEmpty = licenceBlocked && licenceGate !== undefined && !licenceGate.loading;
   const verifiedLicence = licence.required && !licenceBlocked ? licence.current : null;
-  // Giấy tờ tuỳ thân (CCCD/CMND) không liệt kê ở đây - dòng này chỉ nhắc giấy tờ lái xe.
-  const hostDocuments = (hostTerms?.documents ?? []).filter(
-    (doc) => doc !== CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID,
-  );
+  const rules = useRentalConditionsText();
   const licenceMeta = verifiedLicence
     ? [
         verifiedLicence.classes.length
@@ -115,10 +113,11 @@ export function BookingRequirementsCard({
           </span>
         </p>
       ) : null}
-      {!showLicenceEmpty && hostDocuments.length > 0 ? (
+      {!showLicenceEmpty ? (
         <p className={styles.requirementBody}>
-          {t('reviewPage.requirements.documents', {
-            documents: hostDocuments.map((doc) => dl('customerDocumentType', doc, doc)).join(', '),
+          {t('reviewPage.requirements.identity', {
+            documents: rules.documents,
+            verify: rules.verify,
           })}
         </p>
       ) : null}
@@ -127,9 +126,7 @@ export function BookingRequirementsCard({
           <p className={styles.depositHead}>
             <span className={styles.requirementTitle}>{tCommon('components.price.deposit')}</span>
             <strong className={styles.depositAmount}>
-              {deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
-                ? fmt.money(deposit.amount)
-                : dl('collateralMode', deposit.mode)}
+              {deposit.display}
             </strong>
           </p>
           <p className={styles.requirementBody}>{deposit.note}</p>

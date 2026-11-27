@@ -35,6 +35,7 @@ const BASE: CustomerTripFinance = {
   refundedAt: null,
   refundReference: null,
   legacyPricing: false,
+    collaterals: [],
 };
 
 function money(text: string): boolean {

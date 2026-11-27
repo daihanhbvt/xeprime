@@ -116,6 +116,8 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--xp-font-size-body);
   line-height: 22px;
   color: var(--xp-color-text-secondary);

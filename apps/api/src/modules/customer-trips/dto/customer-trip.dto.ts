@@ -15,6 +15,7 @@ import {
   STOREFRONT_KIND_VALUES,
   SURCHARGE_CATEGORY_VALUES,
   type DepositCollectionMode,
+  BOOKING_COLLATERAL_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -198,6 +199,20 @@ export class CustomerTripFinanceBreakdownDto {
 }
 
 /**
+ * Một món tài sản thế chấp chủ xe đã ghi nhận giữ của khách (ADR 0109). Chỉ LOẠI + trạng thái
+ * trả - số giấy tờ chủ xe gõ (`description`) không quay lại bề mặt khách.
+ */
+export class CustomerTripCollateralDto {
+  @ApiProperty({ enum: BOOKING_COLLATERAL_TYPE_VALUES }) collateralType!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC - null = chủ xe đang giữ',
+  })
+  returnedAt!: string | null;
+}
+
+/**
  * Toàn bộ tiền của một chuyến, tính MỘT LẦN ở server.
  *
  * Mọi số ở đây là chuỗi thập phân (ADR 0007) và đã tính xong — client chỉ hiển thị. Lý do đóng
@@ -274,6 +289,12 @@ export class CustomerTripFinanceDto {
    */
   @ApiPropertyOptional({ type: CustomerTripFinanceBreakdownDto, nullable: true })
   breakdown!: CustomerTripFinanceBreakdownDto | null;
+
+  @ApiProperty({
+    type: [CustomerTripCollateralDto],
+    description: 'Tài sản thế chấp chủ xe đã ghi nhận giữ (cũ → mới)',
+  })
+  collaterals!: CustomerTripCollateralDto[];
 }
 
 /** Khách thuê, nhìn từ phía CHỦ XE. SĐT gác theo `canContact` — xem `CustomerTripListItemDto`. */

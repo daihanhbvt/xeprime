@@ -1617,7 +1617,7 @@ export function RequestBookingFlow({
           }
           hostTerms={
             activeTerms
-              ? { text: activeTerms.termsText ?? null, documents: activeTerms.requiredDocuments }
+              ? { text: activeTerms.termsText ?? null }
               : null
           }
           deposit={pickupDeposit}

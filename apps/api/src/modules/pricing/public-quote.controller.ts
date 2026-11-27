@@ -58,8 +58,6 @@ export class PublicQuoteController {
             returnAt: new Date(query.returnAt),
             quoteIsEstimate: quote.breakdown.estimateNote != null,
             holdRequired: Boolean(quote.breakdown.fees?.holdAmount),
-            // Preview chưa có câu trả lời của khách — coi như sẽ đồng ý; lúc gửi mới kiểm thật.
-            termsAccepted: true,
           });
     return { ...quote, autoAccept };
   }

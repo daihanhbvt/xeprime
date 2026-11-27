@@ -142,6 +142,48 @@ export function bookingPaidPercentOf(
  *
  * Dùng kèm `BOOKING_MONEY_JOINS`; cả hai giả định bảng `bookings` mang bí danh `b`.
  */
+/**
+ * Cọc RÒNG đã thu trên các dòng `payments p` (đã lọc kind cọc + succeeded): Σ`deposit` −
+ * Σ`deposit_return`. `deposit_return` là phần chủ xe trả lại trước quyết toán qua lượt sửa tiền cọc
+ * - sổ chỉ thêm, nên "đã thu" luôn là phép trừ này, không bao giờ là sửa khoản cũ.
+ */
+export const SQL_NET_DEPOSIT_SUM = Prisma.sql`COALESCE(SUM(CASE p.kind WHEN ${PAYMENT_KIND.DEPOSIT_RETURN} THEN -p.amount ELSE p.amount END), 0)`;
+
+/** Điều kiện Prisma cho các dòng `payments` góp vào cọc ròng - dùng kèm `netDepositOf`. */
+export const NET_DEPOSIT_PAYMENT_WHERE = {
+  kind: { in: [PAYMENT_KIND.DEPOSIT, PAYMENT_KIND.DEPOSIT_RETURN] },
+  status: PAYMENT_STATUS.SUCCEEDED,
+} satisfies Prisma.PaymentWhereInput;
+
+/**
+ * Cọc ròng từ kết quả `groupBy(['kind'])` (hoặc `['bookingId','kind']` đã lọc theo đơn) trên
+ * `NET_DEPOSIT_PAYMENT_WHERE`. Kẹp sàn 0 - trả lại không bao giờ vượt số đã thu (writer chặn).
+ */
+export function netDepositOf(
+  groups: readonly { kind: string; _sum: { amount: Prisma.Decimal | null } }[],
+): Prisma.Decimal {
+  let net = new Prisma.Decimal(0);
+  for (const g of groups) {
+    const amount = g._sum.amount ?? new Prisma.Decimal(0);
+    net = g.kind === PAYMENT_KIND.DEPOSIT_RETURN ? net.minus(amount) : net.plus(amount);
+  }
+  return Prisma.Decimal.max(0, net);
+}
+
+/** Cọc ròng đã thu của MỘT đơn - đọc trong transaction của người gọi khi cần khoá. */
+export async function loadNetDepositReceived(
+  db: Pick<Prisma.TransactionClient, 'payment'>,
+  tenantId: string,
+  bookingId: string,
+): Promise<Prisma.Decimal> {
+  const groups = await db.payment.groupBy({
+    by: ['kind'],
+    where: { tenantId, bookingId, ...NET_DEPOSIT_PAYMENT_WHERE },
+    _sum: { amount: true },
+  });
+  return netDepositOf(groups);
+}
+
 export const BOOKING_MONEY_JOINS = Prisma.sql`
   LEFT JOIN LATERAL (
     SELECT COALESCE(SUM(s.amount), 0) AS total
@@ -158,10 +200,10 @@ export const BOOKING_MONEY_JOINS = Prisma.sql`
       AND r.deleted_at IS NULL
   ) man ON TRUE
   LEFT JOIN LATERAL (
-    SELECT COALESCE(SUM(p.amount), 0) AS total
+    SELECT ${SQL_NET_DEPOSIT_SUM} AS total
     FROM payments p
     WHERE p.booking_id = b.id
-      AND p.kind = ${PAYMENT_KIND.DEPOSIT}
+      AND p.kind IN (${PAYMENT_KIND.DEPOSIT}, ${PAYMENT_KIND.DEPOSIT_RETURN})
       AND p.status = ${PAYMENT_STATUS.SUCCEEDED}
   ) dep ON TRUE
   -- Phần D khách đã trả online (đơn qua sàn). booking_id là unique trên booking_holds nên
@@ -251,12 +293,8 @@ export async function loadBookingMoneySides(
       _sum: { amount: true },
     }),
     db.payment.groupBy({
-      by: ['bookingId'],
-      where: {
-        bookingId: { in: bookingIds },
-        kind: PAYMENT_KIND.DEPOSIT,
-        status: PAYMENT_STATUS.SUCCEEDED,
-      },
+      by: ['bookingId', 'kind'],
+      where: { bookingId: { in: bookingIds }, ...NET_DEPOSIT_PAYMENT_WHERE },
       _sum: { amount: true },
     }),
     // `D` đã trả online: cùng điều kiện với `BOOKING_MONEY_JOINS` (`paid_at` có giá trị).
@@ -275,7 +313,7 @@ export async function loadBookingMoneySides(
     result.set(id, {
       surchargeTotal: sumOf(surcharges, id),
       otherCollected: sumOf(manualReceipts, id),
-      depositReceived: sumOf(deposits, id),
+      depositReceived: netDepositOf(deposits.filter((g) => g.bookingId === id)),
       ownerShareOnline:
         holds.find((h) => h.bookingId === id)?.depositAmount ?? new Prisma.Decimal(0),
     });

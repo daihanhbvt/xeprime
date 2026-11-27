@@ -3,7 +3,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEPOSIT_POLICY_REASON, PERMISSION, type Permission } from '@xeprime/types';
-import type { ShopOperationDefaults, ShopRentalPolicy } from '@/features/rental-policies/types';
+import type {
+  ShopOperationDefaults,
+  ShopRentalPolicy,
+  TenantRentalTerms,
+} from '@/features/rental-policies/types';
 import type { PaymentSettings } from '@/features/shop/types';
 
 import ShopPoliciesPage from './page';
@@ -44,6 +48,14 @@ const defaultsQuery = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 const save = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
+/** Điều khoản thuê của GIAN HÀNG (ADR 0112 điều 3) - chung mọi loại xe. */
+const termsQuery = vi.hoisted(() => ({
+  data: undefined as TenantRentalTerms | undefined,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+const saveTerms = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
 const saveDefaults = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
 
 /** Cảnh báo đổi chế độ bảo hiểm (ADR 0091) — mặc định nền tảng CHƯA bán theo bậc ⇒ ẩn khối. */
@@ -61,6 +73,8 @@ vi.mock('@/features/rental-policies/hooks/use-shop-policy', () => ({
   useShopOperationDefaults: () => defaultsQuery,
   useSaveShopOperationDefaults: () => saveDefaults,
   useShopInsuranceImpact: () => impactQuery,
+  useShopRentalTerms: () => termsQuery,
+  useSaveShopRentalTerms: () => saveTerms,
 }));
 
 const paymentQuery = vi.hoisted(() => ({
@@ -102,7 +116,10 @@ function paymentFixture(over: Partial<PaymentSettings> = {}): PaymentSettings {
 function policyFixture(over: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
   return {
     policy: {
-      collateralMode: 'cash',
+      collateralMode: 'required',
+      collateralCashEnabled: true,
+      collateralAssetEnabled: false,
+      collateralCombination: 'any_one',
       collateralAssetTypes: [],
       depositAmount: '5000000',
       insuranceMode: 'optional',
@@ -140,6 +157,15 @@ function defaultsFixture(over: Partial<ShopOperationDefaults> = {}): ShopOperati
   };
 }
 
+function termsFixture(): TenantRentalTerms {
+  return {
+    items: [
+      { serviceType: 'self_drive', termsText: 'Không hút thuốc.', requireTermsAcceptance: true, updatedAt: null },
+      { serviceType: 'with_driver', termsText: null, requireTermsAcceptance: false, updatedAt: null },
+    ],
+  };
+}
+
 function grant(...permissions: Permission[]) {
   perms.granted = new Set<string>(permissions);
 }
@@ -166,6 +192,10 @@ beforeEach(() => {
   query.isError = false;
   query.refetch.mockReset();
   defaultsQuery.data = defaultsFixture();
+  termsQuery.data = termsFixture();
+  termsQuery.isError = false;
+  saveTerms.mutateAsync.mockReset().mockImplementation(async () => termsFixture());
+  saveTerms.isPending = false;
   defaultsQuery.isError = false;
   defaultsQuery.refetch.mockReset();
   save.mutateAsync.mockReset().mockImplementation(async () => policyFixture());
@@ -230,12 +260,27 @@ describe('Chính sách thuê - quyền, tải, loại xe', () => {
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
-  it('mục lục cột phải có ba mục theo design', () => {
-    renderPage();
+  it('mục lục cột phải có bảy mục theo design; ẩn mục bảo hiểm khi không có thẻ đó', () => {
+    impactQuery.data = { applies: true, total: 0, vehicles: [] };
+    const { unmount } = renderPage();
     const toc = screen.getByRole('navigation', { name: 'Mục lục chính sách thuê' });
-    for (const label of ['Chính sách & Quy định cho thuê', 'Giao nhận xe', 'Ưu đãi dài hạn']) {
-      expect(within(toc).getByRole('link', { name: label })).toBeTruthy();
-    }
+    const labels = [
+      'Thanh toán & hóa đơn',
+      'Bảo hiểm vật chất xe',
+      'Hình thức cọc xe (Thế chấp)',
+      'Giới hạn km & Phụ phí quá giờ',
+      'Giao nhận xe',
+      'Ưu đãi dài hạn',
+      'Điều kiện cho thuê',
+    ];
+    expect(within(toc).getAllByRole('link').map((link) => link.textContent)).toEqual(labels);
+    unmount();
+
+    impactQuery.data = { applies: false, total: 0, vehicles: [] };
+    renderPage();
+    const toc2 = screen.getByRole('navigation', { name: 'Mục lục chính sách thuê' });
+    expect(within(toc2).queryByRole('link', { name: 'Bảo hiểm vật chất xe' })).toBeNull();
+    expect(within(toc2).getAllByRole('link')).toHaveLength(6);
   });
 });
 
@@ -265,23 +310,46 @@ describe('Chính sách thuê - dữ liệu', () => {
     expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).value).toBe('');
   });
 
-  it('ba chế độ thế chấp: chọn Cọc tài sản thì hiện danh mục tài sản, ẩn ô tiền cọc', () => {
+  it('cọc kết hợp: bật cọc tài sản mở danh mục tài sản; "Bắt buộc cả 2" chỉ chọn được khi bật cả hai', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('radio', { name: /Cọc tài sản/ }));
-    expect(screen.queryByLabelText('Số tiền cọc mặc định')).toBeNull();
-    expect(screen.getByText('Loại tài sản nhận thế chấp')).toBeTruthy();
-    expect(screen.getByRole('radio', { name: /Miễn thế chấp/ })).toBeTruthy();
+    const card = screen.getByRole('region', { name: 'Hình thức cọc xe (Thế chấp)' });
+    const all = within(card).getByRole('radio', { name: 'Bắt buộc cả 2' }) as HTMLInputElement;
+    expect(all.disabled).toBe(true);
+    fireEvent.click(within(card).getByRole('checkbox', { name: 'Cọc tài sản' }));
+    expect(within(card).getByText('Loại tài sản nhận thế chấp')).toBeTruthy();
+    expect(within(card).getByLabelText('Số tiền cọc mặc định')).toBeTruthy();
+    expect(within(card).getByText('Đang bật 2 hình thức cọc')).toBeTruthy();
+    expect(
+      (within(card).getByRole('radio', { name: 'Bắt buộc cả 2' }) as HTMLInputElement).disabled,
+    ).toBe(false);
+  });
+
+  it('miễn thế chấp: ẩn hai hình thức, hiện khối huy hiệu - không eKYC, không "+40%"', () => {
+    renderPage();
+    const card = screen.getByRole('region', { name: 'Hình thức cọc xe (Thế chấp)' });
+    fireEvent.click(within(card).getByRole('radio', { name: /Miễn thế chấp/ }));
+    expect(within(card).queryByLabelText('Số tiền cọc mặc định')).toBeNull();
+    expect(within(card).getByText(/huy hiệu "Miễn thế chấp"/)).toBeTruthy();
+    expect(within(card).queryByText(/eKYC|\+40%/)).toBeNull();
+  });
+
+  it('điều kiện cho thuê: giấy tờ + cách đối chiếu chỉ đọc từ luật chuẩn nền tảng', () => {
+    renderPage();
+    const card = screen.getByRole('region', { name: 'Điều kiện cho thuê' });
+    expect(within(card).getAllByText('CMND/CCCD còn hạn hoặc Hộ chiếu còn hạn')).toHaveLength(2);
+    expect(within(card).getAllByText('Đối chiếu qua VNeID hoặc bản gốc trực tiếp')).toHaveLength(2);
+    // Không phải ô nhập: không ai sửa được giấy tờ.
+    expect(within(card).queryByRole('combobox')).toBeNull();
+    expect(within(card).getByRole('link', { name: 'Hợp đồng & Chứng từ' })).toBeTruthy();
   });
 });
 
-describe('Chính sách thuê - xem trước giá gói dài hạn', () => {
-  it('áp mốc đang nhập lên giá tháng ví dụ; sửa giá ví dụ thì số đổi theo', () => {
+describe('Chính sách thuê - ưu đãi dài hạn', () => {
+  it('công thức tính giá gói đứng dưới bảng mốc (khung xem trước giá gói đã gỡ)', () => {
     renderPage();
-    const preview = screen.getByRole('complementary', { name: 'Xem trước giá gói thuê dài hạn' });
-    // Ví dụ ô tô 15.000.000 ₫/tháng, mốc 1 tháng giảm 5% ⇒ 14.250.000 ₫.
-    expect(within(preview).getAllByText(/14.250.000/).length).toBeGreaterThan(0);
-    fireEvent.change(within(preview).getByRole('spinbutton'), { target: { value: '10000000' } });
-    expect(within(preview).getAllByText(/9.500.000/).length).toBeGreaterThan(0);
+    const card = screen.getByRole('region', { name: 'Ưu đãi thuê dài hạn (trên 1 tháng)' });
+    expect(within(card).getByText('Công thức tính giá gói:')).toBeTruthy();
+    expect(screen.queryByRole('complementary', { name: 'Xem trước giá gói thuê dài hạn' })).toBeNull();
   });
 });
 
@@ -452,5 +520,24 @@ describe('Chính sách thuê - thanh toán giữ chỗ (lưu ngay, quyền riên
     renderPage();
     expect(screen.getByText('Không tải được cấu hình thanh toán giữ chỗ')).toBeTruthy();
     expect(screen.getByLabelText('Số tiền cọc mặc định')).toBeTruthy();
+  });
+});
+
+describe('Chính sách thuê - điều khoản của gian hàng (ADR 0112 điều 3)', () => {
+  it('sửa điều khoản: CHỈ gọi endpoint điều khoản, gửi đủ hai nhóm, chữ rỗng là null', async () => {
+    renderPage();
+    const card = screen.getByRole('region', { name: 'Điều kiện cho thuê' });
+    const [selfDrive] = within(card).getAllByRole('textbox');
+    fireEvent.change(selfDrive!, { target: { value: 'Không hút thuốc trong xe.' } });
+    await saveAndConfirm();
+    await waitFor(() => expect(saveTerms.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(saveTerms.mutateAsync.mock.calls[0]![0]).toEqual({
+      items: [
+        { serviceType: 'self_drive', termsText: 'Không hút thuốc trong xe.', requireTermsAcceptance: true },
+        { serviceType: 'with_driver', termsText: null, requireTermsAcceptance: false },
+      ],
+    });
+    expect(save.mutateAsync).not.toHaveBeenCalled();
+    expect(saveDefaults.mutateAsync).not.toHaveBeenCalled();
   });
 });

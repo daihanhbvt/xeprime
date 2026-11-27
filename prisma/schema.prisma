@@ -325,6 +325,7 @@ model Tenant {
   vehicleOperationSettings      VehicleOperationSetting[]
   tenantOperationDefaults       TenantOperationDefault[]
   vehicleServiceSettings        VehicleServiceSetting[]
+  rentalTerms                   TenantRentalTerms[]
   vehicleDriverSurchargeRules   VehicleDriverSurchargeRule[]
   tenantCustomers               TenantCustomer[]
   tenantCustomerNotes           TenantCustomerNote[]
@@ -1717,6 +1718,28 @@ model VehicleServiceSetting {
   @@map("vehicle_service_settings")
 }
 
+/// Điều khoản thuê của GIAN HÀNG theo nhóm dịch vụ (ADR 0112 điều 3): `self_drive` (Tự lái & Dài
+/// hạn) | `with_driver` (Có tài xế) — CHECK. Áp cho mọi xe của gian hàng; snapshot vào yêu cầu lúc
+/// gửi. Writer DUY NHẤT: `TenantRentalTermsService`.
+model TenantRentalTerms {
+  id                     String   @id @db.Char(26)
+  tenantId               String   @map("tenant_id") @db.Char(26)
+  /// @xeprime/types → RentalTermsGroup — CHECK IN ('self_drive', 'with_driver').
+  serviceType            String   @map("service_type") @db.VarChar(50)
+  /// Điều khoản hiển thị cho khách, ≤ 4000 ký tự (DTO). NULL = chưa có.
+  termsText              String?  @map("terms_text") @db.Text
+  /// Khách phải tích đồng ý điều khoản trước khi gửi yêu cầu.
+  requireTermsAcceptance Boolean  @default(false) @map("require_terms_acceptance")
+  updatedBy              String?  @map("updated_by") @db.Char(26)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, serviceType])
+  @@map("tenant_rental_terms")
+}
+
 /// Mức phụ phí MẶC ĐỊNH của dịch vụ có tài xế — QUY TẮC công bố trước với khách, KHÔNG phải khoản
 /// đã ghi vào đơn (khoản thật vẫn là `booking_surcharges`). Một dòng mỗi (xe, loại).
 model VehicleDriverSurchargeRule {
@@ -3044,16 +3067,24 @@ model RentalPolicy {
   /// migration): mặc định theo LOẠI XE thắng mặc định legacy (cả hai NULL); bản ghi đè theo
   /// xe không mang cột này (loại đọc từ chính chiếc xe). Partial unique (tenant, vehicle_type).
   vehicleType              String?  @map("vehicle_type") @db.VarChar(50)
-  /// @xeprime/types → CollateralMode. Ba chế độ bảo đảm LOẠI TRỪ nhau (cash/asset/none).
-  /// Nguồn DUY NHẤT của nhãn "Miễn thế chấp" trên sàn kể từ 20/08 — `vehicles.no_collateral`
-  /// không còn được ghi tay, `ListingsService` suy nó ra từ đây (ADR 0008).
-  collateralMode           String   @default("cash") @map("collateral_mode") @db.VarChar(20)
-  /// @xeprime/types → CollateralAssetType. CHỈ có nghĩa khi mode='asset'; quan hệ ba bên với
-  /// `deposit_amount` giữ bằng CHECK `rental_policies_collateral_scope_check` ở migration —
-  /// ràng ở DB vì đây là thứ hai request đua nhau vẫn không được phép làm sai.
+  /// @xeprime/types → PolicySection[] (ADR 0112). CHỈ ở dòng ghi đè theo xe (CHECK): mục nằm trong
+  /// mảng đọc từ mặc định gian hàng, cột của dòng xe giữ nguyên để tắt kế thừa là thấy lại. Gộp theo
+  /// mục ở `PricingService` — không màn nào tự gộp.
+  inheritedSections        String[] @default([]) @map("inherited_sections") @db.VarChar(30)
+  /// @xeprime/types → CollateralMode (`required` | `none` — ADR 0112). Nguồn DUY NHẤT của nhãn
+  /// "Miễn thế chấp" trên sàn — `vehicles.no_collateral` do `ListingsService` suy ra (ADR 0008).
+  collateralMode           String   @default("required") @map("collateral_mode") @db.VarChar(20)
+  /// Bật cọc tiền ⇔ `deposit_amount > 0`; bật cọc tài sản ⇔ mảng tài sản không rỗng. Quan hệ giữ
+  /// bằng CHECK `rental_policies_collateral_scope_check` — hai request đua nhau vẫn không làm sai.
+  collateralCashEnabled    Boolean  @default(false) @map("collateral_cash_enabled")
+  collateralAssetEnabled   Boolean  @default(false) @map("collateral_asset_enabled")
+  /// @xeprime/types → CollateralCombination (`any_one` = khách chọn 1 trong 2 | `all` = bắt buộc
+  /// cả hai). `all` chỉ hợp lệ khi bật cả hai hình thức (CHECK).
+  collateralCombination    String   @default("any_one") @map("collateral_combination") @db.VarChar(20)
+  /// @xeprime/types → CollateralAssetType. Không rỗng ⇔ `collateral_asset_enabled`.
   collateralAssetTypes     String[] @default([]) @map("collateral_asset_types") @db.VarChar(50)
   /// Cọc thế chấp CỐ ĐỊNH bằng VND — không nằm trong doanh thu thuê, không chịu giảm giá.
-  /// Chỉ khác 0 khi `collateral_mode = 'cash'`.
+  /// Khác 0 ⇔ `collateral_cash_enabled`.
   depositAmount            Decimal  @default(0) @map("deposit_amount") @db.Decimal(14, 2)
   deliveryEnabled          Boolean  @default(false) @map("delivery_enabled")
   /// Bán kính tự báo giá tối đa (km) — ngoài bán kính này phải báo giá thủ công.

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { vehicleInheritsSectionWhere } from '../../common/policy-section-where';
 import {
   INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
   newId,
@@ -13,6 +14,9 @@ import {
   BILLING_MODE,
   COLLATERAL_MODE,
   FEE_POLICY_STATUS,
+  POLICY_SECTION,
+  pickPolicyRowFor,
+  policySectionInherited,
   LISTING_STATUS,
   REVIEW_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -215,7 +219,7 @@ export class ListingsService {
         where: {
           tenantId,
           vehicleType,
-          vehicle: { rentalPolicy: null },
+          vehicle: vehicleInheritsSectionWhere(POLICY_SECTION.COLLATERAL),
           noCollateral: { not: noCollateral },
         },
         data: { noCollateral },
@@ -258,7 +262,7 @@ export class ListingsService {
         where: {
           tenantId,
           vehicleType,
-          vehicle: { rentalPolicy: null },
+          vehicle: vehicleInheritsSectionWhere(POLICY_SECTION.DELIVERY),
           deliveryEnabled: { not: row.deliveryEnabled },
         },
         data: { deliveryEnabled: row.deliveryEnabled },
@@ -306,7 +310,7 @@ export class ListingsService {
         select: {
           id: true,
           ...INSURANCE_ELIGIBILITY_VEHICLE_SELECT,
-          rentalPolicy: { select: { insuranceMode: true } },
+          rentalPolicy: { select: { insuranceMode: true, inheritedSections: true } },
           publicListing: { select: { selfDriveInsuranceBlocked: true } },
         },
       }),
@@ -320,7 +324,10 @@ export class ListingsService {
     const toUnblock: string[] = [];
     for (const v of vehicles) {
       const mode = resolveInsuranceMode({
-        override: v.rentalPolicy?.insuranceMode,
+        // Mục `insurance` đang kế thừa thì dòng xe không có tiếng nói (ADR 0112 điều 1).
+        override: policySectionInherited(v.rentalPolicy, POLICY_SECTION.INSURANCE)
+          ? null
+          : v.rentalPolicy?.insuranceMode,
         typedDefault: defaults.find((d) => d.vehicleType === v.vehicleType)?.insuranceMode,
         legacyDefault: legacy,
       });
@@ -503,16 +510,16 @@ async function resolveSelfDriveInsuranceBlocked(
   const [rows, vehicle] = await Promise.all([
     tx.rentalPolicy.findMany({
       where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
-      select: { vehicleId: true, vehicleType: true, insuranceMode: true },
+      select: { vehicleId: true, vehicleType: true, insuranceMode: true, inheritedSections: true },
     }),
     tx.vehicle.findUnique({ where: { id: vehicleId }, select: INSURANCE_ELIGIBILITY_VEHICLE_SELECT }),
   ]);
   if (!vehicle) return false;
+  const row = pickPolicyRowFor(rows, vehicleId, vehicleType, POLICY_SECTION.INSURANCE);
   const mode = resolveInsuranceMode({
-    override: rows.find((r) => r.vehicleId === vehicleId)?.insuranceMode,
-    typedDefault: rows.find((r) => r.vehicleId === null && r.vehicleType === vehicleType)
-      ?.insuranceMode,
-    legacyDefault: rows.find((r) => r.vehicleId === null && r.vehicleType === null)?.insuranceMode,
+    override: row?.insuranceMode,
+    typedDefault: null,
+    legacyDefault: null,
   });
   return selfDriveInsuranceBlockedOf(mode, vehicle);
 }
@@ -525,11 +532,9 @@ async function resolveNoCollateral(
 ): Promise<boolean> {
   const rows = await tx.rentalPolicy.findMany({
     where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
-    select: { vehicleId: true, vehicleType: true, collateralMode: true },
+    select: { vehicleId: true, vehicleType: true, collateralMode: true, inheritedSections: true },
   });
-  const row =
-    rows.find((r) => r.vehicleId === vehicleId) ??
-    rows.find((r) => r.vehicleId === null && r.vehicleType === vehicleType) ??
-    rows.find((r) => r.vehicleId === null && r.vehicleType === null);
+  // Gộp theo mục `collateral` (ADR 0112 điều 1) - cùng luật với `PricingService.effectivePolicy`.
+  const row = pickPolicyRowFor(rows, vehicleId, vehicleType, POLICY_SECTION.COLLATERAL);
   return row?.collateralMode === COLLATERAL_MODE.NONE;
 }

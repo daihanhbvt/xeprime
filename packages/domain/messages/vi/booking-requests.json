@@ -551,7 +551,8 @@
         "documents": "Giấy tờ chủ xe yêu cầu: {documents}",
         "hostTerms": "Điều khoản thuê của chủ xe",
         "reminder": "Việc xác minh và yêu cầu giấy tờ cụ thể được hướng dẫn theo chính sách hiện hành trước khi nhận xe.",
-        "licenceRequiredToSubmit": "Thêm bằng lái hợp lệ để gửi yêu cầu thuê xe."
+        "licenceRequiredToSubmit": "Thêm bằng lái hợp lệ để gửi yêu cầu thuê xe.",
+        "identity": "Giấy tờ khi nhận xe: {documents} - {verify}"
       },
       "costs": {
         "title": "Chi phí thuê xe",

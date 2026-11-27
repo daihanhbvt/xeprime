@@ -30,3 +30,7 @@ export type BookingRequestDeliveryQuote = components['schemas']['BookingRequestD
 /** Thời gian chết mặc định của gian hàng theo loại xe (06/11/2026). */
 export type ShopOperationDefaults = components['schemas']['ShopOperationDefaultsDto'];
 export type SaveShopOperationDefaultsInput = components['schemas']['SaveShopOperationDefaultsDto'];
+
+/** Điều khoản thuê của gian hàng theo nhóm dịch vụ (ADR 0112 điều 3). */
+export type TenantRentalTerms = components['schemas']['TenantRentalTermsDto'];
+export type SaveTenantRentalTermsInput = components['schemas']['SaveTenantRentalTermsDto'];

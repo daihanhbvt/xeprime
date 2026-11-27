@@ -88,7 +88,13 @@ import { BookingStatusSheet, type Decision } from './components/BookingStatusShe
 import { BookingSettlementCard } from './components/BookingSettlementCard';
 import { BookingInsurancePanel } from './components/BookingInsurancePanel';
 import { BookingExtensionsPanel } from './components/BookingExtensionsPanel';
-import { HandoverPrepCard, missingPhotoSlots, prepRowStates } from './components/HandoverPrepCard';
+import {
+  HandoverPrepCard,
+  missingPhotoSlots,
+  prepCollateralOf,
+  prepRowStates,
+  prepTitleKey,
+} from './components/HandoverPrepCard';
 import {
   BookingOutcomeBanner,
   BookingStageChip,
@@ -279,12 +285,21 @@ function BookingDetailBody({
   const [editing, setEditing] = useState(false);
   const [detailTab, setDetailTab] = useState<'prep' | 'trip' | 'extra'>('prep');
   const [docsOpen, setDocsOpen] = useState(false);
+  /* Dòng "Nhận tài sản thế chấp" mở ô thêm món của thẻ Cọc & thế chấp rồi cuộn tới thẻ (web). */
+  const [collateralAddRequest, setCollateralAddRequest] = useState(0);
+  const [collateralCashRequest, setCollateralCashRequest] = useState(0);
+  const collateralY = useRef(0);
   /* Nút "Ảnh" của Chuẩn bị bàn giao cuộn tới khối ảnh TRONG trang (web `BookingDetailSections`). */
   const scrollRef = useRef<ScrollView | null>(null);
   const photosY = useRef(0);
   const scrollToPhotos = useCallback(() => {
     scrollRef.current?.scrollTo({ y: Math.max(0, photosY.current - space.md), animated: true });
   }, []);
+  const openAddCollateral = useCallback(() => {
+    setCollateralAddRequest((n) => n + 1);
+    scrollRef.current?.scrollTo({ y: Math.max(0, collateralY.current - space.md), animated: true });
+  }, []);
+  const openEditCash = useCallback(() => setCollateralCashRequest((n) => n + 1), []);
 
   const transition = useTransitionBooking(booking.id);
   const assignDriver = useAssignDriver(booking.id);
@@ -729,7 +744,17 @@ function BookingDetailBody({
           />
 
           {/* Cọc tiền + tài sản thế chấp theo đơn (ADR 0109) — tự ẩn khi không có gì để giữ. */}
-          <CollateralSideCard booking={booking} />
+          <YStack
+            onLayout={(event) => {
+              collateralY.current = event.nativeEvent.layout.y;
+            }}
+          >
+            <CollateralSideCard
+              booking={booking}
+              addRequest={collateralAddRequest}
+              cashRequest={collateralCashRequest}
+            />
+          </YStack>
 
           <PaymentSideCard
             booking={booking}
@@ -788,6 +813,8 @@ function BookingDetailBody({
                   can={prepCan}
                   onDocuments={() => setDocsOpen(true)}
                   onPhotos={scrollToPhotos}
+                  onAddCollateral={openAddCollateral}
+                  onEditCash={openEditCash}
                 />
               ) : detailTab === 'trip' ? (
                 <YStack gap={space.md}>
@@ -1062,9 +1089,9 @@ function useHandoverCta(
       return;
     }
     const prepMissing = booking.handoverPrep
-      ? prepRowStates(booking.handoverPrep, prepCan)
+      ? prepRowStates(booking.handoverPrep, prepCan, prepCollateralOf(booking))
           .filter((row) => !row.done)
-          .map((row) => tPrep(row.key))
+          .map((row) => tPrep(prepTitleKey(row.key)))
       : [];
     const slots = missingPhotoSlots(context?.pickup?.photos, booking.vehicleType);
     if (prepMissing.length === 0 && slots.length === 0) {

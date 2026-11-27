@@ -6,7 +6,6 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   addCalendarMonthsVn,
-  COLLATERAL_MODE,
   PRICE_ROW,
   ROUTE_TYPE,
   DELIVERY_DISTANCE_STATUS,
@@ -1015,11 +1014,8 @@ export function ListingBookingCard({
                 <CostLine
                   label={tPrice('deposit')}
                   hint={{ content: cost.deposit.note, label: tPrice('depositHintLabel') }}
-                  value={
-                    cost.deposit.mode === COLLATERAL_MODE.CASH && cost.deposit.amount
-                      ? fmt.money(cost.deposit.amount)
-                      : domainLabel('collateralMode', cost.deposit.mode)
-                  }
+                  value={cost.deposit.display}
+                  stacked={cost.deposit.textual}
                 />
               ) : null}
 
@@ -1315,7 +1311,10 @@ function CostLine({
   value,
   tone,
   includedServiceFee = null,
+  stacked = false,
 }: {
+  /** Giá trị là một CÂU (mô tả cọc - ADR 0112): nhãn trên, giá trị xuống dòng dưới. */
+  stacked?: boolean;
   label: string;
   /** Dòng IV đã gộp phí thu hộ - ⓘ tách hai số (ADR 0091 điều 3). */
   includedServiceFee?: IncludedInsuranceServiceFee | null;
@@ -1327,8 +1326,13 @@ function CostLine({
 }) {
   const colors = useColors();
   return (
-    <XStack ai="flex-start" jc="space-between" gap={space.md}>
-      <YStack f={1} gap={2}>
+    <XStack
+      fd={stacked ? 'column' : 'row'}
+      ai={stacked ? 'stretch' : 'flex-start'}
+      jc="space-between"
+      gap={stacked ? 2 : space.md}
+    >
+      <YStack f={stacked ? undefined : 1} gap={2}>
         <XStack ai="center" gap={4}>
           <Text col={colors.text} fos={fontSize.body}>
             {label}
@@ -1346,6 +1350,7 @@ function CostLine({
         col={tone === 'discount' ? colors.success : colors.text}
         fos={fontSize.body}
         fow={fontWeight.medium}
+        flexShrink={1}
       >
         {value}
       </Text>

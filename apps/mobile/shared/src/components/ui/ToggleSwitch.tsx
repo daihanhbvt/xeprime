@@ -1,3 +1,4 @@
+import { useMotionOff } from '@/components/motion/no-motion';
 import { memo, useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet } from 'react-native';
 import { elevation } from '@/theme/elevation';
@@ -34,14 +35,20 @@ export const ToggleSwitch = memo(function ToggleSwitch({
   const dims = DIMENSIONS[size];
   const travel = dims.w - dims.knob - KNOB_INSET * 2;
   const progress = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const motionOff = useMotionOff();
 
   useEffect(() => {
+    // Màn tắt hiệu ứng (`NoMotionScope`) / Giảm chuyển động ⇒ nhảy thẳng tới vị trí mới.
+    if (motionOff) {
+      progress.setValue(value ? 1 : 0);
+      return;
+    }
     Animated.timing(progress, {
       toValue: value ? 1 : 0,
       duration: DURATION_MS,
       useNativeDriver: false,
     }).start();
-  }, [progress, value]);
+  }, [motionOff, progress, value]);
 
   const trackColor = progress.interpolate({
     inputRange: [0, 1],

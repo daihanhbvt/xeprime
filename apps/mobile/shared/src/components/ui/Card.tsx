@@ -1,3 +1,4 @@
+import { useMotionOff } from '@/components/motion/no-motion';
 import { AutoScrollReveal } from '@/components/motion/ScrollReveal';
 import { useState } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
@@ -5,7 +6,6 @@ import { CardHighlightOverlay, useCardHighlightBorder } from '@/components/ui/Ca
 import { CardHighlightContext } from '@/components/ui/HighlightZoom';
 import Animated, {
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
   Easing,
@@ -187,7 +187,7 @@ function PressableCard({
 }) {
   const pressed = useSharedValue(0);
   // "Giảm chuyển động": bỏ phần co, giữ phần mờ (phản hồi chạm vẫn còn, không có chuyển động).
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionOff();
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: reduceMotion ? 1 : 1 - pressed.value * PRESS_SCALE_DELTA }],

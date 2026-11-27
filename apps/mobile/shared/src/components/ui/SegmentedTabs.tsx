@@ -1,10 +1,10 @@
+import { useMotionOff } from '@/components/motion/no-motion';
 import { IS_PARTNER_APP } from '@/lib/app-kind';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -73,7 +73,8 @@ export function SegmentedTabs<K extends string>({
   const activeBg = dark ? colors.surfaceElevated : colors.surface;
 
   const [trayWidth, setTrayWidth] = useState(0);
-  const reduceMotion = useReducedMotion();
+  // Máy bật Giảm chuyển động hoặc màn tắt hiệu ứng (`NoMotionScope`) ⇒ vạch chỉ đặt thẳng.
+  const reduceMotion = useMotionOff();
   const activeIndex = Math.max(
     items.findIndex((item) => item.key === value),
     0,

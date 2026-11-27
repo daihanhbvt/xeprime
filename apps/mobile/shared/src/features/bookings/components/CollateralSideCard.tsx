@@ -1,19 +1,29 @@
 import { useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isZeroMoney } from '@xeprime/domain';
+import {
+  absoluteMoney,
+  isNegativeMoney,
+  isZeroMoney,
+  normalizeCollateral,
+  subtractMoney,
+} from '@xeprime/domain';
 import {
   BOOKING_COLLATERAL_DESCRIPTION_MAX,
   BOOKING_COLLATERAL_MAX_ITEMS,
   BOOKING_COLLATERAL_TYPE,
   BOOKING_COLLATERAL_TYPE_VALUES,
+  DEPOSIT_STATUS,
   PERMISSION,
   bookingCollateralNeedsDescription,
   isBookingCollateralEditable,
   type BookingCollateralType,
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Button } from '@/components/ui/Button';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
+import { policyCollateral } from '@/features/rental-policies/collateral-text';
 import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { Pill } from '@/components/ui/Pill';
 import { SelectControl } from '@/components/ui/SelectControl';
@@ -30,7 +40,9 @@ import {
   useRemoveBookingCollateral,
   useSetBookingCollateralReturned,
 } from '../hooks/use-booking-collaterals';
+import { useSettlement } from '@/features/settlement/hooks/use-settlement';
 import { SideCard, SideTitle } from './BookingDetailSide';
+import { CollateralCashSheet } from './CollateralCashSheet';
 
 /**
  * Thẻ "Cọc & thế chấp" ở chi tiết đơn (ADR 0109) — native port of web
@@ -38,7 +50,20 @@ import { SideCard, SideTitle } from './BookingDetailSide';
  * tác được ở mọi trạng thái đơn; thêm / gỡ chỉ khi đơn chưa khép (server chặn cùng luật). Quyền
  * `bookings.update`. Đơn không có gì để giữ và không còn sửa được thì ẩn hẳn thẻ.
  */
-export function CollateralSideCard({ booking }: { booking: BookingDetail }) {
+export function CollateralSideCard({
+  booking,
+  addRequest = 0,
+  cashRequest = 0,
+}: {
+  booking: BookingDetail;
+  /** Dòng "Thu cọc tiền" của Chuẩn bị bàn giao bấm "Chỉnh sửa" tăng số này => mở hộp Sửa tiền cọc. */
+  cashRequest?: number;
+  /**
+   * Dòng "Nhận tài sản thế chấp" của Chuẩn bị bàn giao tăng số này => mở ô thêm món (web
+   * `collateralAddRequest`). Giá trị đầu không mở sẵn.
+   */
+  addRequest?: number;
+}) {
   const colors = useColors();
   const t = useTranslations('Bookings.detailPage.side.collateral');
   const tCommon = useTranslations('Common.actions');
@@ -69,6 +94,41 @@ export function CollateralSideCard({ booking }: { booking: BookingDetail }) {
   const items = booking.collaterals ?? [];
   const canUpdate = has(PERMISSION.BOOKING_UPDATE);
   const editable = canUpdate && isBookingCollateralEditable(booking.status);
+  // Chính sách cọc ĐÓNG BĂNG của đơn (ADR 0112 điều 2): nhận tài sản mà chưa ghi món nào => nhắc
+  // các loại được chấp nhận (khách đưa MỘT loại).
+  const policy = normalizeCollateral(policyCollateral(booking.priceSnapshot?.policy ?? null));
+  const acceptedAssets =
+    policy?.asset && policy.assetTypes.length > 0 && items.length === 0
+      ? policy.assetTypes.map((code) => dl('collateralAssetType', code)).join(', ')
+      : null;
+  // Chỉnh state ngay lúc render khi có lượt yêu cầu mới (như web), không setState trong effect.
+  const [seenAddRequest, setSeenAddRequest] = useState(addRequest);
+  if (addRequest !== seenAddRequest) {
+    setSeenAddRequest(addRequest);
+    if (addRequest && editable) setAdding(true);
+  }
+  const [cashOpen, setCashOpen] = useState(false);
+  const [seenCashRequest, setSeenCashRequest] = useState(cashRequest);
+  if (cashRequest !== seenCashRequest) {
+    setSeenCashRequest(cashRequest);
+    if (cashRequest && canUpdate) setCashOpen(true);
+  }
+  // Cùng khoá cache với thẻ quyết toán - không thêm request.
+  const settlement = useSettlement(booking.id).data;
+  const depositStatus = settlement?.depositStatus;
+  const depositLeft = settlement
+    ? subtractMoney(settlement.depositRequired, settlement.depositReceived)
+    : '0';
+  const depositShort = !isNegativeMoney(depositLeft) && !isZeroMoney(depositLeft);
+  // Thu DƯ: tiền thật đang thừa trong tay chủ xe - phải hiện, không gộp vào "đủ".
+  const depositOver = isNegativeMoney(depositLeft);
+  const hasReceived = settlement ? !isZeroMoney(settlement.depositReceived) : false;
+  const canAdjustCollected =
+    has(PERMISSION.PAYMENT_RECORD) &&
+    (depositStatus === DEPOSIT_STATUS.NONE ||
+      depositStatus === DEPOSIT_STATUS.NOT_RECEIVED ||
+      depositStatus === DEPOSIT_STATUS.RECEIVED ||
+      depositStatus === DEPOSIT_STATUS.AWAITING_REFUND);
   const hasCash = !isZeroMoney(booking.depositAmount);
   const held = items.filter((item) => !item.returnedAt).length;
 
@@ -118,15 +178,61 @@ export function CollateralSideCard({ booking }: { booking: BookingDetail }) {
         <Text col={colors.textMuted} fos={fontSize.body}>
           {t('cash')}
         </Text>
-        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-          {hasCash ? fmt.money(booking.depositAmount) : t('noCash')}
-        </Text>
+        <XStack ai="center" gap={space.xs}>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+            {hasCash ? fmt.money(booking.depositAmount) : t('noCash')}
+          </Text>
+          {canUpdate ? (
+            <IconSquareButton label={t('editCash')} size="sm" onPress={() => setCashOpen(true)}>
+              <LineIcon name="edit" size={18} color={colors.primary} />
+            </IconSquareButton>
+          ) : null}
+        </XStack>
       </XStack>
+      {(hasCash || hasReceived) && settlement ? (
+        <Text
+          fos={fontSize.bodySm}
+          col={
+            depositOver
+              ? colors.danger
+              : depositStatus === DEPOSIT_STATUS.NOT_RECEIVED || depositShort
+                ? colors.warning
+                : depositStatus === DEPOSIT_STATUS.RECEIVED
+                  ? colors.success
+                  : colors.textMuted
+          }
+        >
+          {depositOver && depositStatus === DEPOSIT_STATUS.RECEIVED
+            ? t('cashOver', {
+                received: fmt.money(settlement.depositReceived),
+                amount: fmt.money(absoluteMoney(depositLeft) ?? '0'),
+              })
+            : depositStatus === DEPOSIT_STATUS.NOT_RECEIVED
+              ? t('cashNotReceived')
+              : depositStatus === DEPOSIT_STATUS.RECEIVED
+                ? depositShort
+                  ? t('cashPartial', {
+                      received: fmt.money(settlement.depositReceived),
+                      amount: fmt.money(depositLeft),
+                    })
+                  : t('cashReceived')
+                : dl('depositStatus', settlement.depositStatus)}
+        </Text>
+      ) : null}
 
       {items.length === 0 ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('empty')}
-        </Text>
+        <YStack gap={space.xs}>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t('empty')}
+          </Text>
+          {acceptedAssets ? (
+            <Text col={colors.text} fos={fontSize.bodySm}>
+              {policy && policy.assetTypes.length > 1
+                ? t('acceptedMany', { assets: acceptedAssets })
+                : t('acceptedOne', { assets: acceptedAssets })}
+            </Text>
+          ) : null}
+        </YStack>
       ) : (
         <YStack gap={space.sm}>
           {items.map((item) => {
@@ -162,40 +268,44 @@ export function CollateralSideCard({ booking }: { booking: BookingDetail }) {
                   </Text>
                 ) : null}
                 {canUpdate ? (
-                  <XStack gap={space.sm} jc="flex-end">
-                    {editable && !returned ? (
-                      <Button
-                        label={t('remove')}
-                        variant="ghostDanger"
-                        size="sm"
-                        block={false}
-                        onPress={() => setRemoving(item)}
-                      />
-                    ) : null}
+                  // Một hàng nút biểu tượng gọn (web: Trả lại / Hoàn tác / Gỡ) - nhãn đọc màn hình qua `label`.
+                  <XStack gap={space.xs} jc="flex-end">
                     {returned ? (
-                      <Button
-                        label={tCommon('undo')}
-                        variant="ghost"
+                      <IconSquareButton
+                        label={t('undoReturn')}
                         size="sm"
-                        block={false}
-                        loading={busy}
+                        busy={busy}
+                        disabled={busy}
                         onPress={() => setReturned.mutate({ id: item.id, returned: false }, { onError })}
-                      />
+                      >
+                        <LineIcon name="rotate-left" size={18} color={colors.textMuted} />
+                      </IconSquareButton>
                     ) : (
-                      <Button
+                      <IconSquareButton
                         label={t('markReturned')}
-                        variant="secondary"
                         size="sm"
-                        block={false}
-                        loading={busy}
+                        busy={busy}
+                        disabled={busy}
                         onPress={() =>
                           setReturned.mutate(
                             { id: item.id, returned: true },
                             { onSuccess: () => toast.showSuccess(t('returnedToast')), onError },
                           )
                         }
-                      />
+                      >
+                        <LineIcon name="arrow-left" size={18} color={colors.textMuted} />
+                      </IconSquareButton>
                     )}
+                    {editable && !returned ? (
+                      <IconSquareButton
+                        label={t('remove')}
+                        size="sm"
+                        tone="dangerSoft"
+                        onPress={() => setRemoving(item)}
+                      >
+                        <LineIcon name="trash" size={18} color={colors.danger} />
+                      </IconSquareButton>
+                    ) : null}
                   </XStack>
                 ) : null}
               </YStack>
@@ -266,6 +376,16 @@ export function CollateralSideCard({ booking }: { booking: BookingDetail }) {
           });
         }}
       />
+      {canUpdate ? (
+        <CollateralCashSheet
+          bookingId={booking.id}
+          current={booking.depositAmount}
+          received={settlement ? settlement.depositReceived : null}
+          collectedEditable={canAdjustCollected}
+          open={cashOpen}
+          onClose={() => setCashOpen(false)}
+        />
+      ) : null}
     </SideCard>
   );
 }

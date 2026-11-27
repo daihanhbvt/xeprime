@@ -26,6 +26,8 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingSettlementController } from '../src/modules/bookings/settlement/booking-settlement.controller';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
+import { BookingPaymentWriter } from '../src/modules/payments/booking-payment.writer';
+import { loadBookingMoneySides } from '../src/common/booking-money';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeNotificationService, makePricingService } from './helpers/service-factory';
 
@@ -46,6 +48,7 @@ const pricing = makePricingService(asService);
 const notifications = makeNotificationService(asService);
 const receipts = new ReceiptsService(asService, audit);
 const settlement = new SettlementService(asService, audit, pricing, notifications, receipts);
+const paymentWriter = new BookingPaymentWriter(audit, receipts);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -902,5 +905,97 @@ describe('Đơn huỷ / khách không đến', () => {
     await receiveDeposit(bookingId, '3000000');
     const result = await settlement.get(tenantId, bookingId);
     expect(result.depositStatus).toBe(DEPOSIT_STATUS.RECEIVED);
+  });
+});
+
+describe('Sửa cọc ĐÃ THU bằng bút toán điều chỉnh', () => {
+  const adjust = (bookingId: string, collectedAmount: string) =>
+    prisma.$transaction((tx) =>
+      paymentWriter.adjustDepositCollectedWithinTx(tx, {
+        tenantId,
+        userId: ownerId,
+        bookingId,
+        collectedAmount: new Prisma.Decimal(collectedAmount),
+        method: PAYMENT_METHOD.CASH,
+      }),
+    );
+  const rows = (bookingId: string) =>
+    prisma.payment.findMany({
+      where: { tenantId, bookingId },
+      orderBy: { createdAt: 'asc' },
+      select: { kind: true, amount: true, receipt: { select: { type: true, source: true } } },
+    });
+
+  maybe('thu 15tr rồi sửa về 150k: MỘT khoản trả lại 14,85tr, cọc ròng 150k', async () => {
+    const bookingId = await createBooking({ deposit: '150000' });
+    await receiveDeposit(bookingId, '15000000');
+
+    const res = await adjust(bookingId, '150000');
+    expect(res.diff.toFixed(0)).toBe('-14850000');
+
+    const list = await rows(bookingId);
+    expect(list).toHaveLength(2);
+    expect(list[0]!.kind).toBe(PAYMENT_KIND.DEPOSIT);
+    expect(list[1]).toMatchObject({ kind: PAYMENT_KIND.DEPOSIT_RETURN });
+    expect(list[1]!.amount.toFixed(0)).toBe('14850000');
+    expect(list[1]!.receipt).toMatchObject({
+      type: RECEIPT_TYPE.EXPENSE,
+      source: RECEIPT_SOURCE.DEPOSIT_REFUND,
+    });
+
+    const view = await settlement.get(tenantId, bookingId);
+    expect(view.depositReceived).toBe('150000.00');
+    const sides = (await loadBookingMoneySides(prisma, [bookingId])).get(bookingId)!;
+    expect(sides.depositReceived.toFixed(0)).toBe('150000');
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { tenantId, action: 'booking.deposit_collected.adjust', targetId: bookingId },
+    });
+    expect(log.beforeJson).toMatchObject({ depositReceived: '15000000.00' });
+    expect(log.afterJson).toMatchObject({ depositReceived: '150000.00', diff: '-14850000.00' });
+
+    // Quyết toán chỉ hoàn phần RÒNG - không hoàn lại 14,85tr đã trả.
+    await expect(
+      settlement.recordRefund(tenantId, bookingId, ownerId, {
+        refundAmount: '15000000',
+        refundMethod: REFUND_METHOD.CASH,
+      }),
+    ).rejects.toBeTruthy();
+    const refund = await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '150000',
+      refundMethod: REFUND_METHOD.CASH,
+    });
+    expect(refund.depositStatus).toBe(DEPOSIT_STATUS.REFUNDED);
+
+    // Đã ghi hoàn cọc ⇒ không điều chỉnh nữa.
+    await expect(adjust(bookingId, '0')).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+    });
+  });
+
+  maybe('sửa LÊN: thêm một khoản thu cọc đúng phần chênh', async () => {
+    const bookingId = await createBooking({ deposit: '5000000' });
+    await receiveDeposit(bookingId, '3000000');
+
+    const res = await adjust(bookingId, '5000000');
+    expect(res.diff.toFixed(0)).toBe('2000000');
+    const list = await rows(bookingId);
+    expect(list).toHaveLength(2);
+    expect(list[1]).toMatchObject({ kind: PAYMENT_KIND.DEPOSIT });
+    expect(list[1]!.amount.toFixed(0)).toBe('2000000');
+    expect(list[1]!.receipt).toMatchObject({
+      type: RECEIPT_TYPE.INCOME,
+      source: RECEIPT_SOURCE.DEPOSIT,
+    });
+    expect((await settlement.get(tenantId, bookingId)).depositReceived).toBe('5000000.00');
+  });
+
+  maybe('bằng số hiện tại: không ghi gì', async () => {
+    const bookingId = await createBooking({ deposit: '1000000' });
+    await receiveDeposit(bookingId, '1000000');
+    const res = await adjust(bookingId, '1000000');
+    expect(res.diff.isZero()).toBe(true);
+    expect(res.paymentId).toBeNull();
+    expect(await rows(bookingId)).toHaveLength(1);
   });
 });

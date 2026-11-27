@@ -4,16 +4,18 @@ import { InfoHint } from '@/components/data-display/InfoHint';
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useId, useMemo, useSyncExternalStore } from 'react';
-import { isZeroMoney } from '@xeprime/domain';
+import { isZeroMoney, normalizeCollateral } from '@xeprime/domain';
 import {
-  COLLATERAL_MODE,
   DEPOSIT_COLLECTION_MODE,
   FUEL_TYPE,
   serviceRequiresDriverLicence,
 } from '@xeprime/types';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
 import { ROUTES } from '@/constants/routes';
+import { useDescribeCollateral } from '@/features/rental-policies/collateral-text';
+import { useRentalConditionsText } from '@/features/rental-policies/rental-conditions';
 import { BookingReviewCosts } from '@/features/booking-requests/components/BookingReviewCosts';
+import { TripDepositHeld } from './TripDepositHeld';
 import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { useNow } from '@/hooks/use-now';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -198,6 +200,7 @@ export function TripConfirmedView({
               surface="trip"
               paidAmount={hold?.paidAt ? hold.paidAmount : null}
               frozen
+              depositDetail={finance ? <TripDepositHeld finance={finance} /> : undefined}
             />
           ) : finance ? (
             <TripFinanceCard finance={finance} closed={false} />
@@ -232,6 +235,7 @@ function PickupChecklist({
   const t = useTranslations('Trips.confirmed.checklist');
   const fmt = useAppFormat();
   const dl = useDomainLabel();
+  const describeCollateral = useDescribeCollateral();
   const titleId = useId();
 
   /*
@@ -250,11 +254,8 @@ function PickupChecklist({
     writePickupChecklist(trip.id, on ? [...rest, key] : rest);
   };
 
-  const terms =
-    data.listing?.rentalTerms?.find((term) => term.serviceType === trip.serviceType) ?? null;
-  const documents = (terms?.requiredDocuments ?? [])
-    .map((doc) => dl('customerDocumentType', doc, doc))
-    .join(', ');
+  // Giấy tờ tuỳ thân là luật chuẩn nền tảng (ADR 0112 điều 3) - như nhau ở mọi xe.
+  const rules = useRentalConditionsText(data.listing?.rentalConditions);
 
   /*
    * Cọc khi nhận xe — tiền đặt lại cho chủ xe, KHÁC tiền giữ chỗ (ADR 0044 điều 9). Số tiền là số
@@ -264,11 +265,25 @@ function PickupChecklist({
     trip.finance && !isZeroMoney(trip.finance.depositRequired)
       ? trip.finance.depositRequired
       : null;
-  const collateral = data.listing?.collateral ?? null;
+  const listed = data.listing?.collateral ?? null;
+  const collateralInput = listed
+    ? {
+        mode: listed.mode,
+        cashEnabled: listed.cashEnabled,
+        assetEnabled: listed.assetEnabled,
+        combination: listed.combination,
+        assetTypes: listed.assetTypes,
+        depositAmount: cashDeposit ?? listed.depositAmount,
+      }
+    : null;
+  const collateral = normalizeCollateral(collateralInput);
   const assetDeposit =
-    !cashDeposit && collateral?.mode === COLLATERAL_MODE.ASSET && collateral.assetTypes.length > 0
+    collateral?.asset && collateral.assetTypes.length > 0
       ? collateral.assetTypes.map((asset) => dl('collateralAssetType', asset)).join(', ')
       : null;
+  /** Cọc tiền + tài sản cùng bật (ADR 0112): một mục, câu nói rõ "hoặc" / "và". */
+  const combinedDeposit =
+    cashDeposit && assetDeposit ? describeCollateral(collateralInput) : null;
 
   const items: Array<{ key: string; title: string; body: string }> = [
     ...(serviceRequiresDriverLicence(trip.serviceType)
@@ -277,7 +292,7 @@ function PickupChecklist({
     {
       key: 'identity',
       title: t('identity.title'),
-      body: documents ? t('identity.bodyDocuments', { documents }) : t('identity.body'),
+      body: t('identity.bodyRules', { documents: rules.documents, verify: rules.verify }),
     },
     {
       key: 'inspect',
@@ -287,7 +302,9 @@ function PickupChecklist({
       }),
     },
     { key: 'sign', title: t('sign.title'), body: t('sign.body') },
-    ...(cashDeposit
+    ...(combinedDeposit
+      ? [{ key: 'collateral', title: t('collateral.title'), body: combinedDeposit }]
+      : cashDeposit
       ? [
           {
             key: 'deposit',

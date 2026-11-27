@@ -11,19 +11,15 @@ import {
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
   AUTO_ACCEPT_MIN_LEAD_MINUTES,
-  CUSTOMER_DOCUMENT_TYPE,
   DRIVER_DEPOSIT_MODE,
   DRIVER_DEPOSIT_MODE_SUPPORTED,
   DRIVER_SURCHARGE_KIND_SPEC,
   DRIVER_SURCHARGE_KIND_VALUES,
-  IDENTITY_VERIFY_METHOD,
+  PLATFORM_RENTAL_CONDITIONS,
   SERVICE_TYPE,
-  effectiveRequiredDocuments,
   hasVehicleServiceSettings,
   isDriverDepositModeSupported,
-  requiredIdentityDocuments,
   type AutoAcceptBlocker,
-  type CustomerDocumentType,
   type DriverDepositMode,
   type DriverSurchargeRuleSnapshot,
   type RentalTermsSnapshot,
@@ -32,6 +28,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { DriversService } from '../drivers/drivers.service';
 import { AuditService } from '../audit/audit.service';
+import { TenantRentalTermsService } from './tenant-rental-terms.service';
 import { currentSupportScope } from '../../common/support/support-request.store';
 import { assertSupportServiceSettingPinned } from './service-setting-support-policy';
 import { OccupancyService } from '../calendar/occupancy.service';
@@ -58,11 +55,6 @@ export interface EffectiveServiceSetting {
   autoAcceptEnabled: boolean;
   minRentalMinutes: number | null;
   preferredRouteTypes: string[];
-  requiredDocuments: string[];
-  effectiveRequiredDocuments: CustomerDocumentType[];
-  identityVerifyMethod: string;
-  termsText: string | null;
-  requireTermsAcceptance: boolean;
   depositMode: DriverDepositMode;
   updatedAt: Date | null;
 }
@@ -75,8 +67,11 @@ export interface AutoAcceptInput {
   quoteIsEstimate: boolean;
   /** Tuyến hoa hồng sẽ sinh khoản giữ chỗ thay vì tạo đơn ngay. */
   holdRequired: boolean;
-  /** Khách đã tích đồng ý điều khoản (chỉ có nghĩa khi chủ xe bắt buộc). */
-  termsAccepted: boolean;
+  /**
+   * `false` = điều khoản GIAN HÀNG chụp trên yêu cầu đòi xác nhận mà khách chưa tích (ADR 0112
+   * điều 3). Vắng (preview) = coi như sẽ đồng ý; lúc gửi mới kiểm thật.
+   */
+  termsAccepted?: boolean;
   /** Mốc đo khoảng tới giờ nhận (`PICKUP_TOO_SOON`) - mặc định bây giờ; test truyền để cố định. */
   now?: Date;
 }
@@ -86,10 +81,8 @@ const SERVICE_SELECT = {
   autoAcceptEnabled: true,
   minRentalMinutes: true,
   preferredRouteTypes: true,
-  requiredDocuments: true,
-  identityVerifyMethod: true,
-  termsText: true,
-  requireTermsAcceptance: true,
+  // Bốn cột điều kiện thuê theo xe thôi được đọc (ADR 0112 điều 3) - luật chuẩn ở
+  // `PLATFORM_RENTAL_CONDITIONS`.
   depositMode: true,
   updatedAt: true,
 } satisfies Prisma.VehicleServiceSettingSelect;
@@ -119,6 +112,8 @@ export class VehicleSettingsService {
     private readonly listings: ListingsService,
     /** Writer duy nhất của liên kết + lượt gán tài xế (ADR 0063). */
     private readonly drivers: DriversService,
+    /** Writer duy nhất của điều khoản thuê theo gian hàng (ADR 0112 điều 3). */
+    private readonly rentalTerms: TenantRentalTermsService,
   ) {}
 
   // ── Thời gian chết ───────────────────────────────────────────────────────
@@ -336,14 +331,6 @@ export class VehicleSettingsService {
       ...(dto.preferredRouteTypes !== undefined
         ? { preferredRouteTypes: dto.preferredRouteTypes }
         : {}),
-      ...(dto.requiredDocuments !== undefined ? { requiredDocuments: dto.requiredDocuments } : {}),
-      ...(dto.identityVerifyMethod !== undefined
-        ? { identityVerifyMethod: dto.identityVerifyMethod }
-        : {}),
-      ...(dto.termsText !== undefined ? { termsText: dto.termsText?.trim() || null } : {}),
-      ...(dto.requireTermsAcceptance !== undefined
-        ? { requireTermsAcceptance: dto.requireTermsAcceptance }
-        : {}),
       ...(dto.depositMode !== undefined
         ? { depositMode: dto.depositMode as DriverDepositMode }
         : {}),
@@ -359,12 +346,6 @@ export class VehicleSettingsService {
       throw invalid(
         'Chế độ đặt cọc này chưa được hệ thống thu - chỉ "không yêu cầu đặt cọc" đang dùng được',
       );
-    }
-    if (next.requiredDocuments.includes(CUSTOMER_DOCUMENT_TYPE.OTHER)) {
-      throw invalid('"Giấy tờ khác" không định danh được khách - không dùng làm yêu cầu bắt buộc');
-    }
-    if (next.requireTermsAcceptance && !next.termsText) {
-      throw invalid('Bắt buộc khách đồng ý điều khoản thì phải có nội dung điều khoản');
     }
     /*
      * Bật tự động nhận CÓ TÀI XẾ chỉ khi hệ thống gán được tài xế an toàn: gói có tính năng Tài
@@ -389,10 +370,6 @@ export class VehicleSettingsService {
         autoAcceptEnabled: next.autoAcceptEnabled,
         minRentalMinutes: next.minRentalMinutes,
         preferredRouteTypes: [...new Set(next.preferredRouteTypes)],
-        requiredDocuments: [...new Set(next.requiredDocuments)],
-        identityVerifyMethod: next.identityVerifyMethod,
-        termsText: next.termsText,
-        requireTermsAcceptance: next.requireTermsAcceptance,
         depositMode: next.depositMode,
         updatedBy: userId,
       };
@@ -408,8 +385,6 @@ export class VehicleSettingsService {
           ? {
               minRentalMinutes: data.minRentalMinutes,
               preferredRouteTypes: data.preferredRouteTypes,
-              requiredDocuments: data.requiredDocuments,
-              identityVerifyMethod: data.identityVerifyMethod,
               updatedBy: data.updatedBy,
             }
           : data,
@@ -463,7 +438,6 @@ export class VehicleSettingsService {
     vehicleId: string,
     serviceType: ServiceType,
   ): Promise<EffectiveServiceSetting> {
-    const legal = requiredIdentityDocuments(serviceType);
     const row = hasVehicleServiceSettings(serviceType)
       ? await db.vehicleServiceSetting.findUnique({
           where: { vehicleId_serviceType: { vehicleId, serviceType } },
@@ -476,11 +450,6 @@ export class VehicleSettingsService {
         autoAcceptEnabled: false,
         minRentalMinutes: null,
         preferredRouteTypes: [],
-        requiredDocuments: [],
-        effectiveRequiredDocuments: legal,
-        identityVerifyMethod: IDENTITY_VERIFY_METHOD.IN_PERSON,
-        termsText: null,
-        requireTermsAcceptance: false,
         depositMode: DRIVER_DEPOSIT_MODE.NONE,
         updatedAt: null,
       };
@@ -490,15 +459,6 @@ export class VehicleSettingsService {
       autoAcceptEnabled: row.autoAcceptEnabled,
       minRentalMinutes: row.minRentalMinutes,
       preferredRouteTypes: row.preferredRouteTypes,
-      requiredDocuments: row.requiredDocuments,
-      effectiveRequiredDocuments: effectiveRequiredDocuments(
-        serviceType,
-        row.requiredDocuments,
-        legal,
-      ),
-      identityVerifyMethod: row.identityVerifyMethod,
-      termsText: row.termsText,
-      requireTermsAcceptance: row.requireTermsAcceptance,
       depositMode: row.depositMode as DriverDepositMode,
       updatedAt: row.updatedAt,
     };
@@ -512,12 +472,7 @@ export class VehicleSettingsService {
     setting: EffectiveServiceSetting,
     input: { pickupAt: Date | null; returnAt: Date | null; acceptedTerms: boolean },
   ): void {
-    if (setting.requireTermsAcceptance && !input.acceptedTerms) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.RENTAL_TERMS_ACCEPTANCE_REQUIRED,
-        message: 'Chủ xe yêu cầu khách đồng ý điều khoản thuê trước khi gửi yêu cầu',
-      });
-    }
+    // Điều khoản là của GIAN HÀNG (ADR 0112 điều 3) - cổng xác nhận ở `assertRentalTermsAccepted`.
     if (
       setting.minRentalMinutes != null &&
       input.pickupAt &&
@@ -565,9 +520,7 @@ export class VehicleSettingsService {
     ) {
       return AUTO_ACCEPT_BLOCKER.BELOW_MIN_DURATION;
     }
-    if (setting.requireTermsAcceptance && !input.termsAccepted) {
-      return AUTO_ACCEPT_BLOCKER.TERMS_NOT_ACCEPTED;
-    }
+    if (input.termsAccepted === false) return AUTO_ACCEPT_BLOCKER.TERMS_NOT_ACCEPTED;
     if (input.quoteIsEstimate) return AUTO_ACCEPT_BLOCKER.QUOTE_ESTIMATE;
     /*
      * Có tài xế + có thu tiền giữ chỗ: đơn chỉ sinh khi tiền về (webhook), tức hai giờ sau mới
@@ -699,18 +652,26 @@ export class VehicleSettingsService {
     termsAcceptedAt: Date | null,
   ): Promise<RentalTermsSnapshot> {
     const service = serviceType as ServiceType;
-    const [setting, buffer] = await Promise.all([
+    const vehicle = await db.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { tenantId: true },
+    });
+    const [setting, buffer, terms] = await Promise.all([
       this.serviceSettingFor(db, vehicleId, service),
       this.turnaroundBufferFor(db, vehicleId),
+      // Điều khoản của GIAN HÀNG theo nhóm dịch vụ (dài hạn đọc nhóm tự lái) - ADR 0112 điều 3.
+      this.rentalTerms.termsFor(db, vehicle.tenantId, service),
     ]);
     // Phụ phí tài xế đã gỡ (ADR 0075) — snapshot mới luôn rỗng; snapshot cũ giữ nguyên số của nó.
     const surchargeRules: DriverSurchargeRuleSnapshot[] = [];
     return {
       serviceType: service,
-      requiredDocuments: setting.effectiveRequiredDocuments,
-      identityVerifyMethod: setting.identityVerifyMethod,
-      termsText: setting.termsText,
-      requireTermsAcceptance: setting.requireTermsAcceptance,
+      // Giấy tờ theo luật chuẩn nền tảng, điều khoản của gian hàng (ADR 0112 điều 3); snapshot cũ
+      // giữ nguyên bản đã chụp.
+      requiredDocuments: [...PLATFORM_RENTAL_CONDITIONS.identityDocuments],
+      identityVerifyMethod: PLATFORM_RENTAL_CONDITIONS.verifyMethods[0],
+      termsText: terms.termsText,
+      requireTermsAcceptance: terms.requireTermsAcceptance,
       termsAcceptedAt: termsAcceptedAt?.toISOString() ?? null,
       depositMode: serviceType === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
       surchargeRules,
@@ -719,6 +680,19 @@ export class VehicleSettingsService {
       returnWindows: [],
       turnaroundBufferMinutes: buffer,
     };
+  }
+
+  /**
+   * Cổng lúc khách gửi yêu cầu (ADR 0112 điều 3): điều khoản GIAN HÀNG vừa chụp đòi xác nhận mà
+   * payload không tích ⇒ 400 `RENTAL_TERMS_ACCEPTANCE_REQUIRED`.
+   */
+  assertRentalTermsAccepted(terms: RentalTermsSnapshot, acceptedTerms: boolean): void {
+    if (terms.requireTermsAcceptance && !acceptedTerms) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.RENTAL_TERMS_ACCEPTANCE_REQUIRED,
+        message: 'Gian hàng yêu cầu khách đồng ý điều khoản thuê trước khi gửi yêu cầu',
+      });
+    }
   }
 
   // ── Tiện ích ────────────────────────────────────────────────────────────
@@ -745,11 +719,6 @@ function toServiceDto(
     autoAcceptEnabled: s.autoAcceptEnabled,
     minRentalMinutes: s.minRentalMinutes,
     preferredRouteTypes: s.preferredRouteTypes,
-    requiredDocuments: s.requiredDocuments,
-    effectiveRequiredDocuments: s.effectiveRequiredDocuments,
-    identityVerifyMethod: s.identityVerifyMethod,
-    termsText: s.termsText,
-    requireTermsAcceptance: s.requireTermsAcceptance,
     depositMode: s.depositMode,
     supportedDepositModes: [...DRIVER_DEPOSIT_MODE_SUPPORTED],
     withDriverAutoAccept: capability,
@@ -762,10 +731,6 @@ function auditShape(s: EffectiveServiceSetting): Record<string, unknown> {
     autoAcceptEnabled: s.autoAcceptEnabled,
     minRentalMinutes: s.minRentalMinutes,
     preferredRouteTypes: s.preferredRouteTypes,
-    requiredDocuments: s.requiredDocuments,
-    identityVerifyMethod: s.identityVerifyMethod,
-    termsText: s.termsText,
-    requireTermsAcceptance: s.requireTermsAcceptance,
     depositMode: s.depositMode,
   };
 }

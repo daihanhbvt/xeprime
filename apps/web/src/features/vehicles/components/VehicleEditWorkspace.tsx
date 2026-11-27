@@ -239,7 +239,6 @@ function Workspace({ vehicle, errorMessage, onSave }: VehicleEditWorkspaceProps)
           vehicle={vehicle}
           canUpdate={canUpdate}
           canEditOperations={canEditOperations}
-          scrollTo={initial.termsOf}
         />
       );
       break;

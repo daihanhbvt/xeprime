@@ -100,6 +100,7 @@
     "reorderToggle": "Allow drag and drop to reorder photos.",
     "reorderLabel": "Enable drag-and-drop reordering",
     "coverBadge": "Cover",
+    "formats": "JPG, PNG, JPEG, WEBP",
     "appReorderToggle": "Allow moving photos between slots.",
     "appReorderLabel": "Enable moving photos",
     "appReorderHint": "Tap a photo to pick it, then tap the slot to move it to - the two photos swap places.",

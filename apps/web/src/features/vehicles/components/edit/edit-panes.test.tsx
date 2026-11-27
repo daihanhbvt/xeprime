@@ -229,6 +229,8 @@ beforeEach(() => {
   pricing.isError = false;
   (pricing.data as Record<string, unknown>).source = 'shop';
   (pricing.data as Record<string, unknown>).policy = null;
+  (pricing.data as Record<string, unknown>).ownPolicy = null;
+  (pricing.data as Record<string, unknown>).inheritedSections = undefined;
   saveOperation.mutateAsync.mockClear();
   insuranceStatus.data = { applies: false, eligible: false, gaps: [] };
   onTab.mockReset();
@@ -416,18 +418,21 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
     expect(screen.queryByText(/không tự động nhận/i)).toBeNull();
   });
 
-  it('tab tự lái chỉ còn giá + khuyến mãi - cọc/km/công tắc chính sách ở mục Chính sách thuê', () => {
+  it('tab tự lái: giá + khuyến mãi, thẻ hạn mức km & quá giờ có công tắc kế thừa RIÊNG, dải cọc hiện tại', () => {
     renderPane(
       <ServicesPane
         vehicle={vehicle()}
         tab={VEHICLE_EDIT_TAB.SELF_DRIVE}
         canUpdate
         onTab={onTab}
+        onOpenPolicy={vi.fn()}
       />,
     );
-    expect(screen.queryByRole('switch', { name: 'Áp dụng chính sách của gian hàng' })).toBeNull();
-    expect(screen.queryByText(/Thủ tục & Điều khoản cho thuê/)).toBeNull();
     expect(screen.getByRole('region', { name: 'Giá thuê & Khuyến mãi' })).toBeTruthy();
+    const limits = screen.getByRole('region', { name: 'Giới hạn quãng đường & Phụ phí quá giờ' });
+    expect(within(limits).getAllByRole('switch', { name: 'Áp dụng chính sách của gian hàng' })).toHaveLength(1);
+    expect(within(limits).getByText(/Hình thức cọc xe hiện tại:/)).toBeTruthy();
+    expect(within(limits).getByRole('button', { name: /Thiết lập tại Bảo hiểm & Giao nhận/ })).toBeTruthy();
   });
 
   it('tải giá lỗi: chỉ phần giá báo lỗi - công tắc dịch vụ và tự nhận vẫn dùng được', () => {
@@ -478,11 +483,14 @@ describe('Dịch vụ xe - ba tab dịch vụ', () => {
   });
 });
 
-/** Chính sách đang có của xe - có một bậc theo km còn sót để soi form không đoán phí cho nó. */
+/** Chính sách riêng của xe - có một bậc theo km còn sót để soi form không đoán phí cho nó. */
 const VEHICLE_POLICY = {
-  collateralMode: 'cash',
+  collateralMode: 'required',
+  collateralCashEnabled: true,
+  collateralAssetEnabled: false,
+  collateralCombination: 'any_one',
   collateralAssetTypes: [],
-  depositAmount: '0',
+  depositAmount: '3000000',
   deliveryEnabled: true,
   deliveryMaxRadiusKm: 12,
   deliveryTiers: [
@@ -497,38 +505,88 @@ const VEHICLE_POLICY = {
   discountEnabled: false,
   discountTiers: [],
   legacyDiscountTiers: [],
+  insuranceMode: 'optional',
 };
 
-function renderPolicy(over: Partial<Parameters<typeof PolicyPane>[0]> = {}) {
-  return renderPane(
-    <PolicyPane vehicle={vehicle()} canUpdate canEditOperations scrollTo={null} {...over} />,
-  );
+/** Xe có dòng chính sách riêng, riêng ở MỌI mục (ADR 0112 - `inheritedSections = []`). */
+function ownPolicy(policy: Record<string, unknown> = VEHICLE_POLICY) {
+  const data = pricing.data as Record<string, unknown>;
+  data.source = 'vehicle';
+  data.policy = policy;
+  data.ownPolicy = policy;
+  data.inheritedSections = [];
 }
 
-describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
-  it('công tắc chính sách gian hàng đứng TRƯỚC phần giao xe; đang theo gian hàng thì các ô khoá', () => {
+function renderPolicy(over: Partial<Parameters<typeof PolicyPane>[0]> = {}) {
+  return renderPane(<PolicyPane vehicle={vehicle()} canUpdate canEditOperations {...over} />);
+}
+
+const INHERIT = 'Áp dụng chính sách của gian hàng';
+
+describe('Bảo hiểm & Giao nhận xe - kế thừa gian hàng THEO MỤC (ADR 0112)', () => {
+  it('mỗi thẻ một công tắc riêng; đang theo gian hàng thì ô của thẻ đó khoá', () => {
     renderPolicy();
-    const toggle = screen.getByRole('switch', { name: 'Áp dụng chính sách của gian hàng' });
-    expect(toggle.getAttribute('aria-checked')).toBe('true');
-    const delivery = screen.getByRole('region', { name: 'Giao xe tận nơi' });
-    // Thứ tự đọc: công tắc → giao xe.
-    expect(
-      toggle.compareDocumentPosition(delivery) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    // Công tắc đứng ngay trên đã nói lý do - không lặp dòng nhắc "Đang theo…" ở từng khối.
-    expect(screen.queryByText(/Đang theo/)).toBeNull();
-    const deliverySwitch = within(delivery).getByRole('switch') as HTMLButtonElement;
+    const collateral = screen.getByRole('region', { name: 'Hình thức cọc xe (Thế chấp)' });
+    const delivery = screen.getByRole('region', { name: 'Giao nhận xe' });
+    const collateralInherit = within(collateral).getByRole('switch', { name: INHERIT });
+    expect(collateralInherit.getAttribute('aria-checked')).toBe('true');
+    expect(within(delivery).getByRole('switch', { name: INHERIT }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    const deliverySwitch = within(delivery).getByRole('switch', {
+      name: 'Dịch vụ giao nhận xe tận nơi',
+    }) as HTMLButtonElement;
     expect(deliverySwitch.disabled).toBe(true);
-    expect(screen.getByRole('region', { name: 'Yêu cầu bảo đảm (thế chấp)' })).toBeTruthy();
+    // Điều khoản/giấy tờ nay là của gian hàng - màn sửa xe không còn khối đó.
+    expect(screen.queryByRole('region', { name: 'Thuê xe tự lái & Thuê xe dài hạn' })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: /điều khoản/i })).toBeNull();
+  });
+
+  it('tắt kế thừa MỘT mục: chỉ mục đó mở ra; lưu gửi các mục còn kế thừa', async () => {
+    renderPolicy();
+    const collateral = screen.getByRole('region', { name: 'Hình thức cọc xe (Thế chấp)' });
+    fireEvent.click(within(collateral).getByRole('switch', { name: INHERIT }));
+    fireEvent.click(within(collateral).getByRole('button', { name: '5 triệu' }));
+    const delivery = screen.getByRole('region', { name: 'Giao nhận xe' });
+    expect(
+      (within(delivery).getByRole('switch', { name: 'Dịch vụ giao nhận xe tận nơi' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu ở cột phải' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(savePricing.mutateAsync).toHaveBeenCalledTimes(1));
+    const body = savePricing.mutateAsync.mock.calls[0]![0]!;
+    expect(body.source).toBe('vehicle');
+    expect([...(body.inheritedSections as string[])].sort()).toEqual(
+      ['delivery', 'insurance', 'long_term_discount', 'usage_limits'].sort(),
+    );
+    expect(body.policy).toMatchObject({
+      collateralMode: 'required',
+      collateralCashEnabled: true,
+      depositAmount: '5000000',
+    });
+  });
+
+  it('bật lại kế thừa cho mục đang RIÊNG thì hỏi trước; Hoàn tác trả công tắc về bản đã lưu', async () => {
+    ownPolicy();
+    renderPolicy();
+    const delivery = screen.getByRole('region', { name: 'Giao nhận xe' });
+    const inherit = within(delivery).getByRole('switch', { name: INHERIT });
+    expect(inherit.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(inherit);
+    expect((await screen.findAllByText('Áp dụng lại chính sách của gian hàng?')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Đặt lại' }));
+    await waitFor(() => expect(inherit.getAttribute('aria-checked')).toBe('true'));
+    fireEvent.click(screen.getByRole('button', { name: 'Hoàn tác ở cột phải' }));
+    await waitFor(() => expect(inherit.getAttribute('aria-checked')).toBe('false'));
   });
 
   it('giao xe chỉ còn phí trọn gói - không có lựa chọn "Theo km"; bậc theo km còn sót hiện ô phí trống', () => {
-    (pricing.data as Record<string, unknown>).source = 'vehicle';
-    (pricing.data as Record<string, unknown>).policy = VEHICLE_POLICY;
+    ownPolicy();
     renderPolicy();
-    const delivery = screen.getByRole('region', { name: 'Giao xe tận nơi' });
+    const delivery = screen.getByRole('region', { name: 'Giao nhận xe' });
     expect(within(delivery).queryByText(/Theo km/i)).toBeNull();
-    expect(within(delivery).queryByRole('radio')).toBeNull();
     const second = within(delivery).getByLabelText(/Phí của bậc 2/i) as HTMLInputElement;
     expect(second.value).toBe('');
   });
@@ -554,29 +612,8 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
     expect(saveOperation.mutateAsync.mock.calls[0]![0]).toMatchObject({ useShopDefault: true });
   });
 
-  it('điều khoản - hai khối: tự lái & dài hạn · có tài xế; mỗi khối ghi đúng thiết lập của nó', async () => {
-    renderPolicy();
-    expect(screen.getByRole('region', { name: 'Thuê xe tự lái & Thuê xe dài hạn' })).toBeTruthy();
-    const driver = screen.getByRole('region', { name: 'Xe có tài xế' });
-
-    fireEvent.change(within(driver).getByRole('textbox', { name: /điều khoản/i }), {
-      target: { value: 'Điều khoản tài xế' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu ở cột phải' }));
-    await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(patch.mutateAsync.mock.calls[0]![0]!.termsText).toBe('Điều khoản tài xế');
-    // Điều khoản không đụng giá/chính sách: đó là một bản ghi khác.
-    expect(savePricing.mutateAsync).not.toHaveBeenCalled();
-  });
-
   it('xe có tài xế còn thiếu giá lộ trình: sửa chính sách vẫn lưu được (giá có tài xế không bắt buộc)', async () => {
-    // Fixture giá: có tài xế chỉ có giá nội thành - đúng dạng xe bật trước luật 19/11/2026.
-    (pricing.data as Record<string, unknown>).source = 'vehicle';
-    (pricing.data as Record<string, unknown>).policy = {
-      ...VEHICLE_POLICY,
-      depositAmount: '3000000',
-      deliveryTiers: [{ toKm: 20, fee: '0' }],
-    };
+    ownPolicy({ ...VEHICLE_POLICY, deliveryTiers: [{ toKm: 20, fee: '0' }] });
     renderPolicy();
     const radius = screen.getByRole('spinbutton', { name: /Bán kính hỗ trợ tối đa tự giao/i });
     fireEvent.change(radius, { target: { value: '20' } });
@@ -587,18 +624,14 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
     await waitFor(() => expect(savePricing.mutateAsync).toHaveBeenCalledTimes(1));
     const body = savePricing.mutateAsync.mock.calls[0]![0]!;
     expect(body.policy).toMatchObject({ deliveryMaxRadiusKm: 20 });
+    expect(body.inheritedSections).toEqual([]);
     expect(body).toMatchObject({ withDriverDailyPrice: '1200000', withDriverInterCityPrice: null });
     expect(screen.queryByText(/còn ô (giá )?chưa hợp lệ/)).toBeNull();
   });
 
   it('ô giá ở mục khác chặn lượt lưu: thông báo nêu ĐÚNG tên ô đó, không đưa ví dụ đoán mò', async () => {
+    ownPolicy({ ...VEHICLE_POLICY, deliveryTiers: [{ toKm: 20, fee: '0' }] });
     const data = pricing.data as Record<string, unknown>;
-    data.source = 'vehicle';
-    data.policy = {
-      ...VEHICLE_POLICY,
-      depositAmount: '3000000',
-      deliveryTiers: [{ toKm: 20, fee: '0' }],
-    };
     data.weekdayPrice = null;
     try {
       renderPolicy();
@@ -609,7 +642,7 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
 
       expect(
         await screen.findByText(
-          'Mục Dịch vụ & giá còn ô chưa hợp lệ: Giá ngày thường - mở mục đó để sửa rồi lưu lại.',
+          'Mục Dịch vụ xe còn ô chưa hợp lệ: Giá ngày thường - mở mục đó để sửa rồi lưu lại.',
         ),
       ).toBeTruthy();
       expect(savePricing.mutateAsync).not.toHaveBeenCalled();
@@ -625,18 +658,11 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
     expect(screen.queryByText(/tự động (tra cứu|xác thực|định danh)/i)).toBeNull();
   });
 
-  it('xe máy: không có khối có tài xế (dịch vụ đó không bật được cho xe máy)', () => {
-    renderPolicy({ vehicle: vehicle({ vehicleType: VEHICLE_TYPE.MOTORBIKE }) });
-    expect(screen.queryByRole('region', { name: 'Xe có tài xế' })).toBeNull();
-  });
-
-  it('Hoàn tác ở cột phải trả điều khoản về bản đã lưu', async () => {
+  it('miễn thế chấp: khối huy hiệu, không có ô eKYC hay con số "+40%"', () => {
+    ownPolicy({ ...VEHICLE_POLICY, collateralMode: 'none', collateralCashEnabled: false, depositAmount: '0' });
     renderPolicy();
-    const self = screen.getByRole('region', { name: 'Thuê xe tự lái & Thuê xe dài hạn' });
-    const textarea = within(self).getByRole('textbox', { name: /điều khoản/i });
-    fireEvent.change(textarea, { target: { value: 'Sửa dở' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Hoàn tác ở cột phải' }));
-    await waitFor(() => expect((textarea as HTMLTextAreaElement).value).toBe('Điều khoản gốc'));
+    expect(screen.getByText(/huy hiệu "Miễn thế chấp"/)).toBeTruthy();
+    expect(screen.queryByText(/eKYC|\+40%/)).toBeNull();
   });
 });
 
@@ -644,13 +670,10 @@ describe('Chính sách thuê - mọi thứ áp cho cả xe', () => {
  * Bảo hiểm Bắt buộc mà xe thiếu dữ liệu ⇒ xe ngừng nhận đặt tự lái (ADR 0091 điều 1). Chủ xe phải
  * thấy điều đó NGAY khi chọn, kèm đúng thứ còn thiếu và chỗ bổ sung — không phải đợi khách báo.
  */
-describe('Chính sách thuê - bảo hiểm Bắt buộc báo trước xe thiếu gì', () => {
+describe('Bảo hiểm & Giao nhận xe - bảo hiểm Bắt buộc báo trước xe thiếu gì', () => {
   const BLOCKED = /chưa đủ dữ liệu bảo hiểm nên không nhận đặt tự lái/;
 
-  beforeEach(() => {
-    (pricing.data as Record<string, unknown>).source = 'vehicle';
-    (pricing.data as Record<string, unknown>).policy = VEHICLE_POLICY;
-  });
+  beforeEach(() => ownPolicy());
 
   it('chọn Bắt buộc khi xe thiếu dữ liệu: liệt kê từng mục, mỗi mục dẫn tới đúng tab', () => {
     insuranceStatus.data = {
@@ -659,9 +682,14 @@ describe('Chính sách thuê - bảo hiểm Bắt buộc báo trước xe thiế
       gaps: ['insured_value_missing', 'photos_missing', 'registration_missing'],
     };
     renderPolicy();
+    expect(screen.getByRole('region', { name: 'Bảo hiểm vật chất xe' })).toBeTruthy();
     expect(screen.queryByText(BLOCKED)).toBeNull();
 
-    fireEvent.click(screen.getByRole('radio', { name: /Bắt buộc/ }));
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Bảo hiểm vật chất xe' })).getByRole('radio', {
+        name: /Bắt buộc/,
+      }),
+    );
 
     expect(screen.getByText(BLOCKED)).toBeTruthy();
     const href = (name: string) => screen.getByRole('link', { name }).getAttribute('href');
@@ -675,16 +703,20 @@ describe('Chính sách thuê - bảo hiểm Bắt buộc báo trước xe thiế
   it('xe đủ điều kiện: chọn Bắt buộc không có cảnh báo', () => {
     insuranceStatus.data = { applies: true, eligible: true, gaps: [] };
     renderPolicy();
-    fireEvent.click(screen.getByRole('radio', { name: /Bắt buộc/ }));
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Bảo hiểm vật chất xe' })).getByRole('radio', {
+        name: /Bắt buộc/,
+      }),
+    );
     expect(screen.queryByText(BLOCKED)).toBeNull();
   });
 });
 
 /**
  * Chủ xe tuyến hoa hồng cấu hình chính sách trên TỪNG xe (ADR 0085 điều 3): không công tắc chính sách
- * gian hàng, nhưng ĐỦ khối như gian hàng — kể cả phí quá giờ, thứ quyết toán đọc từ chính sách của xe.
+ * gian hàng, nhưng ĐỦ khối như gian hàng — kể cả phí quá giờ (nay ở mục Dịch vụ xe, ADR 0112).
  */
-describe('Chính sách thuê - chủ xe tuyến hoa hồng', () => {
+describe('Chính sách xe - chủ xe tuyến hoa hồng', () => {
   const ownerWorkspace = {
     workspace: WORKSPACE.ACCOUNT,
     paths: workspacePaths(WORKSPACE.ACCOUNT),
@@ -692,15 +724,22 @@ describe('Chính sách thuê - chủ xe tuyến hoa hồng', () => {
     isManage: false,
   };
 
-  it('không công tắc chính sách gian hàng; có khối phí quá giờ như gian hàng', () => {
+  it('không công tắc chính sách gian hàng; có khối cọc, giao nhận và phí quá giờ', () => {
     renderPane(
       <WorkspaceScope value={ownerWorkspace}>
-        <PolicyPane vehicle={vehicle()} canUpdate canEditOperations scrollTo={null} />
+        <PolicyPane vehicle={vehicle()} canUpdate canEditOperations />
+        <ServicesPane
+          vehicle={vehicle()}
+          tab={VEHICLE_EDIT_TAB.SELF_DRIVE}
+          canUpdate
+          onTab={onTab}
+        />
       </WorkspaceScope>,
     );
-    expect(screen.queryByRole('switch', { name: 'Áp dụng chính sách của gian hàng' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'Yêu cầu bảo đảm (thế chấp)' })).toBeTruthy();
-    expect(screen.getAllByRole('region', { name: /quá giờ/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('switch', { name: INHERIT })).toBeNull();
+    expect(screen.getAllByRole('region', { name: 'Hình thức cọc xe (Thế chấp)' }).length).toBe(1);
+    expect(screen.getByRole('region', { name: 'Giao nhận xe' })).toBeTruthy();
+    expect(screen.getAllByText(/quá giờ/i).length).toBeGreaterThan(0);
   });
 });
 

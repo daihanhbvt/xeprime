@@ -4,10 +4,12 @@ import type {
   PublicQuote,
   SaveRentalPolicyInput,
   SaveShopOperationDefaultsInput,
+  SaveTenantRentalTermsInput,
   SaveVehiclePricingInput,
   ShopInsuranceImpact,
   ShopOperationDefaults,
   ShopRentalPolicy,
+  TenantRentalTerms,
   VehiclePricing,
 } from './types';
 
@@ -37,6 +39,13 @@ export const saveShopOperationDefaults = (
   vehicleType: string,
 ): Promise<ShopOperationDefaults> =>
   apiPut<ShopOperationDefaults>(`/shop/operation-defaults?vehicleType=${vehicleType}`, body);
+
+/** Điều khoản thuê của gian hàng - hai nhóm Tự lái & Dài hạn · Có tài xế (ADR 0112 điều 3). */
+export const fetchShopRentalTerms = (): Promise<TenantRentalTerms> =>
+  apiGet<TenantRentalTerms>('/shop/rental-policies/terms');
+
+export const saveShopRentalTerms = (body: SaveTenantRentalTermsInput): Promise<TenantRentalTerms> =>
+  apiPut<TenantRentalTerms>('/shop/rental-policies/terms', body);
 
 export const fetchVehiclePricing = (vehicleId: string): Promise<VehiclePricing> =>
   apiGet<VehiclePricing>(`/vehicles/${vehicleId}/pricing`);

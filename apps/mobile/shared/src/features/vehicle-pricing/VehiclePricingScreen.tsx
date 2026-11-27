@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SubFormSave } from '@/hooks/use-report-dirty';
 import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
-import type { LayoutChangeEvent, ScrollView } from 'react-native';
+import type { ScrollView } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
-import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { useForm, useWatch, type Control, type Path, type UseFormSetValue } from 'react-hook-form';
 import { CatalogRentHintFor } from '@/features/vehicles/components/CatalogSuggestions';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  COLLATERAL_MODE,
   LONG_TERM_PACKAGE_MONTHS,
   PERMISSION,
   POLICY_SOURCE,
@@ -18,8 +17,10 @@ import {
   SERVICE_TYPE_VALUES,
   type ServiceType,
   STATUS_COLOR,
+  POLICY_SECTION,
+  POLICY_SECTION_VALUES,
+  type PolicySection,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { VehicleEditHeader } from '@/features/vehicles/components/VehicleEditHeader';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
@@ -36,9 +37,7 @@ import { MoneyField } from '@/components/ui/MoneyField';
 import { WithDriverWageNote } from '@/features/drivers/components/WithDriverWageNote';
 import { AutoAcceptBody } from '@/features/vehicle-manage/VehicleAutoAcceptScreen';
 import { HandoverBody } from '@/features/vehicle-manage/VehicleHandoverTimeScreen';
-import { TermsBody } from '@/features/vehicle-manage/VehicleTermsScreen';
 import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
-import { LongTermPackagePreview } from '@/features/rental-policies/components/LongTermPackagePreview';
 import type { PolicyFormValues } from '@/features/rental-policies/schema';
 import { NumberField } from '@/components/ui/NumberField';
 import { InlineAction } from '@/components/ui/InlineAction';
@@ -52,7 +51,6 @@ import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { VehicleServiceToggles } from '@/features/vehicles/components/VehicleServiceToggles';
 import type { VehicleDetail } from '@/features/vehicles/api';
 import { discountedPriceVnd } from '@/features/vehicles/pricing';
-import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -66,12 +64,24 @@ import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import {
+  CollateralPolicySection,
+  DeliveryPolicySection,
   POLICY_BLOCK,
   PolicySections,
   ToggleRow,
   type PolicyBlock,
 } from '@/features/rental-policies/components/PolicySections';
-import { formToSaveInput, policyToForm } from '@/features/rental-policies/form';
+import type { PolicyInheritControl } from '@/features/rental-policies/components/VehiclePolicySectionCard';
+import {
+  POLICY_SECTION_FORM_FIELDS,
+  formToSaveInput,
+  policyToForm,
+} from '@/features/rental-policies/form';
+import { VehiclePolicySectionCard } from '@/features/rental-policies/components/VehiclePolicySectionCard';
+import {
+  policyCollateral,
+  useDescribeCollateral,
+} from '@/features/rental-policies/collateral-text';
 import { InsuranceModeBlock } from '@/features/rental-policies/components/InsuranceModeBlock';
 import { useVehicleInsuranceStatus } from '@/features/vehicle-documents/hooks/use-documents';
 import {
@@ -115,17 +125,14 @@ export const OWNER_POLICY_BLOCKS: readonly PolicyBlock[] = [
 /** Các ô của mục "Chính sách thuê" - web `PolicyPane.POLICY_FIELDS`. */
 const POLICY_FIELDS: ReadonlySet<string> = new Set([
   'collateralMode',
+  'collateralCashEnabled',
+  'collateralAssetEnabled',
+  'collateralCombination',
   'depositAmount',
   'collateralAssetTypes',
   'deliveryEnabled',
   'deliveryMaxRadiusKm',
   'deliveryTiers',
-  'mileageLimitEnabled',
-  'includedDistanceKmPerDay',
-  'excessDistanceFeePerKm',
-  'overtimeFeePerHour',
-  'overtimeGraceMinutes',
-  'overtimeRoundingMinutes',
   'insuranceMode',
 ]);
 
@@ -142,7 +149,8 @@ export function shouldSendPolicy({
   policyDirty: boolean;
   editMode: boolean;
 }): boolean {
-  return overriding || (showPolicy && (direct ? policyDirty : editMode));
+  // ADR 0112 (web `buildBody`): `switch` đủ năm mục kế thừa ⇒ `shop` (server xoá dòng riêng).
+  return showPolicy ? (direct ? overriding || policyDirty : editMode) : overriding;
 }
 
 /** Hộp xác nhận đang chờ — cùng một hộp thoại cho lưu và đặt lại. */
@@ -151,6 +159,8 @@ type Pending =
   | { kind: 'override'; body: SaveVehiclePricingInput }
   | { kind: 'inherit'; body: SaveVehiclePricingInput }
   | { kind: 'reset' }
+  /** Bật lại kế thừa cho MỘT mục đang riêng (đã lưu) - tuỳ chỉnh của mục đó thôi áp dụng. */
+  | { kind: 'sectionReset'; section: PolicySection; label: string }
   | null;
 
 /**
@@ -230,7 +240,7 @@ export function VehiclePricingScreen({
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage icon="lock-closed-outline" title={title} description={t('noPermission')} />
         </Screen>
       </>
@@ -241,7 +251,7 @@ export function VehiclePricingScreen({
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']}>
           <SkeletonText lines={10} />
         </Screen>
       </>
@@ -252,7 +262,7 @@ export function VehiclePricingScreen({
     return (
       <>
         <AppHeader title={title} onBack={back} />
-        <Screen scrollReveal edges={['left', 'right', 'bottom']} scroll={false}>
+        <Screen scrollReveal={false} motion={false} edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={pricing.error ?? vehicle.error}
             title={t('loadError')}
@@ -308,7 +318,6 @@ function VehiclePricingForm({
   vehicle,
   pane,
   initialService,
-  scrollToTerms,
 }: Omit<VehiclePricingScreenProps, 'customerScope'> & {
   /** Hồ sơ xe — công tắc dịch vụ ở đầu mục (cổng quản lý, web `ServicesPane`). */
   vehicle: VehicleDetail;
@@ -334,9 +343,10 @@ function VehiclePricingForm({
   const tEdit = useTranslations('Vehicles.edit');
   /* Cuộn tới khối điều khoản của link cũ `*-terms` (web `scrollTo`). */
   const scrollRef = useRef<ScrollView | null>(null);
-  const scrolledToTerms = useRef(false);
   const toast = useAppToast();
   const tPolicyEditor = useTranslations('Vehicles.editor.policy');
+  /* Tiêu đề thẻ từng mục chính sách - CÙNG chữ với trang Chính sách thuê (web ADR 0112). */
+  const tWorkspace = useTranslations('Shop.policies.workspace');
   const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
   const save = useSaveVehiclePricing(vehicleId);
@@ -349,10 +359,30 @@ function VehiclePricingForm({
   const insuranceApplies = isCarVehicle && insuranceStatus.data?.applies === true;
 
   const overriding = pricing.source === POLICY_SOURCE.VEHICLE;
-  // Bật form ghi đè TRƯỚC khi lưu lần đầu — state cục bộ, chỉ commit khi bấm Lưu.
-  const [editingOverride, setEditingOverride] = useState(false);
+  /*
+   * Kế thừa gian hàng THEO MỤC (ADR 0112 điều 1, web `useVehiclePricingForm`). `savedInherited` là bản
+   * server đang lưu; `inherited` là bản người dùng đang bật/tắt - chỉ commit khi bấm Lưu. Không có
+   * dòng riêng ⇒ cả năm mục kế thừa.
+   */
+  const savedKey = (pricing.inheritedSections ?? POLICY_SECTION_VALUES).join(',');
+  const savedInherited = useMemo<readonly PolicySection[]>(
+    () => (savedKey ? (savedKey.split(',') as PolicySection[]) : []),
+    [savedKey],
+  );
+  const [inherited, setInherited] = useState<readonly PolicySection[]>(savedInherited);
+  // Lưu xong (hoặc dữ liệu đổi từ nơi khác) ⇒ về đúng bản server.
+  useEffect(() => {
+    setInherited(savedInherited);
+  }, [savedInherited]);
+  const inheritedRef = useRef(inherited);
+  useEffect(() => {
+    inheritedRef.current = inherited;
+  }, [inherited]);
   const [pending, setPending] = useState<Pending>(null);
-  const editMode = overriding || editingOverride;
+  /** Còn ít nhất một mục riêng của xe ⇒ lưu là ghi dòng chính sách theo xe. */
+  const editMode = inherited.length < POLICY_SECTION_VALUES.length;
+  const inheritedChanged =
+    [...inherited].sort().join(',') !== [...savedInherited].sort().join(',');
   /*
    * Hai mục của màn sửa xe (web `ServicesPane` · `PolicyPane`) — CẢ HAI tuyến từ 03/11/2026. Khu tài
    * khoản (`customerScope`, Owner Lite) khác gian hàng ở đúng các nhánh `!isManage` của web.
@@ -361,7 +391,13 @@ function VehiclePricingForm({
   const policyPane = pane === 'policy';
   /** Màn "Giá & chính sách" gộp cũ của khu tài khoản — chỉ khi không chọn mục nào. */
   const legacyMerged = customerScope && !pane;
-  const showPolicy = policyMode === 'full' && !servicesPane;
+  /*
+   * Bộ chính sách tham gia form ở CẢ HAI mục từ ADR 0112: "Dịch vụ xe" mang hạn mức km + quá giờ và
+   * ưu đãi dài hạn, "Bảo hiểm & Giao nhận" mang bảo hiểm, cọc, giao nhận. `renderPolicy` chỉ là chỗ
+   * VẼ khối chính sách gộp cũ (ngoài hai mục).
+   */
+  const showPolicy = policyMode === 'full';
+  const renderPolicy = showPolicy && !servicesPane;
   const direct = policySource === 'direct';
   /*
    * Chế độ `direct`: khối chính sách có ô bị đổi hay chưa — đọc lúc VALIDATE (getter của
@@ -403,7 +439,8 @@ function VehiclePricingForm({
     vehiclePricingFormSchema,
     'Vehicles.pricing.validation',
   );
-  const { control, handleSubmit, reset, setValue, formState } = useForm<VehiclePricingFormValues>({
+  const { control, handleSubmit, reset, resetField, setValue, formState } =
+    useForm<VehiclePricingFormValues>({
     resolver,
     /*
      * `policyEditable` tắt ràng buộc khối CHÍNH SÁCH khi các ô đó không được sửa — đúng getter
@@ -413,13 +450,21 @@ function VehiclePricingForm({
     context: {
       serviceTypes: services,
       get policyEditable() {
-        return showPolicy && (editMode || (direct && policyDirtyRef.current));
+        return showPolicy && (direct ? policyDirtyRef.current : true);
+      },
+      // Mục đang theo gian hàng không có ô nào để sửa ⇒ không được chặn nút Lưu (web).
+      get inheritedSections() {
+        return direct ? [] : inheritedRef.current;
       },
     },
     /* Giữ ô đang gõ khi dữ liệu server đổi — cùng luật với hai màn form còn lại. */
     resetOptions: { keepDirtyValues: true },
+    /*
+     * Ô của form = bộ RIÊNG của xe (giữ cả cột của mục đang kế thừa - tắt kế thừa là thấy lại cấu hình
+     * cũ); chưa có dòng riêng thì bắt đầu từ chính sách gian hàng. Mục kế thừa vẽ từ `shopForm`.
+     */
     values: {
-      ...policyToForm(pricing.policy ?? pricing.shopPolicy),
+      ...policyToForm(pricing.ownPolicy ?? pricing.policy ?? pricing.shopPolicy),
       weekdayPrice: toNumber(pricing.weekdayPrice),
       weekendPrice: toNumber(pricing.weekendPrice),
       hourlyPrice: toNumber(pricing.hourlyPrice),
@@ -430,6 +475,65 @@ function VehiclePricingForm({
       withDriverOneWayPrice: toNumber(pricing.withDriverOneWayPrice),
     },
   });
+
+  /** Bản CHỈ ĐỌC của chính sách gian hàng - các mục đang kế thừa vẽ từ đây (ô khoá). */
+  const shopForm = useForm<VehiclePricingFormValues>({
+    values: {
+      ...policyToForm(pricing.shopPolicy),
+      weekdayPrice: null,
+      weekendPrice: null,
+      hourlyPrice: null,
+      discountPercent: null,
+      monthlyPrice: null,
+      withDriverDailyPrice: null,
+      withDriverInterCityPrice: null,
+      withDriverOneWayPrice: null,
+    },
+  });
+  const isInherited = (section: PolicySection) => !direct && inherited.includes(section);
+  /** Form nối với MỘT mục: của xe, hoặc bản chỉ đọc của gian hàng khi mục kế thừa. */
+  const sectionControl = (section: PolicySection) =>
+    (isInherited(section) ? shopForm.control : control) as unknown as Parameters<
+      typeof PolicySections
+    >[0]['control'];
+
+  /** Đưa các ô của MỘT mục về giá trị đã lưu, hoặc về số của gian hàng (web `fillSection`). */
+  function fillSection(section: PolicySection, from: 'saved' | 'shop') {
+    for (const field of POLICY_SECTION_FORM_FIELDS[section]) {
+      const name = field as Path<VehiclePricingFormValues>;
+      if (from === 'saved') resetField(name);
+      else setValue(name, shopForm.getValues(name), { shouldDirty: true });
+    }
+  }
+  function addInherited(section: PolicySection) {
+    fillSection(section, 'saved');
+    setInherited((current) => (current.includes(section) ? current : [...current, section]));
+  }
+  /**
+   * Bật/tắt "Áp dụng chính sách của gian hàng" của MỘT mục (web `setSectionInherited`). Bật lại một
+   * mục đang RIÊNG (đã lưu) thì hỏi trước; tắt mà xe chưa có dòng riêng thì bắt đầu từ số của gian hàng.
+   */
+  function setSectionInherited(section: PolicySection, next: boolean, label: string) {
+    if (!next) {
+      if (!pricing.ownPolicy) fillSection(section, 'shop');
+      setInherited((current) => current.filter((item) => item !== section));
+      return;
+    }
+    if (savedInherited.includes(section)) {
+      addInherited(section);
+      return;
+    }
+    setPending({ kind: 'sectionReset', section, label });
+  }
+  const inheritControl = (section: PolicySection, label: string) =>
+    direct
+      ? undefined
+      : {
+          checked: isInherited(section),
+          disabled: !canEdit || save.isPending,
+          onChange: (next: boolean) => setSectionInherited(section, next, label),
+          ...(shopPolicyHref ? { onOpenPolicies: () => navigateOnce(shopPolicyHref) } : {}),
+        };
 
   const policyDirty = Object.keys(formState.dirtyFields).some((field) => !PRICE_FIELDS.has(field));
   useEffect(() => {
@@ -492,7 +596,6 @@ function VehiclePricingForm({
     save.mutate(body, {
       onSuccess: () => {
         setPending(null);
-        setEditingOverride(false);
         // Web: cả hai khu nói `Vehicles.edit.pricingTab.saved`, kể cả lần đặt lại theo gian hàng.
         toast.showSuccess(tSaved('saved'));
       },
@@ -509,9 +612,17 @@ function VehiclePricingForm({
     const money = (v: number | null | undefined): string | null =>
       v != null ? String(Math.round(v)) : null;
 
+    /*
+     * Web `buildBody` (ADR 0112): `switch` - còn mục riêng ⇒ ghi dòng theo xe kèm danh sách mục kế
+     * thừa; đủ năm mục kế thừa ⇒ `shop` (server xoá dòng riêng). `direct` - chỉ ghi khi một ô chính
+     * sách THẬT SỰ đổi, riêng toàn bộ. Chế độ chỉ-giá giữ nguyên nguồn và các mục đang có.
+     */
     const sendPolicy = shouldSendPolicy({ overriding, showPolicy, direct, policyDirty, editMode });
+    const sections: PolicySection[] =
+      direct && !overriding ? [] : [...(showPolicy && !direct ? inherited : savedInherited)];
     const body: SaveVehiclePricingInput = {
       source: sendPolicy ? POLICY_SOURCE.VEHICLE : POLICY_SOURCE.SHOP,
+      ...(sendPolicy ? { inheritedSections: sections } : {}),
       ...(hasSelfDrive || values.weekdayPrice != null
         ? { weekdayPrice: money(values.weekdayPrice) ?? '0' }
         : {}),
@@ -557,7 +668,7 @@ function VehiclePricingForm({
    * hộp đó thì phần form con đã lưu vẫn giữ (chúng là các bản ghi độc lập, như web `PolicyPane`).
    */
   async function saveAll() {
-    const pricingDirty = formState.isDirty || editMode !== overriding;
+    const pricingDirty = formState.isDirty || (showPolicy && !direct && inheritedChanged);
     if (policyPane && anySubDirty) {
       setSubSaving(true);
       try {
@@ -583,11 +694,22 @@ function VehiclePricingForm({
             cancelLabel: t('source.resetCancel'),
             destructive: true,
             onConfirm: () => {
-              setEditingOverride(false);
               commit({ source: POLICY_SOURCE.SHOP });
             },
           }
-        : {
+        : pending.kind === 'sectionReset'
+          ? {
+              title: t('source.sectionResetTitle'),
+              message: t('source.sectionResetBody', { section: pending.label }),
+              confirmLabel: t('source.resetOk'),
+              cancelLabel: t('source.resetCancel'),
+              destructive: true,
+              onConfirm: () => {
+                addInherited(pending.section);
+                setPending(null);
+              },
+            }
+          : {
             title: confirmTitle(t, pending.kind),
             message: confirmBody(t, pending.kind, vehicleName),
             confirmLabel: t('confirm.ok'),
@@ -615,7 +737,8 @@ function VehiclePricingForm({
         />
       )}
       <Screen
-        scrollReveal
+        scrollReveal={false}
+        motion={false}
         edges={['left', 'right', 'bottom']}
         scrollRef={scrollRef}
         {...refresh}
@@ -624,14 +747,16 @@ function VehiclePricingForm({
             <Button
               variant="gradient"
               label={tActions('saveChanges')}
-              icon="checkmark-outline"
+              lineIcon="tick"
               loading={save.isPending || subSaving}
               /*
                * Chuyển nguồn kế thừa ↔ tuỳ chỉnh là thay đổi CẦN LƯU dù chưa gõ ô nào — so ý định
                * (`editMode`) với nguồn đã lưu (`overriding`). Tab chính sách tính cả form con.
                */
               disabled={
-                !formState.isDirty && editMode === overriding && !(policyPane && anySubDirty)
+                !formState.isDirty &&
+                !(showPolicy && !direct && inheritedChanged) &&
+                !(policyPane && anySubDirty)
               }
               onPress={() => void saveAll()}
             />
@@ -691,7 +816,7 @@ function VehiclePricingForm({
             <Callout tone="warning">{tSection('withDriverEstimateHint')}</Callout>
           ) : null}
 
-          {showPolicy && !direct && !policyPane ? (
+          {renderPolicy && !direct && !policyPane ? (
             <Card lift="flat">
               <YStack gap={space.sm}>
                 <SectionHeader icon="business-outline">{t('source.title')}</SectionHeader>
@@ -701,7 +826,11 @@ function VehiclePricingForm({
                   disabled={!canEdit || save.isPending}
                   onToggle={() => {
                     if (!editMode) {
-                      setEditingOverride(true);
+                      // Tuỳ chỉnh toàn bộ: mọi mục riêng, bắt đầu từ số của gian hàng khi chưa có dòng riêng.
+                      if (!pricing.ownPolicy) {
+                        POLICY_SECTION_VALUES.forEach((section) => fillSection(section, 'shop'));
+                      }
+                      setInherited([]);
                       return;
                     }
                     // Đang ghi đè → về kế thừa. Bản ghi đè ĐÃ LƯU thì phải xác nhận xoá.
@@ -709,7 +838,7 @@ function VehiclePricingForm({
                       setPending({ kind: 'reset' });
                       return;
                     }
-                    setEditingOverride(false);
+                    setInherited(POLICY_SECTION_VALUES);
                     reset();
                   }}
                 />
@@ -729,7 +858,7 @@ function VehiclePricingForm({
             </Card>
           ) : null}
 
-          {showPolicy && !direct && !policyPane && overriding && canEdit ? (
+          {renderPolicy && !direct && !policyPane && overriding && canEdit ? (
             <Button
               icon="refresh-outline"
               label={t('source.reset')}
@@ -800,6 +929,38 @@ function VehiclePricingForm({
             </Card>
           ) : null}
 
+          {/*
+            Hạn mức km + phụ phí quá giờ (ADR 0112 điều 4, web `ServicesPane`): áp cho chuyến tự lái,
+            công tắc kế thừa của RIÊNG mục này. Dưới cùng là hình thức cọc đang áp, dẫn sang mục Bảo
+            hiểm & Giao nhận - nơi đặt nó.
+          */}
+          {servicesPane && showSelfDrive && showPolicy ? (
+            <VehiclePolicySectionCard
+              title={tWorkspace('limits.title')}
+              {...withInherit(
+                inheritControl(POLICY_SECTION.USAGE_LIMITS, tWorkspace('limits.title')),
+              )}
+            >
+              <PolicySections
+                key={isInherited(POLICY_SECTION.USAGE_LIMITS) ? 'shop' : 'own'}
+                control={sectionControl(POLICY_SECTION.USAGE_LIMITS)}
+                disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.USAGE_LIMITS)}
+                numbered={false}
+                blocks={[POLICY_BLOCK.MILEAGE, POLICY_BLOCK.OVERTIME]}
+              />
+              <CollateralStrip
+                control={sectionControl(POLICY_SECTION.COLLATERAL)}
+                onOpen={() =>
+                  navigateOnce(
+                    customerScope
+                      ? ROUTES.account.vehicleManageSection(vehicleId, VEHICLE_MANAGE_SECTION.POLICY)
+                      : ROUTES.manage.vehicleEditTab(vehicleId, VEHICLE_EDIT_TAB.POLICY),
+                  )
+                }
+              />
+            </VehiclePolicySectionCard>
+          ) : null}
+
           {showLongTerm ? (
             <Card lift="flat">
               <YStack gap={space.sm}>
@@ -832,30 +993,31 @@ function VehiclePricingForm({
             lời dẫn sang công tắc ở mục Chính sách thuê.
           */}
           {/* Tuyến hoa hồng không có thẻ này (web `isManage ? … : null`). */}
-          {servicesPane && showLongTerm && !customerScope ? (
-            <YStack gap={space.sm}>
-              <SectionHeader>{tServices('policy.longTermTitle')}</SectionHeader>
-              {editMode || direct ? null : (
-                <Callout tone="info">
-                  {tPolicyEditor.rich('inheritedElsewhere', {
-                    policies: (chunks) => chunks,
-                    switch: (chunks) => chunks,
-                  })}
-                </Callout>
+          {servicesPane && showLongTerm && !customerScope && showPolicy ? (
+            <VehiclePolicySectionCard
+              title={tServices('policy.longTermTitle')}
+              {...withInherit(
+                inheritControl(
+                  POLICY_SECTION.LONG_TERM_DISCOUNT,
+                  tServices('policy.longTermTitle'),
+                ),
               )}
+            >
               <PolicySections
-                control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
-                disabled={!canEdit || save.isPending || !(editMode || direct)}
+                key={isInherited(POLICY_SECTION.LONG_TERM_DISCOUNT) ? 'shop' : 'own'}
+                control={sectionControl(POLICY_SECTION.LONG_TERM_DISCOUNT)}
+                disabled={
+                  !canEdit || save.isPending || isInherited(POLICY_SECTION.LONG_TERM_DISCOUNT)
+                }
                 numbered={false}
                 blocks={[POLICY_BLOCK.DISCOUNT]}
-                legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
+                legacyDiscountTiers={
+                  (isInherited(POLICY_SECTION.LONG_TERM_DISCOUNT)
+                    ? pricing.shopPolicy
+                    : (pricing.ownPolicy ?? pricing.policy))?.legacyDiscountTiers
+                }
               />
-              <LongTermPackagePreview
-                monthly={watchedMonthly == null ? null : Number(watchedMonthly)}
-                tiers={watchedTiers}
-                discountEnabled={watchedDiscountEnabled}
-              />
-            </YStack>
+            </VehiclePolicySectionCard>
           ) : null}
 
           {showWithDriver ? (
@@ -923,66 +1085,60 @@ function VehiclePricingForm({
             />
           ) : null}
 
-          {showPolicy && policyPane && !direct ? (
+          {showPolicy && policyPane ? (
             /*
-              Web `PolicyPane` (`PolicyCards`): MỘT thẻ "Giao xe, cọc & phụ phí" - công tắc "Áp dụng
-              chính sách của gian hàng" ở đầu, rồi các khối chính sách LUÔN hiện (đang kế thừa thì
-              chỉ đọc, hiện giá trị của gian hàng) - không còn thẻ tóm tắt riêng.
+              Web `PolicyPane` › `PolicyCards` (ADR 0112): mỗi mục một thẻ với công tắc kế thừa RIÊNG
+              - bảo hiểm (ô tô, khi nền tảng bán theo bậc) · cọc · giao nhận - rồi thời gian chuẩn bị.
+              Mục kế thừa vẽ số của gian hàng và khoá. Tuyến hoa hồng (`direct`) không có công tắc.
             */
-            <Card lift="flat">
-              <YStack gap={space.md}>
-                <SectionHeader>{tPolicyEditor('rulesTitle')}</SectionHeader>
-                <ToggleRow
-                  label={tPolicyEditor('useShop')}
-                  hint={tPolicyEditor.rich('useShopHint', {
-                    policies: (chunks) => (
-                      <Text
-                        col={colors.brandLink}
-                        textDecorationLine="underline"
-                        onPress={() => shopPolicyHref && navigateOnce(shopPolicyHref)}
-                      >
-                        {chunks}
-                      </Text>
-                    ),
-                  })}
-                  checked={!editMode}
-                  disabled={!canEdit || save.isPending}
-                  onToggle={() => {
-                    if (!editMode) {
-                      setEditingOverride(true);
-                      return;
-                    }
-                    if (overriding) {
-                      setPending({ kind: 'reset' });
-                      return;
-                    }
-                    setEditingOverride(false);
-                    reset();
-                  }}
+            <>
+              {insuranceApplies ? (
+                <VehiclePolicySectionCard
+                  title={tWorkspace('insurance.title')}
+                  subtitle={tWorkspace('insurance.hint')}
+                  {...withInherit(
+                    inheritControl(POLICY_SECTION.INSURANCE, tWorkspace('insurance.title')),
+                  )}
+                >
+                  <InsuranceModeBlock
+                    key={isInherited(POLICY_SECTION.INSURANCE) ? 'shop' : 'own'}
+                    control={sectionControl(POLICY_SECTION.INSURANCE)}
+                    disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.INSURANCE)}
+                    vehicle={{ vehicleId, gaps: insuranceStatus.data?.gaps ?? [] }}
+                  />
+                </VehiclePolicySectionCard>
+              ) : null}
+              <VehiclePolicySectionCard
+                title={tWorkspace('collateral.title')}
+                subtitle={tWorkspace('collateral.subtitle')}
+                {...withInherit(
+                  inheritControl(POLICY_SECTION.COLLATERAL, tWorkspace('collateral.title')),
+                )}
+              >
+                <CollateralPolicySection
+                  key={isInherited(POLICY_SECTION.COLLATERAL) ? 'shop' : 'own'}
+                  control={sectionControl(POLICY_SECTION.COLLATERAL)}
+                  disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.COLLATERAL)}
+                  bare
                 />
-                <PolicySections
-                  control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
-                  disabled={!canEdit || save.isPending || !editMode}
-                  numbered={false}
-                  legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
-                  blocks={OWNER_POLICY_BLOCKS}
-                  {...(insuranceApplies
-                    ? {
-                        afterRules: (
-                          <InsuranceModeBlock
-                            control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
-                            disabled={!canEdit || save.isPending || !editMode}
-                            vehicle={{ vehicleId, gaps: insuranceStatus.data?.gaps ?? [] }}
-                          />
-                        ),
-                      }
-                    : {})}
+              </VehiclePolicySectionCard>
+              <VehiclePolicySectionCard
+                title={tWorkspace('delivery.title')}
+                {...withInherit(
+                  inheritControl(POLICY_SECTION.DELIVERY, tWorkspace('delivery.title')),
+                )}
+              >
+                <DeliveryPolicySection
+                  key={isInherited(POLICY_SECTION.DELIVERY) ? 'shop' : 'own'}
+                  control={sectionControl(POLICY_SECTION.DELIVERY)}
+                  disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.DELIVERY)}
+                  bare
                 />
-              </YStack>
-            </Card>
+              </VehiclePolicySectionCard>
+            </>
           ) : null}
 
-          {showPolicy && !(policyPane && !direct) ? (
+          {renderPolicy && !policyPane ? (
             // `direct`: khối chính sách luôn sửa được — không có thẻ tóm tắt chính sách gian hàng.
             editMode || direct ? (
               <PolicySections
@@ -1011,7 +1167,12 @@ function VehiclePricingForm({
               <InheritedPolicyCard
                 policy={pricing.shopPolicy ? policyToForm(pricing.shopPolicy) : null}
                 canEdit={canEdit}
-                onEdit={() => setEditingOverride(true)}
+                onEdit={() => {
+                  if (!pricing.ownPolicy) {
+                    POLICY_SECTION_VALUES.forEach((section) => fillSection(section, 'shop'));
+                  }
+                  setInherited([]);
+                }}
                 {...(policyBlocks
                   ? { blocks: policyBlocks }
                   : policyPane
@@ -1030,53 +1191,6 @@ function VehiclePricingForm({
                 onDirtyChange={subReporters.handover}
                 registerSave={subRegistrars.handover}
               />
-              {/* Web `TermsCards`: tự lái (gồm dài hạn) luôn có; có tài xế khi loại xe cho phép. */}
-              {[SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER]
-                .filter(
-                  (service) =>
-                    service === SERVICE_TYPE.SELF_DRIVE || allowedServices.includes(service),
-                )
-                .map((service) => (
-                  <YStack
-                    key={service}
-                    {...(service === scrollToTerms
-                      ? {
-                          onLayout: (event: LayoutChangeEvent) => {
-                            // Cuộn MỘT lần khi khối đã có vị trí - không giật lại mỗi lần đổi bố cục.
-                            if (scrolledToTerms.current) return;
-                            scrolledToTerms.current = true;
-                            const y = event.nativeEvent.layout.y;
-                            requestAnimationFrame(() =>
-                              scrollRef.current?.scrollTo({ y, animated: true }),
-                            );
-                          },
-                        }
-                      : {})}
-                  >
-                    {/*
-                      Khu tài khoản (Owner Lite): không banner kế thừa, và cọc · km đã nằm ở khối
-                      chính sách phía trên — web `TermsCards` chỉ có giấy tờ & điều khoản.
-                    */}
-                    <TermsBody
-                      vehicleId={vehicleId}
-                      serviceType={service}
-                      canEdit={canEdit}
-                      isManage={!customerScope}
-                      // Web `TermsCards` chỉ còn giấy tờ & điều khoản - cọc/km đã ở các khối chính sách phía trên.
-                      showRules={false}
-                      onDirtyChange={
-                        service === SERVICE_TYPE.SELF_DRIVE
-                          ? subReporters.termsSelf
-                          : subReporters.termsDriver
-                      }
-                      registerSave={
-                        service === SERVICE_TYPE.SELF_DRIVE
-                          ? subRegistrars.termsSelf
-                          : subRegistrars.termsDriver
-                      }
-                    />
-                  </YStack>
-                ))}
             </>
           ) : null}
         </YStack>
@@ -1111,6 +1225,56 @@ function VehiclePricingForm({
         onCancel={leave.cancel}
       />
     </>
+  );
+}
+
+/** Trải `inherit` chỉ khi có - `exactOptionalPropertyTypes` không nhận `undefined` tường minh. */
+const withInherit = (control: PolicyInheritControl | undefined) =>
+  control ? { inherit: control } : {};
+
+/**
+ * "Hình thức cọc xe hiện tại: … - Thiết lập tại Bảo hiểm & Giao nhận" (web `CollateralStrip`). Đọc cọc
+ * ĐANG ÁP: của gian hàng khi mục cọc kế thừa, của xe khi riêng - kể cả số đang gõ dở.
+ */
+function CollateralStrip({
+  control,
+  onOpen,
+}: {
+  control: Control<PolicyFormValues>;
+  onOpen?: () => void;
+}) {
+  const colors = useColors();
+  const t = useTranslations('Vehicles.editor.services');
+  const describe = useDescribeCollateral();
+  const [mode, cash, asset, combination, assetTypes, depositAmount] = useWatch({
+    control,
+    name: [
+      'collateralMode',
+      'collateralCashEnabled',
+      'collateralAssetEnabled',
+      'collateralCombination',
+      'collateralAssetTypes',
+      'depositAmount',
+    ],
+  });
+  const text = describe(
+    policyCollateral({
+      collateralMode: mode,
+      collateralCashEnabled: cash,
+      collateralAssetEnabled: asset,
+      collateralCombination: combination,
+      collateralAssetTypes: assetTypes,
+      depositAmount,
+    }),
+  );
+  if (!text) return null;
+  return (
+    <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.infoSurface} bw={1} bc={colors.info}>
+      <Text col={colors.text} fos={fontSize.bodySm}>
+        {t('collateralNow', { collateral: text })}
+      </Text>
+      {onOpen ? <BlockLink label={t('collateralSetup')} onPress={onOpen} /> : null}
+    </YStack>
   );
 }
 
@@ -1320,25 +1484,10 @@ function InheritedPolicyCard({
   const shows = (block: PolicyBlock) => !blocks || blocks.includes(block);
   const t = useTranslations('Vehicles.pricing.inherited');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
 
-  const collateral = () => {
-    if (!policy) return null;
-    if (policy.collateralMode === COLLATERAL_MODE.CASH) {
-      return `${domainLabel('collateralMode', policy.collateralMode)}${LIST_SEPARATOR}${fmt.money(
-        String(policy.depositAmount ?? 0),
-      )}`;
-    }
-    if (policy.collateralMode === COLLATERAL_MODE.ASSET) {
-      const types = (policy.collateralAssetTypes ?? [])
-        .map((type) => domainLabel('collateralAssetType', type))
-        .join(', ');
-      return `${domainLabel('collateralMode', policy.collateralMode)}${LIST_SEPARATOR}${
-        types || t('assetNone')
-      }`;
-    }
-    return domainLabel('collateralMode', policy.collateralMode);
-  };
+  const describeCollateral = useDescribeCollateral();
+  // "Cọc tiền X hoặc Cọc tài sản (…)" - một câu chung mọi bề mặt (ADR 0112 điều 2).
+  const collateral = () => (policy ? describeCollateral(policyCollateral(policy)) : null);
 
   const maxDiscount =
     policy?.discountEnabled && (policy.discountTiers ?? []).length > 0

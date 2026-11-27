@@ -3,7 +3,7 @@
 import { Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { COLLATERAL_MODE, FEE_LINE, PRICE_ROW } from '@xeprime/types';
+import { FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { isNegativeMoney, subtractMoney } from '@xeprime/domain';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
@@ -71,6 +71,8 @@ interface BookingReviewCostsProps {
    * nhận xe" bên trái — nói hai lần cùng một khoản là thừa.
    */
   showDeposit?: boolean;
+  /** Màn chuyến đã có đơn: cọc khách ĐÃ giao (tiền + tài sản) ngay dưới dòng "Cọc xe". */
+  depositDetail?: ReactNode;
 }
 
 /**
@@ -103,6 +105,7 @@ export function BookingReviewCosts({
   paidAmount = null,
   frozen = false,
   showDeposit = true,
+  depositDetail,
 }: BookingReviewCostsProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const t = useTranslations('BookingRequests.flow');
@@ -207,35 +210,39 @@ export function BookingReviewCosts({
             <div className={reviewStyles.divider} role="presentation" />
 
             {onTrip && paidAmount ? (
-              <TripPaidRemaining
-                total={total?.amount ?? breakdown.totalAmount}
-                paid={paidAmount}
-              />
+              <TripPaidRemaining total={total?.amount ?? breakdown.totalAmount} paid={paidAmount} />
             ) : (
-            <div className={cx(styles.total, onTrip && styles.tripTotal)}>
-              {/* Màn chuyến (Figma `21788:60666`): nhãn + số cùng một hàng, số vàng 20/30. */}
-              <span className={cx(styles.totalLabel, styles.labelWithHint)}>
-                {onTrip
-                  ? t(frozen ? 'reviewPage.costs.tripTotal' : 'reviewPage.costs.tripEstimatedTotal')
-                  : total?.label}
-                {costNote ? (
-                  <InfoHint content={costNote} label={tCommon('components.price.totalHintLabel')} />
-                ) : null}
-              </span>
-              <strong className={styles.totalAmount}>
-                {fmt.money(total?.amount ?? breakdown.totalAmount)}
-              </strong>
-              {/* "Tiết kiệm" CHỈ nói về ưu đãi cam kết thời hạn, không so với giá ngày (ADR 0011). */}
-              {longTerm?.durationDiscountPercent ? (
-                <strong className={styles.savings}>
-                  {t('price.savings', {
-                    amount: fmt.money(longTerm.durationDiscountAmount),
-                    months: longTerm.packageMonths,
-                  })}
+              <div className={cx(styles.total, onTrip && styles.tripTotal)}>
+                {/* Màn chuyến (Figma `21788:60666`): nhãn + số cùng một hàng, số vàng 20/30. */}
+                <span className={cx(styles.totalLabel, styles.labelWithHint)}>
+                  {onTrip
+                    ? t(
+                        frozen
+                          ? 'reviewPage.costs.tripTotal'
+                          : 'reviewPage.costs.tripEstimatedTotal',
+                      )
+                    : total?.label}
+                  {costNote ? (
+                    <InfoHint
+                      content={costNote}
+                      label={tCommon('components.price.totalHintLabel')}
+                    />
+                  ) : null}
+                </span>
+                <strong className={styles.totalAmount}>
+                  {fmt.money(total?.amount ?? breakdown.totalAmount)}
                 </strong>
-              ) : null}
-              {estimateNote ? <p className={styles.note}>{estimateNote}</p> : null}
-            </div>
+                {/* "Tiết kiệm" CHỈ nói về ưu đãi cam kết thời hạn, không so với giá ngày (ADR 0011). */}
+                {longTerm?.durationDiscountPercent ? (
+                  <strong className={styles.savings}>
+                    {t('price.savings', {
+                      amount: fmt.money(longTerm.durationDiscountAmount),
+                      months: longTerm.packageMonths,
+                    })}
+                  </strong>
+                ) : null}
+                {estimateNote ? <p className={styles.note}>{estimateNote}</p> : null}
+              </div>
             )}
           </>
         ) : listedRows.length > 0 ? (
@@ -279,7 +286,10 @@ export function BookingReviewCosts({
               <div className={styles.row}>
                 <span className={cx(styles.label, styles.labelWithHint)}>
                   {tCommon('components.price.holdAmount')}
-                  <InfoHint content={tCommon('components.price.holdHint')} label={tCommon('components.price.holdHintLabel')} />
+                  <InfoHint
+                    content={tCommon('components.price.holdHint')}
+                    label={tCommon('components.price.holdHintLabel')}
+                  />
                 </span>
                 <strong className={styles.amount}>{fmt.money(holdAmount)}</strong>
               </div>
@@ -297,7 +307,10 @@ export function BookingReviewCosts({
                 <div className={styles.otherText}>
                   <span className={cx(styles.otherLabel, styles.labelWithHint)}>
                     {tCommon('components.price.holdAmount')}
-                    <InfoHint content={tCommon('components.price.holdHint')} label={tCommon('components.price.holdHintLabel')} />
+                    <InfoHint
+                      content={tCommon('components.price.holdHint')}
+                      label={tCommon('components.price.holdHintLabel')}
+                    />
                   </span>
                   {holdTag}
                 </div>
@@ -316,24 +329,25 @@ export function BookingReviewCosts({
           ) : null}
           {deposit ? (
             <div className={styles.block}>
-              <div className={styles.row}>
+              <div className={cx(styles.row, deposit.textual && styles.rowStacked)}>
                 {/*
                   Màn chuyến (Figma `21621:53895`): "Cọc xe" — cọc THẾ CHẤP trả tay khi nhận xe, KHÁC
                   tiền giữ chỗ chuyển qua QR ở trên (ADR 0044 điều 9).
                 */}
-                <span className={cx(styles.label, styles.labelWithHint, onTrip && styles.depositLabel)}>
+                <span
+                  className={cx(styles.label, styles.labelWithHint, onTrip && styles.depositLabel)}
+                >
                   {onTrip ? t('reviewPage.others.deposit') : tCommon('components.price.deposit')}
                   <InfoHint
                     content={deposit.note}
                     label={tCommon('components.price.depositHintLabel')}
                   />
                 </span>
-                <strong className={styles.amount}>
-                  {deposit.mode === COLLATERAL_MODE.CASH && deposit.amount
-                    ? fmt.money(deposit.amount)
-                    : dl('collateralMode', deposit.mode)}
+                <strong className={cx(styles.amount, deposit.textual && styles.amountText)}>
+                  {deposit.display}
                 </strong>
               </div>
+              {depositDetail}
             </div>
           ) : null}
         </section>

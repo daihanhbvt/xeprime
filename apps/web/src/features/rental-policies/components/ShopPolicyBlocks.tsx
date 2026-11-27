@@ -1,8 +1,16 @@
 'use client';
 
-import { CheckOutlined, DeleteOutlined, PlusOutlined, WarningOutlined } from '@ant-design/icons';
-import { Alert, Button, Radio, Switch } from 'antd';
-import { useState } from 'react';
+import {
+  CheckOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  SafetyCertificateOutlined,
+  UnlockOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
+import { Alert, Button, Checkbox, Radio, Switch } from 'antd';
+import Link from 'next/link';
+import { useId, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   useController,
@@ -14,13 +22,15 @@ import {
 } from 'react-hook-form';
 import {
   COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_COMBINATION,
+  COLLATERAL_COMBINATION_VALUES,
   COLLATERAL_MODE,
   COLLATERAL_MODE_VALUES,
   LONG_TERM_PACKAGE_MONTHS,
   MILEAGE_LIMIT,
-  VEHICLE_TYPE,
+  type CollateralCombination,
   type CollateralMode,
-  type VehicleType,
+  type RentalTermsGroup,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 
@@ -36,17 +46,42 @@ import { cx } from '@/lib/cx';
 
 import { deliverySummaryText } from '../form';
 import type { PolicyFormValues } from '../schema';
-import { LongTermPackagePreview } from './LongTermPackagePreview';
 import { PolicyInfoTip } from './PolicyInfoTip';
 import { TurnaroundBufferField } from './TurnaroundBufferField';
 import styles from './ShopPolicies.module.css';
 
-/** Form của trang: chính sách theo loại xe + thời gian chết mặc định (hai API, một nút Lưu). */
-export type ShopPolicyFormValues = PolicyFormValues & { turnaroundBufferMinutes: number };
+/** Điều khoản thuê của MỘT nhóm dịch vụ trên form trang Chính sách thuê (ADR 0112 điều 3). */
+export interface RentalTermsFormGroup {
+  termsText: string;
+  requireTermsAcceptance: boolean;
+}
+
+/**
+ * Form của trang: chính sách theo loại xe + thời gian chết mặc định + điều khoản thuê của gian hàng
+ * (ba API, một nút Lưu).
+ */
+export type ShopPolicyFormValues = PolicyFormValues & {
+  turnaroundBufferMinutes: number;
+  terms: Record<RentalTermsGroup, RentalTermsFormGroup>;
+};
 
 type Ctl = Control<ShopPolicyFormValues>;
 type SetValue = UseFormSetValue<ShopPolicyFormValues>;
-type BooleanField = 'deliveryEnabled' | 'mileageLimitEnabled' | 'overtimeEnabled';
+type BooleanField =
+  | 'deliveryEnabled'
+  | 'mileageLimitEnabled'
+  | 'overtimeEnabled'
+  | 'collateralCashEnabled'
+  | 'collateralAssetEnabled';
+
+/**
+ * Các khối dưới đây dùng CHUNG cho trang Chính sách thuê của gian hàng và màn sửa xe (mục "Bảo hiểm
+ * & Giao nhận xe", "Dịch vụ xe") - ADR 0112. Form của nơi gọi là một BỘ BAO HÀM `PolicyFormValues`;
+ * RHF không suy được tên trường trên kiểu generic, nên quy chiếu MỘT lần ở đây.
+ */
+function asPolicyControl<T extends PolicyFormValues>(control: Control<T>): Control<PolicyFormValues> {
+  return control as unknown as Control<PolicyFormValues>;
+}
 
 /** Công tắc nối RHF — hàng tiêu đề đã có nhãn nhìn thấy, công tắc mang tên khả truy cập riêng. */
 function FormSwitch({
@@ -55,7 +90,7 @@ function FormSwitch({
   label,
   disabled,
 }: {
-  control: Ctl;
+  control: Control<PolicyFormValues>;
   name: BooleanField;
   label: string;
   disabled: boolean;
@@ -76,59 +111,158 @@ function useHideRowControls(disabled: boolean): boolean {
   return useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && disabled;
 }
 
-// ── Tài sản thế chấp ─────────────────────────────────────────────────────────
+// ── Thẻ một mục chính sách ──────────────────────────────────────────────────
 
-const MODE_DESCRIPTION: Readonly<Record<CollateralMode, 'cash' | 'asset' | 'none'>> = {
-  [COLLATERAL_MODE.CASH]: 'cash',
-  [COLLATERAL_MODE.ASSET]: 'asset',
-  [COLLATERAL_MODE.NONE]: 'none',
-};
+/** Công tắc "Áp dụng chính sách của gian hàng" của MỘT mục (ADR 0112 điều 1) - chỉ màn sửa xe. */
+export interface PolicyInheritControl {
+  /** Mục đang theo gian hàng. */
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  /** Link "chính sách chung" - `null` khi người này không tới được trang đó. */
+  policiesHref?: string | null;
+}
 
 /**
- * Ba thẻ chế độ bảo đảm (design `23979:96568`) — loại trừ nhau. Chỉ phần của chế độ đang chọn hiện ra:
- * ô tiền cọc (`cash`), danh mục tài sản (`asset`), `none` không có gì để nhập — `formToSaveInput` ép
- * phần còn lại về 0/rỗng, nên một ô mờ còn số cũ sẽ là lời nói dối.
+ * Thẻ trắng của một mục chính sách (design `23874:75957` gian hàng · `24705:27808` sửa xe): tiêu đề,
+ * mô tả, nhãn góc phải, và - ở màn sửa xe - hàng công tắc "Áp dụng chính sách của gian hàng" ngay dưới
+ * tiêu đề. Cùng một thẻ cho hai màn để chủ xe thấy đúng một khuôn cho một mục.
  */
-export function CollateralBlock({
-  control,
-  disabled,
-  inheritingVehicles,
-  overriddenVehicles,
+export function PolicySectionCard({
+  id,
+  title,
+  titleExtra,
+  subtitle,
+  badge,
+  inherit,
+  children,
 }: {
-  control: Ctl;
-  disabled: boolean;
-  inheritingVehicles: number;
-  overriddenVehicles: number;
+  id?: string;
+  title: ReactNode;
+  titleExtra?: ReactNode;
+  subtitle?: ReactNode;
+  badge?: ReactNode;
+  inherit?: PolicyInheritControl;
+  children: ReactNode;
 }) {
-  const t = useTranslations('Shop.policies.workspace.collateral');
-  const tPolicy = useTranslations('Shop.policies');
-  const tDeposit = useTranslations('Vehicles.pricing.deposit');
-  const domainLabel = useDomainLabel();
-  const { field } = useController({ control, name: 'collateralMode' });
-  const mode = field.value as CollateralMode;
+  const t = useTranslations('Shop.policies.workspace.inherit');
+  const titleId = useId();
+  return (
+    <section id={id} className={cx(styles.card, styles.sectionCard)} aria-labelledby={titleId}>
+      <header className={styles.sectionHead}>
+        <div className={styles.cardHead}>
+          <h2 id={titleId} className={styles.cardTitle}>
+            {title}
+            {titleExtra ? <span className={styles.cardTitleExtra}>{titleExtra}</span> : null}
+          </h2>
+          {subtitle ? <p className={styles.cardSubtitle}>{subtitle}</p> : null}
+        </div>
+        {badge ? <span className={styles.sectionBadge}>{badge}</span> : null}
+      </header>
+      {inherit ? (
+        <SettingRow
+          title={t('title')}
+          description={t.rich('hint', {
+            policies: (chunks) =>
+              inherit.policiesHref ? (
+                <Link href={inherit.policiesHref} className={styles.inheritLink}>
+                  {chunks}
+                </Link>
+              ) : (
+                chunks
+              ),
+          })}
+          control={
+            <Switch
+              aria-label={t('title')}
+              checked={inherit.checked}
+              disabled={inherit.disabled}
+              onChange={inherit.onChange}
+            />
+          }
+        />
+      ) : null}
+      {children}
+    </section>
+  );
+}
 
-  const description = (value: CollateralMode) => {
-    const kind = MODE_DESCRIPTION[value];
-    return kind === 'cash'
-      ? t('modeCash')
-      : kind === 'none'
-        ? t('modeNone')
-        : tDeposit('modeAsset');
+// ── Hình thức cọc xe (Thế chấp) ─────────────────────────────────────────────
+
+/** Mốc gợi ý số tiền cọc (Figma) - bấm chỉ ĐIỀN số, không phải một mức nền tảng áp đặt. */
+const DEPOSIT_PRESETS = [3_000_000, 5_000_000, 10_000_000, 15_000_000] as const;
+
+/** "Đang bật 2 hình thức cọc" - nhãn góc phải của thẻ cọc. */
+export function CollateralBadge<T extends PolicyFormValues>({ control }: { control: Control<T> }) {
+  const t = useTranslations('Shop.policies.workspace.collateral');
+  const ctl = asPolicyControl(control);
+  const [mode, cash, asset] = useWatch({
+    control: ctl,
+    name: ['collateralMode', 'collateralCashEnabled', 'collateralAssetEnabled'],
+  });
+  if (mode !== COLLATERAL_MODE.REQUIRED || !cash || !asset) return null;
+  return <>{t('bothOn')}</>;
+}
+
+/**
+ * Cọc kết hợp (ADR 0112 điều 2 · design `24705:27808`): "Có yêu cầu thế chấp" bật cọc tiền, cọc tài
+ * sản hoặc cả hai, kèm "Khách chọn 1 trong 2" / "Bắt buộc cả 2"; "Miễn thế chấp" không hỏi gì. Tắt một
+ * hình thức thì ô của nó ẩn đi - `formToSaveInput` gửi 0 / rỗng cho hình thức đang tắt.
+ */
+export function CollateralBlock<T extends PolicyFormValues>({
+  control: outerControl,
+  disabled,
+  usage,
+}: {
+  control: Control<T>;
+  disabled: boolean;
+  /** Dòng "N xe đang theo mặc định này" của trang gian hàng - đứng dưới ô tiền cọc. */
+  usage?: ReactNode;
+}) {
+  const control = asPolicyControl(outerControl);
+  const t = useTranslations('Shop.policies.workspace.collateral');
+  const tDeposit = useTranslations('Vehicles.pricing.deposit');
+  const tUnits = useTranslations('Common.units');
+  const domainLabel = useDomainLabel();
+  const { field: modeField } = useController({ control, name: 'collateralMode' });
+  const { field: cashField, fieldState: cashState } = useController({
+    control,
+    name: 'collateralCashEnabled',
+  });
+  const { field: assetField } = useController({ control, name: 'collateralAssetEnabled' });
+  const { field: comboField } = useController({ control, name: 'collateralCombination' });
+  const { field: amountField } = useController({ control, name: 'depositAmount' });
+  const mode = modeField.value as CollateralMode;
+  const cash = cashField.value === true;
+  const asset = assetField.value === true;
+  const both = cash && asset;
+
+  const selectMode = (next: CollateralMode) => {
+    modeField.onChange(next);
+    // Chuyển sang "Có yêu cầu" mà chưa bật hình thức nào ⇒ bật cọc tiền (thứ phổ biến nhất).
+    if (next === COLLATERAL_MODE.REQUIRED && !cash && !asset) cashField.onChange(true);
+  };
+  const toggle = (which: 'cash' | 'asset', next: boolean) => {
+    (which === 'cash' ? cashField : assetField).onChange(next);
+    // "Bắt buộc cả 2" chỉ có nghĩa khi cả hai bật.
+    if (!next) comboField.onChange(COLLATERAL_COMBINATION.ANY_ONE);
   };
 
-  return (
-    <div className={styles.subCard}>
-      <h3 className={styles.subTitle}>
-        {t('title')}
-        <PolicyInfoTip label={tDeposit('tipLabel')}>{tDeposit('hint')}</PolicyInfoTip>
-      </h3>
+  const modeIcon = (value: CollateralMode) =>
+    value === COLLATERAL_MODE.REQUIRED ? (
+      <SafetyCertificateOutlined aria-hidden="true" />
+    ) : (
+      <UnlockOutlined aria-hidden="true" />
+    );
 
+  return (
+    <div className={styles.blockStack}>
       <Radio.Group
         value={mode}
         disabled={disabled}
-        onChange={(event) => field.onChange(event.target.value as CollateralMode)}
+        onChange={(event) => selectMode(event.target.value as CollateralMode)}
         className={styles.modeCards}
-        aria-label={t('title')}
+        aria-label={t('modeLabel')}
       >
         {COLLATERAL_MODE_VALUES.map((value) => (
           <Radio
@@ -136,59 +270,139 @@ export function CollateralBlock({
             value={value}
             className={cx(styles.modeCard, value === mode && styles.modeCardChecked)}
           >
-            <span className={styles.modeLabel}>{domainLabel('collateralMode', value)}</span>
-            <span className={styles.modeDescription}>{description(value)}</span>
+            <span className={styles.modeLabel}>
+              <span className={styles.modeIcon}>{modeIcon(value)}</span>
+              {domainLabel('collateralMode', value)}
+            </span>
+            <span className={styles.modeDescription}>
+              {value === COLLATERAL_MODE.REQUIRED ? t('modeRequired') : t('modeNone')}
+            </span>
           </Radio>
         ))}
       </Radio.Group>
 
-      {mode === COLLATERAL_MODE.CASH ? (
-        <div className={styles.depositRow}>
-          <div className={styles.depositField}>
-            <NumberField
-              control={control}
-              name="depositAmount"
-              label={tDeposit('amount')}
-              labelAccessory={
-                <PolicyInfoTip label={tDeposit('amountTipLabel')}>
-                  {tDeposit('amountHint')}
-                </PolicyInfoTip>
-              }
-              money
-              required
-              min={0}
-              disabled={disabled}
-            />
+      {mode === COLLATERAL_MODE.REQUIRED ? (
+        <>
+          <div className={styles.methodHead}>
+            <span className={styles.methodTitle}>{t('methodTitle')}</span>
+            {/* Chip viên thuốc (Figma `24729:80545`) - chỉ chọn được khi bật cả hai hình thức. */}
+            <div className={styles.comboSwitch} role="radiogroup" aria-label={t('methodTitle')}>
+              {COLLATERAL_COMBINATION_VALUES.map((value) => {
+                const active =
+                  (both ? (comboField.value as CollateralCombination) : COLLATERAL_COMBINATION.ANY_ONE) ===
+                  value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    disabled={disabled || !both}
+                    className={cx(styles.comboChip, active && styles.comboChipActive)}
+                    onClick={() => comboField.onChange(value)}
+                  >
+                    {domainLabel('collateralCombination', value)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          {inheritingVehicles > 0 || overriddenVehicles > 0 ? (
-            <span className={styles.usage}>
-              {inheritingVehicles > 0
-                ? tPolicy('depositHint', { count: inheritingVehicles })
-                : null}
-              {overriddenVehicles > 0 ? (
-                <PolicyInfoTip label={t('overriddenTipLabel')} placement="bottomRight">
-                  {tPolicy('overridden', { count: overriddenVehicles })}
-                </PolicyInfoTip>
+
+          <div className={styles.methodCards}>
+            <div className={cx(styles.methodCard, cash && styles.methodCardOn)}>
+              <div className={styles.methodCardHead}>
+                <div className={styles.methodText}>
+                  <span className={styles.methodName}>{t('cashTitle')}</span>
+                  <span className={styles.methodHint}>{t('cashHint')}</span>
+                </div>
+                <Checkbox
+                  checked={cash}
+                  disabled={disabled}
+                  onChange={(event) => toggle('cash', event.target.checked)}
+                  aria-label={t('cashTitle')}
+                />
+              </div>
+              {cash ? (
+                <>
+                  <div className={styles.depositField}>
+                    <NumberField
+                      control={control}
+                      name="depositAmount"
+                      label={t('amountLabel')}
+                      labelAccessory={
+                        <PolicyInfoTip label={tDeposit('amountTipLabel')}>
+                          {tDeposit('amountHint')}
+                        </PolicyInfoTip>
+                      }
+                      money
+                      required
+                      min={0}
+                      disabled={disabled}
+                    />
+                  </div>
+                  <div className={styles.presets} role="group" aria-label={t('presetsLabel')}>
+                    {DEPOSIT_PRESETS.map((amount) => (
+                      <button
+                        key={amount}
+                        type="button"
+                        className={cx(
+                          styles.preset,
+                          Number(amountField.value) === amount && styles.presetActive,
+                        )}
+                        disabled={disabled}
+                        onClick={() => amountField.onChange(amount)}
+                      >
+                        {tUnits('millionShort', { count: amount / 1_000_000 })}
+                      </button>
+                    ))}
+                  </div>
+                  {usage ? <span className={styles.usage}>{usage}</span> : null}
+                </>
               ) : null}
+            </div>
+
+            <div className={cx(styles.methodCard, asset && styles.methodCardOn)}>
+              <div className={styles.methodCardHead}>
+                <div className={styles.methodText}>
+                  <span className={styles.methodName}>{t('assetTitle')}</span>
+                  <span className={styles.methodHint}>{t('assetHint')}</span>
+                </div>
+                <Checkbox
+                  checked={asset}
+                  disabled={disabled}
+                  onChange={(event) => toggle('asset', event.target.checked)}
+                  aria-label={t('assetTitle')}
+                />
+              </div>
+              {asset ? (
+                <CheckboxGroupField
+                  control={control}
+                  name="collateralAssetTypes"
+                  label={tDeposit('assetTypes')}
+                  options={COLLATERAL_ASSET_TYPE_VALUES.map((value) => ({
+                    value,
+                    label: domainLabel('collateralAssetType', value),
+                  }))}
+                  disabled={disabled}
+                  required
+                />
+              ) : null}
+            </div>
+          </div>
+          {cashState.error?.message ? (
+            <span className={styles.tableError} role="alert">
+              <WarningOutlined aria-hidden="true" /> {cashState.error.message}
             </span>
           ) : null}
-        </div>
-      ) : null}
-
-      {mode === COLLATERAL_MODE.ASSET ? (
-        <CheckboxGroupField
-          control={control}
-          name="collateralAssetTypes"
-          label={tDeposit('assetTypes')}
-          options={COLLATERAL_ASSET_TYPE_VALUES.map((value) => ({
-            value,
-            label: domainLabel('collateralAssetType', value),
-          }))}
-          disabled={disabled}
-          required
-          help={tDeposit('assetTypesHint')}
+        </>
+      ) : (
+        <Alert
+          type="success"
+          showIcon
+          title={t('noneBadgeTitle')}
+          description={t('noneBadgeBody')}
         />
-      ) : null}
+      )}
     </div>
   );
 }
@@ -200,7 +414,14 @@ export function CollateralBlock({
  * áp", nên tắt ⇒ `formToSaveInput` gửi null cả cặp. Ô làm tròn quá giờ đã gỡ — quyết toán làm tròn lên
  * theo giờ, công thức nằm trong ⓘ.
  */
-export function LimitBlocks({ control, disabled }: { control: Ctl; disabled: boolean }) {
+export function LimitBlocks<T extends PolicyFormValues>({
+  control: outerControl,
+  disabled,
+}: {
+  control: Control<T>;
+  disabled: boolean;
+}) {
+  const control = asPolicyControl(outerControl);
   const t = useTranslations('Shop.policies.workspace');
   const tMileage = useTranslations('Vehicles.pricing.mileage');
   const tOvertime = useTranslations('Vehicles.pricing.overtime');
@@ -340,9 +561,16 @@ type TierErrors = { root?: { message?: string }; message?: string } | undefined;
 /**
  * "Dịch vụ giao nhận xe tận nơi" (design `24047:77366`): bảng Từ · Đến · Phí áp dụng · Thao tác. Ô sửa
  * thẳng trong bảng (không chế độ bút chì/✓✗ từng dòng — chốt 06/11); mỗi bậc MỘT phí trọn gói (ADR
- * 0078). Bán kính tự giao tối đa — design không vẽ — đứng dưới bảng như màn sửa xe (E17).
+ * 0078). Bán kính tự giao tối đa — design không vẽ — đứng dưới bảng.
  */
-export function DeliveryBlock({ control, disabled }: { control: Ctl; disabled: boolean }) {
+export function DeliveryBlock<T extends PolicyFormValues>({
+  control: outerControl,
+  disabled,
+}: {
+  control: Control<T>;
+  disabled: boolean;
+}) {
+  const control = asPolicyControl(outerControl);
   const t = useTranslations('Shop.policies.workspace.delivery');
   const tDelivery = useTranslations('Vehicles.pricing.delivery');
   const tLabels = useTranslations('Common.labels');
@@ -402,7 +630,7 @@ export function DeliveryBlock({ control, disabled }: { control: Ctl; disabled: b
             {fields.map((field, index) => (
               <div key={field.id} className={cx(styles.tableRow, styles.deliveryGrid)}>
                 <span className={styles.fromCell}>
-                  {index === 0 ? '0' : `>${tiers[index - 1]?.toKm ?? '—'}`}
+                  {index === 0 ? '0' : `>${tiers[index - 1]?.toKm ?? '-'}`}
                 </span>
                 <NumberField
                   control={control}
@@ -498,11 +726,12 @@ export function TurnaroundBlock({
       <div className={styles.turnaroundHead}>
         <h3 className={styles.blockTitle}>
           {t('title')}
-          {/* Phạm vi áp dụng + số xe đang theo: đọc khi cần, không đứng thành hai dải dưới nút. */}
-          <PolicyInfoTip label={t('tipLabel')}>
-            {tHandover('scopeNote')}
-            {inheritingVehicles > 0 ? <> {t('applies', { count: inheritingVehicles })}</> : null}
-          </PolicyInfoTip>
+          {/* Số xe đang theo mặc định: đọc khi cần. Phạm vi áp dụng đứng thành dải ngay dưới ô. */}
+          {inheritingVehicles > 0 ? (
+            <PolicyInfoTip label={t('tipLabel')}>
+              {t('applies', { count: inheritingVehicles })}
+            </PolicyInfoTip>
+          ) : null}
         </h3>
         <p className={styles.blockHint}>{t('hint')}</p>
       </div>
@@ -513,6 +742,7 @@ export function TurnaroundBlock({
         disabled={disabled}
         notice={false}
       />
+      <Alert type="info" title={tHandover('scopeNote')} />
     </div>
   );
 }
@@ -522,20 +752,18 @@ export function TurnaroundBlock({
 /**
  * Mốc ưu đãi cam kết thời hạn (design `24047:77588`) — chỉ theo % (ADR 0011, như E12 màn sửa xe).
  * Không có công tắc: có mốc = đang bật, xoá hết = tắt (`discountEnabled` đi theo số mốc). Gợi ý giá
- * tháng cụ thể cần giá ngày của MỘT xe nên ở tab Dài hạn của từng xe; công thức nằm trong ⓘ.
+ * tháng cụ thể cần giá ngày của MỘT xe nên ở tab Dài hạn của từng xe; công thức ở hộp dưới bảng.
  */
 export function DiscountBlock({
   control,
   setValue,
   disabled,
   legacyTiers,
-  vehicleType,
 }: {
   control: Ctl;
   setValue: SetValue;
   disabled: boolean;
   legacyTiers?: readonly { minDays: number; percent: number }[];
-  vehicleType: VehicleType;
 }) {
   const t = useTranslations('Shop.policies.workspace.longTerm');
   const tDiscount = useTranslations('Vehicles.pricing.longTermDiscount');
@@ -679,22 +907,12 @@ export function DiscountBlock({
           />
         ) : null}
       </div>
-      <ExamplePreview control={control} vehicleType={vehicleType} />
+      {/* Figma `23874:75957`: không có khung xem trước - chỉ hộp công thức dưới bảng mốc. */}
+      <div className={styles.formulaCard}>
+        <span className={styles.formulaTitle}>{tDiscount('formulaTitle')}</span>
+        <span className={styles.formulaText}>{tDiscount('formula')}</span>
+      </div>
     </div>
   );
 }
 
-/**
- * Giá tháng VÍ DỤ của khung xem trước — gian hàng không có một giá chung, nên preview cần một con số
- * để hình dung. Chỉ là trạng thái hiển thị (không lưu, không gửi); chủ xe sửa được ngay trong khung.
- */
-const EXAMPLE_MONTHLY_PRICE: Readonly<Record<VehicleType, number>> = {
-  [VEHICLE_TYPE.CAR]: 15_000_000,
-  [VEHICLE_TYPE.MOTORBIKE]: 3_000_000,
-};
-
-function ExamplePreview({ control, vehicleType }: { control: Ctl; vehicleType: VehicleType }) {
-  const [monthly, setMonthly] = useState<number | null>(EXAMPLE_MONTHLY_PRICE[vehicleType]);
-  const tiers = useWatch({ control, name: 'discountTiers' });
-  return <LongTermPackagePreview monthly={monthly} onMonthlyChange={setMonthly} tiers={tiers} />;
-}

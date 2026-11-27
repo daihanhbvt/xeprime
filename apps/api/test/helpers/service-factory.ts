@@ -60,6 +60,7 @@ import { SellerProfileService } from '../../src/modules/seller-profile/seller-pr
 import { SupportService } from '../../src/modules/support/support.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
+import { TenantRentalTermsService } from '../../src/modules/vehicle-settings/tenant-rental-terms.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
 import { NotConfiguredVehicleRegistrationReader } from '../../src/modules/vehicles/registration/registration-reader';
 import { VehicleRegistrationUploadsService } from '../../src/modules/vehicles/registration/vehicle-registration-uploads.service';
@@ -85,6 +86,7 @@ export function makeVehicleSettingsService(prisma: PrismaService): VehicleSettin
     new OccupancyService(prisma),
     new ListingsService(prisma),
     makeDriversService(prisma),
+    new TenantRentalTermsService(prisma, new AuditService(prisma)),
   );
 }
 
@@ -600,6 +602,7 @@ export function makePublicListingsService(prisma: PrismaService): PublicListings
     makePricingService(prisma),
     makeVehicleSettingsService(prisma),
     new HostMetricsService(prisma),
+    new TenantRentalTermsService(prisma, audit),
   );
 }
 

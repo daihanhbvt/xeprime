@@ -17,6 +17,9 @@ export type SaveShopOperationDefaultsInput = Schemas['SaveShopOperationDefaultsD
 
 /** Xe kế thừa mà thiếu dữ liệu bảo hiểm bắt buộc (ADR 0091 điều 1) - web `fetchShopInsuranceImpact`. */
 export type ShopInsuranceImpact = Schemas['ShopInsuranceImpactDto'];
+/** Điều khoản thuê của gian hàng theo nhóm dịch vụ (ADR 0112 điều 3) - web `TenantRentalTerms`. */
+export type TenantRentalTerms = Schemas['TenantRentalTermsDto'];
+export type SaveTenantRentalTermsInput = Schemas['SaveTenantRentalTermsDto'];
 
 const PATH = '/shop/rental-policies';
 
@@ -47,6 +50,19 @@ export const shopPoliciesApi = {
     const res = await getApiClient().request<ShopRentalPolicy>(PATH, {
       method: 'PUT',
       query: { vehicleType },
+      body,
+    });
+    return res.data;
+  },
+
+  /** Điều khoản thuê của gian hàng - hai nhóm Tự lái & Dài hạn · Có tài xế (ADR 0112 điều 3). */
+  terms(): Promise<TenantRentalTerms> {
+    return getApiClient().get<TenantRentalTerms>(`${PATH}/terms`);
+  },
+
+  async saveTerms(body: SaveTenantRentalTermsInput): Promise<TenantRentalTerms> {
+    const res = await getApiClient().request<TenantRentalTerms>(`${PATH}/terms`, {
+      method: 'PUT',
       body,
     });
     return res.data;

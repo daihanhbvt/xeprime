@@ -3,6 +3,7 @@
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
+import { useDescribeCollateral } from '@/features/rental-policies/collateral-text';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { WorkDrawerFacts } from '@/components/overlay/WorkDrawer';
@@ -46,6 +47,7 @@ function useReviewValueFormatter(): (value: ReviewValue) => ReactNode {
   const numbers = useFormatter();
   const domainLabel = useDomainLabel();
   const { brandLabel } = useCatalogLabels();
+  const describeCollateral = useDescribeCollateral();
 
   const decimal = (value: string | number) =>
     numbers.number(Number(value), { maximumFractionDigits: 2 });
@@ -73,6 +75,8 @@ function useReviewValueFormatter(): (value: ReviewValue) => ReactNode {
         return value.on ? t('values.on') : t('values.off');
       case 'unlimited':
         return t('values.unlimited');
+      case 'collateral':
+        return describeCollateral(value.collateral) ?? '-';
       case 'measure':
         return t(`units.${value.unit}`, { value: decimal(value.value) });
       case 'deliveryTiers':

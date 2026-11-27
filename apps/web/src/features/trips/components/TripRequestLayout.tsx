@@ -349,7 +349,7 @@ export function TripRequestLayout({
           <BookingRequirementsCard
             licence={{ required: licenceRequired, current: licenceQ.data?.verified ?? null }}
             hostTerms={
-              terms ? { text: terms.termsText ?? null, documents: terms.requiredDocuments } : null
+              terms ? { text: terms.termsText ?? null } : null
             }
             headingLevel={2}
           />
