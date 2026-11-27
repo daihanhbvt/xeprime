@@ -7,6 +7,7 @@
 import {
   PARTNER_PAYMENT_RETURN_PATH,
   PARTNER_PLAN_PURCHASE_PATH,
+  PAYMENT_CHECKOUT_PAGE_PATH,
   PAYMENT_PAGE_PATH,
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
@@ -1121,7 +1122,7 @@ export const paymentPath = {
     `${ROUTES.MANAGE.PAYMENT}/${encodeURIComponent(invoiceId)}`,
   /** Một phiếu thanh toán gộp nhiều gói (ADR 0083) - site partner. */
   checkout: (checkoutId: string): string =>
-    `${ROUTES.MANAGE.PAYMENT}/checkout/${encodeURIComponent(checkoutId)}`,
+    `${partner(PAYMENT_CHECKOUT_PAGE_PATH)}/${encodeURIComponent(checkoutId)}`,
 };
 
 /** Trang thanh toán hoá đơn gói TRONG khung site partner - xem `ROUTES.MANAGE.SHOP_PAYMENT`. */

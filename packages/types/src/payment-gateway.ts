@@ -58,7 +58,20 @@ export const HOLD_PAYMENT_CHANNEL_VALUES = Object.values(
 export const PAYMENT_ORDER_TARGET = {
   SUBSCRIPTION_INVOICE: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
   BOOKING_HOLD: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+  /**
+   * PHIẾU GỘP nhiều gói (`XPC…`, ADR 0083 điều 6 sửa 27/11/2026) — cùng công tắc luồng với hoá đơn
+   * gói (`PAYMENT_GATEWAY_SUBSCRIPTION`); tiền áp qua đúng hàm SePay dùng cho mã `XPC…`.
+   */
+  SUBSCRIPTION_CHECKOUT: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_CHECKOUT,
 } as const;
+
+/** Đích thuộc trục GÓI (site partner) — hoá đơn lẻ hay phiếu gộp, cùng một luồng mua gói. */
+export function isSubscriptionPaymentTarget(target: string): boolean {
+  return (
+    target === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE ||
+    target === PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT
+  );
+}
 
 export type PaymentOrderTarget = (typeof PAYMENT_ORDER_TARGET)[keyof typeof PAYMENT_ORDER_TARGET];
 
@@ -325,6 +338,12 @@ export const PAYMENT_RETURN_PARAM = {
  * Phải trùng route thật của web (có test khoá).
  */
 export const PAYMENT_PAGE_PATH = '/payment';
+
+/**
+ * Trang thanh toán PHIẾU GỘP nhiều gói của site partner (`/payment/checkout/:id`, ADR 0083) - đích
+ * quay về của lượt cổng trả phiếu. Phải trùng route thật của web (có test khoá).
+ */
+export const PAYMENT_CHECKOUT_PAGE_PATH = `${PAYMENT_PAGE_PATH}/checkout`;
 
 /**
  * Trang quay về CŨ của site partner (`/payment-return?order=…`). Server không dựng nó nữa — giữ hằng

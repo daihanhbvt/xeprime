@@ -11,7 +11,7 @@ import {
   PAYMENT_ORDER_REVIEW_STATUS,
   PAYMENT_ORDER_STATUS,
   PAYMENT_ORDER_STATUS_META,
-  PAYMENT_ORDER_TARGET,
+  isSubscriptionPaymentTarget,
   type PaymentOrderStatus,
 } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
@@ -409,7 +409,8 @@ function OrderSide({ order }: { order: PlatformPaymentOrderDetail }) {
               <dt>{t('detail.targetStatus')}</dt>
               <dd>
                 {domainLabel(
-                  order.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE
+                  // Phiếu gộp dùng chung bộ trạng thái của hoá đơn gói (ADR 0083).
+                  isSubscriptionPaymentTarget(order.targetType)
                     ? 'subscriptionInvoiceStatus'
                     : 'bookingHoldStatus',
                   target.status,

@@ -38,8 +38,14 @@ một trang thanh toán với một mã duy nhất.
    phạm vi không xung đột (ô tô + xe máy; bậc `all` mua riêng), kiểm từng phần tử bằng CHÍNH luật của
    `POST /subscription/purchase`, rồi tạo phiếu + hai hoá đơn trong một transaction dưới advisory lock
    theo tenant. Một gói vẫn đi `POST /subscription/purchase` (app native giữ nguyên).
-6. **Không cổng ví điện tử cho phiếu gộp** ở giai đoạn này: ADR 0058 còn Proposed và mặc định tắt; phiên
-   cổng cho riêng một hoá đơn con bị từ chối (`PAYMENT_TARGET_NOT_PAYABLE`) vì nó trả một nửa lượt mua.
+6. **Cổng ví điện tử trả CẢ PHIẾU** (sửa 27/11/2026 — bản đầu không có cổng cho phiếu gộp; QC #22 báo
+   mua ô tô + xe máy chỉ còn VietQR khi staging đã bật MoMo/VNPAY). Phiếu là đích cổng thứ ba
+   (`payment_gateway_orders.target_type = subscription_checkout`, cột `subscription_checkout_id`, CHECK
+   đúng-một-đích): `POST /subscription/payment-gateway/checkouts/:id/checkout` gửi sang cổng phần còn
+   thiếu của CẢ phiếu, quay về `/payment/checkout/:id`; tiền áp qua `applyCheckoutPaymentWithinTx` —
+   đúng hàm webhook SePay dùng cho `XPC…`, nên vẫn một đường tiền (điều 3). Cùng công tắc luồng với hoá
+   đơn lẻ (`PAYMENT_GATEWAY_SUBSCRIPTION`). Phiên cổng cho riêng một hoá đơn CON vẫn bị từ chối
+   (`PAYMENT_TARGET_NOT_PAYABLE`) vì nó trả một nửa lượt mua.
 
 ## Hệ quả
 
@@ -52,5 +58,4 @@ một trang thanh toán với một mã duy nhất.
 
 ## Cần xem lại khi
 
-- Cổng ví điện tử (ADR 0058) được bật ⇒ cần đích cổng cho phiếu gộp.
 - Có thêm phạm vi loại xe thứ ba ⇒ nới trần hai phần tử của lượt mua gộp.

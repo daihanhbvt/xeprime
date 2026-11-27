@@ -26,7 +26,7 @@ import {
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
-import { shopPath } from '@/constants/routes';
+import { marketSiteHref, shopPath } from '@/constants/routes';
 import { PlatformWalletButton } from '@/features/platform-wallets/components/PlatformWalletButton';
 import { StartSupportDialog } from '@/features/tenant-support/components/StartSupportDialog';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -231,7 +231,7 @@ function HeaderActions({ overview }: { overview: PartnerOverview }) {
       />
       {identity.storefrontAvailable ? (
         <Button
-          href={shopPath.detail(identity.slug)}
+          href={marketSiteHref(shopPath.detail(identity.slug))}
           target="_blank"
           rel="noreferrer"
           icon={<ExportOutlined />}

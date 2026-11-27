@@ -19,6 +19,7 @@ export const PAYMENT_ORDER_VIEW_SELECT = {
   targetCode: true,
   subscriptionInvoiceId: true,
   bookingHoldId: true,
+  subscriptionCheckoutId: true,
   amount: true,
   status: true,
   checkoutUrl: true,
@@ -98,6 +99,10 @@ export function toPaymentOrderDto(
     invoiceId:
       row.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE
         ? row.subscriptionInvoiceId
+        : null,
+    checkoutId:
+      row.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT
+        ? row.subscriptionCheckoutId
         : null,
     amount: row.amount.toFixed(0),
     status: row.status,

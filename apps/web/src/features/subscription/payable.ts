@@ -1,6 +1,7 @@
 import { subtractMoney } from '@xeprime/domain';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 
+import type { GatewayTarget } from '@/features/payment-gateway/types';
 import type { SubscriptionCheckout, SubscriptionInvoice } from './types';
 
 /**
@@ -20,8 +21,11 @@ export interface Payable {
   paidAmount: string;
   expiresAt: string | null;
   invoices: readonly SubscriptionInvoice[];
-  /** Phiên cổng ví chỉ có cho hoá đơn lẻ (ADR 0083 điều 6). */
-  gatewayInvoiceId: string | null;
+  /**
+   * Đích của phiên cổng ví (MoMo/VNPAY) - ĐÚNG thứ đang trả: hoá đơn lẻ, hoặc cả phiếu gộp (ADR 0083
+   * điều 6 sửa 27/11/2026). Không bao giờ là một hoá đơn con của phiếu - trả nó là trả nửa lượt mua.
+   */
+  gatewayTarget: GatewayTarget;
 }
 
 /** Hoá đơn LẺ - không dùng cho hoá đơn có `checkoutId` (xem `Payable`). */
@@ -33,7 +37,7 @@ export function payableOfInvoice(invoice: SubscriptionInvoice): Payable {
     paidAmount: invoice.paidAmount,
     expiresAt: invoice.expiresAt ?? null,
     invoices: [invoice],
-    gatewayInvoiceId: invoice.id,
+    gatewayTarget: { kind: 'invoice', invoiceId: invoice.id },
   };
 }
 
@@ -45,7 +49,7 @@ export function payableOfCheckout(checkout: SubscriptionCheckout): Payable {
     paidAmount: checkout.paidAmount,
     expiresAt: checkout.expiresAt ?? null,
     invoices: checkout.invoices,
-    gatewayInvoiceId: null,
+    gatewayTarget: { kind: 'checkout', checkoutId: checkout.id },
   };
 }
 

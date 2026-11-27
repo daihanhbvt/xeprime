@@ -302,9 +302,7 @@ function PaymentBody({
    */
   const order = useGatewayOrder(PAYMENT_SURFACE.PARTNER, awaiting ? orderId : null);
   const gatewayEnabled =
-    payable.gatewayInvoiceId !== null &&
-    (!orderId || canStartAnotherCheckout(order.data, { failedToLoad: order.isError }));
-  const [first] = payable.invoices;
+    !orderId || canStartAnotherCheckout(order.data, { failedToLoad: order.isError });
 
   if (payable.status === SUBSCRIPTION_INVOICE_STATUS.PAID) {
     // Đang chuyển về trang gói — thông báo đã bật nằm ở góc phải (xem `SubscriptionPaymentView`).
@@ -339,7 +337,7 @@ function PaymentBody({
 
   return (
     <CheckoutPanel
-      target={{ kind: 'invoice', invoiceId: payable.gatewayInvoiceId ?? first?.id ?? '' }}
+      target={payable.gatewayTarget}
       amount={amount}
       code={payable.code}
       account={paymentInfo.data}

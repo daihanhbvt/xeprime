@@ -70,6 +70,9 @@ const DETAIL_SELECT = {
     select: { status: true, totalAmount: true, paidAmount: true, expiresAt: true },
   },
   bookingHold: { select: { status: true, amount: true, paidAmount: true, expiresAt: true } },
+  subscriptionCheckout: {
+    select: { status: true, totalAmount: true, paidAmount: true, expiresAt: true },
+  },
   events: {
     orderBy: { createdAt: 'desc' },
     take: EVENTS_IN_DETAIL,
@@ -249,21 +252,34 @@ function toListDto(row: ListRow): PlatformPaymentOrderDto {
   };
 }
 
+function targetSnapshot(row: DetailRow): PaymentOrderTargetSnapshotDto {
+  switch (row.targetType) {
+    case PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE:
+      return {
+        status: row.subscriptionInvoice?.status ?? null,
+        amount: row.subscriptionInvoice?.totalAmount.toFixed(0) ?? null,
+        paidAmount: row.subscriptionInvoice?.paidAmount.toFixed(0) ?? null,
+        expiresAt: row.subscriptionInvoice?.expiresAt?.toISOString() ?? null,
+      };
+    case PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT:
+      return {
+        status: row.subscriptionCheckout?.status ?? null,
+        amount: row.subscriptionCheckout?.totalAmount.toFixed(0) ?? null,
+        paidAmount: row.subscriptionCheckout?.paidAmount.toFixed(0) ?? null,
+        expiresAt: row.subscriptionCheckout?.expiresAt?.toISOString() ?? null,
+      };
+    default:
+      return {
+        status: row.bookingHold?.status ?? null,
+        amount: row.bookingHold?.amount.toFixed(0) ?? null,
+        paidAmount: row.bookingHold?.paidAmount.toFixed(0) ?? null,
+        expiresAt: row.bookingHold?.expiresAt.toISOString() ?? null,
+      };
+  }
+}
+
 function toDetailDto(row: DetailRow): PlatformPaymentOrderDetailDto {
-  const target: PaymentOrderTargetSnapshotDto =
-    row.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE
-      ? {
-          status: row.subscriptionInvoice?.status ?? null,
-          amount: row.subscriptionInvoice?.totalAmount.toFixed(0) ?? null,
-          paidAmount: row.subscriptionInvoice?.paidAmount.toFixed(0) ?? null,
-          expiresAt: row.subscriptionInvoice?.expiresAt?.toISOString() ?? null,
-        }
-      : {
-          status: row.bookingHold?.status ?? null,
-          amount: row.bookingHold?.amount.toFixed(0) ?? null,
-          paidAmount: row.bookingHold?.paidAmount.toFixed(0) ?? null,
-          expiresAt: row.bookingHold?.expiresAt.toISOString() ?? null,
-        };
+  const target = targetSnapshot(row);
   return {
     ...toListDto(row),
     providerOrderRef: row.providerOrderRef,

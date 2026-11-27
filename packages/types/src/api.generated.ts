@@ -12449,6 +12449,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/subscription/payment-gateway/checkouts/{checkoutId}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mở phiên thanh toán PHIẾU GỘP nhiều gói qua cổng (ADR 0083) - số tiền là phần còn thiếu của cả phiếu đọc từ DB; dùng lại phiên còn hạn
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        post: operations["PartnerPaymentGatewayController_checkoutCombined"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/subscription/payment-gateway/invoices/{invoiceId}/checkout": {
         parameters: {
             query?: never;
@@ -12509,7 +12535,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Trạng thái MỘT lượt thanh toán hoá đơn qua cổng (trang quay về) - server tự hỏi cổng khi còn chờ quá lâu
+         * Trạng thái MỘT lượt thanh toán gói qua cổng - hoá đơn hoặc phiếu gộp (trang quay về); server tự hỏi cổng khi còn chờ quá lâu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.
@@ -16309,8 +16335,10 @@ export interface components {
         BookingRequestPricingDto: {
             /** @description true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng */
             isEstimate: boolean;
-            /** @description Tiền thuê - doanh thu gian hàng, VND string */
+            /** @description Tiền thuê - doanh thu gian hàng, ĐÃ GỒM phí giao xe tận nơi `deliveryFee` nếu có, VND string */
             rentalTotal: string;
+            /** @description Phí giao xe tận nơi `G` đã chốt (khách trả tận tay chủ xe lúc nhận xe, nằm trong `rentalTotal` và `remainingAmount`, không vào tiền giữ chỗ - ADR 0064 điều 4). Từ đơn nếu đã có đơn, từ snapshot giữ chỗ nếu đã duyệt. null khi còn tạm tính (chủ xe nhập lúc duyệt) (VND string) */
+            deliveryFee?: string | null;
             /** @description Tổng khách phải trả (đã gồm phụ phí nếu có), VND string */
             customerTotalAmount: string;
             /** @description Đã trả qua nền tảng (giữ chỗ/đơn) - null khi còn tạm tính */
@@ -21710,7 +21738,7 @@ export interface components {
         };
         PaymentGatewayMethodsDto: {
             /** @enum {string} */
-            target: "subscription_invoice" | "booking_hold";
+            target: "subscription_invoice" | "booking_hold" | "subscription_checkout";
             /** @description Cổng đang ở môi trường thử (sandbox) - giao diện gắn nhãn để người thử không tưởng mình trả tiền thật */
             sandbox: boolean;
             methods: components["schemas"]["PaymentGatewayMethodDto"][];
@@ -21730,13 +21758,15 @@ export interface components {
             /** @enum {string} */
             provider: "momo" | "vnpay";
             /** @enum {string} */
-            targetType: "subscription_invoice" | "booking_hold";
-            /** @description Mã đối soát của đích (XPG… / XPH…) */
+            targetType: "subscription_invoice" | "booking_hold" | "subscription_checkout";
+            /** @description Mã đối soát của đích (XPG… / XPC… / XPH…) */
             targetCode: string;
             /** @description Chuyến (id yêu cầu thuê) - chỉ có ở lượt trả tiền giữ chỗ */
             tripId?: string | null;
             /** @description Hoá đơn gói - chỉ có ở lượt trả hoá đơn gói */
             invoiceId?: string | null;
+            /** @description Phiếu gộp nhiều gói (ADR 0083) - chỉ có ở lượt trả phiếu gộp */
+            checkoutId?: string | null;
             /** @description Số tiền đã gửi sang cổng - VND, chuỗi (ADR 0007) */
             amount: string;
             /** @enum {string} */
@@ -22909,7 +22939,7 @@ export interface components {
             /** @enum {string} */
             provider: "momo" | "vnpay";
             /** @enum {string} */
-            targetType: "subscription_invoice" | "booking_hold";
+            targetType: "subscription_invoice" | "booking_hold" | "subscription_checkout";
             targetCode: string;
             tenantId: string;
             /** @description Tên gian hàng / chủ xe sở hữu đích */
@@ -22967,7 +22997,7 @@ export interface components {
             /** @enum {string} */
             provider: "momo" | "vnpay";
             /** @enum {string} */
-            targetType: "subscription_invoice" | "booking_hold";
+            targetType: "subscription_invoice" | "booking_hold" | "subscription_checkout";
             targetCode: string;
             tenantId: string;
             /** @description Tên gian hàng / chủ xe sở hữu đích */
@@ -83727,7 +83757,7 @@ export interface operations {
                 /** @description Bỏ trống = `review` (CẦN XỬ LÝ - việc của người trực). `resolved` = đã xử lý; `history` = mọi lượt */
                 view?: "review" | "resolved" | "history";
                 provider?: "momo" | "vnpay";
-                target?: "subscription_invoice" | "booking_hold";
+                target?: "subscription_invoice" | "booking_hold" | "subscription_checkout";
                 status?: "pending" | "succeeded" | "failed" | "cancelled" | "expired";
                 /** @description Tìm theo mã đối soát (XPG/XPH), mã đơn gửi sang cổng, hoặc mã giao dịch của cổng */
                 q?: string;
@@ -107224,6 +107254,181 @@ export interface operations {
             };
             /**
              * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PartnerPaymentGatewayController_checkoutCombined: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checkoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartGatewayCheckoutDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PaymentOrderDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */

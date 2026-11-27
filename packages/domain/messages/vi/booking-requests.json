@@ -847,6 +847,8 @@
     "paymentHeading": "Chi tiết thanh toán",
     "rentalTotal": "Tiền thuê:",
     "customerTotal": "Khách trả:",
+    "deliveryFee": "Phí giao xe tận nơi:",
+    "deliveryFeeFree": "Miễn phí",
     "holdExpected": "Tiền giữ chỗ (dự kiến):",
     "holdAwaiting": "Tiền giữ chỗ (chờ khách trả):",
     "holdPaid": "Đã giữ chỗ:",

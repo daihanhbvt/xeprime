@@ -54906,7 +54906,8 @@
               "type": "string",
               "enum": [
                 "subscription_invoice",
-                "booking_hold"
+                "booking_hold",
+                "subscription_checkout"
               ]
             }
           },
@@ -79277,6 +79278,173 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/subscription/payment-gateway/checkouts/{checkoutId}/checkout": {
+      "post": {
+        "operationId": "PartnerPaymentGatewayController_checkoutCombined",
+        "parameters": [
+          {
+            "name": "checkoutId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartGatewayCheckoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaymentOrderDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu - trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 10 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mở phiên thanh toán PHIẾU GỘP nhiều gói qua cổng (ADR 0083) - số tiền là phần còn thiếu của cả phiếu đọc từ DB; dùng lại phiên còn hạn",
+        "tags": [
+          "payment-gateway"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` - phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng - `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
     "/subscription/payment-gateway/invoices/{invoiceId}/checkout": {
       "post": {
         "operationId": "PartnerPaymentGatewayController_checkout",
@@ -79673,7 +79841,7 @@
             }
           }
         },
-        "summary": "Trạng thái MỘT lượt thanh toán hoá đơn qua cổng (trang quay về) - server tự hỏi cổng khi còn chờ quá lâu",
+        "summary": "Trạng thái MỘT lượt thanh toán gói qua cổng - hoá đơn hoặc phiếu gộp (trang quay về); server tự hỏi cổng khi còn chờ quá lâu",
         "tags": [
           "payment-gateway"
         ],
@@ -100479,7 +100647,12 @@
           },
           "rentalTotal": {
             "type": "string",
-            "description": "Tiền thuê - doanh thu gian hàng, VND string"
+            "description": "Tiền thuê - doanh thu gian hàng, ĐÃ GỒM phí giao xe tận nơi `deliveryFee` nếu có, VND string"
+          },
+          "deliveryFee": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phí giao xe tận nơi `G` đã chốt (khách trả tận tay chủ xe lúc nhận xe, nằm trong `rentalTotal` và `remainingAmount`, không vào tiền giữ chỗ - ADR 0064 điều 4). Từ đơn nếu đã có đơn, từ snapshot giữ chỗ nếu đã duyệt. null khi còn tạm tính (chủ xe nhập lúc duyệt) (VND string)"
           },
           "customerTotalAmount": {
             "type": "string",
@@ -117269,7 +117442,8 @@
             "type": "string",
             "enum": [
               "subscription_invoice",
-              "booking_hold"
+              "booking_hold",
+              "subscription_checkout"
             ]
           },
           "sandbox": {
@@ -117336,12 +117510,13 @@
             "type": "string",
             "enum": [
               "subscription_invoice",
-              "booking_hold"
+              "booking_hold",
+              "subscription_checkout"
             ]
           },
           "targetCode": {
             "type": "string",
-            "description": "Mã đối soát của đích (XPG… / XPH…)"
+            "description": "Mã đối soát của đích (XPG… / XPC… / XPH…)"
           },
           "tripId": {
             "type": "string",
@@ -117352,6 +117527,11 @@
             "type": "string",
             "nullable": true,
             "description": "Hoá đơn gói - chỉ có ở lượt trả hoá đơn gói"
+          },
+          "checkoutId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phiếu gộp nhiều gói (ADR 0083) - chỉ có ở lượt trả phiếu gộp"
           },
           "amount": {
             "type": "string",
@@ -121205,7 +121385,8 @@
             "type": "string",
             "enum": [
               "subscription_invoice",
-              "booking_hold"
+              "booking_hold",
+              "subscription_checkout"
             ]
           },
           "targetCode": {
@@ -121407,7 +121588,8 @@
             "type": "string",
             "enum": [
               "subscription_invoice",
-              "booking_hold"
+              "booking_hold",
+              "subscription_checkout"
             ]
           },
           "targetCode": {

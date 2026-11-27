@@ -169,7 +169,9 @@ function OrderAlert({ order }: { order: PaymentOrder }) {
             <>
               {order.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE
                 ? t('completedInvoice', { code: order.targetCode })
-                : t('completedHold', { code: order.targetCode })}{' '}
+                : order.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_CHECKOUT
+                  ? t('completedCheckout', { code: order.targetCode })
+                  : t('completedHold', { code: order.targetCode })}{' '}
               {sandboxTag}
             </>
           }

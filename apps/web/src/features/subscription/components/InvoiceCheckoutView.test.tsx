@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from 'antd';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,7 @@ import { API_ERROR_CODE, SHOP_ONBOARDING_STATE, SUBSCRIPTION_INVOICE_STATUS } fr
 import { ApiClientError } from '@xeprime/api-client';
 import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import type { SubscriptionInvoice } from '../types';
-import { InvoiceCheckoutView } from './InvoiceCheckoutView';
+import { CheckoutPaymentView, InvoiceCheckoutView } from './InvoiceCheckoutView';
 
 /**
  * TRANG THANH TOÁN một hoá đơn gói - `partner.xeprime.vn/payment/:invoiceId` (13/10/2026).
@@ -23,13 +23,25 @@ const invoice = vi.hoisted(() => ({
   error: null as unknown,
   refetch: vi.fn(),
 }));
+const checkout = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isPending: false,
+  isError: false,
+  error: null as unknown,
+  refetch: vi.fn(),
+}));
+const gatewayApi = vi.hoisted(() => ({
+  fetchGatewayMethods: vi.fn(),
+  fetchGatewayOrder: vi.fn(),
+  startGatewayCheckout: vi.fn(),
+}));
 const user = vi.hoisted(() => ({ data: undefined as unknown }));
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }));
 
 vi.mock('../hooks/use-subscription', () => ({
   useSubscriptionInvoice: () => invoice,
   // Trang hoá đơn lẻ không đọc phiếu gộp - hook vẫn được gọi (tắt) theo luật hooks.
-  useSubscriptionCheckout: () => ({ data: undefined, isPending: false, isError: false }),
+  useSubscriptionCheckout: () => checkout,
   usePaymentInfo: () => ({
     data: {
       configured: true,
@@ -46,13 +58,17 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => router,
 }));
-vi.mock('@/features/payment-gateway/api', () => ({
-  fetchGatewayMethods: vi
-    .fn()
-    .mockResolvedValue({ target: 'subscription_invoice', sandbox: false, methods: [] }),
-  fetchGatewayOrder: vi.fn(),
-  startGatewayCheckout: vi.fn(),
-}));
+vi.mock('@/features/payment-gateway/api', () => gatewayApi);
+
+const NO_WALLETS = { target: 'subscription_invoice', sandbox: false, methods: [] };
+const BOTH_WALLETS = {
+  target: 'subscription_invoice',
+  sandbox: true,
+  methods: [
+    { provider: 'momo', minAmount: '1000', maxAmount: '50000000' },
+    { provider: 'vnpay', minAmount: '5000', maxAmount: null },
+  ],
+};
 
 function makeInvoice(over: Partial<SubscriptionInvoice> = {}): SubscriptionInvoice {
   return {
@@ -85,13 +101,26 @@ function renderPage() {
   return render(<InvoiceCheckoutView invoiceId="01HINVOICE" />, { wrapper });
 }
 
+function renderCheckoutPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>
+      <App>{children}</App>
+    </QueryClientProvider>
+  );
+  return render(<CheckoutPaymentView checkoutId="01HCHECKOUT" />, { wrapper });
+}
+
 beforeEach(() => {
   invoice.data = undefined;
   invoice.isPending = false;
   invoice.isError = false;
   invoice.error = null;
+  checkout.data = undefined;
   user.data = undefined;
   router.replace.mockClear();
+  gatewayApi.fetchGatewayMethods.mockReset().mockResolvedValue(NO_WALLETS);
+  gatewayApi.startGatewayCheckout.mockReset();
 });
 
 describe('InvoiceCheckoutView', () => {
@@ -168,6 +197,41 @@ describe('InvoiceCheckoutView', () => {
     expect(router.replace).toHaveBeenCalledWith('/manage/payment/checkout/01HCHECKOUT');
     expect(screen.queryByText('XPGWYZZ8TZY')).toBeNull();
     expect(screen.queryByText(/650.000/)).toBeNull();
+  });
+
+  /*
+   * QC 27/11/2026 (#22): mua ô tô + xe máy một lần ⇒ phiếu gộp `XPC…` chỉ có VietQR. Từ ADR 0083
+   * điều 6 (sửa 27/11) phiếu có đích cổng riêng: ví điện tử hiện như hoá đơn lẻ, và phiên mở cho CẢ
+   * phiếu - không bao giờ cho một hoá đơn con (trả nửa lượt mua).
+   */
+  it('PHIẾU GỘP ⇒ có ví điện tử MoMo/VNPAY, phiên mở theo phiếu chứ không theo hoá đơn con', async () => {
+    gatewayApi.fetchGatewayMethods.mockResolvedValue(BOTH_WALLETS);
+    gatewayApi.startGatewayCheckout.mockResolvedValue({ id: 'ORDER1', checkoutUrl: null });
+    checkout.data = {
+      id: '01HCHECKOUT',
+      tenantId: 'T1',
+      code: 'XPCABCDEFGH',
+      totalAmount: '1300000',
+      paidAmount: '0',
+      status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      invoices: [
+        makeInvoice({ checkoutId: '01HCHECKOUT' }),
+        makeInvoice({ id: '01HINVOICE2', code: 'XPGSECOND01', checkoutId: '01HCHECKOUT' }),
+      ],
+    };
+    renderCheckoutPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /ví điện tử/i }));
+    expect(screen.getByRole('radio', { name: /momo/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: /vnpay/i }));
+    fireEvent.click(screen.getByRole('button', { name: /thanh toán qua vnpay/i }));
+
+    await waitFor(() => expect(gatewayApi.startGatewayCheckout).toHaveBeenCalled());
+    expect(gatewayApi.startGatewayCheckout).toHaveBeenCalledWith(
+      { kind: 'checkout', checkoutId: '01HCHECKOUT' },
+      expect.objectContaining({ provider: 'vnpay' }),
+    );
   });
 
   it('hoá đơn không thuộc gian hàng này ⇒ không tìm thấy, không thử lại', () => {

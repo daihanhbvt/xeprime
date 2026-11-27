@@ -447,8 +447,8 @@ export function BookingRequestCard({
           <>
             <RentalFacts>
               {requestPaymentRows(request, t).map((row) => (
-                <RentalFact key={row.key} label={row.label} money>
-                  {fmt.money(row.amount)}
+                <RentalFact key={row.key} label={row.label} money={row.text == null}>
+                  {row.text ?? fmt.money(row.amount)}
                 </RentalFact>
               ))}
             </RentalFacts>
@@ -519,7 +519,9 @@ export function BookingRequestCard({
                     </ExtraFact>
                   </dl>
                 ) : null}
-                <p className={styles.hint}>{t('schedule.deliveryFeeHint')}</p>
+                {request.pricing?.deliveryFee == null ? (
+                  <p className={styles.hint}>{t('schedule.deliveryFeeHint')}</p>
+                ) : null}
               </div>
             ) : null}
 
@@ -602,9 +604,11 @@ function RemindButton({
 
 /** Một dòng tiền của ô "Thanh toán" — đổi NHÃN theo chặng (chốt 02/11/2026, ADR 0044). */
 export interface RequestPaymentRow {
-  key: 'rental' | 'customer' | 'hold' | 'payAtPickup';
+  key: 'rental' | 'delivery' | 'customer' | 'hold' | 'payAtPickup';
   label: string;
   amount: string;
+  /** Chữ thay cho số tiền ("Miễn phí", "Chốt khi duyệt") - chỉ dòng phí giao xe. */
+  text?: string;
   /** Chỉ ở dòng giữ chỗ: dự kiến (chưa ai nhận) · chưa thanh toán · đã thanh toán đủ. */
   holdState?: RentalBoardHold['state'];
 }
@@ -621,9 +625,27 @@ export function requestPaymentRows(
   const pricing = request.pricing;
   if (!pricing) return [];
   const preview = request.approvalPreview ?? null;
+  /*
+   * Phí giao xe tận nơi `G` (QC 27/11/2026): chủ xe chốt ở hộp duyệt, nằm trong `rentalTotal` và
+   * trong phần trả tay, không vào tiền giữ chỗ (ADR 0064 điều 4). Tách thành dòng riêng để "Tiền
+   * thuê" là tiền thuê thật và các dòng cộng lại khớp "Khách trả". Chưa duyệt thì chưa có số (chủ
+   * xe nhập ở hộp duyệt) - không có dòng, ⓘ cạnh "Giao xe tận nơi" giải thích.
+   */
+  const deliveryFee = request.deliveryRequested ? (pricing.deliveryFee ?? null) : null;
   const rows: RequestPaymentRow[] = [
-    { key: 'rental', label: t('card.rentalTotal'), amount: pricing.rentalTotal },
+    {
+      key: 'rental',
+      label: t('card.rentalTotal'),
+      amount: deliveryFee ? subtractMoney(pricing.rentalTotal, deliveryFee) : pricing.rentalTotal,
+    },
   ];
+  if (deliveryFee != null) {
+    rows.push(
+      isPositiveMoney(deliveryFee)
+        ? { key: 'delivery', label: t('card.deliveryFee'), amount: deliveryFee }
+        : { key: 'delivery', label: t('card.deliveryFee'), amount: '0', text: t('card.deliveryFeeFree') },
+    );
+  }
   if (pricing.customerTotalAmount !== pricing.rentalTotal) {
     rows.push({
       key: 'customer',
@@ -709,7 +731,7 @@ export function RequestPaymentFacts({
                 : styles.factValueEnd
             }
           >
-            {fmt.money(row.amount)}
+            {row.text ?? fmt.money(row.amount)}
           </dd>
         </div>
       ))}
@@ -784,7 +806,17 @@ function requestBoardSchedule(
     request.deliveryAddress
       ? { key: 'address', label: t('schedule.deliveryAddress'), text: request.deliveryAddress }
       : null,
-    request.deliveryRequested ? { key: 'fee', text: t('schedule.deliveryFeeHint') } : null,
+    request.deliveryRequested
+      ? request.pricing?.deliveryFee == null
+        ? { key: 'fee', text: t('schedule.deliveryFeeHint') }
+        : {
+            key: 'fee',
+            label: t('approve.deliveryFeeLabel'),
+            text: isPositiveMoney(request.pricing.deliveryFee)
+              ? fmt.money(request.pricing.deliveryFee)
+              : t('card.deliveryFeeFree'),
+          }
+      : null,
     routeType
       ? { key: 'route', label: t('schedule.route'), text: domainLabel('routeType', routeType) }
       : null,

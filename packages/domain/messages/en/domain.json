@@ -33,7 +33,8 @@
   },
   "paymentOrderTarget": {
     "subscription_invoice": "Plan invoice",
-    "booking_hold": "Reservation payment"
+    "booking_hold": "Reservation payment",
+    "subscription_checkout": "Combined plan payment"
   },
   "paymentOrderStatus": {
     "pending": "Awaiting gateway",

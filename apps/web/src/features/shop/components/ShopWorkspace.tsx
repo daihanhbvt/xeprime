@@ -2,7 +2,6 @@
 
 import { ExportOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { Alert, Avatar, Button, Form } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useWatch } from 'react-hook-form';
@@ -26,7 +25,13 @@ import { OwnerInfoForm } from '@/features/account/components/OwnerInfoForm';
 import type { UserProfile } from '@/features/account/types';
 import { BranchesView } from '@/features/branches/components/BranchesView';
 import { ShopPlanSection } from '@/features/subscription/components/ShopPlanSection';
-import { shopPath, shopSectionDomId, SHOP_SECTION, type ShopSection } from '@/constants/routes';
+import {
+  marketSiteHref,
+  shopPath,
+  shopSectionDomId,
+  SHOP_SECTION,
+  type ShopSection,
+} from '@/constants/routes';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -277,13 +282,21 @@ export function ShopWorkspace({
               {domainLabel('tenantRole', roleKey)}
             </span>
           ) : null}
-          {/* Chỉ shop đang hoạt động mới có trang công khai - link tới 404 là hành động giả. */}
+          {/*
+            Chỉ shop đang hoạt động mới có trang công khai - link tới 404 là hành động giả.
+            Trang công khai nằm ở SITE KHÁCH: `/<slug>` trần trên host partner rơi vào khu partner
+            (QC 27/11/2026), nên đi qua `marketSiteHref`.
+          */}
           {status === TENANT_STATUS.ACTIVE ? (
-            <Link href={shopPath.detail(shop.slug)} target="_blank" rel="noopener noreferrer">
-              <Button size="large" icon={<ExportOutlined />}>
-                {personal ? tOwner('viewPublicPage') : t('page.viewPublicPage')}
-              </Button>
-            </Link>
+            <Button
+              size="large"
+              icon={<ExportOutlined />}
+              href={marketSiteHref(shopPath.detail(shop.slug))}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {personal ? tOwner('viewPublicPage') : t('page.viewPublicPage')}
+            </Button>
           ) : null}
         </div>
       </header>
