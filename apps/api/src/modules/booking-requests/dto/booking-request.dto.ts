@@ -596,8 +596,20 @@ export class BookingRequestListQueryDto {
 export class BookingRequestPricingDto {
   @ApiProperty({ description: 'true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng' })
   isEstimate!: boolean;
-  @ApiProperty({ description: 'Tiền thuê - doanh thu gian hàng, VND string' })
+  @ApiProperty({
+    description:
+      'Tiền thuê - doanh thu gian hàng, ĐÃ GỒM phí giao xe tận nơi `deliveryFee` nếu có, VND string',
+  })
   rentalTotal!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Phí giao xe tận nơi `G` đã chốt (khách trả tận tay chủ xe lúc nhận xe, nằm trong ' +
+      '`rentalTotal` và `remainingAmount`, không vào tiền giữ chỗ - ADR 0064 điều 4). Từ đơn nếu đã ' +
+      'có đơn, từ snapshot giữ chỗ nếu đã duyệt. null khi còn tạm tính (chủ xe nhập lúc duyệt) (VND string)',
+  })
+  deliveryFee!: string | null;
   @ApiProperty({ description: 'Tổng khách phải trả (đã gồm phụ phí nếu có), VND string' })
   customerTotalAmount!: string;
   @ApiPropertyOptional({

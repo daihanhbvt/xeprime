@@ -848,6 +848,8 @@
     "paymentHeading": "Payment details",
     "rentalTotal": "Rental:",
     "customerTotal": "Customer pays:",
+    "deliveryFee": "Doorstep delivery fee:",
+    "deliveryFeeFree": "Free",
     "holdExpected": "Reservation payment (estimated):",
     "holdAwaiting": "Reservation payment (awaiting customer):",
     "holdPaid": "Reserved:",

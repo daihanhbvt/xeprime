@@ -12,7 +12,6 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons';
 import { App, Button, Dropdown, Tooltip } from 'antd';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { CSSProperties } from 'react';
 import {
@@ -28,7 +27,7 @@ import {
 } from '@xeprime/types';
 
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { listingPath } from '@/constants/routes';
+import { listingPath, marketSiteHref } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -305,9 +304,15 @@ export function VehicleEditMarketBar({ vehicle }: { vehicle: VehicleDetail }) {
         <MarketplaceVisibilitySwitch vehicle={vehicle} bare />
       </div>
       {isPublic ? (
-        <Link href={listingPath.detail(vehicle.id)} target="_blank" rel="noopener">
-          <Button icon={<ExportOutlined aria-hidden />}>{t('viewListing')}</Button>
-        </Link>
+        // Trang xe công khai ở SITE KHÁCH - `/listings/…` trần trên host partner là 404.
+        <Button
+          icon={<ExportOutlined aria-hidden />}
+          href={marketSiteHref(listingPath.detail(vehicle.id))}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t('viewListing')}
+        </Button>
       ) : null}
     </div>
   );

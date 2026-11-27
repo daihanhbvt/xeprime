@@ -22,7 +22,9 @@ export type PaymentSurface = (typeof PAYMENT_SURFACE)[keyof typeof PAYMENT_SURFA
 /** Khoản đang trả — quyết định bề mặt và endpoint mở phiên. */
 export type GatewayTarget =
   | { readonly kind: 'trip'; readonly tripId: string }
-  | { readonly kind: 'invoice'; readonly invoiceId: string };
+  | { readonly kind: 'invoice'; readonly invoiceId: string }
+  /** Phiếu gộp nhiều gói `XPC…` (ADR 0083 điều 6) - một phiên cho cả phiếu. */
+  | { readonly kind: 'checkout'; readonly checkoutId: string };
 
 export function surfaceOf(target: GatewayTarget): PaymentSurface {
   return target.kind === 'trip' ? PAYMENT_SURFACE.CUSTOMER : PAYMENT_SURFACE.PARTNER;

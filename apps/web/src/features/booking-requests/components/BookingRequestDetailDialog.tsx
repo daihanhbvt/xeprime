@@ -159,7 +159,8 @@ function DetailBody({
             <Row label={t('schedule.handoverHeading')}>
               <span className={styles.strong}>
                 {request.deliveryRequested ? t('card.handoverDelivery') : t('card.handoverSelf')}
-                {request.deliveryRequested ? (
+                {/* Phí đã chốt thì nằm ở ô "Thanh toán" - ⓘ chỉ còn khi chưa duyệt. */}
+                {request.deliveryRequested && request.pricing?.deliveryFee == null ? (
                   <>
                     {' '}
                     <InfoHint content={t('schedule.deliveryFeeHint')} label={t('card.handoverDelivery')} />

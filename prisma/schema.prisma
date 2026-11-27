@@ -4761,7 +4761,8 @@ model SubscriptionCheckout {
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoices SubscriptionInvoice[]
+  invoices             SubscriptionInvoice[]
+  paymentGatewayOrders PaymentGatewayOrder[]
 
   @@index([tenantId, createdAt])
   @@index([status, expiresAt])
@@ -4854,7 +4855,9 @@ model PaymentGatewayOrder {
   targetType            String    @map("target_type") @db.VarChar(30)
   subscriptionInvoiceId String?   @map("subscription_invoice_id") @db.Char(26)
   bookingHoldId         String?   @map("booking_hold_id") @db.Char(26)
-  /// Mã đối soát của đích (`XPG…`/`XPH…`) chụp lúc tạo — chính khoá mà hàm áp tiền tra lại.
+  /// Phiếu gộp nhiều gói (`XPC…`, ADR 0083 điều 6) — đích thứ ba; DB canh đúng-một-đích bằng CHECK.
+  subscriptionCheckoutId String?  @map("subscription_checkout_id") @db.Char(26)
+  /// Mã đối soát của đích (`XPG…`/`XPH…`/`XPC…`) chụp lúc tạo — chính khoá mà hàm áp tiền tra lại.
   targetCode            String    @map("target_code") @db.VarChar(20)
   /// Suy từ ĐÍCH lúc tạo, không bao giờ từ client hay từ payload của cổng.
   tenantId              String    @map("tenant_id") @db.Char(26)
@@ -4922,6 +4925,7 @@ model PaymentGatewayOrder {
   tenant              Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   subscriptionInvoice SubscriptionInvoice?       @relation(fields: [subscriptionInvoiceId], references: [id], onDelete: Restrict)
   bookingHold         BookingHold?               @relation(fields: [bookingHoldId], references: [id], onDelete: Restrict)
+  subscriptionCheckout SubscriptionCheckout?     @relation(fields: [subscriptionCheckoutId], references: [id], onDelete: Restrict)
   initiator           User?                      @relation("gateway_order_initiator", fields: [initiatedBy], references: [id], onDelete: SetNull)
   reviewer            User?                      @relation("gateway_order_reviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
   events              PaymentGatewayOrderEvent[]
@@ -4931,6 +4935,7 @@ model PaymentGatewayOrder {
   /// Dùng lại phiên còn hạn + đọc lịch sử thanh toán của MỘT đích.
   @@index([subscriptionInvoiceId, createdAt])
   @@index([bookingHoldId, createdAt])
+  @@index([subscriptionCheckoutId, createdAt])
   /// Hàng đợi người xử lý của admin (mặc định: `open`, mới nhất trước).
   @@index([reviewStatus, createdAt])
   @@index([status, createdAt])

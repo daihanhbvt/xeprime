@@ -33,7 +33,8 @@
   },
   "paymentOrderTarget": {
     "subscription_invoice": "Hoá đơn gói",
-    "booking_hold": "Tiền giữ chỗ"
+    "booking_hold": "Tiền giữ chỗ",
+    "subscription_checkout": "Phiếu gộp gói"
   },
   "paymentOrderStatus": {
     "pending": "Chờ cổng xác nhận",

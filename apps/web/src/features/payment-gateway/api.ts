@@ -36,13 +36,21 @@ export function startGatewayCheckout(
   target: GatewayTarget,
   body: StartGatewayCheckoutInput,
 ): Promise<PaymentOrder> {
-  return target.kind === 'trip'
-    ? apiPost<PaymentOrder>(
+  switch (target.kind) {
+    case 'trip':
+      return apiPost<PaymentOrder>(
         `${BASE[PAYMENT_SURFACE.CUSTOMER]}/trips/${encodeURIComponent(target.tripId)}/checkout`,
         body,
-      )
-    : apiPost<PaymentOrder>(
+      );
+    case 'invoice':
+      return apiPost<PaymentOrder>(
         `${BASE[PAYMENT_SURFACE.PARTNER]}/invoices/${encodeURIComponent(target.invoiceId)}/checkout`,
         body,
       );
+    case 'checkout':
+      return apiPost<PaymentOrder>(
+        `${BASE[PAYMENT_SURFACE.PARTNER]}/checkouts/${encodeURIComponent(target.checkoutId)}/checkout`,
+        body,
+      );
+  }
 }

@@ -29,7 +29,7 @@ import {
 } from '@xeprime/types';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { ROUTES, shopPath } from '@/constants/routes';
+import { marketSiteHref, ROUTES, shopPath } from '@/constants/routes';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -128,7 +128,7 @@ function ShopProfile({
               {overview.identity.storefrontAvailable ? (
                 <div className={styles.linkRow}>
                   <a
-                    href={shopPath.detail(overview.identity.slug)}
+                    href={marketSiteHref(shopPath.detail(overview.identity.slug))}
                     target="_blank"
                     rel="noreferrer"
                   >

@@ -59,6 +59,7 @@
     "confirmingBody": "This usually takes only a few seconds. You do not need to pay again.",
     "completedTitle": "Received {amount} through {provider}",
     "completedInvoice": "The payment was recorded against invoice {code}.",
+    "completedCheckout": "The payment was recorded against combined plan payment {code}.",
     "completedHold": "The payment was recorded against reservation payment {code} for this trip.",
     "cancelledTitle": "You cancelled the {provider} payment",
     "expiredResultTitle": "The {provider} payment session expired",
