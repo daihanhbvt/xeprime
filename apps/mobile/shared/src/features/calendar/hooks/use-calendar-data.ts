@@ -45,7 +45,8 @@ export function useCalendarData(
   isLoading: boolean;
   isFetching: boolean;
   error: unknown;
-  refetch: () => void;
+  /** Tải lại cả ba nguồn; Promise xong khi cả ba xong (kéo-để-tải-lại chờ nó để tắt vòng quay). */
+  refetch: () => Promise<unknown>;
 } {
   const range = useMemo(() => buildRange(filters.from, filters.days), [filters.from, filters.days]);
 
@@ -131,11 +132,8 @@ export function useCalendarData(
     isLoading: resources.isPending || events.isPending,
     isFetching: resources.isFetching || events.isFetching,
     error: resources.error ?? events.error,
-    refetch: () => {
-      void resources.refetch();
-      void events.refetch();
-      void dailyPrices.refetch();
-    },
+    refetch: () =>
+      Promise.all([resources.refetch(), events.refetch(), dailyPrices.refetch()]),
   };
 }
 

@@ -291,7 +291,7 @@ export function PriceBreakdown({
               : (totalLabel ?? tCommon('subtotal')).toLocaleUpperCase('vi')}
           </Text>
           <Text
-            col={hasFees ? colors.textMuted : colors.price}
+            col={hasFees ? colors.textMuted : colors.primary}
             fos={hasFees ? fontSize.body : fontSize.h3}
             fow={hasFees ? fontWeight.semibold : fontWeight.bold}
           >
@@ -401,7 +401,7 @@ export function PriceBreakdown({
             <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold} letterSpacing={0.4}>
               {tCommon('customerTotal').toLocaleUpperCase('vi')}
             </Text>
-            <Text col={colors.price} fos={fontSize.h3} fow={fontWeight.bold}>
+            <Text col={colors.primary} fos={fontSize.h3} fow={fontWeight.bold}>
               {fmt.money(fees.customerTotalAmount)}
             </Text>
           </XStack>

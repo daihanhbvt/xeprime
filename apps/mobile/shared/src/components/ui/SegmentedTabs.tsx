@@ -1,15 +1,7 @@
-import { useMotionOff } from '@/components/motion/no-motion';
 import { IS_PARTNER_APP } from '@/lib/app-kind';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { duration, easing } from '@/theme/motion';
 import { useAppScheme, useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 
@@ -81,8 +73,6 @@ export function SegmentedTabs<K extends string>({
   const activeBg = dark ? colors.surfaceElevated : colors.surface;
 
   const [trayWidth, setTrayWidth] = useState(0);
-  // Máy bật Giảm chuyển động hoặc màn tắt hiệu ứng (`NoMotionScope`) ⇒ vạch chỉ đặt thẳng.
-  const reduceMotion = useMotionOff();
   const activeIndex = Math.max(
     items.findIndex((item) => item.key === value),
     0,
@@ -96,19 +86,8 @@ export function SegmentedTabs<K extends string>({
   const activeCell = fit ? cells[activeIndex] : undefined;
   const indicatorWidth = fit ? (activeCell?.w ?? 0) : segmentWidth;
   const measured = fit ? activeCell !== undefined : segmentWidth > 0;
-  const offset = useSharedValue(0);
-  const placed = useSharedValue(false);
-  useEffect(() => {
-    if (!measured) return;
-    const target = fit ? (activeCell?.x ?? 0) - pad : activeIndex * (segmentWidth + gap);
-    // Lần đặt đầu (vừa đo xong) thì đặt thẳng — không trượt từ ô 0 sang.
-    offset.value =
-      reduceMotion || !placed.value
-        ? target
-        : withTiming(target, { duration: duration.base, easing: Easing.bezier(...easing.standard) });
-    placed.value = true;
-  }, [activeIndex, segmentWidth, gap, measured, reduceMotion, offset, placed, fit, activeCell, pad]);
-  const indicatorStyle = useAnimatedStyle(() => ({ transform: [{ translateX: offset.value }] }));
+  /* Vị trí ô chọn - đặt thẳng, không trượt (xem ghi chú ở style của ô chọn). */
+  const targetX = fit ? (activeCell?.x ?? 0) - pad : activeIndex * (segmentWidth + gap);
 
   const onTrayLayout = (event: LayoutChangeEvent) => {
     const next = Math.round(event.nativeEvent.layout.width);
@@ -129,7 +108,7 @@ export function SegmentedTabs<K extends string>({
       onLayout={onTrayLayout}
     >
       {measured ? (
-        <Animated.View
+        <View
           pointerEvents="none"
           style={[
             styles.indicator,
@@ -146,7 +125,12 @@ export function SegmentedTabs<K extends string>({
             },
             // Figma `shadow-xs` ĐÚNG số (0 1 2 /5%) - `elevation.xs` của Android đọc thành viền đáy đậm.
             neutral ? FIGMA_SHADOW_XS : null,
-            indicatorStyle,
+            /*
+              Ô chọn đặt THẲNG theo `targetX`, không trượt (người dùng 28/11/2026): trong tấm trượt
+              đóng/mở lại, giá trị Reanimated kẹt ở ô cũ - đang ở "Lịch tháng" mà ô trắng vẫn nằm
+              trên "Danh sách", tưởng không chuyển về được. Đúng vị trí quan trọng hơn hiệu ứng.
+            */
+            { transform: [{ translateX: targetX }] },
           ]}
         />
       ) : null}

@@ -37,7 +37,6 @@ import {
 } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
-import { BookingSourceControl } from './components/BookingSourceControl';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -522,8 +521,6 @@ function BookingDetailBody({
               {t('detailPage.createdAt', { date: fmt.date(booking.createdAt) })}
             </Text>
             <XStack ai="center" gap={space.xs} flexShrink={1}>
-              {/* Nguồn đơn cạnh nhãn chặng + bút đổi nguồn (ADR 0110, web `BookingSourceControl`). */}
-              <BookingSourceControl booking={booking} />
               <BookingStageChip status={status} cancellationParty={booking.cancellationParty} />
             </XStack>
           </XStack>

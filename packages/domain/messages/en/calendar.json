@@ -1,5 +1,6 @@
 {
   "toolbar": {
+    "pickStartApp": "Pick a start date",
     "searchPlaceholder": "Search by name, code or plate",
     "searchPlaceholderApp": "Plate, vehicle...",
     "searchAriaLabel": "Search vehicles on the calendar",
@@ -29,6 +30,8 @@
     "nextMonth": "Next month"
   },
   "grid": {
+    "scrollPrev": "Show earlier days",
+    "scrollNext": "Show later days",
     "ariaLabel": "Vehicle rental calendar by day",
     "loadingAriaLabel": "Loading calendar",
     "resourceHeader": "Vehicles ({count})",
@@ -39,6 +42,7 @@
     "availableCell": "Day {day}: {count, plural, one {# vehicle available} other {# vehicles available}}",
     "availableCellPending": "Day {day}: availability not loaded yet",
     "resourceTitle": "Vehicles",
+    "resourceTitleApp": "Vehicle",
     "resourceCount": "{cars, plural, =0 {} one {# car} other {# cars}}{both, select, yes {, } other {}}{bikes, plural, =0 {} one {# motorbike} other {# motorbikes}}"
   },
   "cell": {
@@ -112,7 +116,8 @@
     "sheetTitle": "{vehicle} · {date}",
     "booking": {
       "label": "Book",
-      "hint": "Create a rental for a customer"
+      "hint": "Create a rental for a customer",
+      "hintApp": "Book the selected vehicle"
     },
     "block": {
       "label": "Block",

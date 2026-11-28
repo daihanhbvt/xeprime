@@ -415,7 +415,7 @@ làm trong cùng ngày (`docs/mobile-module-status.md` §2.9). Còn lại, cố 
 - màn cài đặt bật/tắt từng loại thông báo;
 - UX xin quyền (màn GIẢI THÍCH trước khi hiện hộp thoại hệ thống — thời điểm hỏi thì đã sửa, xem §7);
 - đo đếm tỉ lệ nhận/mở;
-- tạo kênh Android thật (§6);
+- ~~tạo kênh Android thật (§6)~~ - đã làm 28/11/2026: plugin `apps/mobile/shared/plugins/with-android-notification-channels.js` tạo hai kênh mức HIGH (banner bật lên đầu màn hình);
 - **gộp thông báo chat trong HỘP THƯ.** `pushCollapseKey` đã gộp trên khay, nhưng
   `GET /notifications` vẫn là một dòng mỗi tin nhắn: một hội thoại 30 tin là 30 dòng "Bạn có tin
   nhắn mới" giống hệt nhau cho mỗi thành viên gian hàng. Cố ý chưa xử lý ở đợt này vì cách sửa

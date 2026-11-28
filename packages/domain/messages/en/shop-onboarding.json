@@ -118,10 +118,13 @@
   "packageWaiting": {
     "title": "Shop registered successfully!",
     "status": "Awaiting activation",
+    "leadApp": "Your shop has been created and is waiting for XePrime to activate it.",
+    "statusLabel": "Status",
     "next": {
       "review": "XePrime will contact you to recommend a suitable plan for your shop.",
       "notify": "You will be notified as soon as your shop is activated.",
-      "refresh": "This screen updates automatically once your shop is activated."
+      "refresh": "This screen updates automatically once your shop is activated.",
+      "reviewApp": "XePrime will contact you to help activate your shop."
     }
   },
   "signup": {
@@ -196,7 +199,8 @@
     },
     "submit": {
       "commission": "Sign up & list your first vehicle",
-      "package": "Sign up & choose a plan"
+      "package": "Sign up & choose a plan",
+      "packageApp": "Register for me"
     },
     "changeTrack": "Change rental option",
     "hasAccount": "Already have a partner account?",

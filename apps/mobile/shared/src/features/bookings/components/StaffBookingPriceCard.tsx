@@ -1,20 +1,23 @@
+import { useState } from 'react';
 import { useFieldArray, useWatch, type Control } from 'react-hook-form';
-import { Pressable } from 'react-native';
+import { AddLink, EditableSummaryRow } from '@/components/ui/EditableSummaryRow';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { MoneyControl } from '@/components/ui/MoneyControl';
+import { TextControl } from '@/components/ui/TextControl';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_EXTRA_CHARGE_MAX_LINES } from '@xeprime/types';
-import { Ionicons } from '@/components/icons/Ionicons';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { TextField } from '@/components/ui/TextField';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { QuoteBreakdown } from '@/api/bookings/api';
 import { negotiatedTotal, type StaffBookingValues } from '../staff-booking-schema';
 
@@ -27,6 +30,9 @@ import { negotiatedTotal, type StaffBookingValues } from '../staff-booking-schem
  *   tính lại ngay — chỉ để HIỂN THỊ; server tính lại bằng cùng công thức.
  * - Xe chưa cấu hình giá (`quoteUnavailable`): công tắc bật sẵn, không tắt được.
  */
+/** `editingExtra` khi đang THÊM mới. */
+const NEW_ROW = -1;
+
 export function StaffBookingPriceCard({
   control,
   quote,
@@ -34,6 +40,7 @@ export function StaffBookingPriceCard({
   quoteUnavailable,
   isDelivery,
   onToggleNegotiated,
+  manualTotal,
 }: {
   control: Control<StaffBookingValues>;
   quote: QuoteBreakdown | null;
@@ -41,6 +48,11 @@ export function StaffBookingPriceCard({
   quoteUnavailable: boolean;
   isDelivery: boolean;
   onToggleNegotiated: (on: boolean) => void;
+  /**
+   * Tổng "Giá thoả thuận" do màn cha tính (cùng số với chân trang) - một nguồn duy nhất để hai chỗ
+   * không lệch nhau. `null` ⇒ thẻ tự tính (dùng ở nơi không có chân trang).
+   */
+  manualTotal?: string | null;
 }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.staffFlow');
@@ -52,6 +64,34 @@ export function StaffBookingPriceCard({
     name: ['manualBaseAmount', 'manualDiscount', 'manualDeliveryFee', 'extraCharges'],
   });
   const extras = useFieldArray({ control, name: 'extraCharges' });
+  const tActions = useTranslations('Common.actions');
+  /* Popup nhập NHÁP: "Xác nhận" mới thêm/sửa khoản, "Huỷ" không đổi gì (người dùng 28/11/2026). */
+  const [editingExtra, setEditingExtra] = useState<number | null>(null);
+  const [draftLabel, setDraftLabel] = useState('');
+  const [draftAmount, setDraftAmount] = useState<number | null>(null);
+  const [draftErrors, setDraftErrors] = useState<{ label?: string; amount?: string }>({});
+  const openExtra = (index: number) => {
+    const row = index === NEW_ROW ? null : extraRows?.[index];
+    setDraftLabel(row?.label ?? '');
+    setDraftAmount(row?.amount ?? null);
+    setDraftErrors({});
+    setEditingExtra(index);
+  };
+  const confirmExtra = () => {
+    const value = { label: draftLabel.trim(), amount: draftAmount };
+    // Tên khoản và số tiền đều bắt buộc (> 0) - chặn ngay trong popup, không để lọt xuống lúc tạo đơn.
+    const errors = {
+      ...(value.label ? {} : { label: t('validation.extraLabelRequired') }),
+      ...(value.amount != null && value.amount > 0 ? {} : { amount: t('validation.extraAmountPositive') }),
+    };
+    if (errors.label || errors.amount) {
+      setDraftErrors(errors);
+      return;
+    }
+    if (editingExtra === NEW_ROW) extras.append(value);
+    else if (editingExtra != null) extras.update(editingExtra, value);
+    setEditingExtra(null);
+  };
 
   const toggle = (
     <XStack ai="center" gap={space.sm}>
@@ -71,63 +111,96 @@ export function StaffBookingPriceCard({
   if (quoteLoading) {
     return (
       <Card>
-        <Skeleton height={140} />
+        {/* Cùng hình bảng giá: công tắc · tiêu đề · các dòng nhãn ↔ tiền · dòng tổng. */}
+        <YStack gap={space.sm}>
+          <XStack jc="flex-end">
+            <Skeleton width={140} height={20} round />
+          </XStack>
+          <Skeleton width="40%" height={20} />
+          {Array.from({ length: 3 }, (_, i) => (
+            <XStack key={i} jc="space-between" gap={space.md}>
+              <Skeleton width="45%" height={14} />
+              <Skeleton width="25%" height={14} />
+            </XStack>
+          ))}
+          <YStack h={1} bg={colors.borderSubtle} />
+          <XStack jc="space-between" gap={space.md}>
+            <Skeleton width="35%" height={18} />
+            <Skeleton width="30%" height={22} />
+          </XStack>
+        </YStack>
       </Card>
     );
   }
 
   if (!negotiated && !quoteUnavailable && quote) {
     // Bảng giá là MỘT khối tự có tiêu đề (như trước ADR 0109) — công tắc đứng ngay trên nó.
+    // Bọc trong thẻ như các khối khác của màn Xem lại (không để bảng giá nằm trơ trên nền).
     return (
+      <Card>
       <YStack gap={space.sm}>
-        <XStack jc="flex-end">{toggle}</XStack>
+        {/* Tiêu đề + (i) ghi chú (tạm tính, "giá theo hệ thống") bên trái, công tắc bên phải. */}
+        <XStack ai="center" jc="space-between" gap={space.sm} flexWrap="wrap">
+          <XStack ai="center" gap={4}>
+            <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} accessibilityRole="header">
+              {t('review.costs.title')}
+            </Text>
+            <InfoHint
+              label={t('review.costs.title')}
+              content={`${quote.estimateNote ? `${quote.estimateNote}. ` : ''}${t('review.costs.systemNote')}`}
+              size={fontSize.bodyLg}
+            />
+          </XStack>
+          {toggle}
+        </XStack>
         <PriceBreakdown
             rows={quote.rows}
             totalAmount={quote.totalAmount}
             totalLabel={quote.estimateNote ? t('trip.barEstimate') : t('trip.barTotal')}
-            title={t('review.costs.title')}
             footer={
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {quote.longTerm?.durationDiscountPercent ? (
-                  <Text fow={fontWeight.semibold}>
-                    {tFlow('price.savings', {
-                      amount: fmt.money(quote.longTerm.durationDiscountAmount),
-                      months: quote.longTerm.packageMonths,
-                    })}{' '}
-                  </Text>
-                ) : null}
-                {quote.estimateNote ? `${quote.estimateNote}. ` : ''}
-                {t('review.costs.systemNote')}
-              </Text>
+              quote.longTerm?.durationDiscountPercent ? (
+                <Text col={colors.success} fos={fontSize.label} fow={fontWeight.semibold}>
+                  {tFlow('price.savings', {
+                    amount: fmt.money(quote.longTerm.durationDiscountAmount),
+                    months: quote.longTerm.packageMonths,
+                  })}
+                </Text>
+              ) : undefined
             }
         />
       </YStack>
+      </Card>
     );
   }
 
-  const total = negotiatedTotal({
-    base,
-    discount,
-    delivery: isDelivery ? delivery : 0,
-    extras: extraRows,
-  });
+  const total =
+    manualTotal ??
+    String(
+      negotiatedTotal({
+        base,
+        discount,
+        delivery: isDelivery ? delivery : 0,
+        extras: extraRows,
+      }),
+    );
 
   return (
     <Card>
       <YStack gap={space.md}>
         <XStack ai="center" jc="space-between" gap={space.sm} flexWrap="wrap">
-          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} accessibilityRole="header">
-            {t('review.costs.title')}
-          </Text>
+          <XStack ai="center" gap={4}>
+            <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} accessibilityRole="header">
+              {t('review.costs.title')}
+            </Text>
+            {quoteUnavailable ? null : (
+              <InfoHint label={t('review.costs.title')} content={t('review.negotiated.lead')} size={fontSize.bodyLg} />
+            )}
+          </XStack>
           {toggle}
         </XStack>
         {quoteUnavailable ? (
           <Callout tone="warning" title={t('review.costs.noPrice')} />
-        ) : (
-          <Text col={colors.placeholder} fos={fontSize.body}>
-            {t('review.negotiated.lead')}
-          </Text>
-        )}
+        ) : null}
         <MoneyField
           control={control}
           name="manualBaseAmount"
@@ -141,52 +214,87 @@ export function StaffBookingPriceCard({
             name="manualDeliveryFee"
             label={t('review.negotiated.deliveryFee')}
             hint={t('review.negotiated.deliveryFeeHint')}
+            hintInLabel
           />
         ) : null}
 
-        <YStack gap={2}>
+        <XStack ai="center" gap={4}>
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
             {t('review.negotiated.extrasTitle')}
           </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('review.negotiated.extrasHint')}
-          </Text>
-        </YStack>
-        {extras.fields.map((field, index) => (
-          <XStack key={field.id} gap={space.sm} ai="flex-start">
-            <YStack f={1} minWidth={0} gap={space.sm}>
-              <TextField
-                control={control}
-                name={`extraCharges.${index}.label`}
-                label={t('review.negotiated.extraLabel')}
-                placeholder={t('review.negotiated.extraLabelPlaceholder')}
-              />
-              <MoneyField
-                control={control}
-                name={`extraCharges.${index}.amount`}
-                label={t('review.negotiated.extraAmount')}
-              />
-            </YStack>
-            <YStack pt={space.xl}>
-              <Pressable
-                onPress={() => extras.remove(index)}
-                accessibilityRole="button"
-                accessibilityLabel={t('review.negotiated.removeExtra')}
-                hitSlop={space.sm}
-              >
-                <Ionicons name="trash-outline" size={iconSize.lg} color={colors.danger} />
-              </Pressable>
-            </YStack>
-          </XStack>
-        ))}
+          <InfoHint label={t('review.negotiated.extrasTitle')} content={t('review.negotiated.extrasHint')} />
+        </XStack>
+        {/*
+          Như danh sách bậc ở chính sách gian hàng (người dùng 28/11/2026): mỗi khoản là MỘT dòng tóm
+          tắt "Tên khoản / Số tiền" + xoá/sửa; thêm hay sửa đều mở POPUP nhập hai ô.
+        */}
+        {extras.fields.map((field, index) => {
+          const row = extraRows?.[index];
+          return (
+            <EditableSummaryRow
+              key={field.id}
+              lines={[
+                { label: `${t('review.negotiated.extraLabel')}:`, value: row?.label?.trim() || '-' },
+                {
+                  label: `${t('review.negotiated.extraAmount')}:`,
+                  value: row?.amount == null ? '-' : fmt.money(String(row.amount)),
+                },
+              ]}
+              removeLabel={t('review.negotiated.removeExtra')}
+              editLabel={t('review.negotiated.extraLabel')}
+              disabled={false}
+              onRemove={() => extras.remove(index)}
+              onEdit={() => openExtra(index)}
+            />
+          );
+        })}
         {extras.fields.length < BOOKING_EXTRA_CHARGE_MAX_LINES ? (
-          <Button
+          <AddLink
             label={t('review.negotiated.addExtra')}
-            icon="add"
-            variant="secondary"
-            onPress={() => extras.append({ label: '', amount: null })}
+            onPress={() => openExtra(NEW_ROW)}
           />
         ) : null}
+        <BottomSheet
+          open={editingExtra != null}
+          onClose={() => setEditingExtra(null)}
+          title={t('review.negotiated.extrasTitle')}
+          footer={
+            <XStack gap={8}>
+              <YStack f={1}>
+                <Button label={tActions('cancel')} variant="secondary" onPress={() => setEditingExtra(null)} />
+              </YStack>
+              <YStack f={1}>
+                <Button label={tActions('confirm')} variant="gradient" onPress={confirmExtra} />
+              </YStack>
+            </XStack>
+          }
+        >
+          {editingExtra == null ? null : (
+            <YStack gap={12}>
+              <TextControl
+                label={t('review.negotiated.extraLabel')}
+                value={draftLabel}
+                onChangeText={(next) => {
+                  setDraftLabel(next);
+                  if (draftErrors.label) setDraftErrors((e) => ({ ...e, label: undefined }));
+                }}
+                placeholder={t('review.negotiated.extraLabelPlaceholder')}
+                required
+                {...(draftErrors.label ? { error: draftErrors.label } : {})}
+              />
+              <MoneyControl
+                label={t('review.negotiated.extraAmount')}
+                value={draftAmount}
+                onChange={(next) => {
+                  setDraftAmount(next);
+                  if (draftErrors.amount) setDraftErrors((e) => ({ ...e, amount: undefined }));
+                }}
+                required
+                {...(draftErrors.amount ? { error: draftErrors.amount } : {})}
+              />
+            </YStack>
+          )}
+        </BottomSheet>
 
         <XStack ai="center" jc="space-between" gap={space.sm} pt={space.xs}>
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>

@@ -1,5 +1,9 @@
+import type React from 'react';
 import { memo, useMemo } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable, RefreshControl } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scrollThrottle } from '@/theme/motion';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { startOfAppDay, toAppTz } from '@xeprime/domain';
@@ -77,7 +81,8 @@ function levelTone(level: LoadLevel, colors: AppColors) {
  */
 export const CalendarMonthView = memo(function CalendarMonthView({
   days,
-  monthIndex,
+  rangeFrom,
+  rangeTo,
   resources,
   eventsByResource,
   priceMarkers,
@@ -87,11 +92,17 @@ export const CalendarMonthView = memo(function CalendarMonthView({
   onEventPress,
   onCreate,
   onDayActions,
+  onScroll,
+  topInset = 0,
+  refreshing = false,
+  onRefresh,
 }: {
   /** Đủ các tuần của lưới (bắt đầu thứ Hai), kể cả ngày tháng trước/sau. */
   days: readonly DayCell[];
   /** Tháng đang xem (0-11) - để làm mờ ngày ngoài tháng. */
-  monthIndex: number;
+  /** Khoảng đang xem (YYYY-MM-DD, tính cả hai đầu) - ngày ngoài khoảng làm mờ, không chạm. */
+  rangeFrom: string;
+  rangeTo: string;
   resources: readonly CalendarResource[];
   eventsByResource: ReadonlyMap<string, CalendarEvent[]>;
   priceMarkers: ReadonlyMap<string, PriceMarker>;
@@ -103,11 +114,19 @@ export const CalendarMonthView = memo(function CalendarMonthView({
   onCreate: ((resource: CalendarResource, dayKey: string) => void) | null;
   /** Bảng thao tác cả-đội-xe của ngày (khoá / đặt giá hàng loạt) - `null` khi không có quyền. */
   onDayActions: ((day: DayCell) => void) | null;
+  /** Handler Reanimated - màn dùng để ẩn/hiện khối đầu trang khi cuộn. */
+  onScroll?: React.ComponentProps<typeof Animated.ScrollView>['onScroll'];
+  /** Khối đầu trang nằm ĐÈ lên vùng này - nội dung chừa đúng chiều cao của nó. */
+  topInset?: number;
+  /** Kéo-để-tải-lại. */
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Calendar');
   const fmt = useAppFormat();
 
+  const safeBottom = useSafeAreaInsets().bottom;
   const total = resources.length;
 
   /** Một lượt duyệt event cho CẢ lưới - ngày → xe → event, không lọc lại mỗi ô. */
@@ -158,10 +177,25 @@ export const CalendarMonthView = memo(function CalendarMonthView({
   const byId = useMemo(() => new Map(resources.map((r) => [r.id, r])), [resources]);
 
   return (
-    <ScrollView
+    <Animated.ScrollView
+      onScroll={onScroll}
+      scrollEventThrottle={scrollThrottle.frame}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primaryActive}
+            colors={[colors.primaryActive]}
+            progressViewOffset={topInset}
+          />
+        ) : undefined
+      }
       contentContainerStyle={{
+        paddingTop: topInset,
         paddingHorizontal: layout.screenX,
-        paddingBottom: SECTION_GAP,
+        // Như lưới Danh sách: chừa thanh điều hướng hệ thống + 4 để khối cuối không bị che.
+        paddingBottom: safeBottom + 4,
         gap: SECTION_GAP,
       }}
       showsVerticalScrollIndicator={false}
@@ -196,7 +230,7 @@ export const CalendarMonthView = memo(function CalendarMonthView({
               <MonthCell
                 key={day.key}
                 day={day}
-                inMonth={day.at.month() === monthIndex}
+                inMonth={day.key >= rangeFrom && day.key <= rangeTo}
                 busy={loads.get(day.key)?.byResource.size ?? 0}
                 total={total}
                 priced={pricedDays.has(day.key)}
@@ -220,7 +254,7 @@ export const CalendarMonthView = memo(function CalendarMonthView({
           onDayActions={onDayActions}
         />
       ) : null}
-    </ScrollView>
+    </Animated.ScrollView>
   );
 });
 

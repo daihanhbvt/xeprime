@@ -1,6 +1,12 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentProps, useCallback, useTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, type LayoutChangeEvent } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { holidayRunAround, LIST_SEPARATOR, startOfAppDay } from '@xeprime/domain';
@@ -18,6 +24,7 @@ import { useCanCreateBooking } from '@/features/bookings/hooks/use-can-create-bo
 import { withBranchReturn } from '@/features/branches/branch-link';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useTabBarAutoHide } from '@/hooks/use-tab-bar-auto-hide';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
@@ -29,7 +36,7 @@ import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import type { CalendarEvent, CalendarResource } from './api';
 import { BulkDayBlockSheet, type BulkDayBlockState } from './components/BulkDayBlockSheet';
 import { BulkDayPriceSheet, type BulkDayPriceState } from './components/BulkDayPriceSheet';
-import { CalendarGridSkeleton } from './components/CalendarGridSkeleton';
+import { CalendarGridSkeleton, CalendarMonthSkeleton } from './components/CalendarGridSkeleton';
 import { CalendarLegend } from './components/CalendarLegend';
 import { CalendarMonthView } from './components/CalendarMonthView';
 import { CalendarTimeline } from './components/CalendarTimeline';
@@ -126,10 +133,19 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
    */
   const { branchId, filter: branchFilter } = useScreenBranchFilter();
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
-  const filters = useMemo(
-    () => ({ ...screenFilters, branchId: branchId ?? null }),
-    [screenFilters, branchId],
-  );
+  /** Cách bày (Figma "Chế độ xem"): lưới Danh sách hay Lịch tháng - trạng thái của màn, không lên URL. */
+  const [view, setView] = useState<CalendarView>(CALENDAR_VIEW.LIST);
+  /*
+   * Danh sách luôn xem TRỌN MỘT THÁNG lịch tính từ ngày đang chọn (24/11 → 23/12), người dùng
+   * chốt 28/11/2026 - không còn ô "Khoảng xem". Số ngày suy ở đây nên lưới, nhãn và mọi API đọc
+   * cùng một con số (28-31, dưới trần 62 ngày của backend).
+   */
+  const filters = useMemo(() => {
+    const base = { ...screenFilters, branchId: branchId ?? null };
+    // Cả HAI chế độ xem cùng một khoảng (Lịch tháng chỉ là cách bày khác - người dùng 28/11/2026).
+    const start = startOfAppDay(screenFilters.from);
+    return { ...base, days: start.add(1, 'month').diff(start, 'day') };
+  }, [screenFilters, branchId]);
 
   const [search, setSearch] = useState(filters.q ?? '');
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
@@ -224,8 +240,6 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
    */
   const gridFilters = useDeferredValue(filters);
 
-  /** Cách bày (Figma "Chế độ xem"): lưới Danh sách hay Lịch tháng - trạng thái của màn, không lên URL. */
-  const [view, setView] = useState<CalendarView>(CALENDAR_VIEW.LIST);
   const monthView = view === CALENDAR_VIEW.MONTH;
 
   /**
@@ -233,14 +247,21 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
    * chứa `from` - tối đa 42 ngày, dưới trần 62 ngày của backend. Cùng bộ lọc (chi nhánh, loại xe,
    * từ khoá), nên con số "x/N xe kín" khớp đúng tập xe của lưới.
    */
+  /*
+   * Lịch tháng bày ĐÚNG khoảng của Danh sách (28/11 → 27/12): lưới là trọn các tuần (bắt đầu thứ
+   * Hai) phủ khoảng đó, ngày ngoài khoảng làm mờ. Tối đa 6 tuần = 42 ngày, dưới trần 62 của backend.
+   */
   const monthFilters = useMemo(() => {
-    const monthStart = startOfAppDay(gridFilters.from).startOf('month');
-    const lead = (monthStart.day() + 6) % 7;
-    const gridStart = monthStart.subtract(lead, 'day');
-    const weeks = Math.ceil((lead + monthStart.daysInMonth()) / 7);
+    const start = startOfAppDay(gridFilters.from);
+    const lead = (start.day() + 6) % 7;
+    const gridStart = start.subtract(lead, 'day');
+    const weeks = Math.ceil((lead + gridFilters.days) / 7);
     return { ...gridFilters, from: gridStart.format('YYYY-MM-DD'), days: weeks * 7 };
   }, [gridFilters]);
-  const monthIndex = startOfAppDay(gridFilters.from).month();
+  const rangeFromKey = gridFilters.from;
+  const rangeToKey = startOfAppDay(gridFilters.from)
+    .add(gridFilters.days - 1, 'day')
+    .format('YYYY-MM-DD');
   const data = useCalendarData(monthView ? monthFilters : gridFilters, canView);
 
   /**
@@ -257,7 +278,56 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
   const resources = useMemo(() => data.resources ?? [], [data.resources]);
 
   const [collapsed, setCollapsed] = useState(false);
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  /** Vùng nội dung dưới thanh trang (đo) - lưới suy kích thước từ đây. */
+  const [area, setArea] = useState({ width: 0, height: 0 });
+
+  /*
+   * Khối đầu trang (ô tìm + Lọc, chú giải, thanh ngày) thu lên khi cuộn XUỐNG, ló ra khi cuộn LÊN -
+   * cùng luật `useCollapseOnScroll` của các màn danh sách (Đơn thuê…): cộng dồn quãng cuộn, kẹp
+   * [0,1], trượt bằng `translateY` trên luồng UI. Lưới cuộn dọc bằng `useScrollViewOffset` nên ở
+   * đây nhận Y qua một worklet thay vì một scroll handler thứ hai trên cùng danh sách.
+   */
+  const [headHeight, setHeadHeight] = useState(0);
+  const headHeightSv = useSharedValue(0);
+  const headProgress = useSharedValue(1);
+  const lastScrollY = useSharedValue(0);
+  const autoHideTabBar = useTabBarAutoHide();
+  const onVerticalScroll = useCallback(
+    (y: number) => {
+      'worklet';
+      autoHideTabBar?.(y);
+      const delta = y - lastScrollY.value;
+      lastScrollY.value = y;
+      if (y <= 0) {
+        headProgress.value = 1;
+        return;
+      }
+      const h = headHeightSv.value;
+      if (h <= 0) return;
+      headProgress.value = Math.min(Math.max(headProgress.value - delta / h, 0), 1);
+    },
+    // Shared value ổn định theo hợp đồng Reanimated.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [autoHideTabBar],
+  );
+  const onMonthScroll = useAnimatedScrollHandler({
+    onScroll: (event) => onVerticalScroll(event.contentOffset.y),
+  });
+  const measureHead = useCallback(
+    (event: LayoutChangeEvent) => {
+      const next = event.nativeEvent.layout.height;
+      headHeightSv.value = next;
+      setHeadHeight(next);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  /* Đổi cách bày là đổi vùng cuộn: hiện lại khối đầu trang, quên mốc cuộn của vùng cũ. */
+  useEffect(() => {
+    headProgress.value = 1;
+    lastScrollY.value = 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
 
   const [sheet, setSheet] = useState<SheetState>(null);
   const [quickBooking, setQuickBooking] = useState<QuickBookingTarget | null>(null);
@@ -327,12 +397,14 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
   /** Ngày đang chọn của Lịch tháng - mặc định hôm nay nếu nó thuộc tháng đang xem, không thì mùng 1. */
   const selectedDayKey = useMemo(() => {
     const inMonth = (key: string | null) =>
-      key !== null && days.some((day) => day.key === key && day.at.month() === monthIndex);
+      key !== null && key >= rangeFromKey && key <= rangeToKey && days.some((day) => day.key === key);
     if (inMonth(pickedDay)) return pickedDay as string;
+    // Ngày đang xem của Danh sách - đổi chế độ không làm mất ngày người dùng đang đứng.
+    if (inMonth(filters.from)) return filters.from;
     const today = todayIsoDate();
     if (inMonth(today)) return today;
-    return days.find((day) => day.at.month() === monthIndex)?.key ?? '';
-  }, [days, monthIndex, pickedDay]);
+    return rangeFromKey;
+  }, [days, rangeFromKey, rangeToKey, pickedDay, filters.from]);
 
   /**
    * "Tạo đơn" cho một xe trống của Lịch tháng: cùng đường với "Đặt xe" của ô lưới - nhận 8h ngày
@@ -364,26 +436,6 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
       date: day.key,
     });
   }, []);
-
-  /**
-   * Khoảng [đầu, cuối] (tính cả) của một xe có trống không — native port of web
-   * `calendar-event-model.isRangeFree`: chỉ event CHIẾM lịch (yêu cầu chờ duyệt không tính).
-   */
-  const isCellRangeFree = useCallback(
-    (vehicleId: string, fromKey: string, toKey: string) => {
-      const resource = resources.find((r) => r.vehicleId === vehicleId);
-      const events = resource ? (data.eventsByResource.get(resource.id) ?? []) : [];
-      const startAt = startOfAppDay(fromKey).valueOf();
-      const endAt = startOfAppDay(toKey).add(1, 'day').valueOf();
-      return !events.some(
-        (event) =>
-          event.occupying !== false &&
-          new Date(event.startAt).getTime() < endAt &&
-          new Date(event.endAt).getTime() > startAt,
-      );
-    },
-    [resources, data.eventsByResource],
-  );
 
   const runCellAction = useCallback(
     (action: CellActionKey, endDate: string) => {
@@ -431,6 +483,9 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
             mode: 'create',
             vehicleId: target.vehicleId,
             vehicleName: target.vehicleName,
+            vehicleTitle: resource?.name ?? null,
+            vehiclePlate: resource?.plateNumber ?? null,
+            vehicleImageUrl: resource?.mainImageUrl ?? null,
             date: target.date,
             endDate,
           },
@@ -443,6 +498,9 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
         state: {
           vehicleId: target.vehicleId,
           vehicleName: target.vehicleName,
+          vehicleTitle: resource?.name ?? null,
+          vehiclePlate: resource?.plateNumber ?? null,
+          vehicleImageUrl: resource?.mainImageUrl ?? null,
           weekdayPrice: resource?.weekdayPrice ?? null,
           hourlyPrice: resource?.hourlyPrice ?? null,
           date: target.date,
@@ -536,25 +594,115 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
           </IconSquareButton>
         ) : undefined
       }
-      below={
-        canView ? (
-          <YStack gap={12}>
-            <CalendarSearchBar
-              filters={filters}
-              setFilters={setFilters}
-              searchValue={search}
-              onSearchChange={setSearch}
-              view={view}
-              onViewChange={setView}
-              branchFilter={branchFilter}
-              branchId={branchId}
-            />
-            <CalendarLegend />
-          </YStack>
-        ) : undefined
-      }
     />
   );
+
+  const hasGrid = !data.isLoading && resources.length > 0 && !(data.error && !data.resources);
+  /* Chỉ thu khi có lưới để cuộn - trạng thái tải/rỗng/lỗi không có sự kiện cuộn nào gọi nó lại. */
+  const headStyle = useAnimatedStyle(() => {
+    const shown = hasGrid ? headProgress.value : 1;
+    return {
+      transform: [{ translateY: -headHeightSv.value * (1 - shown) }],
+      pointerEvents: shown > 0.01 ? ('box-none' as const) : ('none' as const),
+    };
+  }, [hasGrid]);
+  /* Mép đáy `space.xs` như trước: hàng cuối không sát thanh điều hướng. */
+  const gridHeight = Math.max(0, area.height - space.xs);
+  const gridViewport = useMemo(() => ({ width: area.width, height: gridHeight }), [area.width, gridHeight]);
+  /* Phần khối đầu trang đang hiện - hàng ngày của lưới trượt theo con số này (luồng UI). */
+  const headOffset = useDerivedValue(
+    () => headHeightSv.value * (hasGrid ? headProgress.value : 1),
+    [hasGrid],
+  );
+
+  /*
+   * Hàm/đối tượng truyền xuống các tấm trượt và lưới phải ỔN ĐỊNH: mọi tấm đều `memo`, nên một hàm
+   * viết thẳng trong JSX làm chúng dựng lại theo từng lần gõ ô tìm / refetch nền.
+   */
+  const toggleCollapsed = useCallback(() => setCollapsed((v) => !v), []);
+  /*
+   * Đổi chế độ xem (Danh sách ↔ Lịch tháng) là một lượt dựng NẶNG. Chạy nó cùng lượt với việc đóng
+   * tấm Bộ lọc thì tấm đứng hình (người dùng 28/11/2026: "bấm Lưu bị đơ"). Nên: để tấm đóng trước
+   * (`setTimeout` 0 - lượt render sau), rồi đổi chế độ trong `startTransition` (ưu tiên thấp, không
+   * chặn khung hình); `viewPending` hiện viên "Đang tải lịch" trong lúc đó.
+   */
+  const [viewPending, startViewTransition] = useTransition();
+  const changeView = useCallback((next: CalendarView) => {
+    setTimeout(() => startViewTransition(() => setView(next)), 0);
+  }, []);
+  /*
+   * Kéo-để-tải-lại: vòng quay chỉ theo lượt NGƯỜI DÙNG kéo (state riêng), không theo refetch nền -
+   * không thì mỗi lần khoá xe / đặt giá xong là vòng quay tự hiện.
+   */
+  const [pulling, setPulling] = useState(false);
+  const dataRefetch = data.refetch;
+  const pullRefresh = useCallback(() => {
+    setPulling(true);
+    void dataRefetch().finally(() => setPulling(false));
+  }, [dataRefetch]);
+  const closeQuickBooking = useCallback(() => setQuickBooking(null), []);
+  const openBookingDetail = useCallback(
+    (bookingId: string) => {
+      setQuickBooking(null);
+      navigateOnce(ROUTES.manage.bookingDetail(bookingId));
+    },
+    [navigateOnce],
+  );
+  const closeCellMenu = useCallback(() => setCellTarget(null), []);
+  const closeInfo = useCallback(() => setInfoResource(null), []);
+  const openVehicle = useCallback(
+    (vehicleId: string) => {
+      setInfoResource(null);
+      navigateOnce(ROUTES.manage.vehicleDetail(vehicleId));
+    },
+    [navigateOnce],
+  );
+  const dayBlockState = useMemo(
+    () => ({
+      batchId: panelPreview.data?.activeBlockBatchId ?? null,
+      loading: panelPreview.isPending,
+      busy: quickBlock.isPending || releaseBatch.isPending,
+    }),
+    [panelPreview.data?.activeBlockBatchId, panelPreview.isPending, quickBlock.isPending, releaseBatch.isPending],
+  );
+  const closeDayPanel = useCallback(() => setDayPanel(null), []);
+  const releaseMutate = releaseBatch.mutate;
+  const releaseDayBlock = useCallback(
+    (batchId: string) =>
+      releaseMutate(
+        { batchId, branchId: filters.branchId },
+        {
+          onSuccess: () => toast.showSuccess(t('bulkBlock.released')),
+          onError: (error) => toast.showError(errorMessage(error)),
+        },
+      ),
+    [releaseMutate, filters.branchId, toast, t, errorMessage],
+  );
+  const openBulkBlock = useCallback(() => {
+    if (dayPanel) setBulkBlock({ date: dayPanel.day.key, suggestedRange });
+    setDayPanel(null);
+  }, [dayPanel, suggestedRange]);
+  const openBulkPrice = useCallback(() => {
+    if (dayPanel) setBulkPrice({ date: dayPanel.day.key, suggestedRange });
+    setDayPanel(null);
+  }, [dayPanel, suggestedRange]);
+  const closeBulkBlock = useCallback(() => setBulkBlock(null), []);
+  const closeBulkPrice = useCallback(() => setBulkPrice(null), []);
+  const closeSheet = useCallback(() => setSheet(null), []);
+  const editBlock = useCallback(
+    (block: Parameters<ComponentProps<typeof VehicleBlockDetailSheet>['onEdit']>[0]) =>
+      setSheet({ kind: 'block', state: { mode: 'edit', block } }),
+    [],
+  );
+  const openMaintenanceProfile = useCallback(
+    (vehicleId: string) => {
+      setSheet(null);
+      navigateOnce(ROUTES.manage.vehicleEditTab(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE));
+    },
+    [navigateOnce],
+  );
+  const blockSheetState = sheet?.kind === 'block' ? sheet.state : null;
+  const priceSheetState = sheet?.kind === 'price' ? sheet.state : null;
 
   // Thiếu quyền là 403 của CHÍNH màn này — không gọi API rồi mới nhận lỗi.
   if (!permissionsLoading && !canView) {
@@ -576,134 +724,96 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
     <>
       {header}
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
-        <YStack px={layout.screenX} pt={16} pb={monthView ? 16 : 0}>
-          <CalendarDateControls filters={filters} setFilters={setFilters} view={view} />
-        </YStack>
-
-        {data.isLoading ? (
-          <CalendarGridSkeleton />
-        ) : data.error && !data.resources ? (
-          <ScreenError
-            messageFrom="backend"
-            error={data.error}
-            title={t('states.loadFailed')}
-            onRetry={data.refetch}
-          />
-        ) : resources.length === 0 && branchEmpty && !filtered ? (
-          <ScreenMessage
-            icon="location-outline"
-            title={branchEmpty.title}
-            description={branchEmpty.hint}
-          />
-        ) : resources.length === 0 ? (
-          <ScreenMessage
-            icon={filtered ? 'search-outline' : 'car-outline'}
-            title={t(filtered ? 'states.noMatchTitle' : 'states.noVehiclesTitle')}
-            description={t(filtered ? 'states.noMatchDescription' : 'states.noVehiclesDescription')}
-            {...(filtered
-              ? {
-                  actionLabel: tCommon('clear'),
-                  onAction: () => {
-                    setSearch('');
-                    reset();
-                  },
-                }
-              : {})}
-          />
-        ) : (
-          <>
-            {/*
-              Lỗi khi ĐÃ CÓ lưới để đọc: nói ra ngay TRÊN lưới, không thay lưới bằng màn lỗi.
-              `keepPreviousData` giữ dữ liệu cũ, nên không có dải này thì một lần refetch hỏng
-              (mất mạng, 500, phiên hết hạn) hoàn toàn im lặng — người điều phối đọc một cái lịch
-              cũ và quyết định xe còn trống dựa trên nó. Web dựng đúng dải này ở đúng chỗ này.
-            */}
-            {data.error ? (
-              <YStack px={layout.screenX} pb={space.xs}>
-                <Callout tone="danger" title={t('states.loadFailed')}>
-                  {getErrorMessage(data.error)}
-                </Callout>
-                <InlineAction label={t('states.retry')} onPress={data.refetch} />
-              </YStack>
-            ) : null}
-
-            {monthView ? (
-              <View
-                style={styles.month}
-                pointerEvents={gridStale ? 'none' : 'auto'}
-                accessibilityState={{ busy: gridStale || data.isFetching }}
-              >
-                <CalendarMonthView
-                  days={days}
-                  monthIndex={monthIndex}
-                  resources={resources}
-                  eventsByResource={data.eventsByResource}
-                  priceMarkers={data.priceMarkers}
-                  holidaysByDay={holidaysByDay}
-                  selectedKey={selectedDayKey}
-                  onSelectDay={setPickedDay}
-                  onEventPress={openEvent}
-                  onCreate={canCreate ? createForDay : null}
-                  onDayActions={onDayPress && dayActions.length > 0 ? onDayPress : null}
+        <View
+          style={styles.area}
+          onLayout={(e) =>
+            setArea({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })
+          }
+        >
+          {data.isLoading ? (
+            <View style={[styles.fill, { paddingTop: headHeight }]}>
+              {monthView ? <CalendarMonthSkeleton /> : <CalendarGridSkeleton />}
+            </View>
+          ) : data.error && !data.resources ? (
+            <View style={[styles.fill, { paddingTop: headHeight }]}>
+              <ScreenError
+                messageFrom="backend"
+                error={data.error}
+                title={t('states.loadFailed')}
+                onRetry={data.refetch}
+              />
+            </View>
+          ) : resources.length === 0 ? (
+            <View style={[styles.fill, { paddingTop: headHeight }]}>
+              {branchEmpty && !filtered ? (
+                <ScreenMessage
+                  icon="location-outline"
+                  title={branchEmpty.title}
+                  description={branchEmpty.hint}
                 />
-                {gridStale ? <GridBusyOverlay /> : null}
-              </View>
-            ) : (
-              <>
-            {!data.hasAnyEvent ? (
-              // Khoảng đang xem chưa có lịch nào: nói NHỎ một dòng — lưới vẫn hiện và chạm được.
-              <Text
-                px={layout.screenX}
-                py={space.xs}
-                col={colors.textMuted}
-                fos={fontSize.bodySm}
-                accessibilityRole="text"
-              >
-                {t(onCellPress ? 'states.noEventsInRangeActionable' : 'states.noEventsInRange')}
-              </Text>
-            ) : null}
-
-            {/*
-              Vùng LƯỚI, và cũng là thứ được ĐO.
-              Bề rộng cột ngày và chiều cao danh sách đều suy từ kích thước thật của vùng này, nên
-              lưới chỉ dựng sau lần đo đầu tiên — dựng ở bề rộng 0 thì mọi cột ra 0px.
-              Nhãn vùng đặt ở đây, đúng chỗ web đặt `role="region" aria-label`.
-            */}
+              ) : (
+                <ScreenMessage
+                  icon={filtered ? 'search-outline' : 'car-outline'}
+                  title={t(filtered ? 'states.noMatchTitle' : 'states.noVehiclesTitle')}
+                  description={t(
+                    filtered ? 'states.noMatchDescription' : 'states.noVehiclesDescription',
+                  )}
+                  {...(filtered
+                    ? {
+                        actionLabel: tCommon('clear'),
+                        onAction: () => {
+                          setSearch('');
+                          reset();
+                        },
+                      }
+                    : {})}
+                />
+              )}
+            </View>
+          ) : monthView ? (
+            <View
+              style={styles.fill}
+              pointerEvents={gridStale ? 'none' : 'auto'}
+              accessibilityState={{ busy: gridStale || data.isFetching }}
+            >
+              <CalendarMonthView
+                days={days}
+                rangeFrom={rangeFromKey}
+                rangeTo={rangeToKey}
+                resources={resources}
+                eventsByResource={data.eventsByResource}
+                priceMarkers={data.priceMarkers}
+                holidaysByDay={holidaysByDay}
+                selectedKey={selectedDayKey}
+                onSelectDay={setPickedDay}
+                onEventPress={openEvent}
+                onCreate={canCreate ? createForDay : null}
+                onDayActions={onDayPress && dayActions.length > 0 ? onDayPress : null}
+                onScroll={onMonthScroll}
+                topInset={headHeight}
+                refreshing={pulling}
+                onRefresh={pullRefresh}
+              />
+              {gridStale || viewPending ? <GridBusyOverlay /> : null}
+            </View>
+          ) : (
+            /*
+              Vùng LƯỚI: nằm ngay dưới khối đầu trang và trượt lên CÙNG nó; cao bằng cả vùng nội
+              dung nên khi khối thu hết, lưới phủ kín màn. Lúc khối còn hiện, đáy lưới tràn qua mép
+              dưới đúng `headHeight` - danh sách hàng đệm đáy cùng con số để hàng cuối vẫn cuộn tới.
+            */
             <View
               accessible={false}
               accessibilityLabel={t('grid.ariaLabel')}
               accessibilityState={{ busy: gridStale || data.isFetching }}
-              /*
-                `marginBottom` chứ KHÔNG phải `padding`: `onLayout` báo kích thước của chính view
-                này, mà bề rộng cột ngày và chiều cao danh sách đều suy từ con số đó. Một
-                `paddingBottom` sẽ nằm TRONG kích thước được báo, nên lưới vẫn dựng đủ chiều cao
-                cũ rồi bị đẩy xuống — đúng phần vừa chừa ra lại bị cắt mất ở đáy.
-
-                Cần dù `Screen` đã ăn vùng an toàn: màn này đi `padded={false}` để mọi pixel dọc
-                thuộc về lưới, nên hàng "Xe còn trống" nằm sát mép và bị thanh điều hướng liếm vào.
-              */
-              style={styles.grid}
-              onLayout={(e) =>
-                setViewport({
-                  width: e.nativeEvent.layout.width,
-                  height: e.nativeEvent.layout.height,
-                })
-              }
+              style={[styles.gridSlide, { height: gridHeight }]}
             >
-              {/*
-                MỜ lưới khi đang tải — đúng cách web làm (`.refetching { opacity: .75 }`), không
-                phải một tấm che xám đè lên. Lưới cũ vẫn đọc được xuyên qua, và đó là chủ đích:
-                người điều phối thường chỉ cần liếc lại một dòng, không cần chờ dữ liệu mới.
-
-                CHẶN chạm thì CHỈ khi lưới đang lệch khoảng — xem `gridStale`. Một lần refetch nền
-                (sau khi khoá xe, sau khi đặt giá) không được phép khoá tay người dùng: khoảng vẫn
-                đúng, chỉ có số liệu đang mới lại.
-              */}
+              {/* MỜ khi đang tải (web `.refetching`); CHẶN chạm chỉ khi lưới lệch khoảng. */}
               <View
                 style={{ flex: 1, opacity: gridStale || data.isFetching ? 0.75 : 1 }}
                 pointerEvents={gridStale ? 'none' : 'auto'}
               >
-                {viewport.width > 0 && viewport.height > 0 ? (
+                {area.width > 0 && gridHeight > 0 ? (
                   <CalendarTimeline
                     resources={resources}
                     eventsByResource={data.eventsByResource}
@@ -711,9 +821,14 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
                     holidaysByDay={holidaysByDay}
                     days={days}
                     range={data.range}
-                    viewport={viewport}
+                    viewport={gridViewport}
                     collapsed={collapsed}
-                    onToggleCollapsed={() => setCollapsed((v) => !v)}
+                    onToggleCollapsed={toggleCollapsed}
+                    refreshing={pulling}
+                    onRefresh={pullRefresh}
+                    onVerticalScroll={onVerticalScroll}
+                    headInset={headHeight}
+                    headOffset={headOffset}
                     onCellPress={onCellPress}
                     onEventPress={openEvent}
                     onResourcePress={setInfoResource}
@@ -721,92 +836,100 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
                   />
                 ) : null}
               </View>
-
-              {gridStale ? <GridBusyOverlay /> : null}
+              {gridStale || viewPending ? <GridBusyOverlay /> : null}
             </View>
-              </>
-            )}
-          </>
-        )}
+          )}
+
+          {/*
+            Khối đầu trang - nằm ĐÈ, thu bằng `translateY` âm; `overflow: hidden` của vùng ngoài cắt
+            nó khi trượt lên (không thì nó vẽ đè lên thanh trang).
+          */}
+          {/*
+            Hiện CẢ lúc quyền đang tải: ẩn đi rồi mới hiện làm khung chờ đổi hình hai lần (lần đầu
+            lưới trống từ đỉnh, lần sau mới có khối tìm/chú giải/ngày ở trên) - người dùng 28/11/2026.
+          */}
+          {canView || permissionsLoading ? (
+            <Animated.View
+              style={[styles.head, { backgroundColor: colors.background }, headStyle]}
+              onLayout={measureHead}
+            >
+              <YStack gap={12} px={16} pb={12} bg={colors.surface}>
+                <CalendarSearchBar
+                  filters={filters}
+                  setFilters={setFilters}
+                  searchValue={search}
+                  onSearchChange={setSearch}
+                  view={view}
+                  onViewChange={changeView}
+                  branchFilter={branchFilter}
+                  branchId={branchId}
+                />
+                <CalendarLegend />
+              </YStack>
+              <YStack px={layout.screenX} pt={16} pb={monthView ? 16 : 0}>
+                <CalendarDateControls filters={filters} setFilters={setFilters} view={view} />
+              </YStack>
+              {hasGrid && data.error ? (
+                // Lỗi khi ĐÃ CÓ lưới: nói ngay trên lưới - refetch hỏng không được im lặng.
+                <YStack px={layout.screenX} pt={space.xs}>
+                  <Callout tone="danger" title={t('states.loadFailed')}>
+                    {getErrorMessage(data.error)}
+                  </Callout>
+                  <InlineAction label={t('states.retry')} onPress={data.refetch} />
+                </YStack>
+              ) : null}
+              {hasGrid && !monthView && !data.hasAnyEvent ? (
+                // Khoảng đang xem chưa có lịch nào: nói NHỎ một dòng - lưới vẫn hiện và chạm được.
+                <Text
+                  px={layout.screenX}
+                  pt={space.xs}
+                  col={colors.textMuted}
+                  fos={fontSize.bodySm}
+                  accessibilityRole="text"
+                >
+                  {t(onCellPress ? 'states.noEventsInRangeActionable' : 'states.noEventsInRange')}
+                </Text>
+              ) : null}
+              {/* Figma: lưới cách hàng ngày 16 (Option 2 `24729:82215`). */}
+              {!monthView ? <View style={styles.gridGap} /> : null}
+            </Animated.View>
+          ) : null}
+        </View>
       </Screen>
 
       {/* ── Overlay ──────────────────────────────────────────────────────── */}
-      <QuickBookingSheet
-        target={quickBooking}
-        onClose={() => setQuickBooking(null)}
-        onOpenDetail={(bookingId) => {
-          setQuickBooking(null);
-          navigateOnce(ROUTES.manage.bookingDetail(bookingId));
-        }}
-      />
+      <QuickBookingSheet target={quickBooking} onClose={closeQuickBooking} onOpenDetail={openBookingDetail} />
 
       <CellActionsSheet
         target={cellTarget}
         actions={cellActions}
-        isFree={isCellRangeFree}
         onSelect={runCellAction}
-        onClose={() => setCellTarget(null)}
+        onClose={closeCellMenu}
       />
 
-      <VehicleInfoSheet
-        resource={infoResource}
-        onClose={() => setInfoResource(null)}
-        onOpenVehicle={(vehicleId) => {
-          setInfoResource(null);
-          navigateOnce(ROUTES.manage.vehicleDetail(vehicleId));
-        }}
-      />
+      <VehicleInfoSheet resource={infoResource} onClose={closeInfo} onOpenVehicle={openVehicle} />
 
       <DayActionSheet
         state={dayPanel}
         actions={dayActions}
-        blockState={{
-          batchId: panelPreview.data?.activeBlockBatchId ?? null,
-          loading: panelPreview.isPending,
-          busy: quickBlock.isPending || releaseBatch.isPending,
-        }}
-        onClose={() => setDayPanel(null)}
+        blockState={dayBlockState}
+        onClose={closeDayPanel}
         onQuickBlock={runQuickBlock}
-        onRelease={(batchId) =>
-          releaseBatch.mutate(
-            { batchId, branchId: filters.branchId },
-            {
-              onSuccess: () => toast.showSuccess(t('bulkBlock.released')),
-              onError: (error) => toast.showError(errorMessage(error)),
-            },
-          )
-        }
-        onOpenBlockDialog={() => {
-          if (dayPanel) setBulkBlock({ date: dayPanel.day.key, suggestedRange });
-          setDayPanel(null);
-        }}
-        onPrice={() => {
-          if (dayPanel) setBulkPrice({ date: dayPanel.day.key, suggestedRange });
-          setDayPanel(null);
-        }}
+        onRelease={releaseDayBlock}
+        onOpenBlockDialog={openBulkBlock}
+        onPrice={openBulkPrice}
       />
 
-      <BulkDayBlockSheet state={bulkBlock} filters={filters} onClose={() => setBulkBlock(null)} />
-      <BulkDayPriceSheet state={bulkPrice} filters={filters} onClose={() => setBulkPrice(null)} />
+      <BulkDayBlockSheet state={bulkBlock} filters={filters} onClose={closeBulkBlock} />
+      <BulkDayPriceSheet state={bulkPrice} filters={filters} onClose={closeBulkPrice} />
 
-      <VehicleBlockSheet
-        state={sheet?.kind === 'block' ? sheet.state : null}
-        onClose={() => setSheet(null)}
-      />
+      <VehicleBlockSheet state={blockSheetState} onClose={closeSheet} />
 
       {sheet?.kind === 'block-detail' ? (
-        <VehicleBlockDetailSheet
-          blockId={sheet.blockId}
-          open
-          onClose={() => setSheet(null)}
-          onEdit={(block) => setSheet({ kind: 'block', state: { mode: 'edit', block } })}
-        />
+        <VehicleBlockDetailSheet blockId={sheet.blockId} open onClose={closeSheet} onEdit={editBlock} />
       ) : null}
 
-      <DailyPriceSheet
-        state={sheet?.kind === 'price' ? sheet.state : null}
-        onClose={() => setSheet(null)}
-      />
+      <DailyPriceSheet state={priceSheetState} onClose={closeSheet} />
 
       {sheet?.kind === 'maintenance' ? (
         <MaintenanceEventSheet
@@ -814,11 +937,8 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
           vehicleName={sheet.vehicleName}
           recordId={sheet.recordId}
           open
-          onClose={() => setSheet(null)}
-          onOpenProfile={(vehicleId) => {
-            setSheet(null);
-            navigateOnce(ROUTES.manage.vehicleEditTab(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE));
-          }}
+          onClose={closeSheet}
+          onOpenProfile={openMaintenanceProfile}
         />
       ) : null}
     </>
@@ -863,9 +983,11 @@ function GridBusyOverlay() {
 }
 
 const styles = StyleSheet.create({
-  /* Figma: lưới cách hàng ngày 16, chỉ mép trên/dưới (Option 2 `24729:82215`). */
-  grid: { flex: 1, marginTop: 16, marginBottom: space.xs },
-  month: { flex: 1 },
+  area: { flex: 1, overflow: 'hidden' },
+  fill: { flex: 1 },
+  head: { position: 'absolute', top: 0, left: 0, right: 0 },
+  gridSlide: { position: 'absolute', top: 0, left: 0, right: 0 },
+  gridGap: { height: 16 },
   busyOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

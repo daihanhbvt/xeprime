@@ -3,14 +3,13 @@
 import {
   ArrowLeftOutlined,
   CalendarOutlined,
-  CarOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
   LeftOutlined,
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Alert, Button, Form, Radio, Segmented, Skeleton } from 'antd';
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
+import { Alert, Button, Form, Radio, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -32,7 +31,7 @@ import {
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
-import { longTermReturnFromWallClock } from '@xeprime/domain';
+import { bestDiscountPackageMonths, longTermReturnFromWallClock } from '@xeprime/domain';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import {
@@ -65,6 +64,7 @@ import { BookingResult, BookingResultTotal } from './BookingResult';
 import { StaffBookingReviewStep } from './StaffBookingReviewStep';
 import { BookingTripCard, type BookingTrip } from './BookingTripCard';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import styles from './RequestBookingFlow.module.css';
 import staffStyles from './StaffBookingCards.module.css';
 import resultStyles from './BookingSuccessStep.module.css';
@@ -141,6 +141,7 @@ export function StaffBookingFlow({
 }: StaffBookingFlowProps) {
   const t = useTranslations('BookingRequests.staffFlow');
   const tFlow = useTranslations('BookingRequests.flow');
+  const tListing = useTranslations('Listings.detail.booking');
   const tSource = useTranslations('Bookings.source');
   const fmt = useAppFormat();
   const dl = useDomainLabel();
@@ -260,6 +261,28 @@ export function StaffBookingFlow({
   });
   const quote = quoteQ.data ?? null;
   const quoteUnavailable = hasPriceSelection && quoteQ.isError;
+
+  /*
+   * % ưu đãi cam kết của TỪNG gói - nhãn góc như ô gói của trang khách. Đọc từ chính báo giá
+   * server (không tự suy % ở client); gói đang chọn trùng khoá với `quoteQ` nên không gọi lặp.
+   */
+  const packageQuotes = useQueries({
+    queries: LONG_TERM_PACKAGE_MONTHS.map((months) => {
+      const params = { vehicleId, serviceType, packageMonths: months };
+      return {
+        queryKey: queryKeys.calendar.quote(params),
+        queryFn: () => fetchCalendarQuote(params),
+        enabled: isLongTerm && Boolean(vehicleId),
+        staleTime: 60_000,
+        retry: false,
+      };
+    }),
+  });
+  const packageOptions = LONG_TERM_PACKAGE_MONTHS.map((months, i) => ({
+    packageMonths: months,
+    durationDiscountPercent: packageQuotes[i]?.data?.longTerm?.durationDiscountPercent ?? null,
+  }));
+  const bestPackageMonths = bestDiscountPackageMonths(packageOptions);
 
   /*
    * Cọc thu trực tiếp — điền sẵn từ chính sách thuê của xe MỖI KHI báo giá đổi, trừ khi nhân viên
@@ -615,20 +638,27 @@ export function StaffBookingFlow({
           {vehicleServices.length > 1 ? (
             <div className={styles.serviceField}>
               <span className={styles.rangeFieldLabel}>{tFlow('service.label')}</span>
-              <Segmented
-                block
-                value={serviceType}
-                onChange={(v) => {
-                  setServiceType(v as ServiceType);
-                  setStepError(null);
-                }}
-                /* Nhãn tab là TÊN DỊCH VỤ — mức ưu đãi dài hạn khác nhau theo từng gói nên
-                   không gắn được một con số chung lên tab (ADR 0011). */
-                options={vehicleServices.map((value) => ({
-                  value,
-                  label: dl('serviceType', value),
-                }))}
-              />
+              {/* Tab dịch vụ gạch chân - cùng hình tab của thẻ đặt xe trang khách. */}
+              <div className={staffStyles.tabHeader} role="tablist">
+                {vehicleServices.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={serviceType === value}
+                    className={cx(
+                      staffStyles.serviceTab,
+                      serviceType === value && staffStyles.serviceTabActive,
+                    )}
+                    onClick={() => {
+                      setServiceType(value as ServiceType);
+                      setStepError(null);
+                    }}
+                  >
+                    {dl('serviceType', value)}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -657,21 +687,21 @@ export function StaffBookingFlow({
           {isLongTerm ? (
             <>
               <div className={styles.serviceField}>
-                <span className={styles.rangeFieldLabel}>{t('trip.packageLabel')}</span>
+                <span className={staffStyles.sectionLabel}>{t('trip.packageLabel')}</span>
                 <div
-                  className={styles.packageRow}
+                  className={staffStyles.packageGrid}
                   role="radiogroup"
                   aria-label={t('trip.packageGroupLabel')}
                 >
-                  {LONG_TERM_PACKAGE_MONTHS.map((months) => (
+                  {packageOptions.map(({ packageMonths: months, durationDiscountPercent }) => (
                     <button
                       key={months}
                       type="button"
                       role="radio"
                       aria-checked={packageMonths === months}
                       className={cx(
-                        styles.packageBtn,
-                        packageMonths === months && styles.packageBtnActive,
+                        staffStyles.packageCell,
+                        packageMonths === months && staffStyles.packageCellActive,
                       )}
                       onClick={() => {
                         setPackageMonths(months);
@@ -679,6 +709,15 @@ export function StaffBookingFlow({
                       }}
                     >
                       {fmt.packageLabel(months)}
+                      {/* % ưu đãi cam kết (ADR 0011): nhãn góc như trang khách. */}
+                      {durationDiscountPercent ? (
+                        <DiscountTag
+                          percent={durationDiscountPercent}
+                          variant="corner"
+                          active={packageMonths === months}
+                          best={bestPackageMonths === months}
+                        />
+                      ) : null}
                     </button>
                   ))}
                 </div>
@@ -687,8 +726,9 @@ export function StaffBookingFlow({
                 ) : null}
               </div>
 
-              <div className={styles.rangeField}>
-                <span className={styles.rangeFieldLabel}>{t('trip.pickupTimeLabel')}</span>
+              {/* Ô ngày nhận - cùng hình "Ngày bạn muốn nhận xe" của thẻ đặt xe trang khách. */}
+              <div className={cx(styles.rangeField, staffStyles.pickupField)}>
+                <span className={staffStyles.inputLabel}>{t('trip.pickupTimeLabel')}:</span>
                 <DateTimeField
                   control={control}
                   name="pickupAt"
@@ -775,10 +815,11 @@ export function StaffBookingFlow({
               </div>
             ) : (
               /* ── Hình thức nhận xe (tự lái / dài hạn) ─────────────────────────────── */
-              <fieldset className={styles.pickupGroup}>
-                <legend className={styles.fieldLabel}>{tFlow('pickup.legend')}</legend>
+              <fieldset className={staffStyles.locationSection}>
+                <legend className={staffStyles.sectionLabel}>{tFlow('pickup.legend')}</legend>
+                {/* Hai ô nhận xe - cùng hình `.deliveryToggle` của trang khách. */}
                 <div
-                  className={styles.pickupOptions}
+                  className={staffStyles.deliveryToggle}
                   role="radiogroup"
                   aria-label={tFlow('pickup.groupLabel')}
                 >
@@ -787,14 +828,14 @@ export function StaffBookingFlow({
                       {
                         key: PICKUP_METHOD.SELF,
                         label: tFlow('pickup.self'),
-                        hint: pickupPoint ? pickupPointText(pickupPoint) : t('trip.selfHint'),
-                        icon: <CarOutlined />,
+                        hint: tListing('pickup.selfHint'),
+                        danger: false,
                       },
                       {
                         key: PICKUP_METHOD.DELIVERY,
                         label: tFlow('pickup.delivery'),
-                        hint: t('trip.deliveryHint'),
-                        icon: <EnvironmentOutlined />,
+                        hint: t('trip.deliveryFeeLater'),
+                        danger: true,
                       },
                     ] as const
                   ).map((option) => (
@@ -804,21 +845,24 @@ export function StaffBookingFlow({
                       role="radio"
                       aria-checked={pickupMethod === option.key}
                       className={cx(
-                        styles.pickupOption,
-                        pickupMethod === option.key && styles.pickupOptionActive,
+                        staffStyles.toggleBtn,
+                        pickupMethod === option.key && staffStyles.toggleBtnActive,
                       )}
                       onClick={() => setValue('pickupMethod', option.key, { shouldValidate: true })}
                     >
-                      <span className={styles.pickupIcon} aria-hidden>
-                        {option.icon}
-                      </span>
-                      <span className={styles.pickupText}>
-                        <span className={styles.pickupLabel}>{option.label}</span>
-                        <span className={styles.pickupHint}>{option.hint}</span>
+                      <span className={staffStyles.toggleLabel}>{option.label}</span>
+                      <span className={option.danger ? staffStyles.toggleSubDanger : staffStyles.toggleSub}>
+                        {option.hint}
                       </span>
                     </button>
                   ))}
                 </div>
+                {pickupMethod === PICKUP_METHOD.SELF ? (
+                  <div className={staffStyles.addressBox}>
+                    <EnvironmentOutlined className={staffStyles.addressIcon} aria-hidden />
+                    <span>{pickupPoint ? pickupPointText(pickupPoint) : t('trip.selfHint')}</span>
+                  </div>
+                ) : null}
               </fieldset>
             )}
 

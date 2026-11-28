@@ -83,35 +83,41 @@ export function useInternalDriverForm({
   });
 
   const form = (
-    <DialogForm onSubmit={submit} labelPosition="top">
+    <>
+      {/*
+        Ảnh đứng NGOÀI <form>: đặt `Upload` của AntD bên trong form làm ô SĐT không gõ được
+        (28/11/2026). Nó vẫn ghi vào form qua `control`, nên vị trí DOM không đổi dữ liệu.
+      */}
       <DriverPhotoField control={control} name="photoUrl" disabled={pending} />
-      <TextField
-        control={control}
-        name="phone"
-        type="tel"
-        label={t('add.internal.phone')}
-        placeholder={t('add.internal.phonePlaceholder')}
-        autoComplete="off"
-      />
-      <TextField
-        control={control}
-        name="name"
-        label={t('add.internal.name')}
-        placeholder={t('add.internal.namePlaceholder')}
-        autoComplete="off"
-      />
-      <TextAreaField
-        control={control}
-        name="note"
-        label={t('add.internal.note')}
-        placeholder={t('add.internal.notePlaceholder')}
-        rows={3}
-        maxLength={INTERNAL_DRIVER_NOTE_MAX}
-      />
-      {driver && driver.activeTripCount > 0 ? (
-        <p>{t('internal.form.snapshotNote', { count: driver.activeTripCount })}</p>
-      ) : null}
-    </DialogForm>
+      <DialogForm onSubmit={submit} labelPosition="top">
+        <TextField
+          control={control}
+          name="phone"
+          type="tel"
+          label={t('add.internal.phone')}
+          placeholder={t('add.internal.phonePlaceholder')}
+          autoComplete="off"
+        />
+        <TextField
+          control={control}
+          name="name"
+          label={t('add.internal.name')}
+          placeholder={t('add.internal.namePlaceholder')}
+          autoComplete="off"
+        />
+        <TextAreaField
+          control={control}
+          name="note"
+          label={t('add.internal.note')}
+          placeholder={t('add.internal.notePlaceholder')}
+          rows={3}
+          maxLength={INTERNAL_DRIVER_NOTE_MAX}
+        />
+        {driver && driver.activeTripCount > 0 ? (
+          <p>{t('internal.form.snapshotNote', { count: driver.activeTripCount })}</p>
+        ) : null}
+      </DialogForm>
+    </>
   );
 
   return { form, submit: () => void submit(), pending };

@@ -1,5 +1,7 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
+import { VEHICLE_TYPE } from '@xeprime/types';
+import { appWallClockToIso, defaultRentalRange } from '@xeprime/domain';
 import { vehiclesApi, type VehicleBookingPickerItem } from '@/api/vehicles/api';
 import { queryKeys } from '@/queries/query-keys';
 
@@ -78,4 +80,30 @@ export function useBookingPickerVehicles(filters: BookingPickerFilters) {
     refetch: () => void query.refetch(),
     retryNextPage: () => void query.fetchNextPage(),
   };
+}
+
+/**
+ * Tải sẵn TRANG ĐẦU của bước "Chọn xe" lúc người dùng còn ở danh sách đơn (người dùng 28/11/2026):
+ * bấm "Tạo đơn" là thấy xe ngay từ cache, rồi bước chọn xe tự làm mới ngầm (`staleTime: 0`). Cùng
+ * bộ lọc mở đầu của `StaffVehiclePicker` (ô tô, chưa tìm, khung giờ mặc định) nên cùng khoá cache.
+ */
+export function usePrefetchBookingPicker(enabled: boolean, branchId?: string | null) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    const range = defaultRentalRange();
+    const baseParams = {
+      q: null,
+      branchId: branchId ?? null,
+      vehicleType: VEHICLE_TYPE.CAR,
+      pickupAt: appWallClockToIso(range.pickupAt),
+      returnAt: appWallClockToIso(range.returnAt),
+      limit: PAGE_SIZE,
+    };
+    void queryClient.prefetchInfiniteQuery({
+      queryKey: queryKeys.vehicles.bookingPicker(baseParams),
+      queryFn: ({ pageParam }) => vehiclesApi.bookingPicker({ ...baseParams, page: pageParam }, PAGE_SIZE),
+      initialPageParam: 1,
+    });
+  }, [enabled, branchId, queryClient]);
 }

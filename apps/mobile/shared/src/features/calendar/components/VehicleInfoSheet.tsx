@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -41,7 +42,7 @@ const HERO = 64;
  * DỮ LIỆU và QUYỀN giữ nguyên bản web: cùng bốn trường, cùng luật chỉ nêu trạng thái vận hành khi
  * nó đáng chú ý, cùng `VEHICLE_VIEW` gác lối sang hồ sơ xe.
  */
-export function VehicleInfoSheet({
+export const VehicleInfoSheet = memo(function VehicleInfoSheet({
   resource,
   onClose,
   onOpenVehicle,
@@ -197,7 +198,7 @@ export function VehicleInfoSheet({
       ) : null}
     </BottomSheet>
   );
-}
+});
 
 /**
  * Viên ĐỊNH DANH — biển số hoặc mã xe.

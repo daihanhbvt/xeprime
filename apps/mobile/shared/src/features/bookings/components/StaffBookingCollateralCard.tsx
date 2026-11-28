@@ -1,21 +1,25 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useFieldArray, useWatch, type Control } from 'react-hook-form';
-import { Pressable } from 'react-native';
+import { AddLink, EditableSummaryRow } from '@/components/ui/EditableSummaryRow';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  BOOKING_COLLATERAL_DESCRIPTION_MAX,
   BOOKING_COLLATERAL_MAX_ITEMS,
   BOOKING_COLLATERAL_TYPE,
   BOOKING_COLLATERAL_TYPE_VALUES,
+  type BookingCollateralType,
 } from '@xeprime/types';
-import { Ionicons } from '@/components/icons/Ionicons';
 import { Card } from '@/components/ui/Card';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { MoneyField } from '@/components/ui/MoneyField';
-import { SelectField } from '@/components/ui/SelectField';
-import { TextField } from '@/components/ui/TextField';
+import { SelectControl } from '@/components/ui/SelectControl';
+import { TextControl } from '@/components/ui/TextControl';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 import type { StaffBookingValues } from '../staff-booking-schema';
 
 /**
@@ -24,6 +28,9 @@ import type { StaffBookingValues } from '../staff-booking-schema';
  * khoản nào thì đơn ghi khoản đó - tiền cọc để 0 và danh sách trống nghĩa là không cọc. Không có ô
  * chọn "hình thức": server suy chế độ từ dữ liệu.
  */
+/** `editing` khi đang THÊM mới (không trỏ vào dòng nào). */
+const NEW_ROW = -1;
+
 export function StaffBookingCollateralCard({ control }: { control: Control<StaffBookingValues> }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.staffFlow.review.collateral');
@@ -31,6 +38,36 @@ export function StaffBookingCollateralCard({ control }: { control: Control<Staff
   const items = useFieldArray({ control, name: 'collaterals' });
   const rows = useWatch({ control, name: 'collaterals' });
   const canAdd = items.fields.length < BOOKING_COLLATERAL_MAX_ITEMS;
+  const tActions = useTranslations('Common.actions');
+  const tFlow = useTranslations('BookingRequests.staffFlow');
+  /*
+   * Popup nhập NHÁP (người dùng 28/11/2026): "+ Thêm tài sản" hay bút sửa chỉ mở popup; bấm
+   * "Xác nhận" mới thêm/sửa vào đơn, "Huỷ" / đóng thì không đổi gì. `editing` = vị trí đang sửa,
+   * `NEW_ROW` = đang thêm mới.
+   */
+  const [editing, setEditing] = useState<number | null>(null);
+  const [draftType, setDraftType] = useState<BookingCollateralType>(BOOKING_COLLATERAL_TYPE.CITIZEN_ID);
+  const [draftDesc, setDraftDesc] = useState('');
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const openDraft = (index: number) => {
+    const row = index === NEW_ROW ? null : rows?.[index];
+    setDraftType((row?.collateralType as BookingCollateralType) ?? BOOKING_COLLATERAL_TYPE.CITIZEN_ID);
+    setDraftDesc(row?.description ?? '');
+    setDraftError(null);
+    setEditing(index);
+  };
+  const confirmDraft = () => {
+    const description = draftDesc.trim();
+    // Mô tả luôn bắt buộc (mọi loại); loại đã có sẵn giá trị nên không đánh dấu bắt buộc.
+    if (!description) {
+      setDraftError(tFlow('validation.collateralDescriptionRequired'));
+      return;
+    }
+    const value = { collateralType: draftType, description };
+    if (editing === NEW_ROW) items.append(value);
+    else if (editing != null) items.update(editing, value);
+    setEditing(null);
+  };
 
   const typeOptions = useMemo(
     () =>
@@ -44,86 +81,99 @@ export function StaffBookingCollateralCard({ control }: { control: Control<Staff
   return (
     <Card>
       <YStack gap={space.md}>
-        <YStack gap={space.xs}>
+        <XStack ai="center" gap={4}>
           <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} accessibilityRole="header">
             {t('title')}
           </Text>
-          <Text col={colors.placeholder} fos={fontSize.body}>
-            {t('lead')}
-          </Text>
-        </YStack>
+          <InfoHint label={t('title')} content={t('lead')} size={fontSize.bodyLg} />
+        </XStack>
 
-        <MoneyField control={control} name="depositAmount" label={t('cash')} hint={t('cashHint')} />
+        <MoneyField control={control} name="depositAmount" label={t('cash')} hint={t('cashHint')} hintInLabel />
 
-        <YStack gap={space.sm}>
-          <XStack ai="center" jc="space-between" gap={space.sm}>
+        <YStack gap={12}>
+          <XStack ai="center" gap={4}>
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
               {t('assetsTitle')}
             </Text>
-            {canAdd ? (
-              <Pressable
-                onPress={() =>
-                  items.append({ collateralType: BOOKING_COLLATERAL_TYPE.CITIZEN_ID, description: '' })
-                }
-                accessibilityRole="button"
-                accessibilityLabel={t('add')}
-                hitSlop={space.sm}
-              >
-                <XStack ai="center" gap={space.xs}>
-                  <Ionicons name="add" size={iconSize.md} color={colors.brandLink} />
-                  <Text col={colors.brandLink} fos={fontSize.body} fow={fontWeight.medium}>
-                    {t('add')}
-                  </Text>
-                </XStack>
-              </Pressable>
-            ) : null}
+            <InfoHint label={t('assetsTitle')} content={t('assetsHint')} />
           </XStack>
-
-          {items.fields.length === 0 ? (
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('assetsHint')}
-            </Text>
-          ) : (
+          {items.fields.length === 0 ? null : (
+            /* Dòng tóm tắt "Loại / Mô tả" + xoá/sửa; sửa trong POPUP (như chính sách gian hàng). */
             items.fields.map((field, index) => {
-              const type = rows?.[index]?.collateralType;
+              const row = rows?.[index];
               return (
-                <XStack key={field.id} gap={space.sm} ai="flex-start">
-                  <YStack f={1} minWidth={0} gap={space.sm}>
-                    <SelectField
-                      control={control}
-                      name={`collaterals.${index}.collateralType`}
-                      label={t('type')}
-                      options={typeOptions}
-                    />
-                    <TextField
-                      control={control}
-                      name={`collaterals.${index}.description`}
-                      label={t('description')}
-                      placeholder={
-                        type === BOOKING_COLLATERAL_TYPE.MOTORBIKE
-                          ? t('descriptionMotorbike')
-                          : type === BOOKING_COLLATERAL_TYPE.OTHER
-                            ? t('descriptionOther')
-                            : t('descriptionPlaceholder')
-                      }
-                      required={type === BOOKING_COLLATERAL_TYPE.OTHER}
-                    />
-                  </YStack>
-                  <YStack pt={space.xl}>
-                    <Pressable
-                      onPress={() => items.remove(index)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('remove')}
-                      hitSlop={space.sm}
-                    >
-                      <Ionicons name="trash-outline" size={iconSize.lg} color={colors.danger} />
-                    </Pressable>
-                  </YStack>
-                </XStack>
+                <EditableSummaryRow
+                  key={field.id}
+                  lines={[
+                    {
+                      label: `${t('type')}:`,
+                      value: row?.collateralType ? domainLabel('bookingCollateralType', row.collateralType) : '-',
+                    },
+                    { label: `${t('description')}:`, value: row?.description?.trim() || '-' },
+                  ]}
+                  removeLabel={t('remove')}
+                  editLabel={t('type')}
+                  disabled={false}
+                  onRemove={() => items.remove(index)}
+                  onEdit={() => openDraft(index)}
+                />
               );
             })
           )}
+          {canAdd ? (
+            <AddLink
+              label={t('add')}
+              onPress={() => openDraft(NEW_ROW)}
+            />
+          ) : null}
         </YStack>
+        <BottomSheet
+          open={editing != null}
+          onClose={() => setEditing(null)}
+          title={t('assetsTitle')}
+          footer={
+            <XStack gap={8}>
+              <YStack f={1}>
+                <Button label={tActions('cancel')} variant="secondary" onPress={() => setEditing(null)} />
+              </YStack>
+              <YStack f={1}>
+                <Button label={tActions('confirm')} variant="gradient" onPress={confirmDraft} />
+              </YStack>
+            </XStack>
+          }
+        >
+          {editing == null ? null : (
+            <YStack gap={12}>
+              <SelectControl
+                label={t('type')}
+                value={draftType}
+                options={typeOptions}
+                onChange={(next) => {
+                  setDraftType(next as BookingCollateralType);
+                  setDraftError(null);
+                }}
+              />
+              <TextControl
+                label={t('description')}
+                value={draftDesc}
+                onChangeText={(next) => {
+                  setDraftDesc(next);
+                  if (draftError) setDraftError(null);
+                }}
+                maxLength={BOOKING_COLLATERAL_DESCRIPTION_MAX}
+                placeholder={
+                  draftType === BOOKING_COLLATERAL_TYPE.MOTORBIKE
+                    ? t('descriptionMotorbike')
+                    : draftType === BOOKING_COLLATERAL_TYPE.OTHER
+                      ? t('descriptionOther')
+                      : t('descriptionPlaceholder')
+                }
+                required
+                {...(draftError ? { error: draftError } : {})}
+              />
+            </YStack>
+          )}
+        </BottomSheet>
       </YStack>
     </Card>
   );

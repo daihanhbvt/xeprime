@@ -1,10 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { memo, useMemo, useState, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { startOfAppDay } from '@xeprime/domain';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import { LineIcon } from '@/components/icons/LineIcon';
+import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import {
   applyBranchFilterGroup,
   BRANCH_FILTER_GROUP_KEY,
@@ -23,17 +24,18 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, radius, typeScale } from '@/theme/tokens';
 import { CALENDAR_SORT_VALUES, type CalendarFilters, type CalendarSort } from '../api';
 import {
-  CALENDAR_DAY_OPTIONS,
-  DEFAULT_DAYS,
   DEFAULT_SORT,
   type CalendarFilterPatch,
 } from '../hooks/use-calendar-filters';
-import { shiftFrom, todayIsoDate } from '../utils/calendar-date.util';
+import { todayIsoDate } from '../utils/calendar-date.util';
 
 /** Sentinel "không lọc" - không endpoint nào nhận `vehicleType=all`. */
 const ALL = 'all';
 
 /** Hai cách bày lịch (Figma "Chế độ xem" `24729:83508`). */
+/** Lùi xa nhất bao nhiêu tháng trước hôm nay - chung cho nút ‹ và bộ chọn ngày. */
+const PAST_LIMIT_MONTHS = 3;
+
 export const CALENDAR_VIEW = { LIST: 'list', MONTH: 'month' } as const;
 export type CalendarView = (typeof CALENDAR_VIEW)[keyof typeof CALENDAR_VIEW];
 
@@ -120,28 +122,8 @@ export function CalendarSearchBar({
           },
         ],
       },
-      /*
-       * "Khoảng xem" chỉ có nghĩa ở Danh sách - Lịch tháng luôn xem trọn tháng. "Không lọc" trỏ
-       * vào CHÍNH `DEFAULT_DAYS`, không phải một đầu của danh sách lựa chọn.
-       */
-      ...(view === CALENDAR_VIEW.LIST
-        ? [
-            {
-              key: GROUP.DAYS,
-              label: t('toolbar.rangeLength'),
-              value: String(filters.days),
-              resetValue: String(DEFAULT_DAYS),
-              display: 'option' as const,
-              labelAbove: true,
-              options: CALENDAR_DAY_OPTIONS.map((value) => ({
-                value: String(value),
-                label: t('toolbar.dayRange', { count: value }),
-              })),
-            },
-          ]
-        : []),
     ],
-    [branchGroup, filters.sort, filters.vehicleType, filters.days, t, domainLabel, view],
+    [branchGroup, filters.sort, filters.vehicleType, t, domainLabel],
   );
 
   const groups = useMemo(() => [viewGroup, ...filterGroups], [viewGroup, filterGroups]);
@@ -152,7 +134,6 @@ export function CalendarSearchBar({
     else if (groupKey === BRANCH_FILTER_GROUP_KEY) applyBranchFilterGroup(branchFilter, value);
     else if (groupKey === GROUP.VEHICLE_TYPE) setFilters({ vehicleType: value === ALL ? null : value });
     else if (groupKey === GROUP.SORT) setFilters({ sort: value as CalendarSort });
-    else if (groupKey === GROUP.DAYS) setFilters({ days: Number(value) });
   }
 
   return (
@@ -187,41 +168,47 @@ const CONTROL_GAP = 12;
  *
  * Nhãn khoảng LUÔN có năm: header lưới chỉ in "T5 12", nên đây là chỗ duy nhất nói tháng và năm.
  */
-export function CalendarDateControls({
+export const CalendarDateControls = memo(function CalendarDateControls({
   filters,
   setFilters,
-  view,
 }: {
   filters: CalendarFilters;
   setFilters: (patch: CalendarFilterPatch) => void;
+  /** Giữ trong kiểu cho nơi gọi; hai chế độ dùng CHUNG khoảng nên thanh ngày không còn phân nhánh. */
   view: CalendarView;
 }) {
   const colors = useColors();
   const t = useTranslations('Calendar');
   const fmt = useAppFormat();
-  const month = view === CALENDAR_VIEW.MONTH;
+  const [picking, setPicking] = useState(false);
 
   const start = startOfAppDay(filters.from);
-  const label = month
-    ? fmt.monthYear(start.toDate())
-    : t('toolbar.rangeLabel', {
+  // Cùng một nhãn khoảng ở cả hai chế độ - Lịch tháng chỉ đổi cách bày.
+  const label = t('toolbar.rangeLabel', {
         from: fmt.dayMonth(start.format('YYYY-MM-DD')),
         to: fmt.dateKey(start.add(filters.days - 1, 'day').format('YYYY-MM-DD')),
-      });
+  });
 
+  /*
+   * ‹ › lùi/tiến đúng MỘT THÁNG lịch từ CHÍNH ngày đang xem (24/11 → 24/12 → 24/1) ở CẢ HAI chế
+   * độ: Danh sách và Lịch tháng chỉ khác cách BÀY, dùng chung một ngày + một bộ lọc - đổi chế độ
+   * qua lại không làm mất ngày (người dùng 28/11/2026). Lịch tháng tự hiện tháng chứa ngày đó.
+   */
   const shift = (direction: 1 | -1) =>
-    setFilters({
-      from: month
-        ? start.startOf('month').add(direction, 'month').format('YYYY-MM-DD')
-        : shiftFrom(filters.from, filters.days, direction),
-    });
+    setFilters({ from: start.add(direction, 'month').format('YYYY-MM-DD') });
+  /*
+   * Lùi tối đa 3 THÁNG trước hôm nay - CÙNG mốc với bộ chọn ngày (người dùng 28/11/2026). Lùi
+   * thêm một tháng mà rơi trước mốc thì khoá nút ‹ (không kẹp về mốc: người dùng bấm ‹ là chờ
+   * đúng một tháng, nhảy nửa vời khó đoán hơn).
+   */
+  const minFrom = startOfAppDay(todayIsoDate()).subtract(PAST_LIMIT_MONTHS, 'month');
+  const canGoBack = !start.subtract(1, 'month').isBefore(minFrom, 'day');
 
   return (
     <XStack h={CONTROL_H} ai="center" gap={CONTROL_GAP}>
       <ControlButton
         label={t('toolbar.today')}
         onPress={() => setFilters({ from: todayIsoDate() })}
-        grow
       >
         <Text
           col={colors.textMuted}
@@ -234,54 +221,73 @@ export function CalendarDateControls({
         </Text>
       </ControlButton>
       <ControlButton
-        label={month ? t('toolbar.previousMonth') : t('toolbar.previousRange', { count: filters.days })}
+        label={t('toolbar.previousMonth')}
         onPress={() => shift(-1)}
+        disabled={!canGoBack}
       >
-        <LineIcon name="chevron-left" size={20} color={colors.textMuted} />
+        <LineIcon name="chevron-left" size={20} color={canGoBack ? colors.textMuted : colors.textPlaceholder} />
       </ControlButton>
-      {/* `accessibilityLiveRegion` để trình đọc màn hình đọc khoảng MỚI sau mỗi lần lùi/tiến. */}
-      <Text
-        flexShrink={1}
-        minWidth={0}
-        ta="center"
-        col={colors.text}
-        fos={typeScale.title.fontSize}
-        lh={typeScale.title.lineHeight}
-        fow={fontWeight.medium}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.85}
-        accessibilityLiveRegion="polite"
-      >
-        {label}
-      </Text>
-      <ControlButton
-        label={month ? t('toolbar.nextMonth') : t('toolbar.nextRange', { count: filters.days })}
-        onPress={() => shift(1)}
-      >
+      {/* Nhãn khoảng = nút chọn NGÀY BẮT ĐẦU (Danh sách); Lịch tháng chọn ngày nào thì về tháng đó. */}
+      <ControlButton label={label} onPress={() => setPicking(true)} grow>
+        <XStack ai="center" gap={6} maxWidth="100%">
+          <LineIcon name="calendar" size={18} color={colors.textMuted} />
+          {/* `accessibilityLiveRegion` để trình đọc màn hình đọc khoảng MỚI sau mỗi lần lùi/tiến. */}
+          <Text
+            flexShrink={1}
+            minWidth={0}
+            col={colors.text}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.semibold}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            accessibilityLiveRegion="polite"
+          >
+            {label}
+          </Text>
+        </XStack>
+      </ControlButton>
+      <ControlButton label={t('toolbar.nextMonth')} onPress={() => shift(1)}>
         <LineIcon name="chevron-right" size={20} color={colors.textMuted} />
       </ControlButton>
+      <DatePickerSheet
+        open={picking}
+        onClose={() => setPicking(false)}
+        value={filters.from}
+        title={t('toolbar.pickStartApp')}
+        // Lùi được tối đa 3 tháng về quá khứ (người dùng 28/11/2026) - mặc định của bộ chọn là từ ngày mai.
+        minDate={minFrom}
+        onChange={(next) => {
+          setPicking(false);
+          setFilters({ from: next });
+        }}
+      />
     </XStack>
   );
-}
+});
 
 function ControlButton({
   label,
   onPress,
   grow = false,
+  disabled = false,
   children,
 }: {
   label: string;
   onPress: () => void;
   grow?: boolean;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       style={grow ? { flex: 1, minWidth: 0 } : null}
     >
       {({ pressed }) => (
@@ -295,7 +301,7 @@ function ControlButton({
           bw={1}
           bc={colors.borderInput}
           bg={colors.surface}
-          opacity={pressed ? 0.7 : 1}
+          opacity={disabled ? 0.5 : pressed ? 0.7 : 1}
         >
           {children}
         </YStack>

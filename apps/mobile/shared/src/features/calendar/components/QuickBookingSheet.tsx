@@ -1,10 +1,12 @@
-import { memo, type ReactNode } from 'react';
-import { Linking } from 'react-native';
+import { memo, useState, type ReactNode } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { telHref, toAppTz } from '@xeprime/domain';
+import { isMarketplaceBooking } from '@xeprime/types';
+import { BookingSourceChip, useBookingSourceText } from '@/components/ui/BookingSourceChip';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { ContactActions } from '@/components/ui/ContactActions';
 import { useBooking } from '@/features/bookings/hooks/use-bookings';
 import {
   RENTAL_STAGE_TONE,
@@ -54,6 +56,10 @@ export const QuickBookingSheet = memo(function QuickBookingSheet({
   const tBoard = useTranslations('Bookings.board');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const sourceText = useBookingSourceText();
+  const tContact = useTranslations('BookingRequests.actions');
+  /** Tấm chọn cách liên hệ (Gọi · Zalo) - mở từ nút "Liên hệ khách". */
+  const [contactFor, setContactFor] = useState<string | null>(null);
 
   const event = target?.event ?? null;
   const resource = target?.resource ?? null;
@@ -84,6 +90,7 @@ export const QuickBookingSheet = memo(function QuickBookingSheet({
   const plate = resource?.plateNumber ?? resource?.code ?? null;
 
   return (
+    <>
     <BottomSheet
       open={target !== null}
       onClose={onClose}
@@ -122,7 +129,7 @@ export const QuickBookingSheet = memo(function QuickBookingSheet({
                 <Button
                   label={t('quick.contact')}
                   variant="neutral"
-                  onPress={() => void Linking.openURL(tel)}
+                  onPress={() => setContactFor(bookingId)}
                 />
               </YStack>
             ) : null}
@@ -221,6 +228,32 @@ export const QuickBookingSheet = memo(function QuickBookingSheet({
             </InfoRow>
             <InfoRow label={t('quick.pickup')} value={fmt.rentalPoint(toAppTz(event.startAt))} />
             <InfoRow label={t('quick.return')} value={fmt.rentalPoint(toAppTz(event.endAt))} />
+            {/* Nguồn đơn (ADR 0110): qua sàn = chữ thường; tự khai thác = viên màu như thẻ lịch. */}
+            {event.bookingSource ? (
+              <InfoRow label={t('eventCard.source')}>
+                {isMarketplaceBooking(event.bookingSource) ? (
+                  <Text
+                    col={colors.text}
+                    fos={typeScale.body.fontSize}
+                    lh={typeScale.body.lineHeight}
+                    fow={fontWeight.medium}
+                    numberOfLines={1}
+                  >
+                    {sourceText(event.bookingSource, event.bookingSourceLabel ?? null)}
+                  </Text>
+                ) : (
+                  // Bọc XStack: viên tự `alignSelf: flex-start`, đặt thẳng vào cột canh phải sẽ lệch trái.
+                  <XStack>
+                    <BookingSourceChip
+                      source={event.bookingSource}
+                      sourceLabel={event.bookingSourceLabel ?? null}
+                      /* Cỡ `sm` (12/18) - cùng cỡ viên "Thuê dài hạn" / "Đang thuê" của tấm. */
+                      size="sm"
+                    />
+                  </XStack>
+                )}
+              </InfoRow>
+            ) : null}
             {event.amount ? <InfoRow label={t('quick.amount')} value={fmt.money(event.amount)} /> : null}
             {paidLabel ? (
               <YStack
@@ -242,7 +275,26 @@ export const QuickBookingSheet = memo(function QuickBookingSheet({
           </YStack>
         </YStack>
       ) : null}
+
     </BottomSheet>
+
+      {/* Liên hệ khách: chọn Gọi hoặc Zalo - cùng cụm nút liên hệ có chữ của chi tiết tài xế. */}
+      <BottomSheet
+        // Gắn với ĐƠN đang mở: đóng tấm đơn rồi mở đơn khác không tự bật lại tấm liên hệ.
+        open={target !== null && contactFor === bookingId && tel !== null}
+        onClose={() => setContactFor(null)}
+        title={t('quick.contact')}
+        {...(phone ? { subtitle: phone } : {})}
+        chrome="v2"
+        headerDivider
+      >
+        <ContactActions
+          phone={phone}
+          labeled
+          labels={{ message: '', call: tContact('call'), zalo: tContact('zalo') }}
+        />
+      </BottomSheet>
+    </>
   );
 });
 

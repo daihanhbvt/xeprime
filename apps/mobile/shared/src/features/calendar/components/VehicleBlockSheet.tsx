@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -20,7 +20,7 @@ import { getErrorCode } from '@xeprime/api-client';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { DataRow } from '@/components/ui/DataRow';
+import { SheetVehicleCard } from './SheetVehicleCard';
 import { RangeFieldBox } from '@/components/ui/RangeFieldBox';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { TextControl } from '@/components/ui/TextControl';
@@ -43,6 +43,10 @@ export type VehicleBlockSheetState =
       mode: 'create';
       vehicleId: string;
       vehicleName: string;
+      /** Thẻ xe đầu tấm: tên / biển số / ảnh tách riêng (`vehicleName` là chuỗi ghép cho thông báo). */
+      vehicleTitle?: string | null;
+      vehiclePlate?: string | null;
+      vehicleImageUrl?: string | null;
       date: string;
       /** Ngày CUỐI (tính cả) khi chọn nhiều ngày ở ô lịch — web `endDate`. Vắng = một ngày. */
       endDate?: string;
@@ -61,7 +65,7 @@ export type VehicleBlockSheetState =
  *
  * `key` theo đối tượng đang mở: state form không được dính lại từ lần mở trước.
  */
-export function VehicleBlockSheet({
+export const VehicleBlockSheet = memo(function VehicleBlockSheet({
   state,
   onClose,
 }: {
@@ -80,7 +84,7 @@ export function VehicleBlockSheet({
       ? state.block.id
       : `${state.vehicleId}-${state.date}-${state.endDate ?? state.date}`;
   return <BlockForm key={key} state={state} onClose={onClose} />;
-}
+});
 
 function BlockForm({
   state,
@@ -111,6 +115,14 @@ function BlockForm({
             : state.block.vehicleName,
         }
       : { vehicleId: state.vehicleId, vehicleName: state.vehicleName };
+  const card =
+    state.mode === 'edit'
+      ? { title: state.block.vehicleName, plate: state.block.vehiclePlate ?? null, imageUrl: null }
+      : {
+          title: state.vehicleTitle ?? state.vehicleName,
+          plate: state.vehiclePlate ?? null,
+          imageUrl: state.vehicleImageUrl ?? null,
+        };
 
   const [range, setRange] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>(() => {
     // Mốc UTC đang lưu → giờ VIỆT NAM cho hộp chọn khoảng (CLAUDE.md mục 9).
@@ -218,6 +230,8 @@ function BlockForm({
         open
         onClose={onClose}
         title={t(editing ? 'block.editTitle' : 'block.createTitle')}
+        chrome="v2"
+        headerDivider
         footer={
           <XStack gap={space.sm}>
             {/*
@@ -230,7 +244,7 @@ function BlockForm({
             <YStack flexShrink={0}>
               <Button
                 label={tCommon('cancel')}
-                variant="secondary"
+                variant="neutral"
                 onPress={onClose}
                 disabled={pending}
               />
@@ -238,7 +252,8 @@ function BlockForm({
             <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t(editing ? 'block.submitEdit' : 'block.submitCreate')}
-                icon={editing ? 'save-outline' : 'lock-closed-outline'}
+                {...(editing ? {} : { lineIcon: 'lock-2' as const })}
+                variant="gradient"
                 onPress={save}
                 loading={pending}
               />
@@ -259,7 +274,12 @@ function BlockForm({
         <YStack gap={space.md}>
           {/* Xe là dữ kiện ĐÃ CHỐT, không phải ô nhập: một block không "chuyển xe" được — muốn
               đổi xe thì gỡ và tạo lại, đúng như `CreateVehicleBlockDto` (chỉ CREATE có vehicleId). */}
-          <DataRow label={t('block.vehicle')} value={vehicleName} />
+          <SheetVehicleCard
+            name={card.title}
+            plate={card.plate}
+            imageUrl={card.imageUrl}
+            recyclingKey={vehicleId}
+          />
 
           <RangeFieldBox
             label={t('block.period')}

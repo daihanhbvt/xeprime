@@ -1,4 +1,4 @@
-import { Switch } from 'react-native';
+import { memo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { HOLIDAY_EVENT_TYPE_META, STATUS_COLOR, type HolidayEventType } from '@xeprime/types';
@@ -10,6 +10,7 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { Holiday } from '../api';
 import type { DayCell } from '../utils/calendar-date.util';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { SheetActionRow } from './SheetActionRow';
 
 /** Hai thao tác cả-đội-xe mở từ thẻ ngày. Mã, không phải chữ. */
@@ -32,7 +33,7 @@ export interface DayPanelState {
  * hai hàng — hai vùng chạm chồng nhau trên một dải cao 48dp là cách chắc chắn nhất để người dùng
  * khoá cả đội xe khi họ chỉ định mở hộp xem trước.
  */
-export function DayActionSheet({
+export const DayActionSheet = memo(function DayActionSheet({
   state,
   actions,
   blockState,
@@ -105,7 +106,8 @@ export function DayActionSheet({
               label={t('dayPanel.blockAll')}
               icon="lock-2"
               trailing={
-                <Switch
+                /* Công tắc v2 theo Figma "_Toggle base" - thay `Switch` Material của Android. */
+                <ToggleSwitch
                   value={blockState.batchId !== null}
                   disabled={blockState.loading || blockState.busy || !state}
                   accessibilityLabel={t('dayPanel.blockAll')}
@@ -113,7 +115,6 @@ export function DayActionSheet({
                     if (next && state) onQuickBlock(state.day.key);
                     else if (!next && blockState.batchId) onRelease(blockState.batchId);
                   }}
-                  trackColor={{ true: colors.primary, false: colors.borderInput }}
                 />
               }
             />
@@ -136,4 +137,4 @@ export function DayActionSheet({
       </YStack>
     </BottomSheet>
   );
-}
+});

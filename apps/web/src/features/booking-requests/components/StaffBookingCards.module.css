@@ -270,3 +270,201 @@
     flex: 1 1 0;
   }
 }
+
+/* Ô chọn gói tháng - cùng hình `.packageBtn` của `ListingBookingCard` (trang khách). */
+.packageGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.packageCell {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--xp-control-height);
+  padding: var(--xp-space-sm) var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-control);
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    border-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    background-color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard),
+    color var(--xp-motion-duration-fast) var(--xp-motion-ease-standard);
+}
+
+.packageCell:hover:not(.packageCellActive) {
+  border-color: var(--xp-color-primary);
+}
+
+.packageCell:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.packageCellActive {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* ── Bước Chuyến đi: cùng hình thẻ đặt xe của trang khách (`ListingBookingCard.module.css`). ── */
+.tabHeader {
+  display: flex;
+  background: var(--xp-color-bg);
+  border-bottom: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control) var(--xp-border-radius-control) 0 0;
+  min-height: 50px;
+  overflow: hidden;
+}
+
+.serviceTab {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.serviceTab:hover {
+  color: var(--xp-color-primary);
+}
+
+.serviceTabActive {
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-semibold);
+  border-bottom-color: var(--xp-color-primary-accent);
+}
+
+.sectionLabel {
+  margin: 0 0 var(--xp-space-sm);
+  padding: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
+}
+
+.locationSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.deliveryToggle {
+  display: flex;
+  background: var(--xp-color-bg);
+  border-radius: var(--xp-border-radius-control);
+}
+
+.toggleBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toggleBtnActive {
+  background: var(--xp-color-bg-container);
+  border-color: var(--xp-color-primary);
+  box-shadow: inset 0 0 0 1px var(--xp-color-primary-muted);
+}
+
+.toggleLabel {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text);
+}
+
+.toggleSub,
+.toggleSubDanger {
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: 22px;
+  color: var(--xp-color-success);
+}
+
+.toggleSubDanger {
+  color: var(--xp-color-error);
+}
+
+.addressBox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: 22px;
+  color: var(--xp-color-text-secondary);
+}
+
+.addressIcon {
+  flex: none;
+  margin-top: 1px;
+  font-size: 20px;
+  color: var(--xp-color-primary);
+}
+
+/* "Giờ nhận xe" của thuê dài hạn - như `.inputLabel` + `.datePickerInput` của trang khách. */
+.inputLabel {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 22px;
+  color: var(--xp-color-text);
+}
+
+.pickupField {
+  gap: var(--xp-space-xs);
+}
+
+/* Nhãn thấy được là `.inputLabel` ở trên; nhãn của Form.Item chỉ còn cho trình đọc màn hình. */
+.pickupField :global(.ant-form-item-label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.pickupField :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.pickupField :global(.ant-picker) {
+  width: 100%;
+  height: 40px;
+  border-radius: 8px;
+}

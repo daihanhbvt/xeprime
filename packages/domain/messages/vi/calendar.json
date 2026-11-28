@@ -1,5 +1,6 @@
 {
   "toolbar": {
+    "pickStartApp": "Chọn ngày bắt đầu",
     "searchPlaceholder": "Tìm xe, mã hoặc biển số",
     "searchPlaceholderApp": "Biển số, xe...",
     "searchAriaLabel": "Tìm xe trên lịch",
@@ -29,6 +30,8 @@
     "nextMonth": "Tháng sau"
   },
   "grid": {
+    "scrollPrev": "Xem các ngày trước",
+    "scrollNext": "Xem các ngày tiếp theo",
     "ariaLabel": "Lịch thuê xe theo ngày",
     "loadingAriaLabel": "Đang tải lịch",
     "resourceHeader": "Phương tiện ({count})",
@@ -39,6 +42,7 @@
     "availableCell": "Ngày {day}: {count, plural, other {# xe còn trống}}",
     "availableCellPending": "Ngày {day}: chưa có số liệu xe còn trống",
     "resourceTitle": "Phương tiện",
+    "resourceTitleApp": "Xe",
     "resourceCount": "{cars, plural, =0 {} other {# ô tô}}{both, select, yes {, } other {}}{bikes, plural, =0 {} other {# xe máy}}"
   },
   "cell": {
@@ -112,7 +116,8 @@
     "sheetTitle": "{vehicle} · {date}",
     "booking": {
       "label": "Đặt xe",
-      "hint": "Tạo đơn thuê cho khách"
+      "hint": "Tạo đơn thuê cho khách",
+      "hintApp": "Đặt lịch cho xe đang chọn"
     },
     "block": {
       "label": "Khóa xe",

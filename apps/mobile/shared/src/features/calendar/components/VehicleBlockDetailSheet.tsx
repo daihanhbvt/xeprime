@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -27,7 +27,7 @@ import { getErrorMessage } from '@/lib/get-error-message';
  * Sửa/Gỡ khoá chỉ hiện với `vehicles.block_schedule`; guard backend vẫn là lớp chặn thật (ẩn nút
  * chỉ là trang trí — ADR 0027 điều 4). Gỡ khoá là hành động PHÁ, nên luôn qua xác nhận.
  */
-export function VehicleBlockDetailSheet({
+export const VehicleBlockDetailSheet = memo(function VehicleBlockDetailSheet({
   blockId,
   open,
   onClose,
@@ -168,4 +168,4 @@ export function VehicleBlockDetailSheet({
       ) : null}
     </>
   );
-}
+});

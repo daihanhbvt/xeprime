@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { BackHandler, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -25,48 +25,44 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { STALE_TIME } from '@xeprime/api-client';
-import { XP_TOKENS, toPx } from '@xeprime/ui';
 import {
   appWallClockToIso,
   buildBusyDayIndex,
   longTermReturnFromWallClock,
   nowInAppTz,
   toAppTz,
+  LIST_SEPARATOR,
   type RentalMode,
+  bestDiscountPackageMonths,
 } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { Chip } from '@/components/ui/Chip';
-import { FieldBox } from '@/components/ui/FieldBox';
-import { FormSection } from '@/components/ui/FormSection';
 import { MomentPickerSheet } from '@/components/ui/MomentPickerSheet';
-import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
-import { RangeFieldBox } from '@/components/ui/RangeFieldBox';
+import { RangeSelectBox } from '@/components/ui/RangeSelectBox';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { useDomainLabel } from '@/i18n/domain';
 import { RemoteImage } from '@/components/ui/RemoteImage';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { IconButton } from '@/components/ui/IconButton';
+import { useCopy } from '@/hooks/use-copy';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { calendarApi } from '@/api/calendar/api';
-import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
 import {
   BookingResult,
-  BookingResultTotal,
 } from '@/features/booking-requests/components/BookingResult';
 import {
   BookingTripCardView,
   type BookingTrip,
 } from '@/features/booking-requests/components/BookingTripCard';
 import {
-  PickupOption,
   RouteChip,
   routeDescription,
 } from '@/features/booking-requests/components/RequestTripStep';
-import { VehicleSummaryCard } from '@/features/booking-requests/components/VehicleSummaryCard';
 import { BUSY_DAYS_LOOKAHEAD } from '@/features/booking-requests/api';
 import { pickupPointText } from '@/features/booking-requests/pickup-point';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
@@ -83,6 +79,8 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { StaffBookingCollateralCard } from './components/StaffBookingCollateralCard';
 import { StaffBookingPriceCard } from './components/StaffBookingPriceCard';
+import { DiscountTag } from '@/components/ui/DiscountTag';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { StaffVehiclePicker, type PickedRange } from './components/StaffVehiclePicker';
 import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
@@ -93,6 +91,7 @@ import type { CreateBookingInput, VehicleListItem } from './api';
 import {
   PICKUP_METHOD,
   STAFF_BOOKING_NOTE_MAX,
+  negotiatedTotal,
   staffBookingSchema,
   type StaffBookingValues,
 } from './staff-booking-schema';
@@ -213,7 +212,11 @@ export interface StaffBookingPrefill {
 }
 
 /** Ô lịch chỉ biết `vehicleId`; luồng này chỉ đọc `id` + `name`, nên đó là tất cả những gì cần. */
-type PickedVehicle = Pick<VehicleListItem, 'id' | 'name'> & { imageUrl?: string | null };
+type PickedVehicle = Pick<VehicleListItem, 'id' | 'name'> & {
+  imageUrl?: string | null;
+  /** Biển số (bước chọn xe có) - viên biển số ở "Tóm tắt lịch trình". */
+  plate?: string | null;
+};
 
 /** Số tiền của MỘT dòng trong bảng giá server. Không có dòng đó thì `null`, không phải `0`. */
 function rowAmount(
@@ -291,7 +294,12 @@ function StaffBookingFlow({
         onCancel={onBack}
         onContinue={(picked, range) => {
           setPickedRange(range);
-          setVehicle({ id: picked.id, name: picked.name, imageUrl: picked.mainImageUrl ?? null });
+          setVehicle({
+            id: picked.id,
+            name: picked.name,
+            imageUrl: picked.mainImageUrl ?? null,
+            plate: picked.plateNumber || null,
+          });
           setPickCount((n) => n + 1);
           setChoosing(false);
         }}
@@ -347,6 +355,9 @@ function StaffBookingTrip({
   const colors = useColors();
   const t = useTranslations('BookingRequests.staffFlow');
   const tFlow = useTranslations('BookingRequests.flow');
+  const tApp = useTranslations('BookingRequests.staffFlow.app');
+  const tPicker = useTranslations('BookingRequests.vehiclePicker');
+  const dl = useDomainLabel();
   const tSource = useTranslations('Bookings.source');
   const fmt = useAppFormat();
   const router = useRouter();
@@ -471,6 +482,29 @@ function StaffBookingTrip({
   const quoteUnavailable = hasPriceSelection && quoteQuery.isError;
 
   /*
+   * % ưu đãi cam kết của TỪNG gói, để gắn nhãn góc như trang khách. Đọc từ chính báo giá server
+   * (cùng `longTermAmounts`), không tự suy % ở client. Không cần giờ nhận nên chạy ngay khi có xe;
+   * gói đang chọn trùng khoá với `quoteQuery` nên không gọi lặp.
+   */
+  const packageQuotes = useQueries({
+    queries: LONG_TERM_PACKAGE_MONTHS.map((months) => {
+      const params = { vehicleId, serviceType, packageMonths: months };
+      return {
+        queryKey: queryKeys.calendar.quote(params),
+        queryFn: () => bookingsApi.quote(params),
+        enabled: isLongTerm && Boolean(vehicleId),
+        staleTime: STALE_TIME.STANDARD,
+        retry: false,
+      };
+    }),
+  });
+  const packageOptions = LONG_TERM_PACKAGE_MONTHS.map((months, i) => ({
+    packageMonths: months,
+    durationDiscountPercent: packageQuotes[i]?.data?.longTerm?.durationDiscountPercent ?? null,
+  }));
+  const bestPackageMonths = bestDiscountPackageMonths(packageOptions);
+
+  /*
    * Cọc thu trực tiếp — điền sẵn từ chính sách thuê của xe MỖI KHI báo giá đổi, trừ khi nhân viên
    * đã tự sửa ô (dirty): con số thoả thuận với khách thắng mức mặc định của xe.
    */
@@ -530,6 +564,34 @@ function StaffBookingTrip({
   const checkConflict = useCheckConflict();
   const create = useCreateBooking();
   const submitting = create.isPending;
+
+  /*
+   * Tổng ở chân trang bước Xem lại phải KHỚP thẻ "Tiền thuê": giá thoả thuận (hoặc xe chưa có
+   * giá) thì cộng đúng như thẻ - tiền thuê - giảm + phí giao + phụ phí theo dòng; còn giá hệ
+   * thống thì là tổng báo giá.
+   */
+  /*
+   * Theo dõi CẢ form (không theo mảng tên): `useWatch` theo tên của một field array có lúc trả bản
+   * cũ sau `append/update` ở component con - đó là gốc của lệch tổng. Một nguồn tính duy nhất, thẻ
+   * "Tiền thuê" nhận lại đúng con số này qua prop.
+   */
+  const watchedAll = useWatch({ control });
+  const negotiatedOn = watchedAll.negotiated;
+  const manualBase = watchedAll.manualBaseAmount;
+  const manualDiscount = watchedAll.manualDiscount;
+  const manualDelivery = watchedAll.manualDeliveryFee;
+  const extraRows = watchedAll.extraCharges;
+  const manualMode = negotiatedOn || quoteUnavailable;
+  const reviewTotal = manualMode
+    ? String(
+        negotiatedTotal({
+          base: manualBase,
+          discount: manualDiscount,
+          delivery: isDelivery ? manualDelivery : 0,
+          extras: extraRows,
+        }),
+      )
+    : (quote?.totalAmount ?? null);
 
   async function continueFromTrip() {
     setStepError(null);
@@ -745,7 +807,6 @@ function StaffBookingTrip({
     return (
       <StaffBookingDone
         code={created.code}
-        listing={listing}
         vehicleName={vehicleName}
         vehicleImageUrl={vehicleThumbUrl}
         trip={tripSummary}
@@ -760,25 +821,57 @@ function StaffBookingTrip({
   if (step === STEP.REVIEW) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={backToTrip} />
-        <Screen edges={['left', 'right', 'bottom']} hideFooterWhileTyping>
-          {/* `.review` — các khối cách `space-lg`. */}
-          <YStack gap={space.lg}>
-            {/* `.head` — tiêu đề + lời dẫn (khe 2), rồi thanh tiến trình; khe `space-md`. */}
-            <YStack gap={space.md}>
-              <YStack gap={2}>
-                {/* `.title` — h2 · semibold · `color-text`. */}
-                <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.semibold} accessibilityRole="header">
-                  {t('review.title')}
-                </Text>
-                {/* `.lead` — body-lg · `text-tertiary`. */}
-                <Text col={colors.placeholder} fos={fontSize.bodyLg}>
-                  {t('review.description')}
-                </Text>
-              </YStack>
-              <BookingJourney audience="staff" current="review" />
+        <AppHeader
+          title={tPicker('title')}
+          onBack={backToTrip}
+          right={
+            <Text col={colors.placeholder} fos={14} lh={20}>
+              {tApp('reviewStep')}
+            </Text>
+          }
+        />
+        <Screen
+          edges={['left', 'right', 'bottom']}
+          hideFooterWhileTyping
+          footer={
+            /* Cùng chân trang bước 2 (Figma "Sticky Footer"): tạm tính + [Quay lại][Tạo đơn]. */
+            <YStack gap={12}>
+              {reviewTotal != null ? (
+                <XStack ai="center" jc="space-between" gap={space.sm}>
+                  <Text f={1} col={colors.placeholder} fos={12} lh={18}>
+                    {manualMode
+                      ? t('trip.barTotal')
+                      : quote?.days && !quote.estimateNote
+                        ? tPicker('estimateDaysLabel', { days: quote.days })
+                        : tPicker('estimateLabel')}
+                  </Text>
+                  <Text col={colors.primary} fos={16} lh={24} fow={fontWeight.semibold}>
+                    {fmt.money(reviewTotal)}
+                  </Text>
+                </XStack>
+              ) : null}
+              <XStack gap={8}>
+                <Button
+                  label={tFlow('actions.back')}
+                  variant="secondary"
+                  block={false}
+                  disabled={submitting}
+                  onPress={backToTrip}
+                />
+                <YStack f={1}>
+                  <Button
+                    variant="gradient"
+                    label={t('review.submit.cta')}
+                    loading={submitting}
+                    onPress={() => void submitBooking()}
+                  />
+                </YStack>
+              </XStack>
             </YStack>
-
+          }
+        >
+          {/* `.review` — các khối cách `space-lg`. */}
+          <YStack gap={16}>
             {/* Thẻ chuyến bố cục `review` (ảnh lớn hết bề rộng, một cột) + nút chữ "Chỉnh sửa". */}
             <BookingTripCardView
               listing={listing}
@@ -810,18 +903,7 @@ function StaffBookingTrip({
               (≤640px), khe `space-md`. Ô nhập là `TextField` dùng chung (viền `border-input`
               1px, bo `radius-control`) — nhãn NẰM TRÊN ô như web `layout="vertical"`.
             */}
-            <Card>
-              <YStack gap={space.md}>
-                <YStack gap={space.xs}>
-                  {/* `.cardTitle` — body-lg · semibold. */}
-                  <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} accessibilityRole="header">
-                    {t('review.customer.title')}
-                  </Text>
-                  {/* `.cardLead` — body · `text-tertiary`. */}
-                  <Text col={colors.placeholder} fos={fontSize.body}>
-                    {t('review.customer.description')}
-                  </Text>
-                </YStack>
+            <InfoGroup title={t('review.customer.title')} hint={t('review.customer.description')}>
                 <TextField
                   control={control}
                   name="customerName"
@@ -849,8 +931,7 @@ function StaffBookingTrip({
                   rows={3}
                   maxLength={STAFF_BOOKING_NOTE_MAX}
                 />
-              </YStack>
-            </Card>
+            </InfoGroup>
 
             {/*
               Tiền thuê (giá hệ thống hoặc "Giá thoả thuận") + Cọc & thế chấp theo đơn (ADR 0109) —
@@ -863,24 +944,11 @@ function StaffBookingTrip({
               quoteUnavailable={quoteUnavailable}
               isDelivery={isDelivery}
               onToggleNegotiated={toggleNegotiated}
+              manualTotal={manualMode ? reviewTotal : null}
             />
             <StaffBookingCollateralCard control={control} />
 
-            {/* `.card.submitCard` — lỗi · nút gradient full · gợi ý body-sm `text-tertiary` căn giữa. */}
-            <Card>
-              <YStack gap={space.md}>
-                {/* Web `<Alert type="error" showIcon role="alert">`. */}
-                {stepError ? <Callout tone="danger" title={stepError} /> : null}
-                <Button
-                  variant="gradient"
-                  label={t('review.submit.cta')}
-                  size="lg"
-                  loading={submitting}
-                  onPress={() => void submitBooking()}
-                />
-                {/* Câu gợi ý dưới nút đã gỡ ở bước Xem lại của web (#344) - "Sau khi tạo" nói thay. */}
-              </YStack>
-            </Card>
+            {stepError ? <Callout tone="danger" title={stepError} /> : null}
 
             {/*
               `.next` "Sau khi tạo đơn" — KHÔNG phải hộp thông báo: dòng tiêu đề body semibold kèm
@@ -915,25 +983,82 @@ function StaffBookingTrip({
         : t('trip.barTotal');
   const rangeError = formState.errors.pickupAt?.message ?? formState.errors.returnAt?.message;
 
+  /* Figma "Sticky Footer" `24576:131649`: "Tạm tính N ngày" + tổng vàng; [Quay lại][Xem lại yêu cầu]. */
   const footer = (
-    <YStack gap={space.sm}>
+    <YStack gap={12}>
       <XStack ai="center" jc="space-between" gap={space.sm}>
-        <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-          {barLabel}
-        </Text>
+        {/* Chi tiết giá (giá gói, ưu đãi, ghi chú) nằm trong dấu (i) cạnh nhãn tổng. */}
+        <XStack f={1} ai="center" gap={4}>
+          <Text col={colors.placeholder} fos={12} lh={18}>
+            {quote && hasPriceSelection && quote.days && !quote.estimateNote
+              ? tPicker('estimateDaysLabel', { days: quote.days })
+              : barLabel}
+          </Text>
+          {quote && hasPriceSelection ? (
+          <InfoHint
+            // Tiêu đề tấm chi tiết = "Giá gói N tháng".
+            label={
+              quote.longTerm
+                ? t('trip.packagePriceTitle', { months: quote.longTerm.packageMonths })
+                : t('trip.priceTitle')
+            }
+            size={12}
+            content={
+              <YStack gap={8}>
+                {quote.rows.map((row) => {
+                  // Dòng giảm (ưu đãi cam kết, khuyến mãi) - cả nhãn lẫn số tô đỏ.
+                  const minus = String(row.amount).startsWith('-');
+                  return (
+                    <XStack key={`${row.key}-${row.label}`} jc="space-between" gap={space.md}>
+                      <Text f={1} col={minus ? colors.danger : colors.textMuted} fos={14} lh={20}>
+                        {row.label}
+                      </Text>
+                      <Text
+                        col={minus ? colors.danger : colors.text}
+                        fos={14}
+                        lh={20}
+                        fow={fontWeight.medium}
+                      >
+                        {fmt.money(row.amount)}
+                      </Text>
+                    </XStack>
+                  );
+                })}
+                {quote.longTerm?.durationDiscountPercent ? (
+                  <Text col={colors.success} fos={14} lh={20} fow={fontWeight.semibold}>
+                    {tFlow('price.savings', {
+                      amount: fmt.money(quote.longTerm.durationDiscountAmount),
+                      months: quote.longTerm.packageMonths,
+                    })}
+                  </Text>
+                ) : null}
+                {quote.estimateNote ? (
+                  <Text col={colors.textMuted} fos={12} lh={18}>
+                    {quote.estimateNote}.
+                  </Text>
+                ) : null}
+              </YStack>
+            }
+          />
+          ) : null}
+        </XStack>
         {quote && hasPriceSelection ? (
-          <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+          <Text col={colors.primary} fos={16} lh={24} fow={fontWeight.semibold}>
             {fmt.money(quote.totalAmount)}
           </Text>
         ) : null}
       </XStack>
-      <XStack gap={space.sm}>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-          <Button label={tFlow('actions.cancel')} variant="secondary" onPress={onBack} />
-        </YStack>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+      <XStack gap={8}>
+        <Button
+          label={tFlow('actions.back')}
+          variant="secondary"
+          block={false}
+          onPress={onChangeVehicle ?? onBack}
+        />
+        <YStack f={1}>
           <Button
-            label={checkConflict.isPending ? tFlow('actions.checking') : tFlow('actions.continue')}
+            label={checkConflict.isPending ? tFlow('actions.checking') : tApp('reviewAction')}
+            variant="gradient"
             loading={checkConflict.isPending}
             onPress={() => void continueFromTrip()}
           />
@@ -942,152 +1067,200 @@ function StaffBookingTrip({
     </YStack>
   );
 
+  const serviceIcon: Record<string, LineIconName> = {
+    [SERVICE_TYPE.SELF_DRIVE]: 'car',
+    [SERVICE_TYPE.WITH_DRIVER]: 'profile',
+    [SERVICE_TYPE.LONG_TERM]: 'calendar',
+  };
+  const serviceOptions = vehicleServices.length > 0 ? vehicleServices : [serviceType];
+  const pickupIso = watchedPickup ? appWallClockToIso(watchedPickup) : null;
+  const returnIso = effectiveReturn ? appWallClockToIso(effectiveReturn) : null;
+  const pickupPlace = isWithDriver
+    ? getValues('pickupAddress')
+    : isDelivery
+      ? getValues('deliveryAddress')
+      : pickupPointLine;
+  const returnPlace = isWithDriver ? getValues('destination') || pickupPlace : pickupPlace;
+
   return (
     <>
-      <AppHeader title={t('title')} onBack={onBack} />
+      <AppHeader
+        title={tPicker('title')}
+        onBack={onBack}
+        right={
+          <Text col={colors.placeholder} fos={14} lh={20}>
+            {tPicker('stepOf', { current: 2, total: 2 })}
+          </Text>
+        }
+      />
       <Screen edges={['left', 'right', 'bottom']} hideFooterWhileTyping footer={footer}>
-        <YStack gap={layout.section}>
-          {/* "Chọn xe khác" — chỉ ở lối vào chưa biết xe (web `onChangeVehicle`): về bước chọn xe, form MỚI. */}
-          {onChangeVehicle ? (
-            <XStack>
-              <Button
-                label={t('changeVehicle')}
-                icon="arrow-back"
-                variant="ghost"
-                size="sm"
-                block={false}
-                onPress={onChangeVehicle}
-              />
-            </XStack>
-          ) : null}
-
-          {listing ? (
-            <VehicleSummaryCard
-              listing={listing}
-              serviceType={serviceType}
-              packageMonths={packageMonths}
-              showShop={false}
-            />
-          ) : (
-            <VehicleFallbackCard name={vehicleName} imageUrl={vehicleThumbUrl} />
-          )}
-
-          <BookingJourney audience="staff" current="trip" />
-
-          {/* Xe phục vụ nhiều dịch vụ → nhân viên chọn dịch vụ cho ĐƠN này. */}
-          {vehicleServices.length > 1 ? (
-            <FormSection title={tFlow('service.label')} icon="car-sport-outline" boxed={false}>
-              <ServiceSelector
-                services={vehicleServices}
-                active={serviceType}
-                onChange={(next) => {
-                  setServiceType(next as ServiceType);
-                  setStepError(null);
-                }}
-              />
-            </FormSection>
-          ) : null}
-
-          {isWithDriver ? (
-            <FormSection title={tFlow('service.routeLabel')} icon="navigate-outline">
-              <XStack gap={space.xs} flexWrap="wrap">
-                {ROUTE_TYPE_VALUES.map((value) => (
-                  <RouteChip
-                    key={value}
-                    value={value}
-                    selected={watchedRoute === value}
-                    onPress={() => setValue('routeType', value, { shouldValidate: true })}
-                  />
-                ))}
-              </XStack>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {routeDescription(tFlow, watchedRoute)}
-              </Text>
-            </FormSection>
-          ) : null}
-
-          {/*
-            Đơn THUÊ DÀI HẠN có độ dài cố định bằng gói (ADR 0011): nhân viên chọn gói + giờ nhận,
-            ngày trả hiện chỉ-đọc. Không có ô chọn khoảng tự do.
-          */}
-          {isLongTerm ? (
-            <>
-              <FormSection title={t('trip.packageLabel')} icon="calendar-outline">
-                <XStack
-                  gap={space.xs}
-                  flexWrap="wrap"
-                  accessibilityRole="radiogroup"
-                  accessibilityLabel={t('trip.packageGroupLabel')}
-                >
-                  {LONG_TERM_PACKAGE_MONTHS.map((months) => (
-                    <Chip
-                      key={months}
-                      label={fmt.packageLabel(months) ?? String(months)}
-                      selected={packageMonths === months}
-                      size="sm"
-                      onPress={() => {
-                        setPackageMonths(months);
-                        setStepError(null);
-                      }}
+        {/*
+          Figma "Create Order" bước 2/2 `24576:130579`: các thẻ "Nhóm thông tin" (trắng, viền mảnh,
+          bo 16, đệm 16, tiêu đề 16 đậm, khe 12) cách nhau 16. Nghiệp vụ giữ như web `StaffBookingFlow`.
+        */}
+        <YStack gap={16}>
+          <InfoGroup
+            title={tApp('serviceTitle')}
+            hint={isWithDriver ? routeDescription(tFlow, watchedRoute) : undefined}
+          >
+            <YStack gap={8} accessibilityRole="radiogroup" accessibilityLabel={tApp('serviceTitle')}>
+              {serviceOptions.map((value) => (
+                <ChoiceRow
+                  key={value}
+                  icon={serviceIcon[value] ?? 'car'}
+                  title={dl('serviceType', value)}
+                  subtitle={tApp(`serviceDesc.${value as ServiceType}`)}
+                  selected={serviceType === value}
+                  onPress={() => {
+                    setServiceType(value as ServiceType);
+                    setStepError(null);
+                  }}
+                />
+              ))}
+            </YStack>
+            {isWithDriver ? (
+              <YStack gap={6}>
+                <Text col={colors.text} fos={14} lh={20} fow={fontWeight.medium}>
+                  {tFlow('service.routeLabel')}
+                </Text>
+                <XStack gap={space.xs} flexWrap="wrap">
+                  {ROUTE_TYPE_VALUES.map((value) => (
+                    <RouteChip
+                      key={value}
+                      value={value}
+                      selected={watchedRoute === value}
+                      onPress={() => setValue('routeType', value, { shouldValidate: true })}
                     />
                   ))}
                 </XStack>
-                {packageMonths == null ? (
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('trip.packageHint')}
-                  </Text>
-                ) : null}
-              </FormSection>
+              </YStack>
+            ) : null}
+          </InfoGroup>
 
-              <FormSection title={t('trip.pickupTimeLabel')} icon="time-outline">
-                <FieldBox
+          <InfoGroup
+            title={tApp('timeTitle')}
+            hint={
+              isLongTerm
+                ? packageMonths == null
+                  ? t('trip.packageHint')
+                  : derivedReturnAt
+                    ? t('trip.returnDerived', { date: fmt.rentalAt(appWallClockToIso(derivedReturnAt)) })
+                    : t('trip.returnPending')
+                : undefined
+            }
+          >
+            {/* Dài hạn (ADR 0011): chọn gói + giờ nhận, ngày trả suy ra (chỉ đọc). */}
+            {isLongTerm ? (
+              <>
+                {/* Lưới 3 cột giống ô chọn gói của trang khách (`ListingBookingCard` › PackageChip). */}
+                <XStack
+                  flexWrap="wrap"
+                  mx={-space.xs / 2}
+                  rowGap={space.sm}
+                  accessibilityRole="radiogroup"
+                  accessibilityLabel={t('trip.packageGroupLabel')}
+                >
+                  {LONG_TERM_PACKAGE_MONTHS.map((months, index) => {
+                    const active = packageMonths === months;
+                    return (
+                      <Pressable
+                        key={months}
+                        style={PACKAGE_CELL}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                        onPress={() => {
+                          setPackageMonths(months);
+                          setStepError(null);
+                        }}
+                      >
+                        <YStack
+                          px={space.xs}
+                          py={space.sm}
+                          minHeight={44}
+                          ai="center"
+                          jc="center"
+                          br={radius.md}
+                          bw={1}
+                          bc={active ? colors.primary : colors.border}
+                          bg={active ? colors.primarySubtle : colors.surface}
+                          overflow="hidden"
+                        >
+                          <Text
+                            col={active ? colors.primary : colors.text}
+                            fos={fontSize.body}
+                            fow={active ? fontWeight.semibold : fontWeight.medium}
+                            numberOfLines={1}
+                          >
+                            {fmt.packageLabel(months) ?? String(months)}
+                          </Text>
+                          {packageOptions[index]?.durationDiscountPercent ? (
+                            <DiscountTag
+                              percent={packageOptions[index]!.durationDiscountPercent!}
+                              variant="corner"
+                              active={active}
+                              best={bestPackageMonths === months}
+                            />
+                          ) : null}
+                        </YStack>
+                      </Pressable>
+                    );
+                  })}
+                </XStack>
+                <RangeSelectBox
                   label={t('trip.pickupTimeField')}
-                  icon="calendar-outline"
-                  value={watchedPickup ? fmt.rentalAt(appWallClockToIso(watchedPickup)) : ''}
                   placeholder={t('trip.pickupTimeField')}
-                  hint={
-                    derivedReturnAt
-                      ? t('trip.returnDerived', {
-                          date: fmt.rentalAt(appWallClockToIso(derivedReturnAt)),
-                        })
-                      : t('trip.returnPending')
+                  value={
+                    pickupIso
+                      ? derivedReturnAt
+                        ? fmt.dateTimeRange(pickupIso, appWallClockToIso(derivedReturnAt))
+                        : fmt.dateTime(pickupIso)
+                      : ''
                   }
-                  required
-                  {...(rangeError ? { error: rangeError } : {})}
                   onPress={() => setPickingPickup(true)}
                 />
-              </FormSection>
-            </>
-          ) : (
-            <FormSection title={tFlow('time.label')} icon="calendar-outline">
-              <RangeFieldBox
-                label={tFlow('time.fieldLabel')}
-                startValue={watchedPickup ? fmt.rentalPoint(watchedPickup) : ''}
-                endValue={watchedReturn ? fmt.rentalPoint(watchedReturn) : ''}
-                {...(watchedPickup && watchedReturn && hasRange
-                  ? { durationText: fmt.rentalDuration(watchedPickup, watchedReturn) }
-                  : {})}
-                hint={
-                  hasRange
-                    ? `${rentalMode === RENTAL_MODE.HOURLY ? tFlow('time.modeHourly') : tFlow('time.modeDaily')} · ${tFlow('time.changeHint')}`
-                    : tFlow('time.empty')
-                }
-                required
-                {...(rangeError ? { error: rangeError } : {})}
-                onPress={() => {
-                  setRangeDraft({
-                    pickupAt: watchedPickup ?? null,
-                    returnAt: watchedReturn ?? null,
-                  });
-                  setScheduling(true);
-                }}
-              />
-            </FormSection>
-          )}
+              </>
+            ) : (
+              <>
+                <RangeSelectBox
+                  label={tFlow('time.fieldLabel')}
+                  placeholder={tFlow('time.empty')}
+                  value={pickupIso && returnIso ? fmt.dateTimeRange(pickupIso, returnIso) : ''}
+                  onPress={() => {
+                    setRangeDraft({
+                      pickupAt: watchedPickup ?? null,
+                      returnAt: watchedReturn ?? null,
+                    });
+                    setScheduling(true);
+                  }}
+                />
+                {watchedPickup && watchedReturn && hasRange ? (
+                  <XStack ai="flex-start" gap={8} px={12} py={8} br={12} bg={colors.successSurface}>
+                    <YStack pt={2}>
+                      <LineIcon name="tick" size={16} color={colors.success} />
+                    </YStack>
+                    <Text f={1} col={colors.success} fos={14} lh={20}>
+                      {tApp('durationNote', {
+                        duration: fmt.rentalDuration(watchedPickup, watchedReturn),
+                        mode:
+                          rentalMode === RENTAL_MODE.HOURLY
+                            ? tFlow('time.modeHourly')
+                            : tFlow('time.modeDaily'),
+                      })}
+                    </Text>
+                  </XStack>
+                ) : null}
+              </>
+            )}
+            {rangeError ? (
+              <Text col={colors.danger} fos={12} lh={18}>
+                {rangeError}
+              </Text>
+            ) : null}
+          </InfoGroup>
 
-          {/* ── Có tài xế: xe ĐẾN ĐÓN — hỏi địa chỉ đón (+ điểm đến khi liên tỉnh) ─────────── */}
+          {/* Có tài xế: xe ĐẾN ĐÓN - địa chỉ đón (+ điểm đến khi liên tỉnh). */}
           {isWithDriver ? (
-            <YStack gap={space.md}>
+            <InfoGroup title={tApp('driverTitle')}>
               <TextField
                 control={control}
                 name="pickupAddress"
@@ -1104,102 +1277,133 @@ function StaffBookingTrip({
                   required
                 />
               ) : null}
-            </YStack>
+            </InfoGroup>
           ) : (
-            /* ── Hình thức nhận xe (tự lái / dài hạn) ─────────────────────────────────── */
-            <FormSection title={tFlow('pickup.legend')} icon="location-outline" boxed={false}>
-              <YStack gap={space.xs} accessibilityRole="radiogroup" accessibilityLabel={tFlow('pickup.groupLabel')}>
-                <PickupOption
-                  icon="car-outline"
-                  title={tFlow('pickup.self')}
-                  subtitle={pickupPointLine || t('trip.selfHint')}
-                  selected={pickupMethod === PICKUP_METHOD.SELF}
-                  onPress={() =>
-                    setValue('pickupMethod', PICKUP_METHOD.SELF, { shouldValidate: true })
-                  }
-                />
-                <PickupOption
-                  icon="location-outline"
-                  title={tFlow('pickup.delivery')}
-                  subtitle={t('trip.deliveryHint')}
-                  selected={pickupMethod === PICKUP_METHOD.DELIVERY}
-                  onPress={() =>
-                    setValue('pickupMethod', PICKUP_METHOD.DELIVERY, { shouldValidate: true })
-                  }
-                />
-              </YStack>
-            </FormSection>
+            <InfoGroup
+              title={tApp('addressTitle')}
+              hint={
+                /* API chưa có địa chỉ trả riêng - trả xe tại chính điểm nhận (người dùng 28/11/2026). */
+                isDelivery ? (
+                  <YStack gap={8}>
+                    <Text col={colors.textMuted} fos={14} lh={20}>
+                      {tApp('returnSameNote')}
+                    </Text>
+                    <Text col={colors.textMuted} fos={14} lh={20}>
+                      {t('trip.deliveryFeeNote')}
+                    </Text>
+                  </YStack>
+                ) : (
+                  tApp('returnSameNote')
+                )
+              }
+            >
+              <SegmentedTabs
+                items={[
+                  { key: PICKUP_METHOD.SELF, label: tApp('selfTab') },
+                  { key: PICKUP_METHOD.DELIVERY, label: tFlow('pickup.delivery') },
+                ]}
+                value={pickupMethod}
+                onChange={(next) => setValue('pickupMethod', next, { shouldValidate: true })}
+              />
+              {isDelivery ? (
+                <>
+                  <TextField
+                    control={control}
+                    name="deliveryAddress"
+                    label={t('trip.deliveryAddressLabel')}
+                    placeholder={t('trip.deliveryAddressPlaceholder')}
+                    required
+                  />
+                  <XStack ai="center" jc="space-between" gap={space.sm}>
+                    <Text col={colors.text} fos={14} lh={20}>
+                      {t('trip.deliveryFeeLabel')}
+                    </Text>
+                    <Text col={colors.success} fos={14} lh={20} fow={fontWeight.semibold}>
+                      {t('trip.deliveryFeeLater')}
+                    </Text>
+                  </XStack>
+                </>
+              ) : (
+                <YStack gap={6}>
+                  <Text col={colors.text} fos={14} lh={20} fow={fontWeight.medium}>
+                    {tApp('pickupAddressLabel')}
+                    <Text col={colors.danger}> *</Text>
+                  </Text>
+                  <XStack
+                    ai="center"
+                    gap={8}
+                    minHeight={40}
+                    px={14}
+                    py={8}
+                    br={12}
+                    bw={1}
+                    bc={colors.borderInput}
+                    bg={colors.surface}
+                  >
+                    <Text f={1} col={colors.text} fos={14} lh={20} numberOfLines={1}>
+                      {pickupPointLine || t('trip.selfHint')}
+                    </Text>
+                    <LineIcon name="location" size={20} color={colors.placeholder} />
+                  </XStack>
+                </YStack>
+              )}
+            </InfoGroup>
           )}
 
-          {isDelivery ? (
-            <Card>
-              <YStack gap={space.sm}>
-                <TextField
-                  control={control}
-                  name="deliveryAddress"
-                  label={t('trip.deliveryAddressLabel')}
-                  placeholder={t('trip.deliveryAddressPlaceholder')}
-                  required
-                />
-                <XStack ai="center" jc="space-between" gap={space.sm}>
-                  <Text col={colors.text} fos={fontSize.bodySm}>
-                    {t('trip.deliveryFeeLabel')}
-                  </Text>
-                  <Text col={colors.success} fos={fontSize.bodySm} fow={fontWeight.bold}>
-                    {t('trip.deliveryFeeLater')}
-                  </Text>
-                </XStack>
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('trip.deliveryFeeNote')}
-                </Text>
-              </YStack>
-            </Card>
-          ) : null}
-
-          {/* Web `<Alert type="warning" showIcon>` dưới biểu mẫu. */}
           {stepError ? <Callout tone="warning" title={stepError} /> : null}
+          {quoteUnavailable ? <Callout tone="info" title={t('trip.noPrice')} /> : null}
 
-          {/* Bảng chi tiết ở cuối thân bước — cuộn chung một mạch với phần nhập liệu phía trên. */}
-          {hasPriceSelection ? (
-            quoteQuery.isLoading ? (
-              <Skeleton height={160} />
-            ) : quote ? (
-              <PriceBreakdown
-                rows={quote.rows}
-                totalAmount={quote.totalAmount}
-                totalLabel={quote.estimateNote ? t('trip.barEstimate') : t('trip.barTotal')}
-                title={
-                  quote.longTerm
-                    ? t('trip.packagePriceTitle', { months: quote.longTerm.packageMonths })
-                    : t('trip.priceTitle')
-                }
-                {...(quote.estimateNote || quote.longTerm?.durationDiscountPercent
-                  ? {
-                      footer: (
-                        <YStack gap={2}>
-                          {quote.longTerm?.durationDiscountPercent ? (
-                            /* Web `.savingsText` — `color-success`, không phải màu giảm giá. */
-                            <Text col={colors.success} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                              {tFlow('price.savings', {
-                                amount: fmt.money(quote.longTerm.durationDiscountAmount),
-                                months: quote.longTerm.packageMonths,
-                              })}
-                            </Text>
-                          ) : null}
-                          {quote.estimateNote ? (
-                            <Text col={colors.textMuted} fos={fontSize.label}>
-                              {quote.estimateNote}.
-                            </Text>
-                          ) : null}
-                        </YStack>
-                      ),
-                    }
-                  : {})}
+          {/* Figma "Tóm tắt lịch trình": xe (ảnh 82×52 + tên + viên biển số), hình thức, nhận, trả. */}
+          <InfoGroup title={tApp('summaryTitle')}>
+            <XStack ai="center" gap={12}>
+              <YStack w={82} h={52} br={8} ov="hidden" bg={colors.surfaceMuted}>
+                <RemoteImage
+                  uri={vehicleThumbUrl}
+                  recyclingKey={vehicleId}
+                  fallback={<Ionicons name="car-outline" size={iconSize.lg} color={colors.placeholder} />}
+                />
+              </YStack>
+              <YStack f={1} minWidth={0} gap={4}>
+                <Text col={colors.text} fos={16} lh={24} fow={fontWeight.semibold} numberOfLines={1}>
+                  {vehicleName}
+                </Text>
+                {vehicle.plate ? (
+                  <XStack alignSelf="flex-start" px={8} py={2} br={6} bg={colors.background}>
+                    <Text col={colors.textMuted} fos={12} lh={18} fow={fontWeight.medium}>
+                      {vehicle.plate}
+                    </Text>
+                  </XStack>
+                ) : null}
+              </YStack>
+            </XStack>
+            <YStack gap={12}>
+              <SummaryRow
+                label={tApp('rowService')}
+                value={[
+                  dl('serviceType', serviceType),
+                  isLongTerm
+                    ? packageMonths
+                      ? fmt.packageLabel(packageMonths)
+                      : null
+                    : rentalMode === RENTAL_MODE.HOURLY
+                      ? tFlow('time.modeHourly')
+                      : tFlow('time.modeDaily'),
+                ]
+                  .filter(Boolean)
+                  .join(LIST_SEPARATOR)}
               />
-            ) : quoteUnavailable ? (
-              <Callout tone="info" title={t('trip.noPrice')} />
-            ) : null
-          ) : null}
+              <SummaryRow
+                label={tApp('rowPickup')}
+                value={pickupIso ? fmt.dateTime(pickupIso) : '-'}
+                sub={pickupPlace}
+              />
+              <SummaryRow
+                label={tApp('rowReturn')}
+                value={returnIso ? fmt.dateTime(returnIso) : '-'}
+                sub={returnPlace}
+              />
+            </YStack>
+          </InfoGroup>
         </YStack>
       </Screen>
 
@@ -1237,14 +1441,114 @@ function StaffBookingTrip({
   );
 }
 
+/** Thẻ "Nhóm thông tin" của Figma tạo đơn: trắng, viền mảnh, bo 16, đệm 16, tiêu đề 16 đậm, khe 12. */
+function InfoGroup({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  /** Ghi chú của khối - nằm sau dấu (i) cạnh tiêu đề thay vì in dưới các ô. */
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
+  const colors = useColors();
+  return (
+    <YStack bg={colors.surface} bw={1} bc={colors.border} br={16} p={16} gap={12}>
+      <XStack ai="center" gap={4}>
+        <Text col={colors.text} fos={16} lh={24} fow={fontWeight.semibold}>
+          {title}
+        </Text>
+        {hint ? <InfoHint label={title} content={hint} size={16} /> : null}
+      </XStack>
+      {children}
+    </YStack>
+  );
+}
+
+/** Một lựa chọn "Hình thức thuê": ô icon 40 + tên + mô tả; chọn = viền vàng, nền ngà, tên vàng. */
+function ChoiceRow({
+  icon,
+  title,
+  subtitle,
+  selected,
+  onPress,
+}: {
+  icon: LineIconName;
+  title: string;
+  subtitle: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={title}
+    >
+      <XStack
+        ai="center"
+        gap={12}
+        px={12}
+        py={9}
+        br={12}
+        bw={1}
+        bc={selected ? colors.primary : colors.border}
+        bg={selected ? colors.brandWash : colors.surface}
+      >
+        <YStack
+          w={40}
+          h={40}
+          br={999}
+          ai="center"
+          jc="center"
+          bg={selected ? colors.brandIconBg : colors.background}
+        >
+          <LineIcon name={icon} size={24} color={selected ? colors.primary : colors.textMuted} />
+        </YStack>
+        <YStack f={1} minWidth={0} gap={4}>
+          <Text col={selected ? colors.primary : colors.text} fos={14} lh={20} fow={fontWeight.medium}>
+            {title}
+          </Text>
+          <Text col={colors.textMuted} fos={14} lh={20} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </YStack>
+      </XStack>
+    </Pressable>
+  );
+}
+
+/** Hàng "Tóm tắt lịch trình": nhãn 14 mờ trái, giá trị 14 vừa phải, địa điểm 12 mờ dưới (canh phải). */
+function SummaryRow({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
+  const colors = useColors();
+  return (
+    <XStack ai="flex-start" jc="space-between" gap={space.sm}>
+      <Text col={colors.placeholder} fos={14} lh={20}>
+        {label}
+      </Text>
+      <YStack f={1} minWidth={0} ai="flex-end" gap={2}>
+        <Text col={colors.text} fos={14} lh={20} fow={fontWeight.medium} ta="right">
+          {value}
+        </Text>
+        {sub ? (
+          <Text col={colors.placeholder} fos={12} lh={18} ta="right">
+            {sub}
+          </Text>
+        ) : null}
+      </YStack>
+    </XStack>
+  );
+}
+
 /**
- * Hộp "Đã tạo đơn thuê" — CÙNG khuôn `BookingResult` với hộp "Đã gửi yêu cầu" của khách (web
- * `StaffBookingFlow` bước `done`): huy hiệu · tiêu đề · lời dẫn · ô mã đơn chép được, rồi thẻ chuyến
- * bố cục `receipt` kèm dòng tổng `BookingResultTotal`.
+ * Hộp "Đã tạo đơn thuê" - khuôn `BookingResult` (huy hiệu thành công như cũ) · tiêu đề ·
+ * lời dẫn · ô mã đơn, rồi MỘT thẻ tóm tắt (xe, hình thức, nhận, trả, tổng). Hai nút dính đáy một hàng.
  */
 function StaffBookingDone({
   code,
-  listing,
   vehicleName,
   vehicleImageUrl,
   trip,
@@ -1261,77 +1565,101 @@ function StaffBookingDone({
   onClose: () => void;
   onOpenBooking: () => void;
 }) {
+  const tPicker = useTranslations('BookingRequests.vehiclePicker');
   const t = useTranslations('BookingRequests.staffFlow');
+  const tFlow = useTranslations('BookingRequests.flow');
+  const tApp = useTranslations('BookingRequests.staffFlow.app');
+  const dl = useDomainLabel();
+  const fmt = useAppFormat();
+  const colors = useColors();
+  const copy = useCopy();
+  const pickupIso = trip.pickupAt ? appWallClockToIso(trip.pickupAt) : null;
+  const returnIso = trip.returnAt ? appWallClockToIso(trip.returnAt) : null;
 
   return (
     <>
-      <AppHeader title={t('title')} onBack={onClose} />
-      <Screen edges={['left', 'right', 'bottom']}>
+      <AppHeader title={tPicker('title')} onBack={onClose} />
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        footer={
+          /* Hai nút DÍNH ĐÁY trên MỘT hàng: [Đóng] [Mở chi tiết đơn] - nút chính bên phải. */
+          <XStack gap={8}>
+            <YStack f={1}>
+              <Button label={t('done.close')} variant="secondary" onPress={onClose} />
+            </YStack>
+            <YStack f={1}>
+              <Button variant="gradient" label={t('done.openBooking')} onPress={onOpenBooking} />
+            </YStack>
+          </XStack>
+        }
+      >
+        {/* Bản GỌN cho điện thoại: huy hiệu thành công + mã đơn, rồi một thẻ tóm tắt (xe · lịch · tổng). */}
         <BookingResult
           title={t('done.title')}
           lead={t('done.lead')}
-          code={{ label: t('done.codeLabel'), value: code, copyLabel: t('done.copyCode') }}
-          footer={
-            /*
-              Web `.footer` ≤640px là `column-reverse` (người dùng chốt 27/10: theo web điện thoại):
-              nút CHÍNH gradient "Mở chi tiết đơn" lên trên cho ngón cái, "Đóng" (nút phụ, mũi tên
-              trái) ở dưới; mỗi nút rộng hết hàng, khe `space-12`.
-            */
-            <YStack gap={toPx(XP_TOKENS['space-12'])}>
-              <Button
-                variant="gradient"
-                label={t('done.openBooking')}
-                size="lg"
-                onPress={onOpenBooking}
-              />
-              <Button
-                label={t('done.close')}
-                icon="chevron-back"
-                variant="secondary"
-                size="lg"
-                onPress={onClose}
-              />
-            </YStack>
-          }
+          code={null}
+          footer={null}
         >
-          <BookingTripCardView
-            listing={listing}
-            vehicleName={vehicleName}
-            vehicleImageUrl={vehicleImageUrl}
-            trip={trip}
-            showOwner={false}
-            selfPickupFallback={t('review.selfPickupBranch')}
-          >
-            {totalAmount ? <BookingResultTotal label={t('done.total')} amount={totalAmount} /> : null}
-          </BookingTripCardView>
+          <YStack bg={colors.surface} bw={1} bc={colors.border} br={16} p={16} gap={12}>
+            {/* Mã đơn gom vào thẻ (người dùng 28/11/2026): nhãn · mã · nút chép. */}
+            <XStack ai="center" jc="space-between" gap={space.sm}>
+              <Text col={colors.placeholder} fos={14} lh={20}>
+                {t('done.codeLabel')}
+              </Text>
+              <XStack ai="center" gap={4} flexShrink={1}>
+                <Text col={colors.text} fos={14} lh={20} fow={fontWeight.semibold} numberOfLines={1}>
+                  {code}
+                </Text>
+                <IconButton icon="copy-outline" label={t('done.copyCode')} onPress={() => void copy(code)} />
+              </XStack>
+            </XStack>
+            <YStack h={1} bg={colors.borderSubtle} />
+            <XStack ai="center" gap={12}>
+              <YStack w={64} h={42} br={8} ov="hidden" bg={colors.surfaceMuted}>
+                <RemoteImage
+                  uri={vehicleImageUrl}
+                  fallback={<Ionicons name="car-outline" size={iconSize.md} color={colors.placeholder} />}
+                />
+              </YStack>
+              <Text f={1} col={colors.text} fos={16} lh={24} fow={fontWeight.semibold} numberOfLines={2}>
+                {vehicleName}
+              </Text>
+            </XStack>
+            <YStack gap={8}>
+              <SummaryRow
+                label={tApp('rowService')}
+                value={[
+                  dl('serviceType', trip.serviceType),
+                  trip.packageMonths ? fmt.packageLabel(trip.packageMonths) : null,
+                ]
+                  .filter(Boolean)
+                  .join(LIST_SEPARATOR)}
+              />
+              <SummaryRow label={tApp('rowPickup')} value={pickupIso ? fmt.dateTime(pickupIso) : '-'} />
+              <SummaryRow label={tApp('rowReturn')} value={returnIso ? fmt.dateTime(returnIso) : '-'} />
+              {trip.isDelivery && trip.deliveryAddress ? (
+                <SummaryRow label={tFlow('pickup.delivery')} value={trip.deliveryAddress} />
+              ) : null}
+            </YStack>
+            {totalAmount ? (
+              <>
+                <YStack h={1} bg={colors.borderSubtle} />
+                <XStack ai="center" jc="space-between" gap={space.sm}>
+                  <Text col={colors.text} fos={14} lh={20} fow={fontWeight.semibold}>
+                    {t('done.total')}
+                  </Text>
+                  <Text col={colors.primary} fos={18} lh={28} fow={fontWeight.semibold}>
+                    {fmt.money(totalAmount)}
+                  </Text>
+                </XStack>
+              </>
+            ) : null}
+          </YStack>
         </BookingResult>
       </Screen>
     </>
   );
 }
 
-/**
- * Thẻ xe khi không có hồ sơ công khai — xe nội bộ (web `VehicleSummaryPanel` dùng `fallbackName`/
- * `fallbackImageUrl`). Bố cục `.compactMobile`: ảnh 112 × 84 (4/3) bo `border-radius`, khe
- * `space-12`, tên body-lg semibold. Đang tải hồ sơ thì VẪN hiện tên + ảnh — web cố ý không che chúng
- * bằng skeleton ("khách mất mốc mình đang đặt xe nào").
- */
-function VehicleFallbackCard({ name, imageUrl }: { name: string; imageUrl: string | null }) {
-  const colors = useColors();
-  return (
-    <Card>
-      <XStack gap={toPx(XP_TOKENS['space-12'])} ai="center">
-        <YStack w={112} h={84} br={radius.md} ov="hidden">
-          <RemoteImage
-            uri={imageUrl}
-            radius={radius.md}
-            fallback={<Ionicons name="car-outline" size={space.lg} color={colors.placeholder} />}
-          />
-        </YStack>
-        <Text f={1} col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold} numberOfLines={2}>
-          {name}
-        </Text>
-      </XStack>
-    </Card>
-  );
-}
+/** Một ô trong lưới 3 cột chọn gói tháng. */
+const PACKAGE_CELL = { width: '33.333%', paddingHorizontal: space.xs / 2 } as const;

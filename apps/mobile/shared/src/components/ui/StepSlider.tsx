@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   PanResponder,
+  Pressable,
   type GestureResponderEvent,
   type LayoutChangeEvent,
   type PanResponderGestureState,
@@ -184,14 +185,27 @@ export const StepSlider = memo(function StepSlider({
           {ticks.map((tick) => {
             const active = tick.value === value;
             return (
-              <Text
+              /* Chạm vào nhãn mốc ⇒ chọn đúng giá trị đó (vd 06:00, phút 30), như kéo núm tới đó. */
+              <Pressable
                 key={tick.value}
-                col={active ? colors.accentText : colors.textMuted}
-                fos={fontSize.label}
-                fow={active ? fontWeight.bold : fontWeight.regular}
+                hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={tick.label}
+                onPress={() => {
+                  if (tick.value === value) return;
+                  offset.value = ((tick.value - min) / span) * usable;
+                  onChange(tick.value);
+                }}
               >
-                {tick.label}
-              </Text>
+                <Text
+                  col={active ? colors.accentText : colors.textMuted}
+                  fos={fontSize.label}
+                  fow={active ? fontWeight.bold : fontWeight.regular}
+                >
+                  {tick.label}
+                </Text>
+              </Pressable>
             );
           })}
         </XStack>

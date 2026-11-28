@@ -83,6 +83,9 @@ export function assignPixelLanes(items: ReadonlyArray<{ left: number; width: num
  */
 export const EVENT_MIN_W = 44;
 
+/** Phần quãng còn lại của ngày mà giờ nhận/trả được nới thêm khi vẽ (0 = đúng tỉ lệ như web). */
+export const MOBILE_DAY_STRETCH = 0.25;
+
 export interface EventBar<T> {
   event: T;
   position: EventBarPosition;
@@ -114,14 +117,30 @@ export function layoutEventBars<T extends Pick<CalendarEvent, 'startAt' | 'endAt
        * ô — đúng cảm nhận vận hành ("nửa ngày là mất nửa ngày xe"), không phải tỉ lệ thiên văn
        * 24h. Event từ một ngày trở lên vẫn theo tỉ lệ thật để vị trí ngày chính xác.
        */
+      /*
+       * NỚI theo giờ trong ngày (riêng mobile, người dùng 28/11/2026): ô ngày trên điện thoại hẹp,
+       * nên giờ bắt đầu lùi về đầu ngày và giờ kết thúc tiến về cuối ngày thêm `MOBILE_DAY_STRETCH`
+       * phần quãng còn lại - trả xe 17h (71%) vẽ tới ~78%, nhận 8h (33%) vẽ từ ~25%. Ngày bắt đầu /
+       * kết thúc vẫn đúng ô; chỉ phần trong ngày được nới để thẻ có thêm chỗ cho chữ.
+       */
+      const startDay = Math.floor(position.offsetDays);
+      const startFrac = position.offsetDays - startDay;
+      const endAt = position.offsetDays + position.spanDays;
+      const endDay = Math.floor(endAt);
+      const endFrac = endAt - endDay;
+      const visualStart = startDay + startFrac * (1 - MOBILE_DAY_STRETCH);
+      const visualEnd = endFrac === 0 ? endAt : endDay + endFrac + (1 - endFrac) * MOBILE_DAY_STRETCH;
+      const stretched = Math.max(visualEnd - visualStart, 0);
       const visualSpan =
-        position.spanDays < 1 ? Math.min(position.spanDays * 2, 1) : position.spanDays;
+        position.spanDays < 1 ? Math.min(Math.max(position.spanDays * 2, stretched), 1) : stretched;
       const width = Math.min(
         trackW,
-        Math.max(visualSpan * dayWidth - 2, Math.min(EVENT_MIN_W, trackW)),
+        // Không trừ khe ở đây: thẻ tự thụt `CARD_INSET_X` MỖI bên lúc vẽ - trừ thêm ở đây làm mép
+        // phải hở gấp đôi mép trái, đơn trọn ngày trông "không full ô" (người dùng 28/11/2026).
+        Math.max(visualSpan * dayWidth, Math.min(EVENT_MIN_W, trackW)),
       );
       // Kẹp trong dải để thanh đã nới không tràn ra ngoài mép phải của hàng.
-      const left = Math.max(0, Math.min(position.offsetDays * dayWidth, trackW - width));
+      const left = Math.max(0, Math.min(visualStart * dayWidth, trackW - width));
       return { event, position, left, width };
     });
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -10,7 +10,7 @@ import { DAY_PARAM_FORMAT, dayjs, nowInAppTz } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Chip } from '@/components/ui/Chip';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { FieldLabel } from '@/components/ui/Field';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
@@ -48,7 +48,7 @@ type RangeMode = 'single' | 'range';
  *     con số. Một nút hứa "khoá hết" rồi âm thầm bỏ sót 8 xe là cách chắc chắn nhất để ai đó nhận
  *     một đơn vào đúng ngày họ tưởng đã đóng.
  */
-export function BulkDayBlockSheet({
+export const BulkDayBlockSheet = memo(function BulkDayBlockSheet({
   state,
   filters,
   onClose,
@@ -60,7 +60,7 @@ export function BulkDayBlockSheet({
   // Đóng thì không dựng — hộp này đọc `state.date` ngay từ bộ khởi tạo; xem `VehicleBlockSheet`.
   if (state === null) return null;
   return <BlockSheetInner key={state.date} state={state} filters={filters} onClose={onClose} />;
-}
+});
 
 function BlockSheetInner({
   state,
@@ -141,6 +141,8 @@ function BlockSheetInner({
         open
         onClose={onClose}
         title={t('bulkBlock.title')}
+        chrome="v2"
+        headerDivider
         footer={
           <XStack gap={space.sm}>
             {/*
@@ -153,7 +155,7 @@ function BlockSheetInner({
             <YStack flexShrink={0}>
               <Button
                 label={tCommon('cancel')}
-                variant="secondary"
+                variant="neutral"
                 onPress={onClose}
                 disabled={block.isPending}
               />
@@ -161,7 +163,8 @@ function BlockSheetInner({
             <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
               <Button
                 label={t('bulkBlock.submit', { count: blockable.length })}
-                icon="lock-closed-outline"
+                lineIcon="lock-2"
+                variant="gradient"
                 onPress={submit}
                 loading={block.isPending}
                 disabled={preview.isPending || blockable.length === 0}
@@ -180,20 +183,16 @@ function BlockSheetInner({
           */}
           <YStack gap={space.xs}>
             <FieldLabel label={t('bulkBlock.scope')} />
-            <XStack gap={space.xs}>
-              <Chip
-                label={t('bulkBlock.modeSingle', { date: fmt.dateKey(state.date) })}
-                selected={mode === 'single'}
-                grow
-                onPress={() => setMode('single')}
-              />
-              <Chip
-                label={t('bulkBlock.modeRange')}
-                selected={mode === 'range'}
-                grow
-                onPress={() => setMode('range')}
-              />
-            </XStack>
+            {/* Tab phân đoạn xám như thẻ doanh thu Tổng quan (người dùng 28/11/2026), thay hai viên. */}
+            <SegmentedTabs<RangeMode>
+              items={[
+                { key: 'single', label: t('bulkBlock.modeSingle', { date: fmt.dateKey(state.date) }) },
+                { key: 'range', label: t('bulkBlock.modeRange') },
+              ]}
+              value={mode}
+              onChange={setMode}
+              variant="neutral"
+            />
           </YStack>
 
           {mode === 'range' ? (

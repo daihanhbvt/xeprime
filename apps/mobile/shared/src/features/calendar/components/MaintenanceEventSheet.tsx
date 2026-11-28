@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -38,7 +38,7 @@ import { getErrorMessage } from '@/lib/get-error-message';
  * Quyền: xem cần `vehicles.maintenance.view`; chi phí chỉ hiện với `view_cost`; hành động cần
  * `manage` — cùng ba trục web dùng.
  */
-export function MaintenanceEventSheet({
+export const MaintenanceEventSheet = memo(function MaintenanceEventSheet({
   vehicleId,
   vehicleName,
   recordId,
@@ -257,4 +257,4 @@ export function MaintenanceEventSheet({
       ) : null}
     </>
   );
-}
+});

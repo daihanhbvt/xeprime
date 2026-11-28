@@ -690,7 +690,7 @@ export function RentalRangeSheet({
                 <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                   <Button
                     label={tCommon('actions.apply')}
-                    icon="checkmark-outline"
+                    lineIcon="tick"
                     onPress={onApply}
                     disabled={!meetsMin || conflict !== null}
                   />

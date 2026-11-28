@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -21,7 +21,7 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Chip } from '@/components/ui/Chip';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { FieldLabel } from '@/components/ui/Field';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
@@ -75,7 +75,7 @@ interface PriceFormValues {
  * Nó chạy CHÍNH `planBulkDayPrices` của `@xeprime/domain` mà backend gọi lúc ghi, nên con số hiện
  * ra là con số sẽ được lưu. Đó cũng là lý do phép tính này KHÔNG được chép lại ở app.
  */
-export function BulkDayPriceSheet({
+export const BulkDayPriceSheet = memo(function BulkDayPriceSheet({
   state,
   filters,
   onClose,
@@ -87,7 +87,7 @@ export function BulkDayPriceSheet({
   // Đóng thì không dựng — hộp này đọc `state.date` ngay từ bộ khởi tạo; xem `VehicleBlockSheet`.
   if (state === null) return null;
   return <PriceSheetInner key={state.date} state={state} filters={filters} onClose={onClose} />;
-}
+});
 
 function PriceSheetInner({
   state,
@@ -267,9 +267,26 @@ function PriceSheetInner({
         open
         onClose={onClose}
         title={t('bulkPrice.title')}
+        chrome="v2"
+        headerDivider
         footer={
-          <>
+          /*
+            Hàng nút ngang như các tấm v2 khác ("Chi tiết nhanh đơn"): "Khôi phục giá" bên trái,
+            nút chính dải vàng bên phải. Bỏ nút "Huỷ" - nút X ở đầu tấm làm đúng việc đó.
+          */
+          <XStack gap={12}>
+            <YStack flexShrink={0}>
+              <Button
+                label={t('bulkPrice.restore')}
+                variant="danger"
+                onPress={() => setConfirmingRestore(true)}
+                loading={restore.isPending}
+                disabled={vehicles.length === 0 || save.isPending}
+              />
+            </YStack>
+            <YStack f={1}>
             <Button
+              variant="gradient"
               // Đồng giá còn TRỐNG: đếm 0, khớp bảng xem trước đang nói "Bỏ qua" ở mọi hàng —
               // không hứa ghi cho N xe rồi khoá nút lại, hứa một đằng khoá một nẻo còn khó đọc hơn.
               label={t('bulkPrice.submit', { count: fixedPriceInvalid ? 0 : targetIds().length })}
@@ -277,21 +294,8 @@ function PriceSheetInner({
               loading={save.isPending}
               disabled={preview.isPending || targetIds().length === 0 || fixedPriceInvalid}
             />
-            <Button
-              label={t('bulkPrice.restore')}
-              variant="danger"
-              onPress={() => setConfirmingRestore(true)}
-              loading={restore.isPending}
-              disabled={vehicles.length === 0}
-            />
-            <Button
-              label={tCommon('cancel')}
-              icon="close-outline"
-              variant="secondary"
-              onPress={onClose}
-              disabled={save.isPending}
-            />
-          </>
+            </YStack>
+          </XStack>
         }
       >
         <YStack gap={space.md}>
@@ -304,20 +308,16 @@ function PriceSheetInner({
           */}
           <YStack gap={space.xs}>
             <FieldLabel label={t('bulkPrice.scope')} />
-            <XStack gap={space.xs}>
-              <Chip
-                label={t('bulkPrice.modeSingle', { date: fmt.dateKey(state.date) })}
-                selected={mode === 'single'}
-                grow
-                onPress={() => setMode('single')}
-              />
-              <Chip
-                label={t('bulkPrice.modeRange')}
-                selected={mode === 'range'}
-                grow
-                onPress={() => setMode('range')}
-              />
-            </XStack>
+            {/* Tab phân đoạn xám như thẻ doanh thu Tổng quan (người dùng 28/11/2026), thay hai viên. */}
+            <SegmentedTabs<RangeMode>
+              items={[
+                { key: 'single', label: t('bulkPrice.modeSingle', { date: fmt.dateKey(state.date) }) },
+                { key: 'range', label: t('bulkPrice.modeRange') },
+              ]}
+              value={mode}
+              onChange={setMode}
+              variant="neutral"
+            />
           </YStack>
 
           {mode === 'range' ? (
@@ -343,20 +343,15 @@ function PriceSheetInner({
 
           <YStack gap={space.xs}>
             <FieldLabel label={t('bulkPrice.mode')} />
-            <XStack gap={space.xs}>
-              <Chip
-                label={t('bulkPrice.modePercent')}
-                selected={priceMode === BULK_PRICE_MODE.PERCENT}
-                grow
-                onPress={() => setPriceMode(BULK_PRICE_MODE.PERCENT)}
-              />
-              <Chip
-                label={t('bulkPrice.modeFixed')}
-                selected={priceMode === BULK_PRICE_MODE.FIXED}
-                grow
-                onPress={() => setPriceMode(BULK_PRICE_MODE.FIXED)}
-              />
-            </XStack>
+            <SegmentedTabs<BulkPriceMode>
+              items={[
+                { key: BULK_PRICE_MODE.PERCENT, label: t('bulkPrice.modePercent') },
+                { key: BULK_PRICE_MODE.FIXED, label: t('bulkPrice.modeFixed') },
+              ]}
+              value={priceMode}
+              onChange={setPriceMode}
+              variant="neutral"
+            />
           </YStack>
 
           {priceMode === BULK_PRICE_MODE.PERCENT ? (

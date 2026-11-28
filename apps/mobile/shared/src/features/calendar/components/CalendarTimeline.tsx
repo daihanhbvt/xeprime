@@ -1,11 +1,17 @@
-import { memo, useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   runOnJS,
   useAnimatedReaction,
   useAnimatedRef,
   useAnimatedStyle,
-  useScrollViewOffset,
+  scrollTo,
+  useAnimatedScrollHandler,
+  useSharedValue,
+  withRepeat,
+  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 import { Ionicons } from '@/components/icons/Ionicons';
@@ -51,10 +57,34 @@ import { layoutEventBars } from '../utils/calendar-position.util';
  */
 const HEADER_H = 44;
 const ROW_H = 108;
-const RESOURCE_W = 100;
+/* 80 = ảnh 63 + đệm 8 hai bên: cột xe vừa khít ảnh, nhường bề ngang cho lưới (người dùng 28/11/2026). */
+const RESOURCE_W = 80;
 /** Cột xe THU GỌN: chỉ còn ảnh - nhường tối đa bề ngang cho lưới ngày. */
 const RESOURCE_W_COLLAPSED = 52;
-const MIN_DAY_W = 96;
+const MIN_DAY_W = 72;
+/** Số ngày nhìn trọn trong khung + phần LÓ của ngày kế để người dùng biết còn cuộn ngang được. */
+const VISIBLE_DAYS = 3;
+/** Thẻ khoá / bảo dưỡng: cao 58 như Figma, canh giữa hàng. */
+const BLOCK_CARD_H = 58;
+const BLOCK_CARD_INSET_X = 4;
+/*
+ * Thẻ khoá dựng bằng `View` + StyleSheet thuần: nét ĐỨT của Android chỉ hiện khi `borderStyle`,
+ * bề dày và bán kính nằm cùng một style gốc - qua lớp style của Tamagui nó vẽ thành nét liền.
+ * Đệm 8 ngang / 8 dọc: ô ngày trên điện thoại hẹp, đệm 16 làm "Đã khóa" bị cắt "…".
+ */
+const blockCardStyles = StyleSheet.create({
+  card: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+  },
+});
+const NEXT_DAY_PEEK = 28;
 
 /** Ảnh xe ở cột ghim (Figma "Vehicle Image" `24729:82238`): 63×40 bo 8. */
 const THUMB_W = 63;
@@ -71,6 +101,8 @@ export const GRID_METRICS = {
   rowHeight: ROW_H,
   resourceWidth: RESOURCE_W,
   minDayWidth: MIN_DAY_W,
+  visibleDays: VISIBLE_DAYS,
+  nextDayPeek: NEXT_DAY_PEEK,
 } as const;
 
 /**
@@ -127,6 +159,18 @@ interface TimelineProps extends TimelineHandlers {
   viewport: { width: number; height: number };
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  /** Worklet nhận độ cuộn DỌC của lưới - màn dùng để ẩn/hiện khối đầu trang. */
+  onVerticalScroll?: ((y: number) => void) | undefined;
+  /**
+   * Khối đầu trang của màn nằm ĐÈ lên lưới: `headInset` = chiều cao đầy đủ của nó (đệm trên của
+   * danh sách hàng), `headOffset` = phần đang hiện (0..headInset, luồng UI). Lưới KHÔNG dịch theo -
+   * chỉ hàng ngày + góc "Phương tiện" trượt theo `headOffset`, nên cuộn không bị giật.
+   */
+  headInset?: number;
+  headOffset?: SharedValue<number> | undefined;
+  /** Kéo-để-tải-lại (trên dải ngày - nơi cuộn dọc chính). */
+  refreshing?: boolean;
+  onRefresh?: (() => void) | undefined;
 }
 
 /**
@@ -139,7 +183,7 @@ interface TimelineProps extends TimelineHandlers {
  *
  * KHÔNG có kéo-thả: web đã bỏ có chủ đích (đổi giờ đi qua form có xác nhận, backend quyết - ADR 0006).
  */
-export function CalendarTimeline({
+export const CalendarTimeline = memo(function CalendarTimeline({
   resources,
   eventsByResource,
   priceMarkers,
@@ -149,6 +193,11 @@ export function CalendarTimeline({
   viewport,
   collapsed,
   onToggleCollapsed,
+  onVerticalScroll,
+  headInset = 0,
+  headOffset,
+  refreshing = false,
+  onRefresh,
   onCellPress,
   onEventPress,
   onResourcePress,
@@ -160,16 +209,79 @@ export function CalendarTimeline({
 
   const resourceW = collapsed ? RESOURCE_W_COLLAPSED : RESOURCE_W;
   const trackViewportW = Math.max(0, viewport.width - resourceW);
+  /* Ba ngày trọn + một mẩu ngày thứ tư (người dùng 28/11/2026); ít ngày hơn thì chia đều. */
   const dayWidth = Math.max(
     MIN_DAY_W,
-    trackViewportW > 0 ? Math.floor(trackViewportW / days.length) : MIN_DAY_W,
+    trackViewportW > 0
+      ? Math.floor(
+          days.length > VISIBLE_DAYS
+            ? (trackViewportW - NEXT_DAY_PEEK) / VISIBLE_DAYS
+            : trackViewportW / Math.max(1, days.length),
+        )
+      : MIN_DAY_W,
   );
-  const trackWidth = days.length * dayWidth;
-  /* −1: mép trên 1px của lưới (Figma "Option 2" viền trên/dưới) nằm trong vùng đo. */
-  const listHeight = Math.max(0, viewport.height - HEADER_H - 1);
+  const canScrollX = trackWidth_(days.length, dayWidth) > trackViewportW + 1;
+  const [atEndX, setAtEndX] = useState(false);
+  const trackWidth = trackWidth_(days.length, dayWidth);
+  /* Danh sách hàng phủ CẢ vùng lưới; hàng ngày nằm đè lên đầu nó (đệm trên = khối đầu + hàng ngày). */
+  const listHeight = Math.max(0, viewport.height);
+  const topPad = headInset + HEADER_H + 1;
+  /*
+   * Đệm ĐÁY: thanh tab Partner nổi đè lưới + vùng thanh điều hướng hệ thống - hàng xe cuối phải
+   * cuộn lên được khỏi chúng (người dùng 28/11/2026: xe cuối bị che).
+   */
+  /*
+   * Vùng lưới kéo tới mép màn hình: chừa ĐÚNG thanh điều hướng hệ thống + 4 (người dùng 28/11/2026).
+   * Thanh tab Partner tự ẩn khi cuộn xuống nên không cộng nó.
+   */
+  const bottomPad = useSafeAreaInsets().bottom + 4;
+  const stickyStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headOffset ? headOffset.value : 0 }],
+  }));
 
   const trackRef = useAnimatedRef<Animated.FlatList<CalendarResource>>();
-  const scrollY = useScrollViewOffset(trackRef);
+  const columnRef = useAnimatedRef<Animated.ScrollView>();
+  /*
+   * Cuộn DỌC được ở CẢ HAI nơi: dải ngày và cột xe (người dùng 28/11/2026 - trước chỉ dải ngày).
+   * Bên nào người dùng đang kéo là bên "lái" (`driver`), bên kia đi theo bằng `scrollTo` trên luồng
+   * UI; `scrollY` luôn là độ cuộn của dải ngày - nơi đọc của khối đầu trang và cửa sổ cột xe.
+   */
+  const scrollY = useSharedValue(0);
+  const driver = useSharedValue<0 | 1>(0);
+  const onTrackScroll = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      driver.value = 0;
+    },
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+      if (driver.value === 0) scrollTo(columnRef, 0, e.contentOffset.y, false);
+    },
+  });
+  const onColumnScroll = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      driver.value = 1;
+    },
+    onScroll: (e) => {
+      if (driver.value === 1) scrollTo(trackRef, 0, e.contentOffset.y, false);
+    },
+  });
+
+  /* Nút ‹ › giữa lưới: cuộn NGANG một trang (số ngày nhìn trọn). */
+  const xRef = useRef<ScrollView>(null);
+  const [scrollX, setScrollX] = useState(0);
+  const pageX = dayWidth * VISIBLE_DAYS;
+  const scrollByPage = (direction: 1 | -1) =>
+    xRef.current?.scrollTo({
+      x: Math.max(0, Math.min(trackWidth - trackViewportW, scrollX + direction * pageX)),
+      animated: true,
+    });
+  useAnimatedReaction(
+    () => scrollY.value,
+    (y, prev) => {
+      if (onVerticalScroll && y !== prev) onVerticalScroll(y);
+    },
+    [onVerticalScroll],
+  );
 
   const getItemLayout = useCallback(
     (_data: ArrayLike<CalendarResource> | null | undefined, index: number) => ({
@@ -209,13 +321,14 @@ export function CalendarTimeline({
   );
 
   return (
-    <XStack f={1} bg={colors.surface} borderTopWidth={1} borderColor={GRID_LINE}>
+    <XStack f={1} bg={colors.surface}>
       {/* ── Cột xe: GHIM, nằm NGOÀI vùng cuộn ngang ─────────────────────── */}
       <YStack w={resourceW} borderRightWidth={1} borderColor={GRID_LINE}>
         {/*
           Góc "PHƯƠNG TIỆN" (Figma `24729:82217`). Nút thu gọn cột Figma không vẽ - người dùng chốt
           giữ (27/11/2026), nên góc mang thêm một mũi tên nhỏ.
         */}
+        <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2 }, stickyStyle]}>
         <Pressable
           onPress={onToggleCollapsed}
           accessibilityRole="button"
@@ -225,16 +338,16 @@ export function CalendarTimeline({
           <XStack
             h={HEADER_H}
             ai="center"
-            jc={collapsed ? 'center' : 'space-between'}
-            px={8}
+            jc="center"
+            px={6}
             bg={colors.background}
+            borderTopWidth={1}
             borderBottomWidth={1}
             borderColor={GRID_LINE}
           >
             {collapsed ? null : (
+              /* "XE" canh GIỮA cột (người dùng 28/11/2026); mũi tên thu gọn ghim mép phải. */
               <Text
-                f={1}
-                minWidth={0}
                 col={colors.textMuted}
                 fos={typeScale.label.fontSize}
                 lh={typeScale.label.lineHeight}
@@ -242,45 +355,66 @@ export function CalendarTimeline({
                 textTransform="uppercase"
                 numberOfLines={1}
               >
-                {t('grid.resourceTitle')}
+                {t('grid.resourceTitleApp')}
               </Text>
             )}
-            <LineIcon
-              name={collapsed ? 'chevron-right' : 'chevron-left'}
-              size={14}
-              color={colors.placeholder}
-            />
+            <YStack
+              {...(collapsed ? {} : { position: 'absolute' as const, right: 6, top: 0, bottom: 0 })}
+              jc="center"
+            >
+              <LineIcon
+                name={collapsed ? 'chevron-right' : 'chevron-left'}
+                size={12}
+                color={colors.placeholder}
+              />
+            </YStack>
           </XStack>
         </Pressable>
+        </Animated.View>
 
         <ResourceColumn
           resources={resources}
           collapsed={collapsed}
           listHeight={listHeight}
+          topPad={topPad}
+          bottomPad={bottomPad}
           scrollY={scrollY}
+          columnRef={columnRef}
+          onScroll={onColumnScroll}
           onPress={onResourcePress}
         />
       </YStack>
 
       {/* ── Dải ngày: cuộn NGANG theo thời gian, cuộn DỌC theo xe ────────── */}
+      <View style={{ width: trackViewportW }}>
       <ScrollView
+        ref={xRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         style={{ width: trackViewportW }}
         contentContainerStyle={{ width: trackWidth }}
+        scrollEventThrottle={64}
+        onScroll={(e) => {
+          const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+          setScrollX(contentOffset.x);
+          const end = contentOffset.x + layoutMeasurement.width >= contentSize.width - 4;
+          if (end !== atEndX) setAtEndX(end);
+        }}
       >
         <YStack w={trackWidth}>
-          <XStack h={HEADER_H} bg={colors.background}>
-            {days.map((day) => (
-              <DayHeaderCell
-                key={day.key}
-                day={day}
-                holiday={holidaysByDay.get(day.key)}
-                width={dayWidth}
-                onPress={onDayPress}
-              />
-            ))}
-          </XStack>
+          <Animated.View style={[{ position: 'absolute', top: 0, left: 0, zIndex: 2 }, stickyStyle]}>
+            <XStack h={HEADER_H + 1} bg={colors.background} borderTopWidth={1} borderColor={GRID_LINE}>
+              {days.map((day) => (
+                <DayHeaderCell
+                  key={day.key}
+                  day={day}
+                  holiday={holidaysByDay.get(day.key)}
+                  width={dayWidth}
+                  onPress={onDayPress}
+                />
+              ))}
+            </XStack>
+          </Animated.View>
 
           <Animated.FlatList
             ref={trackRef}
@@ -290,13 +424,113 @@ export function CalendarTimeline({
             renderItem={renderTrack}
             getItemLayout={getItemLayout}
             {...LIST_WINDOW}
+            contentContainerStyle={{ paddingTop: topPad, paddingBottom: bottomPad }}
+            onScroll={onTrackScroll}
+            scrollEventThrottle={16}
+            refreshControl={
+              onRefresh ? (
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={colors.primaryActive}
+                  colors={[colors.primaryActive]}
+                  progressViewOffset={topPad}
+                />
+              ) : undefined
+            }
             showsVerticalScrollIndicator={false}
           />
         </YStack>
       </ScrollView>
+      {canScrollX && !atEndX ? <ScrollFade /> : null}
+      {canScrollX && scrollX > 4 ? (
+        <PageButton side="left" label={t('grid.scrollPrev')} onPress={() => scrollByPage(-1)} />
+      ) : null}
+      {canScrollX && !atEndX ? (
+        <PageButton side="right" label={t('grid.scrollNext')} onPress={() => scrollByPage(1)} />
+      ) : null}
+      </View>
     </XStack>
   );
+});
+
+function trackWidth_(count: number, dayWidth: number) {
+  return count * dayWidth;
 }
+
+/** Mép phải mờ dần - gợi ý còn ngày phía sau. `pointerEvents="none"`: không nuốt cú chạm. */
+function ScrollFade() {
+  const colors = useColors();
+  return (
+    <View pointerEvents="none" style={hintStyles.fade}>
+      <LinearGradient
+        colors={[`${colors.surface}00`, colors.surface]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+    </View>
+  );
+}
+
+/**
+ * Nút ‹ › nổi GIỮA chiều cao lưới (người dùng 28/11/2026): chạm là cuộn ngang một trang. Nút ›
+ * nhích nhẹ qua lại để gợi ý còn cuộn tiếp được.
+ */
+function PageButton({
+  side,
+  label,
+  onPress,
+}: {
+  side: 'left' | 'right';
+  label: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const nudge = useSharedValue(0);
+  useEffect(() => {
+    if (side === 'right') nudge.value = withRepeat(withTiming(1, { duration: 700 }), -1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [side]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateX: nudge.value * 3 }] }));
+  return (
+    <View
+      pointerEvents="box-none"
+      style={[hintStyles.pageWrap, side === 'left' ? { left: 6 } : { right: 6 }]}
+    >
+      <Animated.View style={style}>
+        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={8}>
+          {({ pressed }) => (
+            <YStack
+              w={32}
+              h={32}
+              br={16}
+              ai="center"
+              jc="center"
+              bg={colors.surface}
+              bw={1}
+              bc={colors.borderInput}
+              opacity={pressed ? 0.7 : 1}
+              style={hintStyles.shadow}
+            >
+              <LineIcon
+                name={side === 'left' ? 'chevron-left' : 'chevron-right'}
+                size={18}
+                color={colors.text}
+              />
+            </YStack>
+          )}
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
+const hintStyles = StyleSheet.create({
+  fade: { position: 'absolute', top: 0, bottom: 0, right: 0, width: 28 },
+  pageWrap: { position: 'absolute', top: '50%', marginTop: -16, zIndex: 3 },
+  shadow: { elevation: 3, shadowColor: '#0a0d12', shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } },
+});
 
 /** Băng hàng GIỮ SỐNG của cột xe, đo bằng số MÀN mỗi phía - ảnh mạng rẻ khi giữ, đắt khi dựng lại. */
 const RESOURCE_OVERSCAN_SCREENS = 3;
@@ -309,12 +543,21 @@ const ResourceColumn = memo(function ResourceColumn({
   resources,
   collapsed,
   listHeight,
+  topPad,
+  bottomPad,
   scrollY,
+  columnRef,
+  onScroll,
   onPress,
 }: {
   resources: readonly CalendarResource[];
   collapsed: boolean;
   listHeight: number;
+  columnRef: ReturnType<typeof useAnimatedRef<Animated.ScrollView>>;
+  onScroll: ReturnType<typeof useAnimatedScrollHandler>;
+  /** Đệm trên của danh sách hàng (khối đầu trang + hàng ngày) - cột xe dịch đúng con số đó. */
+  topPad: number;
+  bottomPad: number;
   scrollY: SharedValue<number>;
   onPress: (resource: CalendarResource) => void;
 }) {
@@ -324,22 +567,31 @@ const ResourceColumn = memo(function ResourceColumn({
   const overscan = rowsPerScreen * RESOURCE_OVERSCAN_SCREENS;
 
   useAnimatedReaction(
-    () => Math.max(0, Math.floor(scrollY.value / ROW_H) - overscan),
+    () => Math.max(0, Math.floor((scrollY.value - topPad) / ROW_H) - overscan),
     (start, previous) => {
       'worklet';
       if (start !== previous) runOnJS(setFirstRow)(start);
     },
   );
 
-  const style = useAnimatedStyle(() => ({ transform: [{ translateY: -scrollY.value }] }));
 
   /* Kẹp theo danh sách HIỆN TẠI: đổi bộ lọc làm danh sách ngắn đi khi vị trí cuộn chưa kịp về 0. */
   const start = Math.min(firstRow, Math.max(0, resources.length - 1));
   const visible = resources.slice(start, start + rowsPerScreen + overscan * 2);
 
   return (
-    <View style={{ height: listHeight, overflow: 'hidden' }}>
-      <Animated.View style={style}>
+    /*
+      Vùng cuộn THẬT (người dùng 28/11/2026: kéo ở cột xe cũng phải cuộn). Tổng chiều cao bằng đúng
+      nội dung dải ngày (đệm trên + N hàng) nên hai bên luôn khớp khi `scrollTo` đồng bộ.
+    */
+    <Animated.ScrollView
+      ref={columnRef}
+      style={{ height: listHeight }}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingTop: topPad, height: topPad + resources.length * ROW_H + bottomPad }}
+    >
         <View style={{ height: start * ROW_H }} />
         {visible.map((resource) => (
           <ResourceCell
@@ -349,8 +601,7 @@ const ResourceColumn = memo(function ResourceColumn({
             onPress={onPress}
           />
         ))}
-      </Animated.View>
-    </View>
+    </Animated.ScrollView>
   );
 });
 
@@ -722,38 +973,53 @@ const EventCard = memo(function EventCard({
 
   if (!isTrip) {
     const isBlock = event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE;
+    /*
+     * Figma "Vehicle details" khoá (`24729:82414`): thẻ GỌN cao ~58, nằm giữa hàng, nền
+     * `bg/gray-50`, viền ĐỨT `stroke/gray-low300`, bo 12, đệm 12/8; ổ khoá 20 trên chữ "Đã khóa"
+     * 12/18 medium `text/gray/low`. Bề ngang vẫn trải theo khoảng ngày bị khoá.
+     */
+    const cardH = Math.min(height, BLOCK_CARD_H);
+    /* Thu bề ngang vào mỗi bên `BLOCK_CARD_INSET_X` (người dùng 28/11/2026: "giảm chiều rộng lại"). */
+    const inset = Math.min(BLOCK_CARD_INSET_X, Math.max(0, (width - 40) / 2));
     return (
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={frame}>
-        <YStack
-          f={1}
-          jc="center"
-          gap={2}
-          px={12}
-          py={4}
-          bg={colors.background}
-          bw={1}
-          bc={colors.borderInput}
-          borderStyle="dashed"
-          ov="hidden"
-          {...corners}
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={{
+          ...frame,
+          left: left + inset,
+          width: width - inset * 2,
+          top: top + (height - cardH) / 2,
+          height: cardH,
+        }}
+      >
+        {/*
+          Viền ĐỨT phải dùng MỘT bán kính chung cho cả 4 góc: Android chỉ vẽ nét đứt khi bo đều -
+          bo từng góc riêng (thẻ bị cắt mép) là nó lặng lẽ vẽ nét liền. Đệm 16 ngang / 8 dọc
+          (người dùng 28/11/2026).
+        */}
+        <View
+          style={[
+            blockCardStyles.card,
+            { backgroundColor: colors.background, borderColor: colors.borderInput },
+          ]}
         >
           <LineIcon
             name={isBlock ? 'lock-2' : 'setting-sm'}
             size={20}
             color={colors.textPlaceholder}
           />
-          {height >= MEDIUM_CARD_MIN_H ? (
-            <Text
-              col={colors.placeholder}
-              fos={typeScale.label.fontSize}
-              lh={typeScale.label.lineHeight}
-              fow={fontWeight.medium}
-              numberOfLines={1}
-            >
-              {isBlock ? t('event.blocked') : event.title}
-            </Text>
-          ) : null}
-        </YStack>
+          <Text
+            col={colors.placeholder}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            fow={fontWeight.medium}
+            numberOfLines={1}
+          >
+            {isBlock ? t('event.blocked') : event.title}
+          </Text>
+        </View>
       </Pressable>
     );
   }
@@ -790,8 +1056,12 @@ const EventCard = memo(function EventCard({
         />
         <YStack f={1} minWidth={0} gap={LINE_GAP}>
           <XStack ai="center" gap={4}>
+            {/*
+              Mã CO lại khi chật, KHÔNG giãn (`f={1}`): giãn thì ở thẻ dài (đơn nhiều ngày) dấu nguồn +
+              % đã thu bị đẩy ra tận mép phải, tách khỏi mã - người dùng 28/11/2026.
+            */}
             <Text
-              f={1}
+              flexShrink={1}
               minWidth={0}
               col={tone.accent}
               fos={typeScale.caption.fontSize}

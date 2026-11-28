@@ -60,6 +60,11 @@
     "estimateLoading": "Đang tính giá…",
     "estimateUnavailable": "Xe chưa cấu hình giá, nhập tiền ở bước sau",
     "pickHint": "Chọn một xe để xem tạm tính",
+    "stepOf": "Bước {current}/{total}",
+    "searchPlaceholderApp": "Tìm kiếm tên xe, biển số...",
+    "estimateDaysLabel": "Tạm tính {days, plural, other {# ngày}}",
+    "estimateLabel": "Tạm tính",
+    "discountBadge": "Giảm {percent}%",
     "plateLabel": "Biển số xe",
     "codeLabel": "Mã xe"
   },
@@ -696,6 +701,27 @@
     "cancelPolicy": "Chính sách huỷ"
   },
   "staffFlow": {
+    "app": {
+      "serviceTitle": "Hình thức thuê",
+      "serviceDesc": {
+        "self_drive": "Khách tự lái theo ngày linh hoạt",
+        "with_driver": "Kèm tài xế đưa đón theo lịch trình",
+        "long_term": "Gói theo tháng tối ưu giá"
+      },
+      "timeTitle": "Thời gian nhận & trả xe",
+      "durationNote": "Thời lượng thuê: {duration} · {mode}",
+      "addressTitle": "Địa chỉ nhận & trả xe",
+      "selfTab": "Tự nhận (Miễn phí)",
+      "pickupAddressLabel": "Địa chỉ nhận xe",
+      "returnSameNote": "Trả xe tại cùng địa chỉ nhận xe",
+      "driverTitle": "Điểm đón & lộ trình",
+      "summaryTitle": "Tóm tắt lịch trình",
+      "rowService": "Hình thức",
+      "rowPickup": "Nhận xe",
+      "rowReturn": "Trả xe",
+      "reviewStep": "Xem lại",
+      "reviewAction": "Xem lại yêu cầu đặt xe"
+    },
     "title": "Đặt xe cho khách",
     "pickVehicleTitle": "Chọn xe cho đơn thuê",
     "changeVehicle": "Chọn xe khác",

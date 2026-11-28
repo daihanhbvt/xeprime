@@ -469,16 +469,30 @@ export function BookingTripCardView({
           ) : null}
           {/* `.tripSummary` — body semibold `color-primary-hover` (Text/Brand/primary 2). */}
           {/* Mỗi hàng MỘT giá trị: "Thuê theo ngày" / "1 ngày" — không nối " · " (28/10/2026). */}
-          <YStack ai="flex-end">
-            <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
-              {serviceText}
-            </Text>
-            {durationText ? (
+          {owner ? (
+            <YStack ai="flex-end">
               <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
-                {durationText}
+                {serviceText}
               </Text>
-            ) : null}
-          </YStack>
+              {durationText ? (
+                <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
+                  {durationText}
+                </Text>
+              ) : null}
+            </YStack>
+          ) : (
+            /* Không có khối chủ xe (đặt hộ): MỘT hàng - dịch vụ trái, thời lượng phải (28/11/2026). */
+            <>
+              <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold}>
+                {serviceText}
+              </Text>
+              {durationText ? (
+                <Text col={colors.brandText} fos={fontSize.body} fow={fontWeight.semibold} ta="right">
+                  {durationText}
+                </Text>
+              ) : null}
+            </>
+          )}
         </XStack>
       </YStack>
     </Card>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useQuery } from '@tanstack/react-query';
@@ -11,7 +11,7 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { DataRow } from '@/components/ui/DataRow';
+import { SheetVehicleCard } from './SheetVehicleCard';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { MoneyField } from '@/components/ui/MoneyField';
@@ -33,6 +33,10 @@ const NOTE_MAX = 255;
 export interface DailyPriceSheetState {
   vehicleId: string;
   vehicleName: string;
+  /** Thẻ xe đầu tấm: tên / biển số / ảnh tách riêng (`vehicleName` là chuỗi ghép cho thông báo). */
+  vehicleTitle?: string | null;
+  vehiclePlate?: string | null;
+  vehicleImageUrl?: string | null;
   /** Giá ngày thường của xe — đối chiếu "giá mặc định" ngay trong tấm trượt. */
   weekdayPrice: string | null;
   /** Xe có cho thuê giờ không — quyết định ô "giá giờ" có hiện hay không. */
@@ -58,7 +62,7 @@ interface PriceValues {
  * Giá riêng KHÔNG đụng lịch trống của xe — đó là lý do nó không đi qua `OccupancyService` và
  * không thể sinh ra 409 trùng lịch.
  */
-export function DailyPriceSheet({
+export const DailyPriceSheet = memo(function DailyPriceSheet({
   state,
   onClose,
 }: {
@@ -74,7 +78,7 @@ export function DailyPriceSheet({
       onClose={onClose}
     />
   );
-}
+});
 
 function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: () => void }) {
   const t = useTranslations('Calendar');
@@ -234,38 +238,42 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
         open
         onClose={onClose}
         title={t('dailyPrice.title')}
+        chrome="v2"
+        headerDivider
         footer={
-          <>
-            {hasOverrides ? (
-              <Button
-                label={t('dailyPrice.restore')}
-                variant="danger"
-                onPress={() => setConfirmingRestore(true)}
-                loading={remove.isPending}
-              />
-            ) : null}
-            {/* Huỷ + Lưu giá chung một hàng (người dùng 16/11/2026). */}
-            <XStack gap={space.sm}>
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+          /*
+            Một hàng ngang như các tấm v2 khác (Đặt giá riêng toàn bộ xe): bên trái là "Khôi phục giá
+            mặc định" khi ngày đó đã có giá riêng, không có thì "Huỷ"; nút chính dải vàng bên phải.
+          */
+          <XStack gap={space.sm}>
+            <YStack flexShrink={0}>
+              {hasOverrides ? (
+                <Button
+                  label={t('dailyPrice.restore')}
+                  variant="danger"
+                  onPress={() => setConfirmingRestore(true)}
+                  loading={remove.isPending}
+                  disabled={save.isPending}
+                />
+              ) : (
                 <Button
                   label={tCommon('cancel')}
-                  icon="close-outline"
-                  variant="secondary"
+                  variant="neutral"
                   onPress={onClose}
                   disabled={save.isPending}
                 />
-              </YStack>
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-                <Button
-                  label={t('dailyPrice.submit')}
-                  icon="save-outline"
-                  onPress={() => void submit()}
-                  loading={save.isPending}
-                  disabled={rangeInvalid}
-                />
-              </YStack>
-            </XStack>
-          </>
+              )}
+            </YStack>
+            <YStack f={1}>
+              <Button
+                label={t('dailyPrice.submit')}
+                variant="gradient"
+                onPress={() => void submit()}
+                loading={save.isPending}
+                disabled={rangeInvalid}
+              />
+            </YStack>
+          </XStack>
         }
       >
         {rangeInvalid ? (
@@ -276,8 +284,13 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
         {formError ? <Callout tone="danger">{formError}</Callout> : null}
 
         <YStack gap={space.md}>
-          <DataRow label={t('dailyPrice.vehicle')} value={state.vehicleName} />
-          <DataRow label={t('dailyPrice.defaultPrice')} value={defaultPriceText} block />
+          <SheetVehicleCard
+            name={state.vehicleTitle ?? state.vehicleName}
+            plate={state.vehiclePlate ?? null}
+            imageUrl={state.vehicleImageUrl ?? null}
+            recyclingKey={state.vehicleId}
+            subtitle={defaultPriceText}
+          />
 
           <FieldBox
             label={t('dailyPrice.appliesTo')}

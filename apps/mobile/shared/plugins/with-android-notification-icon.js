@@ -73,8 +73,13 @@ function withManifestMeta(config) {
 }
 
 /**
- * `source`: bộ ảnh nguồn trong `assets/images/notification/` — `notification_icon` (app XePrime, xe + Y)
- * hoặc `notification_icon_partner` (app Partner, vô-lăng). Mỗi app một logo của CHÍNH nó.
+ * `source`: bộ ảnh nguồn trong `assets/images/notification/` — `notification_icon` (app XePrime)
+ * hoặc `notification_icon_partner` (app Partner).
+ *
+ * Từ 28/11/2026 cả hai bộ là CÙNG nét logo xe + Y (tách từ `xeprime-icon.png`, trắng trên nền trong
+ * suốt, KHÔNG khung vuông): bản cũ là khối vuông trắng khoét logo âm bản, ở 24dp thành một ô trắng;
+ * bản Partner cũ là vô-lăng, không phải logo app. Chữ "PARTNER" không đọc được ở 24dp nên không đưa vào.
+ * Giữ hai tên file để Partner đổi riêng được về sau.
  */
 module.exports = function withAndroidNotificationIcon(config, { source = 'notification_icon' } = {}) {
   return withManifestMeta(withIconFiles(config, source));

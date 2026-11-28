@@ -16,10 +16,9 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Chip } from '@/components/ui/Chip';
-import { RangeFieldBox } from '@/components/ui/RangeFieldBox';
+import { RangeSelectBox } from '@/components/ui/RangeSelectBox';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { SearchInput } from '@/components/ui/SearchInput';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
 import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
@@ -37,7 +36,7 @@ import { queryKeys } from '@/queries/query-keys';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { bookingsApi } from '../api';
-import { StaffVehicleCard } from './StaffVehicleCard';
+import { StaffVehicleCard, StaffVehicleCardSkeleton } from './StaffVehicleCard';
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -91,7 +90,6 @@ export function StaffVehiclePicker({
   const fmt = useAppFormat();
   const dl = useDomainLabel();
   const t = useTranslations('BookingRequests.vehiclePicker');
-  const tFlow = useTranslations('BookingRequests.flow');
   const tCommon = useTranslations('Common.actions');
   const errorMessage = useErrorMessage();
 
@@ -144,9 +142,13 @@ export function StaffVehiclePicker({
 
   const select = useCallback((vehicle: VehicleBookingPickerItem) => setSelectedId(vehicle.id), []);
 
+  /*
+   * Figma "Sticky Footer" `24565:130410`: hàng "Tạm tính N ngày" (12 mờ) + tổng 16 đậm vàng bên phải;
+   * dưới là [Quay lại] (rộng theo chữ) + [Tiếp tục] (gradient, phần còn lại).
+   */
   function renderEstimate() {
     const hint = (text: string) => (
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+      <Text col={colors.placeholder} fos={12} lh={18}>
         {text}
       </Text>
     );
@@ -154,31 +156,27 @@ export function StaffVehiclePicker({
     if (!quoteParams) return null;
     if (quoteQ.isLoading) return hint(t('estimateLoading'));
     if (quoteQ.isError || !quoteQ.data) return hint(t('estimateUnavailable'));
-    const value = fmt.money(quoteQ.data.totalAmount);
-    const amount = (chunks: ReactNode) => (
-      <Text col={colors.price} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-        {chunks}
-      </Text>
-    );
     return (
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {quoteQ.data.days
-          ? t.rich('estimateDays', { days: quoteQ.data.days, value, amount })
-          : t.rich('estimate', { value, amount })}
-      </Text>
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <Text col={colors.placeholder} fos={12} lh={18}>
+          {quoteQ.data.days ? t('estimateDaysLabel', { days: quoteQ.data.days }) : t('estimateLabel')}
+        </Text>
+        <Text col={colors.primary} fos={16} lh={24} fow={fontWeight.semibold}>
+          {fmt.money(quoteQ.data.totalAmount)}
+        </Text>
+      </XStack>
     );
   }
 
   const footer = (
-    <YStack gap={space.sm}>
+    <YStack gap={12}>
       {renderEstimate()}
-      <XStack gap={space.sm}>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-          <Button label={tCommon('back')} variant="secondary" onPress={onCancel} />
-        </YStack>
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+      <XStack gap={8}>
+        <Button label={tCommon('back')} variant="secondary" block={false} onPress={onCancel} />
+        <YStack f={1}>
           <Button
             label={tCommon('next')}
+            variant="gradient"
             disabled={!selectable || !pickedRange}
             onPress={() => {
               if (selectable && pickedRange) onContinue(selectable, pickedRange);
@@ -193,7 +191,15 @@ export function StaffVehiclePicker({
 
   return (
     <>
-      <AppHeader title={t('title')} subtitle={t('subtitle')} onBack={onCancel} />
+      <AppHeader
+        title={t('title')}
+        onBack={onCancel}
+        right={
+          <Text col={colors.placeholder} fos={14} lh={20}>
+            {t('stepOf', { current: 1, total: 2 })}
+          </Text>
+        }
+      />
       <Screen
         edges={['left', 'right', 'bottom']}
         footer={footer}
@@ -203,59 +209,59 @@ export function StaffVehiclePicker({
         onNearEnd={picker.fetchNextPage}
       >
         <YStack gap={space.md}>
-          <BranchFilterField filter={branch} value={branchId} block />
-          {branchId && branch.selectedLabel ? (
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('branchHint', { branch: branch.selectedLabel })}
-            </Text>
-          ) : null}
-
-          <YStack gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-              {t('typeLabel')}
-            </Text>
-            <XStack gap={space.xs} accessibilityRole="radiogroup" accessibilityLabel={t('typeLabel')}>
-              {VEHICLE_TYPE_VALUES.map((type) => (
-                <Chip
-                  key={type}
-                  size="sm"
-                  label={dl('vehicleType', type)}
-                  selected={vehicleType === type}
-                  onPress={() => setVehicleType(type)}
+          {/*
+            Figma "Bộ lọc xe trống" `24565:130447`: thẻ trắng viền mảnh bo 16, đệm 12, các hàng cách 8 -
+            [chi nhánh ▾][Ô tô | Xe máy] · ô tìm thấp (12/18) · ô khung giờ một dòng + icon lịch.
+          */}
+          <YStack bg={colors.surface} bw={1} bc={colors.border} br={16} p={12} gap={8}>
+            <XStack gap={8} ai="center">
+              {branch.visible ? (
+                <YStack f={1} minWidth={0}>
+                  <BranchFilterField filter={branch} value={branchId} select />
+                </YStack>
+              ) : null}
+              <YStack {...(branch.visible ? {} : { f: 1 })}>
+                <SegmentedTabs
+                  fit
+                  items={VEHICLE_TYPE_VALUES.map((type) => ({
+                    key: type,
+                    label: dl('vehicleType', type),
+                    hug: branch.visible,
+                  }))}
+                  value={vehicleType}
+                  onChange={setVehicleType}
                 />
-              ))}
+              </YStack>
             </XStack>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              label={t('searchLabel')}
+              placeholder={t('searchPlaceholderApp')}
+              variant="field"
+            />
+            <RangeSelectBox
+              label={t('timeLabel')}
+              placeholder={t('timePlaceholder')}
+              value={
+                range.pickupAt && range.returnAt
+                  ? fmt.dateTimeRange(appWallClockToIso(range.pickupAt), appWallClockToIso(range.returnAt))
+                  : ''
+              }
+              onPress={() => {
+                setRangeDraft(range);
+                setScheduling(true);
+              }}
+            />
           </YStack>
-
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            label={t('searchLabel')}
-            placeholder={t('searchPlaceholder')}
-            variant="field"
-          />
-
-          <RangeFieldBox
-            label={t('timeLabel')}
-            startValue={range.pickupAt ? fmt.rentalPoint(range.pickupAt) : ''}
-            endValue={range.returnAt ? fmt.rentalPoint(range.returnAt) : ''}
-            {...(range.pickupAt && range.returnAt && pickedRange
-              ? { durationText: fmt.rentalDuration(range.pickupAt, range.returnAt) }
-              : {})}
-            hint={pickedRange ? tFlow('time.changeHint') : t('timePlaceholder')}
-            required
-            onPress={() => {
-              setRangeDraft(range);
-              setScheduling(true);
-            }}
-          />
 
           {!pickedRange ? <Callout tone="info" title={t('timeRequired')} /> : null}
 
           {picker.isInitialLoading ? (
-            <YStack gap={space.md}>
-              <Skeleton height={260} />
-              <Skeleton height={260} />
+            <YStack gap={12}>
+              {Array.from({ length: 4 }, (_, i) => (
+                <StaffVehicleCardSkeleton key={i} />
+              ))}
             </YStack>
           ) : null}
 
@@ -296,7 +302,7 @@ export function StaffVehiclePicker({
           ) : null}
 
           {showList && picker.vehicles.length > 0 ? (
-            <YStack gap={space.md} accessibilityLabel={t('gridLabel')}>
+            <YStack gap={12} accessibilityLabel={t('gridLabel')}>
               {picker.vehicles.map((vehicle) => (
                 <StaffVehicleCard
                   key={vehicle.id}
@@ -307,7 +313,7 @@ export function StaffVehiclePicker({
               ))}
               {/* Đáy danh sách: trạng thái của TRANG KẾ (không đụng tới xe đã hiện). */}
               {picker.isFetchingNextPage ? (
-                <Skeleton height={120} />
+                <StaffVehicleCardSkeleton />
               ) : picker.appendError ? (
                 <XStack ai="center" jc="center" gap={space.sm}>
                   <Text col={colors.textMuted} fos={fontSize.bodySm}>

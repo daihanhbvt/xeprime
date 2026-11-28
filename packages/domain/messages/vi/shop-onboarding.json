@@ -118,10 +118,13 @@
   "packageWaiting": {
     "title": "Đăng ký gian hàng thành công!",
     "status": "Đang chờ kích hoạt",
+    "leadApp": "Gian hàng của bạn đã được tạo và đang chờ XePrime kích hoạt.",
+    "statusLabel": "Trạng thái",
     "next": {
       "review": "XePrime sẽ liên hệ tư vấn gói phù hợp cho gian hàng của bạn.",
       "notify": "Bạn sẽ nhận được thông báo ngay khi gian hàng được kích hoạt.",
-      "refresh": "Màn này tự cập nhật khi gian hàng được kích hoạt."
+      "refresh": "Màn này tự cập nhật khi gian hàng được kích hoạt.",
+      "reviewApp": "XePrime sẽ liên hệ để hỗ trợ kích hoạt gian hàng của bạn."
     }
   },
   "signup": {
@@ -196,7 +199,8 @@
     },
     "submit": {
       "commission": "Đăng ký & đăng xe đầu tiên",
-      "package": "Đăng ký & chọn gói"
+      "package": "Đăng ký & chọn gói",
+      "packageApp": "Đăng ký giúp tôi"
     },
     "changeTrack": "Đổi cách cho thuê",
     "hasAccount": "Đã có tài khoản đối tác?",

@@ -18,7 +18,7 @@ const SWATCH = 8;
 const SWATCH_RADIUS = 2;
 /** Khoảng cách ô ↔ chữ 6, giữa hai mục 20, giữa hai hàng 4 (Figma `24729:83807`). */
 const ITEM_GAP = 6;
-const COLUMN_GAP = 20;
+const LEGEND_COLUMNS = 3;
 const ROW_GAP = 4;
 
 /**
@@ -62,32 +62,48 @@ export const CalendarLegend = memo(function CalendarLegend() {
     { key: 'paidFull', label: t('legend.paidFull'), fill: colors.success },
   ];
 
+  /*
+   * Lưới 3 CỘT thẳng hàng (người dùng 28/11/2026): chia mục thành từng hàng 3, mỗi cột rộng đều
+   * nhau (`f={1}`) nên ô màu của các hàng gióng thẳng; hàng cuối thiếu thì chừa ô trống.
+   */
+  const rows: (typeof items)[] = [];
+  for (let i = 0; i < items.length; i += LEGEND_COLUMNS) rows.push(items.slice(i, i + LEGEND_COLUMNS));
+
   return (
-    <XStack
-      flexWrap="wrap"
-      columnGap={COLUMN_GAP}
-      rowGap={ROW_GAP}
-      accessibilityLabel={t('legend.ariaLabel')}
-    >
-      {items.map((item) => (
-        <XStack key={item.key} ai="center" gap={ITEM_GAP}>
-          <YStack
-            w={SWATCH}
-            h={SWATCH}
-            br={SWATCH_RADIUS}
-            bg={item.fill}
-            {...(item.border ? { bw: 1, bc: item.border } : {})}
-          />
-          <Text
-            col={colors.textMuted}
-            fos={typeScale.label.fontSize}
-            lh={typeScale.label.lineHeight}
-            fow={fontWeight.regular}
-          >
-            {item.label}
-          </Text>
+    <YStack gap={ROW_GAP} accessibilityLabel={t('legend.ariaLabel')}>
+      {rows.map((row, r) => (
+        <XStack key={r} gap={8}>
+          {Array.from({ length: LEGEND_COLUMNS }, (_, c) => {
+            const item = row[c];
+            return (
+              <XStack key={item?.key ?? `empty-${c}`} f={1} minWidth={0} ai="center" gap={ITEM_GAP}>
+                {item ? (
+                  <>
+                    <YStack
+                      w={SWATCH}
+                      h={SWATCH}
+                      br={SWATCH_RADIUS}
+                      bg={item.fill}
+                      {...(item.border ? { bw: 1, bc: item.border } : {})}
+                    />
+                    <Text
+                      f={1}
+                      minWidth={0}
+                      col={colors.textMuted}
+                      fos={typeScale.label.fontSize}
+                      lh={typeScale.label.lineHeight}
+                      fow={fontWeight.regular}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                  </>
+                ) : null}
+              </XStack>
+            );
+          })}
         </XStack>
       ))}
-    </XStack>
+    </YStack>
   );
 });

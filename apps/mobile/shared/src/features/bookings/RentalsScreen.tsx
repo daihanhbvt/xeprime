@@ -78,6 +78,7 @@ import {
 import { useBookingHistory } from './hooks/use-booking-history';
 import { useBookingSourceLabels, useBookingsPage } from './hooks/use-bookings';
 import { useCanCreateBooking } from './hooks/use-can-create-booking';
+import { usePrefetchBookingPicker } from '@/features/vehicles/hooks/use-booking-picker-vehicles';
 import { usePaymentArrivalToast } from './hooks/use-payment-arrival-toast';
 import {
   RENTAL_STAGE,
@@ -696,6 +697,9 @@ export function RentalsScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `stageQuery` đổi mỗi render nhưng chỉ đọc truy vấn.
     [t, tCommon, selectRail, decisionActionFor, startApprove, startReject, startCancel, openRequest, openBooking, canHandle, receiveBooking],
   );
+
+  // Tải sẵn danh sách xe của bước chọn xe - bấm "Tạo đơn" là có xe ngay (cache), làm mới ngầm sau.
+  usePrefetchBookingPicker(canCreate, branchId);
 
   if (!permissions.isLoading && visibleStages.length === 0) {
     return (

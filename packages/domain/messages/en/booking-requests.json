@@ -60,6 +60,11 @@
     "estimateLoading": "Calculating price…",
     "estimateUnavailable": "This vehicle has no price set, enter the amount in the next step",
     "pickHint": "Pick a vehicle to see the estimate",
+    "stepOf": "Step {current}/{total}",
+    "searchPlaceholderApp": "Search vehicle name, plate...",
+    "estimateDaysLabel": "Estimate for {days, plural, one {# day} other {# days}}",
+    "estimateLabel": "Estimate",
+    "discountBadge": "{percent}% off",
     "plateLabel": "Plate number",
     "codeLabel": "Vehicle code"
   },
@@ -696,6 +701,27 @@
     "cancelPolicy": "Cancellation policy"
   },
   "staffFlow": {
+    "app": {
+      "serviceTitle": "Rental type",
+      "serviceDesc": {
+        "self_drive": "Customer drives, flexible daily rental",
+        "with_driver": "Includes a driver for the trip",
+        "long_term": "Monthly packages at the best price"
+      },
+      "timeTitle": "Pick-up & return time",
+      "durationNote": "Rental length: {duration} · {mode}",
+      "addressTitle": "Pick-up & return address",
+      "selfTab": "Self pick-up (Free)",
+      "pickupAddressLabel": "Pick-up address",
+      "returnSameNote": "Return at the same pick-up address",
+      "driverTitle": "Pick-up point & route",
+      "summaryTitle": "Trip summary",
+      "rowService": "Type",
+      "rowPickup": "Pick-up",
+      "rowReturn": "Return",
+      "reviewStep": "Review",
+      "reviewAction": "Review booking request"
+    },
     "title": "Book for a customer",
     "pickVehicleTitle": "Choose a vehicle for the booking",
     "changeVehicle": "Choose another vehicle",

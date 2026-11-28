@@ -347,7 +347,7 @@ export function PartnerSignupForm({
       hideFooterWhileTyping
       footer={
         <Button
-          label={t(`signup.submit.${track}`)}
+          label={isPackageTrack ? t('signup.submit.packageApp') : t(`signup.submit.${track}`)}
           variant="gradient"
           size="lg"
           icon="arrow-forward"
