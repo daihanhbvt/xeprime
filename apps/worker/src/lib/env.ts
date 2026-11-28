@@ -13,13 +13,6 @@ export const FIRESTORE_ENABLED = (process.env.FIRESTORE_ENABLED ?? '').toLowerCa
  */
 export const PUSH_ENABLED = (process.env.PUSH_ENABLED ?? '').toLowerCase() === 'true';
 
-/**
- * Gốc web công khai để lấy LOGO MÀU gắn vào thông báo đẩy Android (ảnh lớn bên phải, người dùng
- * 28/11/2026). Icon nhỏ của Android buộc là nét đơn sắc, nên logo màu chỉ đi qua `imageUrl`.
- * Vd. `https://stg.xeprime.vn`. Thiếu ⇒ không gắn ảnh, thông báo vẫn gửi như cũ.
- */
-export const PUSH_IMAGE_BASE_URL = (process.env.PUSH_IMAGE_BASE_URL ?? '').trim().replace(/\/+$/, '');
-
 /** Số tin gần nhất giữ lại trên Firestore mỗi hội thoại (retention). Postgres vẫn giữ đủ. */
 export const CHAT_FIRESTORE_KEEP = parsePositiveInt(process.env.CHAT_FIRESTORE_KEEP, 50);
 

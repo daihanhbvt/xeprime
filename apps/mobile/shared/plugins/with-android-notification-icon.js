@@ -18,7 +18,7 @@ const { withAndroidManifest, withDangerousMod, AndroidConfig } = require('expo/c
  */
 const ICON_NAME = 'notification_icon';
 const COLOR_NAME = 'notification_icon_color';
-const ACCENT = '#E9AC29';
+const ACCENT = '#F7C21B';
 const DENSITIES = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
 const SOURCE_DIR = path.join(__dirname, '..', 'assets', 'images', 'notification');
 

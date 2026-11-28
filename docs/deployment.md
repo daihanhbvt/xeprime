@@ -801,7 +801,6 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `MOMO_PARTNER_CODE` · `MOMO_API_BASE_URL` | trống | đi cùng hai Secret `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` — bốn cái cùng khai hoặc cùng trống. Sandbox `https://test-payment.momo.vn` |
 | `VNPAY_TMN_CODE` · `VNPAY_PAYMENT_URL` · `VNPAY_API_URL` | trống | đi cùng Secret `VNPAY_HASH_SECRET` — bốn cái cùng khai hoặc cùng trống. IPN URL khai ở portal VNPAY: `${API_PUBLIC_URL}/payment-gateway/vnpay/ipn` |
 | `FIRESTORE_ENABLED` | `false` | |
-| `PUSH_IMAGE_BASE_URL` | trống | gốc web công khai (vd. `https://stg.xeprime.vn`) để worker gắn LOGO MÀU của app vào thông báo Android (`/brand/xeprime-icon-192.png` · `xeprime-partner-icon-192.png`). Trống thì không gắn ảnh |
 | `PUSH_ENABLED` | `false` | thông báo đẩy FCM — ĐỘC LẬP với `FIRESTORE_ENABLED`, dùng chung bộ `FIREBASE_*`. Bật thì worker gửi thật (`docs/push-notifications.md`) |
 | `FIREBASE_PROJECT_ID` · `FIREBASE_CLIENT_EMAIL` | trống | là ĐỊNH DANH, không phải bí mật |
 | `GOOGLE_OAUTH_CLIENT_ID` · `FACEBOOK_APP_ID` | trống hoặc thật | client id đi trong URL authorize ⇒ công khai theo thiết kế |

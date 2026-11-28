@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "vn.xeprime.partnerapp",
-      "versionCode": 11,
+      "versionCode": 12,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "../shared/assets/images/xeprime-partner-icon-foreground.png",

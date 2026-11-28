@@ -48,8 +48,6 @@ export interface PushMessage {
   androidChannelId: AndroidNotificationChannel;
   /** Tin cùng khoá thay chỗ nhau trên khay thay vì xếp chồng. `null` = không gộp. */
   collapseKey: string | null;
-  /** Ảnh lớn (logo màu của app) - Android hiện bên phải tin. `null` = không có. */
-  imageUrl?: string | null;
 }
 
 export interface PushSendResult {
@@ -85,7 +83,6 @@ function toAdminMessage(
         // Banner bật lên đầu màn hình là do MỨC KÊNH quyết định, server không ghi đè được: bản app
         // cũ chưa có kênh thì tin rơi về kênh dự phòng mức DEFAULT, chỉ vào khay.
         channelId: message.androidChannelId,
-        ...(message.imageUrl ? { imageUrl: message.imageUrl } : {}),
         // Âm báo MẶC ĐỊNH của máy — kênh dự phòng của Firebase trên một số máy im lặng nếu gói không
         // khai `sound` (người dùng báo 28/10/2026: có thông báo nhưng không kêu).
         sound: 'default',
