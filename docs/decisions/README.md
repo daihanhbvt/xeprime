@@ -25,7 +25,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0008](0008-public-listings-sync.md) | Đồng bộ public listing qua một writer | Accepted; **điều 2 bị 0030 ghi đè** |
 | [0009](0009-chat-firestore-projection.md) | PostgreSQL là nguồn thật của chat, Firestore là projection | Accepted |
 | [0010](0010-billing-plans-subscriptions.md) | Subscription append-only | Accepted; kỳ hạn tháng lịch + pricing theo 0028/0041 (0041 gỡ `plans.price`/`duration_days`/`max_vehicles`) |
-| [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn theo tháng lịch | Accepted |
+| [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn theo tháng lịch (bổ sung 28/11/2026: bước tìm hỏi ngày nhận + gói, lọc xe rảnh phần lõi) | Accepted |
 | [0012](0012-i18n-shared-url-cookie-locale.md) | i18n vi/en dùng chung URL và message source | Accepted |
 | [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded — điều 1–4 còn hiệu lực**; điều 5 phần lớn bị 0028/0032/0036 thay; giả định một người một tài khoản bị 0053 thay |
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát tiền gói | Accepted; phạm vi mở rộng bởi 0022/0028 |

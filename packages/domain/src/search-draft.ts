@@ -1,4 +1,12 @@
-import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from './datetime';
+import {
+  DAY_PARAM_FORMAT,
+  appWallClockToIso,
+  nowInAppTz,
+  startOfAppDay,
+  toAppTz,
+  type Dayjs,
+} from './datetime';
+import { longTermReturnFromWallClock } from './long-term';
 import {
   RENTAL_MODE,
   ROUTE_TYPE,
@@ -6,8 +14,10 @@ import {
   SERVICE_TYPE_VALUES,
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
+  isLongTermPackageMonths,
   isRouteType,
   isVehicleServiceTypeAllowed,
+  type LongTermPackageMonths,
   type MarketplaceFilters,
   type RentalMode,
   type RouteType,
@@ -33,8 +43,10 @@ import {
  * Hai dịch vụ này hỏi cùng một thứ: một khoảng nhận–trả. Tách thành hai bản nháp rời chỉ tạo
  * ra một cách mất dữ liệu mới (đổi tab là mất lịch vừa chọn) mà không mua lại điều gì — chúng
  * không bao giờ được phát ra cùng lúc. **Dài hạn** thì khác hẳn về CHẤT: nó không có khoảng
- * ngày nào cả (ADR 0011 — khách chọn GÓI và nêu nguyện vọng ngày nhận SAU khi đã chọn xe), nên
- * nó không có ô lịch riêng chứ không phải "có ô lịch nhưng để trống".
+ * nhận–trả nào (ADR 0011 — gian hàng chốt giờ nhận lúc duyệt, ngày trả do server tính từ gói),
+ * nên nó có bản nháp RIÊNG `longTerm`: một NGÀY nhận mong muốn + một GÓI (28/11/2026, Figma
+ * `22647:39581`). Hai thứ đó đi vào URL bằng khoá riêng (`ltFrom` · `ltMonths`), không mượn
+ * `pickupAt`/`returnAt`, để đi tự lái → dài hạn → tự lái vẫn lấy lại đúng lịch cũ.
  */
 export type { RentalMode };
 
@@ -47,6 +59,86 @@ export interface SearchDraft {
   rental: { pickupAt: Dayjs | null; returnAt: Dayjs | null; mode: RentalMode };
   /** Lộ trình — chỉ có nghĩa với CÓ TÀI XẾ; là ngữ cảnh báo giá, không phải chiều lọc. */
   routeType: RouteType;
+  /** Ngày nhận mong muốn + gói — chỉ có nghĩa với DÀI HẠN. Luôn có giá trị (gợi ý sẵn). */
+  longTerm: LongTermPick;
+}
+
+/**
+ * Lựa chọn thời gian của thuê dài hạn ở bước TÌM: ngày nhận mong muốn (`YYYY-MM-DD`, lịch Việt
+ * Nam) và gói. Đây là NGUYỆN VỌNG, không phải lịch: giờ nhận do gian hàng chốt lúc duyệt.
+ */
+export interface LongTermPick {
+  fromDate: string;
+  months: LongTermPackageMonths;
+}
+
+/** Gói gợi ý sẵn ở ô "Thời gian thuê" khi khách chưa chọn (quyết định sản phẩm 28/11/2026). */
+export const DEFAULT_LONG_TERM_MONTHS: LongTermPackageMonths = 3;
+
+/** Ngày nhận gợi ý = hôm nay + chừng này ngày: một tuần để hai bên kịp chuẩn bị xe và hợp đồng. */
+export const DEFAULT_LONG_TERM_LEAD_DAYS = 7;
+
+/** Gợi ý ngày nhận + gói khi URL không nói gì (hoặc nói một ngày đã qua). */
+export function defaultLongTermPick(now: Dayjs = nowInAppTz()): LongTermPick {
+  return {
+    fromDate: now.add(DEFAULT_LONG_TERM_LEAD_DAYS, 'day').format(DAY_PARAM_FORMAT),
+    months: DEFAULT_LONG_TERM_MONTHS,
+  };
+}
+
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * `ltFrom`/`ltMonths` trên URL → lựa chọn dài hạn. Ngày không có thật, ngày đã qua hay gói ngoài
+ * sáu gói của ADR 0011 rơi về gợi ý: một link chia sẻ từ tuần trước không được mở ra một ngày
+ * nhận nằm trong quá khứ.
+ */
+export function longTermPickFromFilters(
+  filters: Pick<MarketplaceFilters, 'ltFrom' | 'ltMonths'>,
+  now: Dayjs = nowInAppTz(),
+): LongTermPick {
+  const fallback = defaultLongTermPick(now);
+  const raw = filters.ltFrom?.trim() ?? '';
+  const valid =
+    DAY_KEY.test(raw) &&
+    toAppTz(startOfAppDay(raw)).format(DAY_PARAM_FORMAT) === raw &&
+    raw >= now.format(DAY_PARAM_FORMAT);
+  return {
+    fromDate: valid ? raw : fallback.fromDate,
+    months: isLongTermPackageMonths(filters.ltMonths) ? filters.ltMonths : fallback.months,
+  };
+}
+
+/** Ngày trả DỰ KIẾN (`YYYY-MM-DD`) = ngày nhận + N tháng lịch, cùng hàm server dùng (ADR 0011). */
+export function longTermReturnDate(pick: LongTermPick): string {
+  return longTermReturnFromWallClock(toAppTz(startOfAppDay(pick.fromDate)), pick.months).format(
+    DAY_PARAM_FORMAT,
+  );
+}
+
+/**
+ * Khoảng để hỏi API "xe nào RẢNH" cho một lựa chọn dài hạn — chỉ phần LÕI mà mọi giờ nhận khả dĩ
+ * đều chiếm: từ hết ngày nhận tới đầu ngày trả.
+ *
+ * Giờ nhận do gian hàng chốt lúc duyệt (ADR 0011), nên khoảng thật là [ngày nhận h, ngày trả h)
+ * với một giờ h chưa biết. Phần chung của mọi h là [00:00 ngày nhận + 1 ngày, 00:00 ngày trả):
+ * xe vướng lịch trong phần đó thì không giờ nào duyệt được (chống trùng ở DB từ chối, ADR 0006),
+ * còn xe chỉ vướng buổi sáng ngày nhận vẫn hiện vì gian hàng chốt giờ chiều là xong. Cách này
+ * KHÔNG BAO GIỜ loại oan một xe; nó chỉ có thể để sót xe vướng lịch ở cả hai đầu cùng lúc.
+ *
+ * Gửi API qua chính `pickupAt`/`returnAt` của bộ lọc xe rảnh đang có — không có endpoint mới.
+ * Trả `null` khi không phải dài hạn hoặc URL chưa mang lựa chọn.
+ */
+export function longTermAvailabilityWindow(
+  filters: Pick<MarketplaceFilters, 'serviceType' | 'ltFrom' | 'ltMonths'>,
+  now: Dayjs = nowInAppTz(),
+): { pickupAt: string; returnAt: string } | null {
+  if (filters.serviceType !== SERVICE_TYPE.LONG_TERM || !filters.ltFrom) return null;
+  const pick = longTermPickFromFilters(filters, now);
+  return {
+    pickupAt: startOfAppDay(pick.fromDate).add(1, 'day').toISOString(),
+    returnAt: startOfAppDay(longTermReturnDate(pick)).toISOString(),
+  };
 }
 
 /** Các key mà thẻ tìm kiếm SỞ HỮU — nó ghi đủ bộ này mỗi lần, không để sót giá trị cũ. */
@@ -58,6 +150,8 @@ export const SEARCH_OWNED_KEYS = [
   'pickupAt',
   'returnAt',
   'hourly',
+  'ltFrom',
+  'ltMonths',
 ] as const satisfies ReadonlyArray<keyof MarketplaceFilters>;
 
 /**
@@ -84,8 +178,8 @@ export function serviceTypesFor(vehicleType: VehicleType): readonly ServiceType[
 /**
  * Dịch vụ này có hỏi khoảng nhận–trả ở bước TÌM không.
  *
- * Dài hạn: **không** (ADR 0011). Khách lọc ra xe cho thuê dài hạn trước, rồi mới chọn gói
- * 1/2/3/6/9/12 tháng và nêu nguyện vọng ngày nhận trong luồng gửi yêu cầu của TỪNG xe.
+ * Dài hạn: **không** (ADR 0011) — nó hỏi NGÀY nhận mong muốn + gói ({@link LongTermPick}), thứ
+ * được mang sang thẻ đặt xe của từng xe để điền sẵn; gian hàng vẫn chốt lịch thật lúc duyệt.
  */
 export function serviceUsesRentalRange(serviceType: ServiceType): boolean {
   return serviceType !== SERVICE_TYPE.LONG_TERM;
@@ -192,6 +286,7 @@ export function draftFromFilters(
       mode: filters.hourly ? RENTAL_MODE.HOURLY : RENTAL_MODE.DAILY,
     },
     routeType: isRouteType(filters.routeType) ? filters.routeType : ROUTE_TYPE.IN_CITY,
+    longTerm: longTermPickFromFilters(filters, now),
   };
 }
 
@@ -202,9 +297,11 @@ export function draftFromFilters(
  * `undefined` = XOÁ key. Nhờ vậy đổi từ tự lái sang dài hạn là `pickupAt`/`returnAt`/`hourly`/
  * `routeType` biến mất thật, không nằm lại như tham số ma.
  *
- * Dài hạn KHÔNG phát: `pickupAt`, `returnAt`, `hourly`, `routeType` — và cũng không có
- * `packageMonths`/`pickupPreference`/`requestedPickupDate`, vì gói và nguyện vọng ngày nhận
- * thuộc luồng gửi yêu cầu của TỪNG xe, không phải bộ lọc marketplace (ADR 0011).
+ * Dài hạn KHÔNG phát: `pickupAt`, `returnAt`, `hourly`, `routeType`. Nó phát `ltFrom` + `ltMonths`
+ * (ngày nhận mong muốn + gói): kết quả chỉ giữ xe rảnh trong phần lõi của khoảng đó
+ * ({@link longTermAvailabilityWindow}) và thẻ đặt xe của từng xe điền sẵn hai giá trị này. Các
+ * khoá của luồng gửi yêu cầu (`packageMonths`/`pickupPreference`/`requestedPickupDate`) vẫn KHÔNG
+ * lên URL tìm kiếm.
  */
 export type SearchFilterPatch = {
   [K in keyof MarketplaceFilters]?: MarketplaceFilters[K] | undefined;
@@ -232,5 +329,7 @@ export function draftToFilterPatch(draft: SearchDraft): SearchFilterPatch {
         : undefined
       : undefined,
     hourly: usesRange && draft.rental.mode === RENTAL_MODE.HOURLY ? true : undefined,
+    ltFrom: usesRange ? undefined : draft.longTerm.fromDate,
+    ltMonths: usesRange ? undefined : draft.longTerm.months,
   };
 }

@@ -62,6 +62,13 @@ export interface MarketplaceFilters {
   province?: string;
   pickupAt?: string;
   returnAt?: string;
+  /**
+   * Thuê DÀI HẠN: ngày nhận mong muốn (`YYYY-MM-DD`, lịch Việt Nam) + gói tháng. Không gửi thẳng
+   * API: client đổi thành `pickupAt`/`returnAt` của phần lõi (`longTermAvailabilityWindow` ở
+   * @xeprime/domain) để lọc xe rảnh, và mang sang trang xe để điền sẵn thẻ đặt xe.
+   */
+  ltFrom?: string;
+  ltMonths?: number;
   brand?: string[];
   bodyType?: string[];
   /** Phân khúc xe máy — chiều lọc đối xứng với `bodyType` của ô tô. */

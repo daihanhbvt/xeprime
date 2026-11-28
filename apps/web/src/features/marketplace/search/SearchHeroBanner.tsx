@@ -5,9 +5,12 @@ import { useState } from 'react';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
+import { cx } from '@/lib/cx';
 import { LocationPicker } from './LocationPicker';
+import { LongTermDateField, LongTermMonthsField } from './LongTermFields';
 import { QuickFilterPills } from './QuickFilterPills';
 import { useSearchExperience } from './search-context';
+import { serviceUsesRentalRange } from './search-draft';
 import { VehicleTypePicker } from './VehicleTypePicker';
 import styles from './SearchHeroBanner.module.css';
 
@@ -23,7 +26,9 @@ export function SearchHeroBanner({
   const t = useTranslations('Marketplace.results');
   const tFilters = useTranslations('Marketplace.filterPanel');
   const { filters, setFilters } = useMarketplaceFilters();
-  const { draft, setRentalRange, setRentalMode } = useSearchExperience();
+  const { draft, setRentalRange, setRentalMode, setLongTerm } = useSearchExperience();
+  /* Dài hạn không có khoảng nhận–trả (ADR 0011): ô thời gian là ngày nhận mong muốn + gói. */
+  const usesRange = serviceUsesRentalRange(draft.serviceType);
 
   const [keyword, setKeyword] = useState(filters.q ?? '');
 
@@ -74,17 +79,36 @@ export function SearchHeroBanner({
 
             <span className={styles.divider} aria-hidden />
 
-            <div className={styles.dateWrap}>
-              <RentalDateTimeRangeField
-                value={draft.rental}
-                onChange={setRentalRange}
-                mode={draft.rental.mode}
-                onModeChange={setRentalMode}
-                prefix={<LineIcon name="calendar-2" className={styles.calendarIcon} />}
-                compactPoint
-                className={styles.inlinePicker}
-              />
-            </div>
+            {usesRange ? (
+              <div className={styles.dateWrap}>
+                <RentalDateTimeRangeField
+                  value={draft.rental}
+                  onChange={setRentalRange}
+                  mode={draft.rental.mode}
+                  onModeChange={setRentalMode}
+                  prefix={<LineIcon name="calendar-2" className={styles.calendarIcon} />}
+                  compactPoint
+                  className={styles.inlinePicker}
+                />
+              </div>
+            ) : (
+              <div className={styles.longTermWrap}>
+                <LongTermDateField
+                  value={draft.longTerm}
+                  onChange={setLongTerm}
+                  withFromPrefix
+                  prefix={<LineIcon name="calendar-2" className={styles.calendarIcon} />}
+                  className={cx(styles.inlinePicker, styles.longTermDate)}
+                />
+                <span className={styles.divider} aria-hidden />
+                <LongTermMonthsField
+                  value={draft.longTerm}
+                  onChange={setLongTerm}
+                  suffix={<LineIcon name="chevron-down" className={styles.monthsCaret} />}
+                  className={cx(styles.inlinePicker, styles.longTermMonths)}
+                />
+              </div>
+            )}
 
             <button
               type="button"

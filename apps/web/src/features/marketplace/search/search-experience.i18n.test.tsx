@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SERVICE_TYPE, VEHICLE_TYPE } from '@xeprime/types';
+import { defaultLongTermPick } from '@xeprime/domain';
 
 import { IntlTestProvider } from '@/i18n/test-utils';
 import type { AppLocale } from '@/i18n/config';
@@ -136,8 +137,8 @@ describe('tham số tìm kiếm KHÔNG đổi theo ngôn ngữ', () => {
   });
 });
 
-describe('thuê dài hạn ở trang chủ vẫn CHỈ hỏi địa điểm (ADR 0011)', () => {
-  it.each(['vi', 'en'] as const)('%s: không có ô thời gian thuê', async (locale) => {
+describe('thuê dài hạn ở trang chủ: địa điểm + ngày nhận + gói (ADR 0011, Figma 22647:39581)', () => {
+  it.each(['vi', 'en'] as const)('%s: không có ô khoảng nhận-trả', async (locale) => {
     const ui = await renderAt(locale);
 
     // Tự lái CÓ ô thời gian…
@@ -151,18 +152,20 @@ describe('thuê dài hạn ở trang chủ vẫn CHỈ hỏi địa điểm (ADR
   });
 
   it.each(['vi', 'en'] as const)(
-    '%s: không có bộ chọn gói, không có nguyện vọng ngày nhận, không có câu "7 ngày"',
+    '%s: gợi ý sẵn "Từ <hôm nay + 7>" + gói 3 tháng, không có câu "7 ngày"',
     async (locale) => {
       const ui = await renderAt(locale);
       fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.longTerm }));
-      const text = heroFields().textContent ?? '';
+      const fields = heroFields();
+      const text = fields.textContent ?? '';
 
-      // Gói thuê và nguyện vọng nhận xe thuộc luồng đặt xe TỪNG XE, không thuộc trang chủ.
+      const dateInput = within(fields).getByLabelText(
+        locale === 'vi' ? 'Ngày nhận xe' : 'Pickup date',
+      );
+      expect((dateInput as HTMLInputElement).value).toMatch(locale === 'vi' ? /^Từ / : /^From /);
+      expect(text).toContain(locale === 'vi' ? '3 tháng' : '3 months');
+      // Lựa chọn "trong 7 ngày tới" đã bỏ khỏi luồng (11/11/2026) - không hồi sinh ở trang chủ.
       for (const forbidden of [
-        '1 tháng',
-        '12 tháng',
-        '1 month',
-        '12 months',
         'Trong 7 ngày tới',
         'Within the next 7 days',
         'tối thiểu 7 ngày',
@@ -173,15 +176,20 @@ describe('thuê dài hạn ở trang chủ vẫn CHỈ hỏi địa điểm (ADR
     },
   );
 
-  it.each(['vi', 'en'] as const)('%s: URL dài hạn KHÔNG mang ngày', async (locale) => {
-    const ui = await renderAt(locale);
-    fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.longTerm }));
-    fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('button', { name: ui.submit }));
+  it.each(['vi', 'en'] as const)(
+    '%s: URL dài hạn mang ngày nhận + gói, KHÔNG mang khoảng nhận-trả hay khoá đặt xe',
+    async (locale) => {
+      const ui = await renderAt(locale);
+      fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.longTerm }));
+      fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('button', { name: ui.submit }));
 
-    const query = submittedQuery();
-    expect(query.get('serviceType')).toBe(SERVICE_TYPE.LONG_TERM);
-    expect(query.get('pickupAt')).toBeNull();
-    expect(query.get('returnAt')).toBeNull();
-    expect(query.get('packageMonths')).toBeNull();
-  });
+      const query = submittedQuery();
+      expect(query.get('serviceType')).toBe(SERVICE_TYPE.LONG_TERM);
+      expect(query.get('ltFrom')).toBe(defaultLongTermPick().fromDate);
+      expect(query.get('ltMonths')).toBe('3');
+      expect(query.get('pickupAt')).toBeNull();
+      expect(query.get('returnAt')).toBeNull();
+      expect(query.get('packageMonths')).toBeNull();
+    },
+  );
 });

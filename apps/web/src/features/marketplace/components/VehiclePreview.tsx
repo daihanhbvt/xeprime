@@ -3,6 +3,7 @@
 import { Alert, Button, Skeleton } from 'antd';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import Link from 'next/link';
+import { longTermAvailabilityWindow } from '@xeprime/domain';
 import { serviceTypeLabel } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { marketplaceSearchHref } from '../filter-params';
@@ -56,12 +57,14 @@ export function VehiclePreview() {
   const nearProvinceCode = useNearProvinceCode(filters);
   const { data: destinations } = useAllDestinations();
 
+  // Dài hạn hỏi xe rảnh trong phần lõi của ngày nhận + gói, như trang kết quả.
+  const longTermWindow = longTermAvailabilityWindow(filters);
   const { data, isLoading, isError, error } = useRecommendedListings({
     vehicleType: filters.vehicleType,
     serviceType: filters.serviceType,
     nearProvinceCode,
-    pickupAt: filters.pickupAt,
-    returnAt: filters.returnAt,
+    pickupAt: longTermWindow?.pickupAt ?? filters.pickupAt,
+    returnAt: longTermWindow?.returnAt ?? filters.returnAt,
   });
   const items = data?.data ?? [];
 
@@ -83,6 +86,8 @@ export function VehiclePreview() {
     pickupAt: filters.pickupAt,
     returnAt: filters.returnAt,
     hourly: filters.hourly,
+    ltFrom: filters.ltFrom,
+    ltMonths: filters.ltMonths,
   });
 
   return (

@@ -158,3 +158,26 @@ Thuần (không cần DB) ở `packages/types/src/long-term.test.ts`; DB thật 
 10. UI: không range picker ở dài hạn; đúng 6 gói, mỗi gói mang % ưu đãi cam kết CỦA GÓI; tóm tắt
     hiện giá gốc/ưu đãi/tổng đúng số server trả; hai nguyện vọng, ngày cụ thể mới hiện date picker;
     panel không lộ giá/khuyến mãi tự lái; badge không nằm trên tab dịch vụ; payload không mang lịch.
+
+## Bổ sung 28/11/2026 - bước TÌM hỏi ngày nhận + gói
+
+Design mới (Figma `22647:39581` trang chủ, `22647:49462` khay hành trình của hộp Bộ lọc) thêm ô
+"Từ <ngày>" + "<N> tháng" vào thẻ tìm kiếm dài hạn. Chốt với sản phẩm:
+
+1. **Vẫn là nguyện vọng, không phải lịch.** Bước tìm chỉ thu NGÀY nhận mong muốn + một trong sáu
+   gói; giờ nhận vẫn do gian hàng chốt lúc duyệt (mục 3 ở trên không đổi). Gợi ý sẵn: hôm nay + 7
+   ngày, gói 3 tháng (`defaultLongTermPick`).
+2. **URL dùng khoá riêng** `ltFrom` (`YYYY-MM-DD`, lịch VN) + `ltMonths`, không mượn
+   `pickupAt`/`returnAt` của tự lái. Luật ở `@xeprime/domain` (`search-draft.ts`).
+3. **Kết quả lọc xe rảnh trong phần LÕI** của khoảng đó: từ 00:00 ngày nhận + 1 đến 00:00 ngày trả
+   (= ngày nhận + N tháng lịch), gửi qua chính bộ lọc xe rảnh `pickupAt`/`returnAt` của
+   `/public/listings` - không đổi backend (`longTermAvailabilityWindow`). Phần lõi là đoạn mọi giờ
+   nhận khả dĩ đều chiếm, nên không bao giờ loại oan một xe; xe vướng lịch trong đó thì lượt duyệt
+   chắc chắn 409. Trước đây tìm dài hạn trả MỌI xe, khách gửi yêu cầu cho xe đã kín lịch và gian
+   hàng chỉ còn cách từ chối.
+4. **Thẻ đặt xe điền sẵn** gói (xe không bán gói đó ⇒ gói gần nhất, cách đều lấy gói ngắn hơn -
+   `nearestPackageMonths`) và ngày nhận từ URL; khách vẫn đổi được. Các khoá của luồng gửi yêu cầu
+   (`packageMonths`/`pickupPreference`/`requestedPickupDate`) vẫn KHÔNG lên URL tìm kiếm.
+
+App native (ADR 0031) chưa theo: `draftToFilterPatch` đã phát hai khoá mới nhưng bản
+`toListingQueryParams` của app chưa đổi chúng thành khoảng lõi.

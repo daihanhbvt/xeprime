@@ -99987,9 +99987,9 @@ export interface operations {
                  * @description Tên tỉnh (link cũ) - được quy về provinceCode qua bí danh
                  */
                 province?: string;
-                /** @description Giá thuê/ngày tối thiểu (VND) */
+                /** @description Giá thuê tối thiểu (VND) - theo ngày; theo THÁNG khi serviceType=long_term */
                 priceMin?: number;
-                /** @description Giá thuê/ngày tối đa (VND) */
+                /** @description Giá thuê tối đa (VND) - theo ngày; theo THÁNG khi serviceType=long_term */
                 priceMax?: number;
                 /** @description Nhận xe (ISO-8601) - lọc xe rảnh trong khoảng */
                 pickupAt?: string;
@@ -100680,9 +100680,9 @@ export interface operations {
                  * @description Tên tỉnh (link cũ) - được quy về provinceCode qua bí danh
                  */
                 province?: string;
-                /** @description Giá thuê/ngày tối thiểu (VND) */
+                /** @description Giá thuê tối thiểu (VND) - theo ngày; theo THÁNG khi serviceType=long_term */
                 priceMin?: number;
-                /** @description Giá thuê/ngày tối đa (VND) */
+                /** @description Giá thuê tối đa (VND) - theo ngày; theo THÁNG khi serviceType=long_term */
                 priceMax?: number;
                 /** @description Nhận xe (ISO-8601) - lọc xe rảnh trong khoảng */
                 pickupAt?: string;

@@ -471,3 +471,49 @@
   }
 
 }
+
+/* Dài hạn (Figma 22647:39581): "Từ 05/12/2026" | "3 tháng ⌄" thay cho khoảng nhận–trả. */
+.longTermWrap {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.searchBar .longTermDate {
+  width: 150px;
+}
+
+.searchBar .longTermMonths {
+  width: 96px;
+}
+
+.monthsCaret {
+  font-size: 16px;
+  color: var(--xp-color-text-tertiary);
+}
+
+@media (max-width: 640px) {
+  /* Hàng riêng như ô nhận–trả: ngày nhận giãn, ô gói co theo chữ. */
+  .longTermWrap {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .longTermWrap .inlinePicker {
+    font-size: var(--xp-font-size-label);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-label);
+    color: var(--xp-color-text-secondary);
+  }
+
+  .searchBar .longTermDate {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  /* Luật "giấu icon đầu ô" ở trên bắt nhầm phần chữ của ô gói (phần tử con đầu của AntD Select). */
+  .searchBar .longTermWrap .longTermMonths > :first-child:not(:only-child) {
+    display: flex;
+  }
+}

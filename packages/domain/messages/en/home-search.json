@@ -49,5 +49,11 @@
     "useCurrent": "Use my current location",
     "noVehiclesNearby": "There are no vehicles in your area yet. Choose Nationwide or another province.",
     "noProvinceNearby": "We couldn’t tell which province you’re in. Please choose manually."
+  },
+  "longTerm": {
+    "dateLabel": "Pickup date",
+    "from": "From {date}",
+    "monthsLabel": "Rental length",
+    "until": "until {date}"
   }
 }

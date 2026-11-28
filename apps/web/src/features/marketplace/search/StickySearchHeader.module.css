@@ -126,6 +126,22 @@
   min-width: 170px;
 }
 
+/* Dài hạn: "Từ 13/10/2026" + gói - hai mục co theo chữ thay cho một khoảng nhận–trả. */
+.longTermDateWrap {
+  flex: 0 1 auto;
+  min-width: 150px;
+}
+
+.monthsWrap {
+  flex: 1 1 auto;
+  min-width: 96px;
+}
+
+.monthsCaret {
+  font-size: 16px;
+  color: var(--xp-color-text-tertiary);
+}
+
 .searchSubmitBtn {
   display: inline-flex;
   align-items: center;
@@ -311,4 +327,16 @@
 /* Giao diện tối: bóng đen 8% vô hình trên nền tối — dùng bóng header tối của token. */
 :global([data-theme='dark']) .stickyHeader {
   box-shadow: var(--xp-elevation-header);
+}
+
+/* Điện thoại: dài hạn giữ "Từ 13/10/2026" trên một hàng; đổi gói ở khay hành trình của Bộ lọc. */
+@media (max-width: 640px) {
+  .longTermDateWrap .inlinePicker {
+    display: inline-flex;
+  }
+
+  .monthsDivider,
+  .monthsWrap {
+    display: none;
+  }
 }

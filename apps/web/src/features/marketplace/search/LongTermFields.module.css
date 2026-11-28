@@ -1,0 +1,43 @@
+/*
+ * Hai ô thời gian của thuê dài hạn. Vỏ (viền, bo góc, chiều cao) do NƠI GỌI khoác bằng
+ * `className` — thẻ trang chủ là viên pill, khay hành trình là ô vuông bo 8 — nên ở đây chỉ dàn
+ * nội dung: chữ 15/14px, giá trị trải hết bề ngang, icon cuối ô.
+ */
+.date,
+.months {
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+}
+
+/*
+ * Chữ theo cỡ của VỎ (15px ở thẻ trang chủ, 16px ở đầu trang kết quả). Lặp lớp để thắng luật cùng
+ * độ đặc hiệu mà AntD chèn SAU file CSS này (`.ant-picker .ant-picker-input > input`).
+ */
+.date.date :global(.ant-picker-input > input),
+.months.months :global(.ant-select-content) {
+  font-size: inherit;
+  color: var(--xp-color-text);
+  cursor: pointer;
+}
+
+.monthsValue {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.monthsLabel {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.until {
+  flex-shrink: 0;
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}

@@ -131,6 +131,17 @@
   background: var(--xp-color-bg-container);
 }
 
+/* Dài hạn: "Từ 28/12/2026" ngắn hơn một khoảng nhận–trả; ô gói chỉ cần vừa "12 tháng". */
+.longTermDateChip {
+  min-width: 170px;
+}
+
+.monthsChip {
+  width: 120px;
+  min-width: 120px;
+  flex: none;
+}
+
 .dateChip:hover {
   border-color: var(--xp-color-border-strong);
 }
@@ -186,6 +197,10 @@
   .dateChip {
     min-width: 228px;
   }
+
+  .longTermDateChip {
+    min-width: 150px;
+  }
 }
 
 /*
@@ -213,6 +228,11 @@
   .dateChip {
     min-height: 36px;
     padding: 0 10px;
+  }
+
+  /* Một hàng: dài hạn giữ ngày nhận; gói đổi ở thẻ tìm kiếm phía trên. */
+  .monthsChip {
+    display: none !important;
   }
 
   .submit {
