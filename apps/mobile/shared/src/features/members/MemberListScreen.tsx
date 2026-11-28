@@ -500,36 +500,11 @@ export function MemberListScreen() {
       <MemberDetailSheet
         item={opened}
         isSelf={opened ? isSelf(opened) : false}
-        abilities={opened ? abilitiesOf(opened) : null}
         canOpenMatrix={canView}
         onClose={() => setOpenedId(null)}
-        handlers={{
-          // Tấm chi tiết đóng trước: hai tấm trượt chồng nhau thì nút lui đóng nhầm tấm.
-          onEdit: (row) => {
-            setOpenedId(null);
-            setEditing(row);
-          },
-          onResetPassword: (row) => {
-            setOpenedId(null);
-            setResetting(row);
-          },
-          // Hộp xác nhận cũng mở SAU khi tấm đóng — iOS không chồng hai modal anh em.
-          onSetLocked: (row, locked) => {
-            setOpenedId(null);
-            setConfirm({ kind: 'lock', row, locked });
-          },
-          onRemove: (row) => {
-            setOpenedId(null);
-            setConfirm({ kind: 'remove', row });
-          },
-          onRevoke: (row) => {
-            setOpenedId(null);
-            setConfirm({ kind: 'revoke', row });
-          },
-          onOpenMatrix: () => {
-            setOpenedId(null);
-            navigateOnce(ROUTES.manage.memberRoles());
-          },
+        onOpenMatrix={() => {
+          setOpenedId(null);
+          navigateOnce(ROUTES.manage.memberRoles());
         }}
       />
       <MemberEditSheet member={editing} onClose={() => setEditing(null)} />

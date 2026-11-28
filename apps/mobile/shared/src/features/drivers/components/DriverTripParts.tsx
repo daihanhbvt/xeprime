@@ -41,13 +41,14 @@ export function DriverTripsToolbar({
           value={search}
           onChange={onSearch}
           label={t('searchLabel')}
-          placeholder={t('searchPlaceholder')}
+          placeholder={t('searchPlaceholderApp')}
           variant="field"
         />
       </YStack>
       <YStack w={STATUS_SELECT_W}>
         <SelectControl
           hideLabel
+          compact
           label={t('status')}
           placeholder={t('status')}
           value={status === allValue ? null : status}

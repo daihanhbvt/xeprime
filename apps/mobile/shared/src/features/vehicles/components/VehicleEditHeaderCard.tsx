@@ -33,13 +33,20 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { Image } from 'expo-image';
 import { useUpdateVehicle, useVehicleSummary } from '../hooks/use-vehicle';
 import type { VehicleDetail } from '../api';
 import { MarketplaceVisibilityRow } from './MarketplaceVisibilityRow';
 
 /** Vùng chạm của nút máy ảnh "Đổi ảnh" giữa ảnh lớn — ≥ 44dp. */
 const EDIT_TARGET = 48;
+/** Ảnh nhỏ của thẻ gọn - Figma "Vehicle Image" 80×50, bo 12. */
+const COMPACT_IMAGE = { width: 80, height: 50 } as const;
+const COMPACT_RADIUS = space.sm + space.xs;
+/** Khe 6 của Figma (`num/6`) giữa tên ↔ nhãn nguồn, huy hiệu ↔ mũi tên. */
+const COMPACT_GAP = 6;
 
 function Strong({ children }: { children: ReactNode }) {
   const colors = useColors();
@@ -66,8 +73,16 @@ export function VehicleEditHeaderCard({
   statusEditable = false,
   showOwnerStats = false,
   showSource = false,
+  compact = false,
   footer,
 }: {
+  /**
+   * Thẻ GỌN của tab "Thông tin chung" màn Chỉnh sửa xe (Figma "Vehicle Summary" `24231:107296`,
+   * người dùng chốt 27/11/2026 "đúng Figma"): ảnh nhỏ + tên + nguồn, loại · chỗ | giá, Vận hành
+   * (sửa tại chỗ), Số KM, Hoàn thiện. Không dải ảnh, kiểm duyệt, công tắc chợ, trang xe - các
+   * mục đó còn ở màn Quản lý xe / tab Hình ảnh. Bấm ảnh mở tab Hình ảnh.
+   */
+  compact?: boolean;
   /** Đánh giá + số chuyến — chỉ khu chủ xe (web `showOwnerStats={!isManage}`). */
   showOwnerStats?: boolean;
   /**
@@ -160,6 +175,181 @@ export function VehicleEditHeaderCard({
       size="sm"
     />
   );
+
+  const statusSheet = (
+    <BottomSheet open={picking} onClose={() => setPicking(false)} title={t('axisOperation')}>
+      <MenuOptionList>
+        {VEHICLE_OPERATION_STATUS_VALUES.map((status) => (
+          <MenuOption
+            key={status}
+            label={operationLabel(status)}
+            selected={status === operationStatus}
+            onPress={() => void changeStatus(status)}
+          />
+        ))}
+      </MenuOptionList>
+    </BottomSheet>
+  );
+
+  if (compact) {
+    const cover = photos[0]?.url ?? null;
+    const odometer = summary?.currentOdometerKm ?? null;
+    const image = (
+      <YStack
+        w={COMPACT_IMAGE.width}
+        h={COMPACT_IMAGE.height}
+        br={COMPACT_RADIUS}
+        ov="hidden"
+        bg={colors.surfaceMuted}
+        ai="center"
+        jc="center"
+      >
+        {cover ? (
+          <Image source={{ uri: cover }} style={styles.cover} contentFit="cover" />
+        ) : (
+          <Ionicons name="car-outline" size={iconSize.md} color={colors.textPlaceholder} />
+        )}
+      </YStack>
+    );
+    return (
+      <Card padded={false} accessibilityLabel={t('profileLabel')}>
+        <YStack p={layout.cardPad} gap={space.sm}>
+          <XStack ai="center" gap={space.sm}>
+            {onEditImages ? (
+              <Pressable
+                onPress={onEditImages}
+                accessibilityRole="button"
+                accessibilityLabel={tEdit('changeImage')}
+              >
+                {image}
+              </Pressable>
+            ) : (
+              image
+            )}
+            <YStack f={1} minWidth={0} gap={space.xs}>
+              <XStack ai="center" gap={COMPACT_GAP}>
+                <Text
+                  flexShrink={1}
+                  col={colors.text}
+                  fos={typeScale.title.fontSize}
+                  lh={typeScale.title.lineHeight}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                >
+                  {vehicle.name}
+                </Text>
+                {showSource ? (
+                  <YStack px={space.sm} py={2} br={radius.pill} bg={colors.background}>
+                    <Text
+                      col={colors.textMuted}
+                      fos={typeScale.label.fontSize}
+                      lh={typeScale.label.lineHeight}
+                      fow={fontWeight.medium}
+                      numberOfLines={1}
+                    >
+                      {domainLabel('vehicleSourceType', vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED)}
+                    </Text>
+                  </YStack>
+                ) : null}
+              </XStack>
+              <XStack ai="center" gap={space.sm} flexWrap="wrap">
+                <Text
+                  col={colors.text}
+                  fos={typeScale.label.fontSize}
+                  lh={typeScale.label.lineHeight}
+                  fow={fontWeight.medium}
+                >
+                  {[domainLabel('vehicleType', vehicle.vehicleType), seatOrCategory]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+                {price ? (
+                  <>
+                    <YStack w={1} h={12} br={radius.pill} bg={colors.borderInput} />
+                    <Text fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                      <Text col={colors.textMuted} fos={typeScale.label.fontSize} fow={fontWeight.medium}>
+                        {price.value}
+                      </Text>
+                      <Text col={colors.textPlaceholder} fos={typeScale.label.fontSize} fow={fontWeight.regular}>
+                        {` ${price.unit}`}
+                      </Text>
+                    </Text>
+                  </>
+                ) : null}
+              </XStack>
+            </YStack>
+          </XStack>
+
+          <YStack>
+            <XStack
+              ai="center"
+              jc="space-between"
+              py={space.sm}
+              borderBottomWidth={1}
+              borderColor={colors.background}
+            >
+              <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                {tSummary('operation')}
+              </Text>
+              {statusEditable ? (
+                <Pressable
+                  onPress={() => setPicking(true)}
+                  disabled={update.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel={tEdit('changeStatus', { status: operationLabel(operationStatus) })}
+                  hitSlop={12}
+                >
+                  <XStack ai="center" gap={COMPACT_GAP}>
+                    {operationBadge}
+                    <LineIcon name="chevron-down-md" color={colors.textMuted} />
+                  </XStack>
+                </Pressable>
+              ) : (
+                operationBadge
+              )}
+            </XStack>
+            <XStack
+              ai="center"
+              jc="space-between"
+              py={space.sm}
+              borderBottomWidth={1}
+              borderColor={colors.background}
+            >
+              <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                {tSummary('odometer')}
+              </Text>
+              <Text
+                col={odometer == null ? colors.borderInput : colors.text}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+                fow={fontWeight.medium}
+              >
+                {odometer == null ? tLabels('notAvailable') : fmt.km(odometer)}
+              </Text>
+            </XStack>
+          </YStack>
+
+          <YStack gap={space.xs} accessibilityLabel={tSummary('completenessValue', completeness)}>
+            <XStack ai="center" gap={space.sm}>
+              <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                {tSummary('completeness')}
+              </Text>
+              <Text
+                col={colors.text}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+                fow={fontWeight.medium}
+              >
+                {`${percent}%`}
+              </Text>
+            </XStack>
+            <ProgressBar percent={percent} color={colors.infoStrong} trackColor={colors.infoSurface} />
+          </YStack>
+        </YStack>
+        {statusSheet}
+      </Card>
+    );
+  }
 
   return (
     <Card padded={false} accessibilityLabel={t('profileLabel')}>
@@ -331,22 +521,12 @@ export function VehicleEditHeaderCard({
         {footer}
       </YStack>
 
-      <BottomSheet open={picking} onClose={() => setPicking(false)} title={t('axisOperation')}>
-        <MenuOptionList>
-          {VEHICLE_OPERATION_STATUS_VALUES.map((status) => (
-            <MenuOption
-              key={status}
-              label={operationLabel(status)}
-              selected={status === operationStatus}
-              onPress={() => void changeStatus(status)}
-            />
-          ))}
-        </MenuOptionList>
-      </BottomSheet>
+      {statusSheet}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  cover: { width: '100%', height: '100%' },
   editTarget: { width: EDIT_TARGET, height: EDIT_TARGET },
 });

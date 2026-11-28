@@ -130,7 +130,7 @@ export function ShopBranchesCard({
           accessibilityRole="alert"
         >
           <XStack ai="flex-start" gap={REVIEW_GAP}>
-            <LineIcon name="location" size={iconSize.lg} color={colors.warningHigh} />
+            <LineIcon name="location" size={iconSize.lg} color={colors.warningVivid} />
             <Text f={1} col={colors.warningHigh} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
               <Text
                 col={colors.warningHigh}

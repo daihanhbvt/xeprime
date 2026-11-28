@@ -243,6 +243,7 @@ function BookingCardImpl({
       code={`#${booking.code}`}
       status={held ? { label: tKanban('holdState.paid'), tone: 'success' } : null}
       serviceType={booking.serviceType}
+      source={{ code: booking.source, label: booking.sourceLabel ?? null }}
       price={{ value: fmt.money(customerTotal), label: tKanban('money.customerTotal') }}
       vehicle={{
         name: booking.vehicleName,

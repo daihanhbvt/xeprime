@@ -1,16 +1,9 @@
-import { XStack, YStack, Text } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { IMAGE_SOURCE, type ImageSource } from '@/lib/r2-image-upload';
-import { useColors } from '@/theme/ThemeProvider';
-import { typeScale } from '@/theme/tokens';
-import { BottomSheet } from './BottomSheet';
-import { Button } from './Button';
 import type { LineIconName } from '@/components/icons/LineIcon';
-
-/** Figma `24486:66049`: hai nút cách 12. */
-const GAP_12 = 12;
-/** Dưới bề ngang này mỗi nút không đủ chỗ cho "Chọn từ thư viện" + icon - hai nút xuống hai hàng (máy 360dp). */
-const BUTTON_MIN = 168;
+import { ActionSheetButtons, type SheetAction } from './ActionSheetButtons';
+import { BottomSheet } from './BottomSheet';
+import { InfoHint } from './InfoHint';
 
 /**
  * Tấm chọn NGUỒN ảnh dùng chung của app: Chụp ảnh · Chọn từ thư viện (· Xoá ảnh). Mọi ô tải
@@ -45,93 +38,53 @@ export function ImageSourceSheet({
    */
   libraryPrimary?: boolean;
 }) {
-  const colors = useColors();
   const t = useTranslations('Common.image');
+  /*
+   * Nút theo khuôn tấm "Thao tác" (`ActionSheetButtons` - Đơn thuê); gợi ý định dạng/dung lượng vào
+   * dấu ⓘ cạnh tiêu đề (người dùng chốt 27/11/2026) - áp cho MỌI popup tải ảnh vì tấm này dùng chung.
+   */
+  const camera: SheetAction = {
+    key: 'camera',
+    label: t('takePhoto'),
+    icon: 'camera-1',
+    onPress: () => onPick(IMAGE_SOURCE.CAMERA),
+  };
+  const library: SheetAction = {
+    key: 'library',
+    label: t('chooseFromLibrary'),
+    icon: 'image',
+    primary: true,
+    onPress: () => onPick(IMAGE_SOURCE.LIBRARY),
+  };
+  const extra: SheetAction[] = extraAction
+    ? [{ key: 'extra', label: extraAction.label, icon: extraAction.lineIcon, onPress: extraAction.onPress }]
+    : [];
+  const remove: SheetAction[] = onRemove
+    ? [
+        {
+          key: 'remove',
+          label: t('removeImage'),
+          icon: 'trash',
+          danger: true,
+          onPress: () => {
+            onClose();
+            onRemove();
+          },
+        },
+      ]
+    : [];
+  /* "Chọn từ thư viện" là nút vàng chính, hàng DƯỚI cùng (người dùng chốt 27/11/2026); các nút còn lại chung hàng trên. */
+  const actions = [library, camera, ...extra, ...remove];
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} chrome="v2" headerDivider>
-      <YStack gap={GAP_12}>
-        {libraryPrimary ? (
-          <>
-            {/* Chụp ảnh + nút phụ CÙNG một hàng, "Chọn từ thư viện" vàng trọn hàng bên dưới (chốt 26/11/2026). */}
-            <XStack gap={GAP_12}>
-              <YStack f={1} flexBasis={0} minWidth={0}>
-                <Button
-                  label={t('takePhoto')}
-                  lineIcon="camera-1"
-                  variant="neutral"
-                  onPress={() => onPick(IMAGE_SOURCE.CAMERA)}
-                />
-              </YStack>
-              {extraAction ? (
-                <YStack f={1} flexBasis={0} minWidth={0}>
-                  <Button
-                    label={extraAction.label}
-                    lineIcon={extraAction.lineIcon}
-                    variant="neutral"
-                    onPress={extraAction.onPress}
-                  />
-                </YStack>
-              ) : null}
-            </XStack>
-            <Button
-              label={t('chooseFromLibrary')}
-              lineIcon="image"
-              variant="gradient"
-              onPress={() => onPick(IMAGE_SOURCE.LIBRARY)}
-            />
-          </>
-        ) : (
-          <>
-          <XStack gap={GAP_12} flexWrap="wrap">
-            <YStack f={1} minWidth={BUTTON_MIN}>
-              <Button
-                label={t('takePhoto')}
-                lineIcon="camera-1"
-                variant="neutral"
-                onPress={() => onPick(IMAGE_SOURCE.CAMERA)}
-              />
-            </YStack>
-            <YStack f={1} minWidth={BUTTON_MIN}>
-              <Button
-                label={t('chooseFromLibrary')}
-                lineIcon="image"
-                variant="neutral"
-                onPress={() => onPick(IMAGE_SOURCE.LIBRARY)}
-              />
-            </YStack>
-          </XStack>
-          {extraAction ? (
-            <Button
-              label={extraAction.label}
-              lineIcon={extraAction.lineIcon}
-              variant="neutral"
-              onPress={extraAction.onPress}
-            />
-          ) : null}
-          </>
-        )}
-        {hint ? (
-          <Text
-            col={colors.textPlaceholder}
-            fos={typeScale.body.fontSize}
-            lh={typeScale.body.lineHeight}
-            fontStyle="italic"
-          >
-            {hint}
-          </Text>
-        ) : null}
-        {onRemove ? (
-          <Button
-            label={t('removeImage')}
-            lineIcon="trash"
-            variant="ghostDanger"
-            onPress={() => {
-              onClose();
-              onRemove();
-            }}
-          />
-        ) : null}
-      </YStack>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      chrome="v2"
+      headerDivider
+      {...(hint ? { titleAdornment: <InfoHint content={hint} label={title} /> } : {})}
+    >
+      <ActionSheetButtons actions={actions} />
     </BottomSheet>
   );
 }

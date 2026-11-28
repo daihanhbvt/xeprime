@@ -10,12 +10,10 @@ import {
   ROLE_MATRIX_ROWS,
   roleMatrixLevel,
   type MemberRosterStatus,
-  type TenantRole,
 } from '@xeprime/types';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -30,38 +28,26 @@ import { useMemberActivity, useMemberRoles } from '../hooks/use-members';
 import { useActivityLabels } from '../use-activity-labels';
 import { LastActiveText } from './LastActiveText';
 import { RolePill } from './RolePill';
-import type { RosterAbilities } from './RosterCard';
-
-/** Thao tác nơi gọi mở — tấm chi tiết đóng lại trước, hộp xác nhận / tấm sửa mở ở màn danh sách. */
-export interface MemberDetailHandlers {
-  onEdit: (item: MemberRosterItem) => void;
-  onResetPassword: (item: MemberRosterItem) => void;
-  onSetLocked: (item: MemberRosterItem, locked: boolean) => void;
-  onRemove: (item: MemberRosterItem) => void;
-  onRevoke: (item: MemberRosterItem) => void;
-  onOpenMatrix: () => void;
-}
 
 /**
  * "Xem chi tiết" một nhân viên (ADR 0086 điều 8 · ADR 0087) — bản native của web
  * `MemberDetailDrawer`. Đọc những gì người quản lý cần để QUẢN người đó: ai, liên hệ thế nào, đang
- * vào được gian hàng không (khoá / mở khoá ngay tại đây), vai làm được gì, đã làm gì gần đây.
+ * vào được gian hàng không, vai làm được gì, đã làm gì gần đây.
  *
- * Web dùng công tắc; native dùng nút "Tạm khoá / Mở khoá" kèm hộp xác nhận — cùng điều kiện, cùng câu.
+ * CHỈ ĐỌC (người dùng 27/11/2026): mọi thao tác (sửa, đặt lại mật khẩu, khoá, gỡ, thu hồi) nằm ở
+ * menu ⋮ của thẻ trong danh sách, không lặp lại ở đây.
  */
 export function MemberDetailSheet({
   item,
   isSelf,
-  abilities,
   canOpenMatrix,
-  handlers,
+  onOpenMatrix,
   onClose,
 }: {
   item: MemberRosterItem | null;
   isSelf: boolean;
-  abilities: RosterAbilities | null;
   canOpenMatrix: boolean;
-  handlers: MemberDetailHandlers;
+  onOpenMatrix: () => void;
   onClose: () => void;
 }) {
   const t = useTranslations('Members');
@@ -72,73 +58,16 @@ export function MemberDetailSheet({
       open={item !== null}
       onClose={onClose}
       title={t(isInvite ? 'detail.inviteTitle' : 'detail.title')}
-      footer={
-        item && abilities ? (
-          <DetailActions item={item} abilities={abilities} handlers={handlers} />
-        ) : undefined
-      }
     >
-      {item && abilities ? (
+      {item ? (
         <DetailBody
           item={item}
           isSelf={isSelf}
-          abilities={abilities}
           canOpenMatrix={canOpenMatrix}
-          handlers={handlers}
+          onOpenMatrix={onOpenMatrix}
         />
       ) : null}
     </BottomSheet>
-  );
-}
-
-/**
- * Hành động chính (Sửa · Gỡ, hoặc Thu hồi lời mời) — dính ở đáy tấm, chia đôi bề ngang, để không
- * phải cuộn hết thông tin mới tới. Đặt lại mật khẩu là việc phụ, ở lại trong thân tấm.
- */
-function DetailActions({
-  item,
-  abilities,
-  handlers,
-}: {
-  item: MemberRosterItem;
-  abilities: RosterAbilities;
-  handlers: MemberDetailHandlers;
-}) {
-  const t = useTranslations('Members');
-  if (!abilities.edit && !abilities.remove && !abilities.revoke) return null;
-  return (
-    <XStack gap={space.sm}>
-      {abilities.edit ? (
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-          <Button
-            label={t('roster.actions.edit')}
-            icon="create-outline"
-            variant="secondary"
-            onPress={() => handlers.onEdit(item)}
-          />
-        </YStack>
-      ) : null}
-      {abilities.remove ? (
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-          <Button
-            label={t('roster.actions.remove')}
-            icon="person-remove-outline"
-            variant="dangerOutline"
-            onPress={() => handlers.onRemove(item)}
-          />
-        </YStack>
-      ) : null}
-      {abilities.revoke ? (
-        <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
-          <Button
-            label={t('roster.actions.revoke')}
-            icon="close-circle-outline"
-            variant="dangerOutline"
-            onPress={() => handlers.onRevoke(item)}
-          />
-        </YStack>
-      ) : null}
-    </XStack>
   );
 }
 
@@ -168,15 +97,13 @@ function Section({
 function DetailBody({
   item,
   isSelf,
-  abilities,
   canOpenMatrix,
-  handlers,
+  onOpenMatrix,
 }: {
   item: MemberRosterItem;
   isSelf: boolean;
-  abilities: RosterAbilities;
   canOpenMatrix: boolean;
-  handlers: MemberDetailHandlers;
+  onOpenMatrix: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Members');
@@ -207,7 +134,7 @@ function DetailBody({
 
   return (
     <YStack gap={space.md}>
-      <XStack ai="center" gap={space.sm}>
+      <XStack ai="flex-start" gap={space.sm}>
         <Avatar name={name || item.phone || ''} url={item.avatarUrl ?? null} size={sizing.touchTarget} />
         <YStack f={1} minWidth={0} gap={2}>
           <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
@@ -219,15 +146,18 @@ function DetailBody({
               {subtitle}
             </Text>
           ) : null}
-          <XStack gap={space.xs} flexWrap="wrap" ai="center" mt={space.xs}>
-            <RolePill roleKey={item.roleKey} badge />
-            {statusMeta ? (
+          {statusMeta ? (
+            <XStack mt={space.xs}>
               <StatusBadge
                 label={domainLabel('memberRosterStatus', item.status, statusMeta.label)}
                 color={statusMeta.color}
               />
-            ) : null}
-          </XStack>
+            </XStack>
+          ) : null}
+        </YStack>
+        {/* Chip vai trò ở BÊN PHẢI (người dùng 27/11/2026). */}
+        <YStack flexShrink={0}>
+          <RolePill roleKey={item.roleKey} badge />
         </YStack>
       </XStack>
 
@@ -248,24 +178,7 @@ function DetailBody({
               {accessText}
             </Text>
           </YStack>
-          {abilities.lock ? (
-            <Button
-              label={t(locked ? 'roster.actions.unlock' : 'roster.actions.lock')}
-              icon={locked ? 'lock-open-outline' : 'lock-closed-outline'}
-              variant={locked ? 'secondary' : 'dangerOutline'}
-              onPress={() => handlers.onSetLocked(item, !locked)}
-            />
-          ) : null}
           <Divider />
-          <YStack gap={space.xs}>
-            <Text col={colors.textMuted} fos={fontSize.meta}>
-              {t('detail.role')}
-            </Text>
-            <RolePill roleKey={item.roleKey} />
-            <Text col={colors.textMuted} fos={fontSize.meta}>
-              {t(`roleHint.${item.roleKey as TenantRole}`)}
-            </Text>
-          </YStack>
           <DataRow label={t('detail.branches')} value={branchText} />
           <DataRow
             label={t('detail.accountType')}
@@ -292,7 +205,7 @@ function DetailBody({
 
       <RolePermissionsSection
         roleKey={item.roleKey}
-        {...(canOpenMatrix ? { onOpenMatrix: handlers.onOpenMatrix } : {})}
+        {...(canOpenMatrix ? { onOpenMatrix } : {})}
       />
 
       {isInvite ? null : (
@@ -313,15 +226,6 @@ function DetailBody({
           {item.userId ? <RecentActivitySection userId={item.userId} /> : null}
         </>
       )}
-
-      {abilities.resetPassword ? (
-        <Button
-          label={t('roster.actions.resetPassword')}
-          icon="key-outline"
-          variant="secondary"
-          onPress={() => handlers.onResetPassword(item)}
-        />
-      ) : null}
     </YStack>
   );
 }

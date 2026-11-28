@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, Share } from 'react-native';
+import { Pressable } from 'react-native';
+import { saveCsvFile } from '@/lib/save-csv-file';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,20 +8,15 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
-  BOOKING_STATUS_META,
   DRIVER_ASSIGNMENT_OUTCOME,
   DRIVER_ASSIGNMENT_OUTCOME_META,
   DRIVER_LICENCE_STATE,
-  DRIVER_ASSIGNMENT_STATUS_META,
-  DRIVER_LINK_END_PARTY,
   DRIVER_LINK_OPEN_STATUSES,
   DRIVER_LINK_STATUS,
   DRIVER_LINK_STATUS_META,
   PERMISSION,
   STATUS_COLOR,
-  type BookingStatus,
   type DriverAssignmentOutcome,
-  type DriverAssignmentStatus,
 } from '@xeprime/types';
 import {
   LIST_SEPARATOR,
@@ -38,11 +34,9 @@ import { useAccumulatedPages } from '@/hooks/use-accumulated-pages';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { ContactActions } from '@/components/ui/ContactActions';
-import { DataRow } from '@/components/ui/DataRow';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
 import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
@@ -58,18 +52,13 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import type { Driver, DriverOverview } from './api';
 import { fetchAllDriverAssignments, wageStatementCsv } from './wage-statement';
-import { DriverLicenceDetail } from './components/DriverLicenceStateBadge';
 import { EditDriverSheet } from './components/DriverFormSheet';
 import { DriverStatusLine } from './components/DriverStatusLine';
 import { DriverTripsToolbar } from './components/DriverTripParts';
 import {
   useDriverAssignments,
   useDriverOverview,
-  useDriverWageSettings,
-  useEndDriver,
-  useResumeDriver,
   useSetDriverLicenceChecked,
-  useSuspendDriver,
 } from './hooks/use-drivers';
 
 const TRIP_SEARCH_DEBOUNCE_MS = 400;
@@ -129,8 +118,6 @@ export function DriverDetailScreen() {
   const tActions = useTranslations('Common.actions');
   const router = useRouter();
   const colors = useColors();
-  const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const permissions = usePermissions();
   const canView = permissions.has(PERMISSION.DRIVER_VIEW);
   const canManage = permissions.has(PERMISSION.DRIVER_MANAGE);
@@ -142,10 +129,6 @@ export function DriverDetailScreen() {
     params.tab === DRIVER_DETAIL_TAB.TRIPS ? DRIVER_DETAIL_TAB.TRIPS : DRIVER_DETAIL_TAB.OVERVIEW,
   );
   const [editing, setEditing] = useState<Driver | null>(null);
-  const [confirm, setConfirm] = useState<'suspend' | 'end' | null>(null);
-  const suspend = useSuspendDriver();
-  const resume = useResumeDriver();
-  const end = useEndDriver();
 
   const query = useDriverOverview(canView ? driverId : null, month);
   const data = query.data && query.data.driver.id === driverId ? query.data : undefined;
@@ -195,15 +178,8 @@ export function DriverDetailScreen() {
 
   const driver = data.driver;
   const open = DRIVER_LINK_OPEN_STATUSES.includes(driver.linkStatus);
-  const invited = driver.linkStatus === DRIVER_LINK_STATUS.INVITED;
   const canEdit = canManage && open;
-  const busy = suspend.isPending || resume.isPending || end.isPending;
   const accountName = driver.account.displayName ?? null;
-
-  const feedback = (key: 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked') => ({
-    onSuccess: () => toast.showSuccess(tDrivers(key)),
-    onError: (err: unknown) => toast.showError(errorMessage(err)),
-  });
 
   return (
     <>
@@ -339,66 +315,16 @@ export function DriverDetailScreen() {
               driver={driver}
               month={data.month.month}
               wageTotal={data.month.wageTotal}
-              onMonthChange={setMonth}
             />
           )}
 
-          {tab === DRIVER_DETAIL_TAB.OVERVIEW && canManage && open ? (
-            <XStack ai="center" gap={space.lg} flexWrap="wrap">
-              {driver.linkStatus === DRIVER_LINK_STATUS.ACTIVE ? (
-                <TextAction label={tDrivers('actions.suspend')} disabled={busy} onPress={() => setConfirm('suspend')} />
-              ) : null}
-              {driver.linkStatus === DRIVER_LINK_STATUS.SUSPENDED ? (
-                <TextAction
-                  label={tDrivers('actions.resume')}
-                  disabled={busy}
-                  onPress={() => resume.mutate(driver.id, feedback('toast.resumed'))}
-                />
-              ) : null}
-              <TextAction
-                danger
-                label={invited ? tDrivers('actions.revoke') : tApp('unlink')}
-                disabled={busy}
-                onPress={() => setConfirm('end')}
-              />
-            </XStack>
-          ) : null}
+          {/* Thao tác tạm khoá / mở lại / huỷ liên kết nằm ở ⋮ của danh sách - chi tiết chỉ còn nút
+              Chỉnh sửa ở header (người dùng 28/11/2026). */}
         </YStack>
       </Screen>
 
       <EditDriverSheet driver={editing} onClose={() => setEditing(null)} />
 
-      <AlertDialog
-        open={confirm === 'suspend'}
-        title={tDrivers('actions.suspendConfirm')}
-        confirmLabel={tDrivers('actions.suspend')}
-        cancelLabel={tActions('close')}
-        loading={suspend.isPending}
-        onConfirm={() => {
-          setConfirm(null);
-          suspend.mutate(driver.id, feedback('toast.suspended'));
-        }}
-        onCancel={() => setConfirm(null)}
-      />
-      <AlertDialog
-        open={confirm === 'end'}
-        title={
-          invited
-            ? tDrivers('actions.revokeConfirm')
-            : driver.activeBookingCount > 0
-              ? tDrivers('actions.endConfirmWithTrips', { count: driver.activeBookingCount })
-              : tDrivers('actions.endConfirm')
-        }
-        confirmLabel={invited ? tDrivers('actions.revoke') : tDrivers('actions.end')}
-        cancelLabel={tActions('close')}
-        destructive
-        loading={end.isPending}
-        onConfirm={() => {
-          setConfirm(null);
-          end.mutate(driver.id, feedback(invited ? 'toast.revoked' : 'toast.ended'));
-        }}
-        onCancel={() => setConfirm(null)}
-      />
     </>
   );
 
@@ -427,38 +353,6 @@ function LinkStatusPill({ driver }: { driver: Driver }) {
 }
 
 /** Lối chữ cuối trang (Figma "Hủy liên kết": chữ 14 đậm, đỏ). */
-function TextAction({
-  label,
-  onPress,
-  danger = false,
-  disabled = false,
-}: {
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  const colors = useColors();
-  return (
-    <Pressable
-      onPress={disabled ? undefined : onPress}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      hitSlop={space.sm}
-      style={{ opacity: disabled ? 0.45 : 1 }}
-    >
-      <Text
-        col={danger ? colors.danger : colors.textMuted}
-        fos={typeScale.body.fontSize}
-        lh={typeScale.body.lineHeight}
-        fow={fontWeight.semibold}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 /** Khung thẻ khối của Figma: nền trắng, viền xám nhạt, bo 16, đệm 16. */
 function Block({ children, gap = 10 }: { children: ReactNode; gap?: number }) {
   const colors = useColors();
@@ -521,11 +415,8 @@ function DriverOverviewSection({
   const tApp = useTranslations('Drivers.app.detail');
   const tDrivers = useTranslations('Drivers');
   const fmt = useAppFormat();
-  const settings = useDriverWageSettings();
   const { driver, month, upcoming, reliability, trend, current } = overview;
-  const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
-  const shopDaily = settings.data?.dailyWage ?? null;
   const [year, mm] = month.month.split('-');
 
   // So với tháng TRƯỚC trong chuỗi 6 tháng (cùng một lần đọc) - không có số tháng trước thì không vẽ.
@@ -537,6 +428,7 @@ function DriverOverviewSection({
     return Math.round(((Number(month.wageTotal) - prevWage) / prevWage) * 100);
   }, [month.month, month.wageTotal, trend]);
 
+  const [pickedMonth, setPickedMonth] = useState<string | null>(null);
   const hasTrend = trend.some((p) => p.trips > 0 || Number(p.wageTotal) > 0);
   const maxWage = Math.max(1, ...trend.map((p) => Number(p.wageTotal)));
 
@@ -559,29 +451,8 @@ function DriverOverviewSection({
       tone: reliability.expired > 0 ? colors.danger : undefined,
     },
     { key: 'pending', label: tApp('pending'), value: tApp('trips', { count: upcoming.pendingTrips }) },
-    ...(driver.dropCount > 0
-      ? [
-          {
-            key: 'drops',
-            label: t('reliability.drops'),
-            value: t('reliability.dropsValue', { count: driver.dropCount, critical: driver.criticalDropCount }),
-            tone: colors.danger,
-          },
-        ]
-      : []),
-    ...(driver.autoAssignCooldownUntil
-      ? [
-          {
-            key: 'cooldown',
-            label: t('reliability.cooldown'),
-            value: fmt.dateTime(driver.autoAssignCooldownUntil),
-            tone: colors.danger,
-          },
-        ]
-      : []),
   ];
 
-  const ended = driver.linkStatus === DRIVER_LINK_STATUS.ENDED;
   const tProfile = useTranslations('Drivers.detail.profile');
 
   return (
@@ -628,7 +499,7 @@ function DriverOverviewSection({
             },
             {
               key: 'upcoming',
-              value: String(upcoming.acceptedTrips).padStart(2, '0'),
+              value: fmt.count(upcoming.acceptedTrips),
               label: tApp('upcoming'),
               tone: colors.brandHigh,
             },
@@ -643,23 +514,6 @@ function DriverOverviewSection({
             </YStack>
           ))}
         </XStack>
-        {/* Chi tiết tiền công Figma không vẽ - giữ gọn dưới ba ô (người dùng 25/11/2026). */}
-        <YStack gap={2}>
-          <DataRow size="sm" labelWide label={t('wage.agreed', { count: month.agreedTrips })} value={fmt.money(month.agreedWage)} />
-          <DataRow size="sm" labelWide label={t('wage.edited')} value={t('wage.editedValue', { count: month.editedTrips })} />
-          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-            {[
-              shopDaily ? t('stats.shopDaily', { amount: fmt.money(shopDaily) }) : t('stats.noShopDaily'),
-              upcoming.acceptedTrips > 0 ? t('stats.upcomingWage', { amount: fmt.money(upcoming.acceptedWage) }) : null,
-            ]
-              .filter(Boolean)
-              .join(LIST_SEPARATOR)}
-          </Text>
-          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-            {t('wage.note')}
-          </Text>
-        </YStack>
-
         <YStack h={1} bg={colors.border} my={space.xs} />
 
         <YStack gap={space.md}>
@@ -697,42 +551,84 @@ function DriverOverviewSection({
       <Block>
         <BlockTitle>{t('trend.title')}</BlockTitle>
         {hasTrend ? (
-          <XStack ai="flex-end" gap={space.sm} pt={space.sm}>
-            {trend.map((point) => {
-              const active = point.month === month.month;
-              const h = Math.max(BAR_MIN, Math.round((Number(point.wageTotal) / maxWage) * BAR_MAX));
-              return (
-                <YStack
-                  key={point.month}
-                  f={1}
-                  ai="center"
-                  gap={space.xs}
-                  accessible
-                  accessibilityLabel={[
-                    fmt.monthYear(dayjs(point.month, MONTH_PERIOD_FORMAT).toDate()),
-                    fmt.money(point.wageTotal),
-                    `${t('trend.trips')}: ${fmt.count(point.trips)}`,
-                  ].join(LIST_SEPARATOR)}
-                >
-                  <YStack
-                    w={BAR_WIDTH}
-                    h={h}
-                    btlr={6}
-                    btrr={6}
-                    bg={active ? colors.brandShape : colors.barIdle}
-                  />
-                  <Text
-                    col={active ? colors.text : colors.placeholder}
-                    fos={typeScale.label.fontSize}
-                    lh={typeScale.label.lineHeight}
-                    fow={active ? fontWeight.semibold : fontWeight.regular}
+          /*
+            Như biểu đồ màn Tổng quan (người dùng 28/11/2026): số rút gọn trên đầu mỗi cột; chạm một
+            cột để chọn tháng đó (tô vàng) và xem chi tiết dưới biểu đồ.
+          */
+          <YStack gap={space.sm}>
+            <XStack ai="flex-end" gap={space.sm} pt={space.sm}>
+              {trend.map((point) => {
+                const active = point.month === (pickedMonth ?? month.month);
+                const h = Math.max(BAR_MIN, Math.round((Number(point.wageTotal) / maxWage) * BAR_MAX));
+                return (
+                  <Pressable
+                    key={point.month}
+                    style={{ flex: 1 }}
+                    onPress={() => setPickedMonth(point.month)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={[
+                      fmt.monthYear(dayjs(point.month, MONTH_PERIOD_FORMAT).toDate()),
+                      fmt.money(point.wageTotal),
+                      `${t('trend.trips')}: ${fmt.count(point.trips)}`,
+                    ].join(LIST_SEPARATOR)}
                   >
-                    {tApp('barMonth', { month: Number(point.month.slice(5, 7)) })}
+                    <YStack ai="center" gap={space.xs}>
+                      <Text
+                        col={active ? colors.text : colors.textMuted}
+                        fos={typeScale.label.fontSize}
+                        lh={typeScale.label.lineHeight}
+                        fow={fontWeight.medium}
+                        numberOfLines={1}
+                      >
+                        {Number(point.wageTotal) > 0 ? fmt.moneyCompact(point.wageTotal) : '0'}
+                      </Text>
+                      <YStack
+                        w={BAR_WIDTH}
+                        h={h}
+                        btlr={6}
+                        btrr={6}
+                        bg={active ? colors.brandShape : colors.barIdle}
+                      />
+                      <Text
+                        col={active ? colors.text : colors.placeholder}
+                        fos={typeScale.label.fontSize}
+                        lh={typeScale.label.lineHeight}
+                        fow={active ? fontWeight.semibold : fontWeight.regular}
+                      >
+                        {tApp('barMonth', { month: Number(point.month.slice(5, 7)) })}
+                      </Text>
+                    </YStack>
+                  </Pressable>
+                );
+              })}
+            </XStack>
+            {(() => {
+              const sel = trend.find((p) => p.month === (pickedMonth ?? month.month));
+              if (!sel) return null;
+              return (
+                <XStack
+                  ai="center"
+                  jc="space-between"
+                  gap={space.sm}
+                  px={space.md}
+                  py={space.sm}
+                  br={radius.control}
+                  bg={colors.background}
+                >
+                  <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                    {[
+                      fmt.monthYear(dayjs(sel.month, MONTH_PERIOD_FORMAT).toDate()),
+                      `${t('trend.trips')}: ${fmt.count(sel.trips)}`,
+                    ].join(LIST_SEPARATOR)}
                   </Text>
-                </YStack>
+                  <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
+                    {fmt.money(sel.wageTotal)}
+                  </Text>
+                </XStack>
               );
-            })}
-          </XStack>
+            })()}
+          </YStack>
         ) : (
           <Text col={colors.textMuted} fos={typeScale.body.fontSize}>
             {t('trend.empty')}
@@ -743,53 +639,56 @@ function DriverOverviewSection({
       {driver.activeBookingCount > 0 ? (
         <Block gap={12}>
           <BlockTitle>{tApp('upcomingTitle')}</BlockTitle>
-          {current.map((trip) => {
-            const bookingMeta = BOOKING_STATUS_META[trip.bookingStatus as BookingStatus];
-            const assignmentMeta = trip.assignmentStatus
-              ? DRIVER_ASSIGNMENT_STATUS_META[trip.assignmentStatus as DriverAssignmentStatus]
-              : null;
-            return (
-              <Pressable
-                key={trip.bookingId}
-                onPress={() => navigateOnce(ROUTES.manage.bookingDetail(trip.bookingId))}
-                accessibilityRole="button"
-                accessibilityLabel={trip.bookingCode}
-              >
-                <YStack bw={1} bc={colors.border} br={radius.control} p={12} gap={space.xs}>
+          {current.map((trip) => (
+            /*
+              Figma "Collateral Options" `24512:120373`: khung viền bo 12, đệm 12, hai khối cách 16 -
+              mã · xe 16/24 đậm + khung giờ 14/20 mờ; khách (ảnh 32 + tên 14 vừa / SĐT 14 mờ) bên trái,
+              tiền công 18/28 đậm bên phải.
+            */
+            <Pressable
+              key={trip.bookingId}
+              onPress={() => navigateOnce(ROUTES.manage.bookingDetail(trip.bookingId))}
+              accessibilityRole="button"
+              accessibilityLabel={trip.bookingCode}
+            >
+              <YStack bw={1} bc={colors.border} br={radius.control} p={12} gap={16} bg={colors.surface}>
+                <YStack gap={4}>
                   <XStack ai="center" gap={6} minWidth={0}>
-                    <Text col={colors.text} fos={typeScale.title.fontSize} lh={typeScale.title.lineHeight} fow={fontWeight.semibold}>
+                    <Text col={colors.text} fos={16} lh={24} fow={fontWeight.semibold}>
                       {`#${trip.bookingCode}`}
                     </Text>
                     <YStack w={6} h={6} br={3} bg={colors.textDisabled} />
-                    <Text f={1} col={colors.text} fos={typeScale.title.fontSize} lh={typeScale.title.lineHeight} fow={fontWeight.semibold} numberOfLines={1}>
-                      {trip.vehiclePlate ? `${trip.vehicleName} · ${trip.vehiclePlate}` : trip.vehicleName}
+                    <Text f={1} col={colors.text} fos={16} lh={24} fow={fontWeight.semibold} numberOfLines={1}>
+                      {trip.vehicleName}
                     </Text>
                   </XStack>
-                  <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+                  <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1}>
                     {fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt)}
                   </Text>
-                  {/* Khách của chuyến (web `PersonCell`). */}
-                  <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
-                    {[trip.customerName, trip.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
-                  </Text>
-                  <XStack gap={space.sm} flexWrap="wrap" pt={space.xs}>
-                    {bookingMeta ? (
-                      <Pill
-                        label={domainLabel('bookingStatus', trip.bookingStatus, bookingMeta.label)}
-                        tone={pillToneOfStatusColor(bookingMeta.color)}
-                      />
-                    ) : null}
-                    {assignmentMeta && trip.assignmentStatus ? (
-                      <Pill
-                        label={domainLabel('driverAssignmentStatus', trip.assignmentStatus, assignmentMeta.label)}
-                        tone={pillToneOfStatusColor(assignmentMeta.color)}
-                      />
-                    ) : null}
-                  </XStack>
                 </YStack>
-              </Pressable>
-            );
-          })}
+                <XStack ai="center" jc="space-between" gap={space.sm}>
+                  <XStack f={1} minWidth={0} ai="center" gap={space.sm}>
+                    <Avatar name={trip.customerName} url={null} size={32} />
+                    <YStack f={1} minWidth={0}>
+                      <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium} numberOfLines={1}>
+                        {trip.customerName}
+                      </Text>
+                      {trip.customerPhone ? (
+                        <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1}>
+                          {trip.customerPhone}
+                        </Text>
+                      ) : null}
+                    </YStack>
+                  </XStack>
+                  {trip.wageAmount ? (
+                    <Text col={colors.text} fos={18} lh={28} fow={fontWeight.semibold}>
+                      {fmt.money(trip.wageAmount)}
+                    </Text>
+                  ) : null}
+                </XStack>
+              </YStack>
+            </Pressable>
+          ))}
           {driver.activeBookingCount > current.length ? (
             <Text col={colors.placeholder} fos={typeScale.label.fontSize}>
               {t('current.more', { shown: current.length })}
@@ -826,43 +725,12 @@ function DriverOverviewSection({
         </YStack>
       </Block>
 
-      {/* Tab Hồ sơ của web gộp về đây (Figma chỉ còn 2 tab - người dùng 25/11/2026). */}
-      <Block gap={space.sm}>
-        <BlockTitle>{tApp('linkInfo')}</BlockTitle>
-        <DataRow size="md" labelWide label={tProfile('invitedAt')} value={fmt.dateTime(driver.invitedAt)} />
-        {driver.respondedAt ? (
-          <DataRow size="md" labelWide label={tProfile('respondedAt')} value={fmt.dateTime(driver.respondedAt)} />
-        ) : null}
-        {ended && driver.endedAt ? (
-          <DataRow
-            size="md"
-            label={tProfile('endedAt')}
-            value={`${fmt.dateTime(driver.endedAt)}${
-              driver.endedByParty
-                ? ` · ${
-                    driver.endedByParty === DRIVER_LINK_END_PARTY.DRIVER
-                      ? tProfile('endedByDriver')
-                      : tProfile('endedByEmployer')
-                  }`
-                : ''
-            }`}
-          />
-        ) : null}
-        <YStack h={1} bg={colors.borderSubtle} my={space.xs} />
-        <Text col={colors.text} fos={typeScale.body.fontSize} fow={fontWeight.medium}>
-          {tProfile('sectionLicence')}
-        </Text>
-        <DriverLicenceDetail
-          licence={driver.licence}
-          invitedName={driver.name}
-          checked={Boolean(driver.licenceCheck)}
-        />
-        {/* Liên kết đã đóng thì server từ chối đối chiếu — web `LicenceCard canManage={canManage && open}`. */}
-        <LicenceCheckControl
-          driver={driver}
-          canManage={canManage && DRIVER_LINK_OPEN_STATUSES.includes(driver.linkStatus)}
-        />
-      </Block>
+      {/* Figma không vẽ khối thông tin liên kết / bằng lái (đã bỏ 28/11/2026); chỉ giữ THAO TÁC đối
+          chiếu bằng lái khi tên trên bằng lệch tên đã đặt (tự ẩn khi không cần). */}
+      <LicenceCheckControl
+        driver={driver}
+        canManage={canManage && DRIVER_LINK_OPEN_STATUSES.includes(driver.linkStatus)}
+      />
     </>
   );
 }
@@ -872,12 +740,10 @@ function DriverTripsSection({
   driver,
   month,
   wageTotal,
-  onMonthChange,
 }: {
   driver: Driver;
   month: string;
   wageTotal: string;
-  onMonthChange: (month: string) => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Drivers.detail.trips');
@@ -938,11 +804,9 @@ function DriverTripsSection({
         outcome: (o) => domainLabel('driverAssignmentOutcome', o),
         dateTime: (iso) => fmt.dateTime(iso),
       });
-      const result = await Share.share({
-        title: `${t('csv.fileName', { month })}-${driver.phone}.csv`,
-        message: csv,
-      });
-      if (result.action === Share.sharedAction) {
+      // Như web `downloadCsv`: ra TỆP .csv (Excel mở được), không phải đoạn chữ chia sẻ.
+      const result = await saveCsvFile(`${t('csv.fileName', { month })}-${driver.phone}.csv`, csv);
+      if (result === 'saved') {
         toast.showSuccess(t('exported', { count: rows.length }));
       }
     } catch (err) {
@@ -955,35 +819,42 @@ function DriverTripsSection({
   return (
     <>
       {/* Figma "Tổng ghi nhận · Tháng 10" + "Bảng kê": thẻ trắng bo 12, bóng nhẹ. Bộ chọn tháng giữ ở đây. */}
-      <XStack ai="center" jc="space-between" gap={space.sm} p={12} br={radius.control} bg={colors.surface} bw={1} bc={colors.border}>
+      {/*
+        Figma `24512:121231`: thẻ trắng bo 12, đệm 12, bóng 0 0 8 - trái "Tổng ghi nhận · <tháng ⌄>"
+        (12 mờ; tháng bấm được để đổi) + số tiền 16 đậm; phải nút "Bảng kê". Một hàng.
+      */}
+      <XStack
+        ai="center"
+        jc="space-between"
+        gap={space.sm}
+        p={12}
+        br={radius.control}
+        bg={colors.surface}
+        shadowColor="#0a0d12"
+        shadowOpacity={0.04}
+        shadowRadius={8}
+        shadowOffset={{ width: 0, height: 0 }}
+        elevation={1}
+      >
         <YStack f={1} minWidth={0} gap={2}>
+          {/* Tháng ĂN THEO bộ chọn tháng của tab Tổng quan (Figma không có bộ lọc riêng ở đây). */}
           <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
             {tApp('trips.total', { month: tApp('detail.month', { month: `${mm}/${year}` }) })}
           </Text>
-          <Text col={colors.text} fos={typeScale.title.fontSize} lh={typeScale.title.lineHeight} fow={fontWeight.semibold}>
+          <Text col={colors.text} fos={16} lh={24} fow={fontWeight.semibold}>
             {fmt.money(wageTotal)}
           </Text>
         </YStack>
-        <YStack ai="flex-end" gap={space.xs}>
-          <MonthPeriodField
-            variant="chip"
-            label={tDrivers('wage.month.label')}
-            display={tApp('detail.month', { month: `${mm}/${year}` })}
-            value={month}
-            onChange={onMonthChange}
-            maxPeriod={currentMonth()}
-          />
-          <Button
-            label={tApp('trips.statement')}
-            lineIcon="download"
-            variant="secondary"
-            size="sm"
-            block={false}
-            loading={exporting}
-            disabled={items.length === 0}
-            onPress={() => void exportStatement()}
-          />
-        </YStack>
+        <Button
+          label={tApp('trips.statement')}
+          lineIcon="download"
+          variant="outline"
+          size="sm"
+          block={false}
+          loading={exporting}
+          disabled={items.length === 0}
+          onPress={() => void exportStatement()}
+        />
       </XStack>
 
       {/* Figma "Tab List" `24512:121256`: ô tìm + "Trạng thái" cùng hàng. */}
@@ -1052,7 +923,8 @@ function DriverTripsSection({
                   {/* Figma `24512:121371`: "Khách: <tên>" 12, tên medium. */}
                   <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} numberOfLines={1}>
                     {tTripsApp.rich('customer', {
-                      name: [row.customerName, row.customerPhone].filter(Boolean).join(LIST_SEPARATOR),
+                      // Figma chỉ tên khách (SĐT xem ở chi tiết đơn).
+                      name: row.customerName,
                       b: (chunks) => (
                         <Text col={colors.textMuted} fos={typeScale.label.fontSize} fow={fontWeight.medium}>
                           {chunks}

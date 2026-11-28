@@ -7,6 +7,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslations } from 'use-intl';
 import {
+  BOOKING_DIRECT_SOURCE_VALUES,
+  BOOKING_SOURCE,
+  BOOKING_SOURCE_FILTER_DIRECT,
+  BOOKING_SOURCE_FILTER_VALUES,
   BOOKING_HISTORY_KIND,
   BOOKING_HISTORY_OUTCOME,
   BOOKING_HISTORY_TAB,
@@ -35,6 +39,7 @@ import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { useRouter } from 'expo-router';
 import { Pill } from '@/components/ui/Pill';
 import { ServiceTypeChip } from '@/components/ui/ServiceTypeChip';
+import { BookingSourceChip } from '@/components/ui/BookingSourceChip';
 import { VehicleThumb } from '@/components/ui/VehicleThumb';
 import { typeScale } from '@/theme/tokens';
 import { ManageListShell } from '@/features/shell/ManageListShell';
@@ -78,6 +83,7 @@ export function BookingHistoryScreen() {
   const gutter = layout.screenX;
   const colors = useColors();
   const t = useTranslations('Bookings.history');
+  const tSource = useTranslations('Bookings.source');
   const tRequestDetail = useTranslations('BookingRequests.detail');
   const label = useDomainLabel();
   const permissions = usePermissions();
@@ -87,7 +93,13 @@ export function BookingHistoryScreen() {
   const [tab, setTab] = useState<BookingHistoryTab>(routeTab ?? BOOKING_HISTORY_TAB.ALL);
   const [outcome, setOutcome] = useState<string>(ALL_FILTER);
   // Bộ lọc chung mang sang từ "Đơn thuê xe" (web `endedHref`) - chỉ đọc làm giá trị đầu.
-  const carried = useLocalSearchParams<{ q?: string; serviceType?: string }>();
+  const carried = useLocalSearchParams<{ q?: string; serviceType?: string; source?: string }>();
+  // Nguồn đơn (ADR 0110) - yêu cầu không thành đơn luôn thuộc nguồn XePrime.
+  const [source, setSource] = useState<string>(() =>
+    carried.source && (BOOKING_SOURCE_FILTER_VALUES as readonly string[]).includes(carried.source)
+      ? carried.source
+      : ALL_FILTER,
+  );
   const [serviceType, setServiceType] = useState<string>(() =>
     carried.serviceType && (SERVICE_TYPE_VALUES as readonly string[]).includes(carried.serviceType)
       ? carried.serviceType
@@ -107,10 +119,11 @@ export function BookingHistoryScreen() {
     () => ({
       ...(outcome === ALL_FILTER ? {} : { outcome: outcome as BookingHistoryOutcome }),
       ...(serviceType === ALL_FILTER ? {} : { serviceType }),
+      ...(source === ALL_FILTER ? {} : { source }),
       ...(branchId ? { branchId } : {}),
       ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     }),
-    [outcome, serviceType, branchId, debouncedSearch],
+    [outcome, serviceType, source, branchId, debouncedSearch],
   );
   const query = useBookingHistory({ tab, ...baseFilters, page });
   // Cuộn vô hạn trên mobile: gộp các trang đã tải (`useAccumulatedPages`).
@@ -164,6 +177,19 @@ export function BookingHistoryScreen() {
           ...SERVICE_TYPE_VALUES.map((value) => ({ value, label: label('serviceType', value) })),
         ],
       },
+      {
+        key: 'source',
+        label: tSource('filter.label'),
+        value: source,
+        resetValue: ALL_FILTER,
+        display: 'option' as const,
+        options: [
+          { value: ALL_FILTER, label: tSource('filter.all') },
+          { value: BOOKING_SOURCE.XEPRIME, label: label('bookingSource', BOOKING_SOURCE.XEPRIME) },
+          { value: BOOKING_SOURCE_FILTER_DIRECT, label: tSource('filter.direct') },
+          ...BOOKING_DIRECT_SOURCE_VALUES.map((value) => ({ value, label: label('bookingSource', value) })),
+        ],
+      },
       ...(outcomeOptions.length > 1
         ? [
             {
@@ -183,7 +209,7 @@ export function BookingHistoryScreen() {
           ]
         : []),
     ],
-    [t, label, serviceType, outcome, outcomeOptions, tabGroup],
+    [t, tSource, label, serviceType, source, outcome, outcomeOptions, tabGroup],
   );
 
   const selectTab = useCallback((next: BookingHistoryTab) => {
@@ -200,6 +226,7 @@ export function BookingHistoryScreen() {
         return;
       }
       if (groupKey === 'outcome') setOutcome(value);
+      else if (groupKey === 'source') setSource(value || ALL_FILTER);
       else setServiceType(value);
       setPage(FIRST_PAGE);
     },
@@ -216,6 +243,7 @@ export function BookingHistoryScreen() {
     tab !== BOOKING_HISTORY_TAB.ALL ||
     outcome !== ALL_FILTER ||
     serviceType !== ALL_FILTER ||
+    source !== ALL_FILTER ||
     Boolean(branchId) ||
     debouncedSearch.trim().length > 0;
 
@@ -451,7 +479,11 @@ const HistoryCard = memo(function HistoryCard({
             </YStack>
           </XStack>
           <XStack ai="center" jc="space-between" gap={space.sm}>
-            <ServiceTypeChip value={row.serviceType} />
+            <XStack ai="center" gap={space.xs} flexShrink={1} minWidth={0}>
+              <ServiceTypeChip value={row.serviceType} />
+              {/* Nguồn đơn (ADR 0110) - yêu cầu không thành đơn luôn thuộc nguồn XePrime (không viên). */}
+              <BookingSourceChip source={row.source} sourceLabel={row.sourceLabel ?? null} />
+            </XStack>
             <Text col={colors.text} {...body} numberOfLines={1} flexShrink={1} ta="right">
               {period}
             </Text>

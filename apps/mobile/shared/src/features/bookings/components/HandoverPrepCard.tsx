@@ -22,7 +22,7 @@ import {
   handoverPhotoSlotsFor,
   PAYMENT_KIND,
   type HandoverPhotoSlot,
-  type HandoverPrepItem,
+  type HandoverPrepManualItem,
 } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -99,7 +99,7 @@ type ManualCheck = BookingHandoverPrep['manualChecks'][number];
 interface PrepRowState {
   key: PrepKey;
   autoDone: boolean;
-  manualItem?: HandoverPrepItem;
+  manualItem?: HandoverPrepManualItem;
   manual: ManualCheck | null;
   done: boolean;
 }
@@ -108,6 +108,14 @@ interface PrepRowState {
 function depositOutstanding(prep: Pick<BookingHandoverPrep, 'depositRequired' | 'depositReceived'>) {
   const left = subtractMoney(prep.depositRequired, prep.depositReceived);
   return isNegativeMoney(left) ? '0' : left;
+}
+
+/** Phần cọc THU DƯ (đã thu − phải thu, không âm) - `'0'` khi chưa vượt. Web `depositOverCollected`. */
+function depositOverCollected(
+  prep: Pick<BookingHandoverPrep, 'depositRequired' | 'depositReceived'>,
+) {
+  const over = subtractMoney(prep.depositReceived, prep.depositRequired);
+  return isNegativeMoney(over) ? '0' : over;
 }
 
 /**
@@ -119,9 +127,9 @@ export function prepRowStates(
   can: { collect: boolean; contract: boolean },
   collateral?: PrepCollateral,
 ): PrepRowState[] {
-  const manualOf = (item: HandoverPrepItem) =>
+  const manualOf = (item: HandoverPrepManualItem) =>
     prep.manualChecks.find((check) => check.item === item) ?? null;
-  const row = (key: PrepKey, autoDone: boolean, manualItem?: HandoverPrepItem): PrepRowState => {
+  const row = (key: PrepKey, autoDone: boolean, manualItem?: HandoverPrepManualItem): PrepRowState => {
     const manual = manualItem && !autoDone ? manualOf(manualItem) : null;
     return { key, autoDone, manualItem, manual, done: autoDone || manual !== null };
   };
@@ -143,7 +151,9 @@ export function prepRowStates(
     ...(can.contract
       ? [row('contract', prep.contractId != null, HANDOVER_PREP_ITEM.CONTRACT)]
       : []),
-    row('photos', prep.pickupPhotoCount >= prep.pickupPhotoRequired, HANDOVER_PREP_ITEM.PHOTOS),
+    // Ảnh bàn giao KHÔNG đánh dấu tay (26/11/2026, web `prepRowStates`): chỉ xong khi biên bản đủ ảnh -
+    // cùng luật với phần cảnh báo góc ảnh trống lúc bấm giao xe. Server bỏ qua dấu cũ, từ chối dấu mới.
+    row('photos', prep.pickupPhotoCount >= prep.pickupPhotoRequired),
     ...(prep.driverReady == null
       ? []
       : [row('driver', prep.driverReady === true, HANDOVER_PREP_ITEM.DRIVER)]),
@@ -313,7 +323,14 @@ export function HandoverPrepCard({
     },
     deposit: {
       title: t('deposit'),
-      body: isZeroMoney(depositOutstanding(prep))
+      // Thu DƯ (đã thu > phải thu) nói rõ phần thừa - web `depositOverCollected`.
+      body: !isZeroMoney(depositOverCollected(prep))
+        ? t.rich('depositOver', {
+            received: fmt.money(prep.depositReceived),
+            amount: fmt.money(depositOverCollected(prep)),
+            b: bold,
+          })
+        : isZeroMoney(depositOutstanding(prep))
         ? t('depositDone', { amount: fmt.money(prep.depositReceived) })
         : isZeroMoney(prep.depositReceived)
           ? t.rich('depositPending', { amount: fmt.money(prep.depositRequired), b: bold })
@@ -340,7 +357,13 @@ export function HandoverPrepCard({
         collateral.recorded > 0
           ? t('eitherDoneAsset')
           : cashDone
-            ? t('eitherDoneCash', { amount: fmt.money(prep.depositReceived) })
+            ? isZeroMoney(depositOverCollected(prep))
+              ? t('eitherDoneCash', { amount: fmt.money(prep.depositReceived) })
+              : t.rich('eitherDoneCashOver', {
+                  received: fmt.money(prep.depositReceived),
+                  amount: fmt.money(depositOverCollected(prep)),
+                  b: bold,
+                })
             : t.rich('eitherPending', {
                 amount: fmt.money(prep.depositRequired),
                 assets:
@@ -376,7 +399,7 @@ export function HandoverPrepCard({
   const rows = prepRowStates(prep, can, collateral);
   const done = rows.filter((row) => row.done).length;
 
-  const toggle = (item: HandoverPrepItem, checked: boolean) => {
+  const toggle = (item: HandoverPrepManualItem, checked: boolean) => {
     if (setCheck.isPending) return;
     setCheck.mutate({ item, checked }, { onError: (err) => toast.showError(errorMessage(err)) });
   };

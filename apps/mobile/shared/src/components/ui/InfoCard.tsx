@@ -9,7 +9,7 @@ import { layout } from '@/theme/layout';
 import { useColors, useDarkAccentBorder } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import { IconSquareButton } from './IconSquareButton';
-import { InfoHint } from './InfoHint';
+import { TextWithHint } from './InfoHint';
 
 /** Nút bút chì 40×40 bo 12 của web `.edit` (`InfoCard.module.css`) - nút viền thường của AntD. */
 const EDIT_BUTTON = 40;
@@ -131,22 +131,19 @@ export function InfoCard({
     >
       <XStack ai="flex-start" gap={12} flexWrap="wrap">
         <YStack f={1} minWidth={200} gap={2}>
-          <XStack ai="center" gap={space.xs}>
-            <Text
-              flexShrink={1}
-              col={colors.text}
-              fos={fontSize.h3}
-              lineHeight={TITLE_LINE_HEIGHT}
-              fow={fontWeight.semibold}
-              accessibilityRole="header"
-            >
-              {title}
-            </Text>
-            {/* Mô tả dài gọn vào dấu ⓘ cạnh tiêu đề, chạm mở đọc đủ (người dùng 17/11/2026). */}
-            {typeof hint === 'string' && hint.length > HINT_INLINE_MAX ? (
-              <InfoHint content={hint} label={title} size={fontSize.body} />
-            ) : null}
-          </XStack>
+          {/* Mô tả dài gọn vào dấu ⓘ LỒNG sau chữ cuối tiêu đề, chạm mở đọc đủ (người dùng 17/11 + 28/11/2026). */}
+          <TextWithHint
+            hint={typeof hint === 'string' && hint.length > HINT_INLINE_MAX ? hint : undefined}
+            hintLabel={title}
+            hintSize={fontSize.body}
+            col={colors.text}
+            fos={fontSize.h3}
+            lineHeight={TITLE_LINE_HEIGHT}
+            fow={fontWeight.semibold}
+            accessibilityRole="header"
+          >
+            {title}
+          </TextWithHint>
           {hint ? (
             typeof hint === 'string' ? (
               hint.length > HINT_INLINE_MAX ? null : (

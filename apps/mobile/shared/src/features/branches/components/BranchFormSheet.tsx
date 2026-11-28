@@ -222,7 +222,6 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={branch ? tActions('update') : tForm('createOk')}
-            icon="checkmark-outline"
             loading={saving}
             onPress={() => void submit()}
           />

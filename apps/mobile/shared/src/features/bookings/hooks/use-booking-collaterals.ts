@@ -37,3 +37,9 @@ export const useSetBookingCollateralReturned = (bookingId: string) =>
   useCollateralMutation(bookingId, ({ id, returned }: { id: string; returned: boolean }) =>
     bookingsApi.setCollateralReturned(bookingId, id, returned),
   );
+
+/** Sửa loại / mô tả một món chưa trả (26/11/2026) — native port of web `useUpdateBookingCollateral`. */
+export const useUpdateBookingCollateral = (bookingId: string) =>
+  useCollateralMutation(bookingId, ({ id, body }: { id: string; body: BookingCollateralInput }) =>
+    bookingsApi.updateCollateral(bookingId, id, body),
+  );

@@ -16,6 +16,8 @@ import partnerTrackPersonal from '../assets/images/partner/track-personal.webp';
 import partnerTrackShop from '../assets/images/partner/track-shop.webp';
 import partnerTrackShopBg from '../assets/images/partner/track-shop-bg.webp';
 import partnerTrackRibbon from '../assets/images/partner/track-ribbon.webp';
+// Dấu tích 3D màn "Đã gửi duyệt xe thành công" - Figma Thêm xe MB `24486:113267` (100px, xuất 300px).
+import vehicleSubmitSuccess from '../assets/images/partner/vehicle-submit-success.webp';
 import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
 // Minh hoạ "chưa có bằng lái" — xuất thẳng từ Figma (Empty State, node 20043:49464).
 import driverLicenceEmpty from '../assets/images/driver-licence-empty.png';
@@ -78,6 +80,7 @@ export const images = {
   shopOnboarding,
   ownerPersonalCar,
   partnerHero,
+  vehicleSubmitSuccess,
   partnerLoginBanner,
   partnerLoginLogo,
   partnerLoginMascot,

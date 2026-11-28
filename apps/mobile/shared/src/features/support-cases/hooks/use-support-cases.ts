@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PERMISSION } from '@xeprime/types';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PERMISSION, SUPPORT_CASE_STATUS_VALUES, type SupportCaseStatus } from '@xeprime/types';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
@@ -41,6 +41,36 @@ export function useSupportCases(
      */
     placeholderData: keepPageData<Awaited<ReturnType<typeof supportCasesApi.list>>>(params),
   });
+}
+
+/**
+ * Số yêu cầu theo TỪNG trạng thái cho dải chip ("Đang mở (3)") - như số đếm của Sổ khách / Công nợ.
+ *
+ * API chưa có phép đếm gộp, nên mỗi trạng thái một lượt `limit: 1` chỉ để đọc `meta.total`, CÙNG
+ * bộ lọc Loại + ô tìm với danh sách (số trên chip luôn khớp danh sách bấm vào). Bỏ `status` khỏi
+ * `filters` truyền vào - chip tự gắn. Chưa về thì `undefined` (chip không hiện số, không hiện 0 giả).
+ */
+export function useSupportCaseStatusCounts(
+  surface: SupportSurface,
+  filters: Omit<SupportCaseFilters, 'status' | 'page' | 'limit'>,
+  { enabled = true }: { enabled?: boolean } = {},
+): Partial<Record<SupportCaseStatus, number>> {
+  const results = useQueries({
+    queries: SUPPORT_CASE_STATUS_VALUES.map((status) => {
+      const f: SupportCaseFilters = { ...filters, status, page: 1, limit: 1 };
+      return {
+        queryKey: queryKeys.supportCases.list(supportCasesToParams(surface, f)),
+        queryFn: () => supportCasesApi.list(surface, f),
+        enabled,
+      };
+    }),
+  });
+  const counts: Partial<Record<SupportCaseStatus, number>> = {};
+  SUPPORT_CASE_STATUS_VALUES.forEach((status, i) => {
+    const total = results[i]?.data?.meta?.total;
+    if (typeof total === 'number') counts[status] = total;
+  });
+  return counts;
 }
 
 function useInvalidateSupport() {

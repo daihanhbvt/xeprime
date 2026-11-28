@@ -509,7 +509,7 @@ function ProfileForm({
          * Footer cố định "Hủy · Lưu thay đổi" (Figma "Footer cố định" `24231:112208`) - CHỈ khi có
          * logo/ảnh bìa chưa lưu (người dùng chốt 26/11/2026). Các nhóm khác lưu qua tấm sửa của nó.
          */
-        {...(canEdit && mediaDirty
+        {...(canEdit
           ? {
               footer: (
                 <XStack gap={HEAD_GAP}>
@@ -518,7 +518,7 @@ function ProfileForm({
                       label={tActions('cancel')}
                       variant="neutral"
                       shape="square"
-                      disabled={saving}
+                      disabled={saving || !mediaDirty}
                       onPress={() => resetGroup(SHOP_PROFILE_GROUP.MEDIA)}
                     />
                   </YStack>
@@ -529,6 +529,7 @@ function ProfileForm({
                       variant="gradient"
                       shape="square"
                       loading={saving}
+                      disabled={!mediaDirty}
                       onPress={() => void saveGroup(SHOP_PROFILE_GROUP.MEDIA)}
                     />
                   </YStack>
@@ -724,15 +725,9 @@ function ProfileForm({
             saving={saving}
             onCancel={closeSheet}
             onSubmit={() => void saveGroup(SHOP_PROFILE_GROUP.LEGAL)}
-            {...(canSeeBranches
-              ? {
-                  // Đóng tấm (bỏ phần đang sửa dở như "Hủy") rồi cuộn tới thẻ Chi nhánh.
-                  onManageBranches: () => {
-                    closeSheet();
-                    scrollToBranches();
-                  },
-                }
-              : {})}
+            /* Không còn lối "Quản lý chi nhánh" trong tấm (người dùng chốt 27/11/2026). */
+            noticesAsToast
+            helpInTitle
           />
         </>
       ) : null}

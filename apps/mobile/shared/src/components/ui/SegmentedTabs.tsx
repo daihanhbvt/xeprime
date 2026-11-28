@@ -25,9 +25,17 @@ export interface SegmentedTabItem<K extends string> {
    * bị cắt "…" (feedback 20/11/2026: "Thu chi 30 ngày" vừa chữ, "Đơn & chuyến 6 tháng" đủ chữ).
    */
   hug?: boolean;
+  /**
+   * Chấm trạng thái 6px SAU nhãn (Figma "_Badge" › "_Dot" của dải tab dịch vụ `24237:39612`): màu do
+   * nơi gọi truyền (vd xanh = dịch vụ đang bật, đỏ = tắt). Bỏ trống thì không vẽ.
+   */
+  dotColor?: string;
 }
 
 const TRAY_PAD = 4;
+const DOT_SIZE = 6;
+const DOT_PAD_X = 2;
+const DOT_OFFSET = 2;
 const TRAY_GAP = 4;
 /**
  * Biến thể `neutral` - "Horizontal tabs" của design v2 (Figma `24175:52486`, thẻ thu chi Tổng quan
@@ -205,6 +213,12 @@ export function SegmentedTabs<K extends string>({
                   >
                     {item.count}
                   </Text>
+                </YStack>
+              ) : null}
+              {item.dotColor ? (
+                // Figma: viên "_Badge" đệm 8/2 bọc chấm 6 - cách nhãn 8 (khoảng `gap` 4 + lề 4).
+                <YStack ml={DOT_OFFSET} px={DOT_PAD_X} py={2}>
+                  <YStack w={DOT_SIZE} h={DOT_SIZE} br={radius.pill} bg={item.dotColor} />
                 </YStack>
               ) : null}
             </XStack>

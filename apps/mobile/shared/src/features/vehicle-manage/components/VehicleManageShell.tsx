@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState, type ReactNode, type RefObject } from 'react';
-import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
 import type { ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { YStack } from 'tamagui';

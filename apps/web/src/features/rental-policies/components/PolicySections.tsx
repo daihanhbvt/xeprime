@@ -47,6 +47,11 @@ interface PolicySectionsProps {
   numbered?: boolean;
   disabled?: boolean;
   blocks?: readonly PolicyBlock[];
+  /**
+   * Thân khung "Công thức tính giá gói" (Figma `24789:85376`) - màn sửa xe truyền câu đề xuất giá
+   * tháng theo giá ngày của xe; vắng = công thức chữ (chính sách gian hàng không gắn với xe nào).
+   */
+  discountFormula?: ReactNode;
 }
 
 export function PolicySections({
@@ -55,6 +60,7 @@ export function PolicySections({
   numbered = true,
   disabled = false,
   blocks = [POLICY_BLOCK.DISCOUNT],
+  discountFormula,
 }: PolicySectionsProps) {
   const t = useTranslations('Vehicles.pricing');
   const flat = useContext(FlatLayout);
@@ -66,6 +72,7 @@ export function PolicySections({
       title={numbered ? `1. ${title}` : title}
       legacyTiers={legacyDiscountTiers}
       disabled={disabled}
+      formula={discountFormula}
     />
   );
   return flat ? body : <div className={styles.stack}>{body}</div>;
@@ -112,11 +119,13 @@ function DiscountSection({
   title,
   legacyTiers,
   disabled,
+  formula,
 }: {
   control: Control<PolicyFormValues>;
   title: string;
   legacyTiers?: readonly LegacyTierView[];
   disabled: boolean;
+  formula?: ReactNode;
 }) {
   const t = useTranslations('Vehicles.pricing.longTermDiscount');
   const tActions = useTranslations('Common.actions');
@@ -249,8 +258,8 @@ function DiscountSection({
             />
           ) : null}
           <div className={styles.formulaCard}>
-            <span className={styles.previewTitle}>{t('formulaTitle')}</span>
-            <span className={styles.previewText}>{t('formula')}</span>
+            <span className={styles.previewTitle}>{t('formulaTitleShort')}</span>
+            <span className={styles.previewText}>{formula ?? t('formula')}</span>
           </div>
         </>
       ) : (

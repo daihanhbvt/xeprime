@@ -50,7 +50,10 @@ export function NumberField<T extends FieldValues>({
   grouped = true,
   percent = false,
   lock,
+  hintInLabel = false,
 }: {
+  /** Gợi ý thành ⓘ cạnh nhãn - xem `NumberControl`. */
+  hintInLabel?: boolean;
   control: Control<T>;
   name: Path<T>;
   label: string;
@@ -106,6 +109,7 @@ export function NumberField<T extends FieldValues>({
       integer={integer}
       grouped={grouped}
       percent={percent}
+      hintInLabel={hintInLabel}
       {...(hint === undefined ? {} : { hint })}
       {...(suffix === undefined ? {} : { suffix })}
       {...(placeholder === undefined ? {} : { placeholder })}

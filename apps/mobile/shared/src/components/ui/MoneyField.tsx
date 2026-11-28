@@ -28,7 +28,10 @@ export function MoneyField<T extends FieldValues>({
   publishRequired = false,
   editable = true,
   unit,
+  hintInLabel = false,
 }: {
+  /** Gợi ý thành ⓘ cạnh nhãn - xem `MoneyControl`. */
+  hintInLabel?: boolean;
   control: Control<T>;
   name: Path<T>;
   label: string;
@@ -59,6 +62,7 @@ export function MoneyField<T extends FieldValues>({
       required={required}
       publishRequired={publishRequired}
       editable={editable}
+      hintInLabel={hintInLabel}
       {...(hint === undefined ? {} : { hint })}
       {...(placeholder === undefined ? {} : { placeholder })}
       {...(unit === undefined ? {} : { unit })}

@@ -257,7 +257,7 @@ export const ApprovalPaymentGroup = memo(function ApprovalPaymentGroup({
           <SummaryRow
             key={row.key}
             label={row.label}
-            value={fmt.money(row.amount)}
+            value={row.text ?? fmt.money(row.amount)}
             emphasis={final ? 'brand' : 'none'}
           />
         );

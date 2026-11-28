@@ -254,6 +254,9 @@ describe('Điểm nối Booking - bộ chọn gán tài xế', () => {
         phone: '0901234567',
         busy: false,
         licenceState: DRIVER_LICENCE_STATE.VERIFIED,
+        licenceClasses: ['B2'],
+        driverType: 'staff',
+        expiredCount: 0,
       },
     ]);
     const listSpy = jest.spyOn(driversApi, 'list');

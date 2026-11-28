@@ -206,8 +206,11 @@
         "payment": "Thanh toán & hóa đơn",
         "insurance": "Bảo hiểm vật chất xe",
         "collateral": "Hình thức cọc xe (Thế chấp)",
+        "collateralApp": "Hình thức cọc xe",
         "limits": "Giới hạn km & Phụ phí quá giờ",
-        "conditions": "Điều kiện cho thuê"
+        "limitsApp": "Giới hạn km & Phụ phí",
+        "conditions": "Điều kiện cho thuê",
+        "paymentInsurance": "Thanh toán & Bảo hiểm"
       },
       "actionsLabel": "Lưu chính sách thuê",
       "switchType": {
@@ -233,12 +236,14 @@
         "modeRequired": "Bật 1 hoặc đồng thời cả 2 hình thức: Cọc tiền & Cọc tài sản",
         "bothOn": "Đang bật 2 hình thức cọc",
         "methodTitle": "Phương thức nhận cọc (Có thể chọn 1 hoặc chọn cả 2)",
+        "methodTitleApp": "Phương thức nhận cọc",
         "cashTitle": "Cọc tiền mặt / Chuyển khoản",
         "cashHint": "Khách đặt khoản tiền đảm bảo khi nhận xe, hoàn lại sau khi trả xe.",
         "amountLabel": "Số tiền cọc mặc định",
         "presetsLabel": "Mức cọc gợi ý",
         "assetTitle": "Cọc tài sản",
         "assetHint": "Khách để lại tài sản đảm bảo (giấy tờ gốc, xe máy…), không cần giữ tiền mặt.",
+        "assetHintApp": "Khách để lại xe máy kèm giấy đăng ký gốc, không cần giữ tiền mặt.",
         "noneBadgeTitle": "Xe được gắn huy hiệu \"Miễn thế chấp\" nổi bật trên XePrime",
         "noneBadgeBody": "Khách không phải đặt tiền cọc hay để lại tài sản khi nhận xe. Huy hiệu hiện trên thẻ xe, trang xe và trong bộ lọc \"Miễn thế chấp\"."
       },
@@ -248,6 +253,7 @@
       "overtime": {
         "title": "Hạn mức & phí trả xe quá giờ",
         "hint": "Thời hạn trả xe và phụ phí trả xe trễ.",
+        "hintApp": "Quy định giờ trả xe và phụ phí trả trễ.",
         "grace": "Miễn phí tối đa"
       },
       "delivery": {
@@ -277,6 +283,7 @@
         "hint": "Bảo hiểm vật chất xe MIC theo chuyến cho ô tô tự lái. Phí tính theo giá trị xe và số ngày thuê, do khách trả. Xe cần có giá trị xe, đủ ảnh và cà vẹt mới được bán kèm. Khi có tổn thất, khách thuê chịu phần khấu trừ.",
         "modeOptional": "Khách tự chọn mua khi đặt xe. Xe chưa đủ dữ liệu bảo hiểm vẫn nhận đặt, không kèm bảo hiểm.",
         "modeRequired": "Mọi chuyến tự lái phải mua kèm. Xe chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái cho tới khi bổ sung.",
+        "modeRequiredApp": "Mọi chuyến tự lái đều phải có bảo hiểm. Xe chưa cập nhật đủ thông tin sẽ tạm ngừng nhận đặt tự lái.",
         "impactTitle": "{count, plural, other {# xe}} chưa đủ dữ liệu bảo hiểm sẽ ngừng nhận đặt tự lái",
         "impactNamesMore": "{names} và {count, plural, other {# xe}} khác",
         "vehicleBlockedTitle": "Xe này chưa đủ dữ liệu bảo hiểm nên không nhận đặt tự lái cho tới khi bổ sung:"

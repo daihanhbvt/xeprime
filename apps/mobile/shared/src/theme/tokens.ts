@@ -219,6 +219,16 @@ const FIGMA_V2_TOKENS = {
     slateText: '#475569',
     /** #1e293b - chữ viên "15 xe" của thẻ chi nhánh (`24231:113733`). */
     slateStrong: '#1e293b',
+    /** `status/information-25` #f5faff - nền thẻ đơn "Tự lái" của khối ngày Lịch tháng (`24729:78798`). */
+    infoWash: '#f5faff',
+    /** `status/rose-25` #fff5f6 - nền thẻ đơn "Xe có tài xế" trên lưới lịch (`24729:82403`). */
+    roseWash: '#fff5f6',
+    /** `status/error-25` #fffbfa - nền ô ngày KÍN hết xe của Lịch tháng (`24729:78694`). */
+    dangerWash: '#fffbfa',
+    /** #e53838 - vạch mức kín 100% của ô ngày Lịch tháng (`24729:78698`). */
+    dangerVivid: '#e53838',
+    /** `text/gray/white` - chữ trên nền ĐẶC màu (viên chặng thẻ lịch `24729:82250`); trắng ở cả hai giao diện. */
+    textOnSolid: '#ffffff',
   },
   dark: {
     brandLink: '#f5c33b',
@@ -247,6 +257,11 @@ const FIGMA_V2_TOKENS = {
     barIdle: 'rgba(255, 255, 255, 0.08)',
     slateText: '#cbd5e1',
     slateStrong: '#e2e8f0',
+    infoWash: 'rgba(21, 112, 239, 0.08)',
+    roseWash: 'rgba(227, 27, 84, 0.10)',
+    dangerWash: 'rgba(217, 45, 32, 0.08)',
+    dangerVivid: '#f97066',
+    textOnSolid: '#ffffff',
   },
 } as const;
 

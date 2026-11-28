@@ -1,33 +1,32 @@
-import { Pressable } from 'react-native';
+import type { ReactNode } from 'react';
 import type { Href } from 'expo-router';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  SERVICE_TYPE_VALUES,
-  type ServiceType,
-} from '@xeprime/types';
-import { Card } from '@/components/ui/Card';
-import { SectionHeader } from '@/components/ui/CardTitle';
+import { SERVICE_TYPE_VALUES, type ServiceType } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
+import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { RowDivider, SwitchRow } from '@/components/ui/SwitchRow';
 import { useServiceToggle } from '@/features/vehicle-manage/hooks/use-service-toggle';
-import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import type { VehicleDetail } from '../api';
-import { layout } from '@/theme/layout';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
-
-const DOT = 8;
-/** Ba tab chia đều bề ngang. */
-const TAB_STYLE = { flex: 1, minWidth: 0 } as const;
+import { useColors } from '@/theme/ThemeProvider';
+import { space, typeScale } from '@/theme/tokens';
+import type { VehicleDetail } from '../api';
 
 /**
- * Đầu mục "Dịch vụ xe" — bản native của dải tab dịch vụ + `ToggleRow` của `ServicesPane` web (sổ
- * redesign §3.6 E8): mỗi dịch vụ một dòng có chấm xanh/xám (bật/tắt) và công tắc bật/tắt dịch vụ.
- * Như web: ba tab, chỉ hiện công tắc và khối giá của tab đang mở (màn giá lọc theo `active`). Công tắc đi CÙNG đường ghi `useServiceToggle` (gửi đủ `serviceTypes`, hỏi lại khi tắt
- * dịch vụ đang có giá riêng); bị chặn thì nói lý do thay vì mờ đi im lặng.
+ * Đầu mục "Dịch vụ xe" - bản native của dải tab dịch vụ + công tắc của `ServicesPane` web, dựng theo
+ * Figma Partner `24237:38682`:
+ *
+ *  - Dải tab "Xe tự lái · Xe có tài xế · Xe dài hạn" (khay `SegmentedTabs` neutral), mỗi tab một
+ *    chấm 6px sau nhãn: xanh = dịch vụ đang bật, đỏ = tắt. Như web: LUÔN đủ ba tab, chỉ hiện công tắc
+ *    và khối giá của tab đang mở.
+ *  - Một "Nhóm thông tin": công tắc bật/tắt dịch vụ của tab + câu gợi ý (link sang mục Bảo hiểm & Giao
+ *    nhận xe), rồi `children` (hàng "Tự động đồng ý nhận chuyến") sau một đường kẻ.
+ *
+ * Công tắc đi CÙNG đường ghi `useServiceToggle` (gửi đủ `serviceTypes`, hỏi lại khi tắt dịch vụ đang
+ * có giá riêng); bị chặn thì nói lý do thay vì mờ đi im lặng.
  */
 export function VehicleServiceToggles({
   vehicle,
@@ -35,6 +34,7 @@ export function VehicleServiceToggles({
   active,
   onSelect,
   policyHref,
+  children,
 }: {
   vehicle: VehicleDetail;
   canEdit: boolean;
@@ -42,10 +42,12 @@ export function VehicleServiceToggles({
   active: ServiceType;
   onSelect: (service: ServiceType) => void;
   /**
-   * Đích của link "Chính sách thuê" trong câu gợi ý — mục Chính sách thuê của ĐÚNG khu đang đứng.
+   * Đích của link trong câu gợi ý - mục Bảo hiểm & Giao nhận xe của ĐÚNG khu đang đứng.
    * Bỏ trống = mục của màn sửa xe gian hàng.
    */
   policyHref?: Href;
+  /** Hàng thêm trong cùng thẻ, sau đường kẻ (Figma: "Tự động đồng ý nhận chuyến"). */
+  children?: ReactNode;
 }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.editor.services');
@@ -53,89 +55,35 @@ export function VehicleServiceToggles({
   const navigateOnce = useNavigateOnce();
   const toggle = useServiceToggle(vehicle, canEdit);
   const services = vehicle.serviceTypes ?? [];
-  /* Web `ServicesPane`: LUÔN đủ ba tab (dịch vụ tắt vẫn bật lên được ngay tại đây). */
-  const allowed = SERVICE_TYPE_VALUES;
   const on = services.includes(active);
   const reason = toggle.blockedReason(active, !on);
 
+  const items = SERVICE_TYPE_VALUES.map((service) => {
+    const serviceOn = services.includes(service);
+    const label = t(`tab.${service}` as 'tab.self_drive');
+    return {
+      key: service,
+      label,
+      dotColor: serviceOn ? colors.successVivid : colors.danger,
+      accessibilityLabel: `${label}, ${serviceOn ? t('on') : t('off')}`,
+    };
+  });
+
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <SectionHeader icon="apps-outline">{t('tabsLabel')}</SectionHeader>
-        {/* Dải tab dịch vụ - chấm xanh = đang bật, xám = tắt (ledger §3.6 E8). */}
-        {/* Dạng TAB ngang chia đều (người dùng chốt 17/11/2026): khối xám, tab đang chọn nền trắng. */}
-        <XStack
-          gap={space.xs}
-          p={space.xs}
-          br={radius.control}
-          bg={colors.surfaceMuted}
-          bw={1}
-          bc={colors.border}
-          accessibilityRole="tablist"
-          accessibilityLabel={t('tabsLabel')}
-        >
-          {allowed.map((service) => {
-            const serviceOn = services.includes(service);
-            const selected = service === active;
-            return (
-              <Pressable
-                key={service}
-                style={TAB_STYLE}
-                onPress={() => onSelect(service)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
-              >
-                <XStack
-                  ai="center"
-                  jc="center"
-                  gap={space.xs}
-                  px={space.xs}
-                  py={space.sm}
-                  br={radius.md}
-                  bg={selected ? colors.surface : 'transparent'}
-                  bw={selected ? 1 : 0}
-                  bc={colors.border}
-                >
-                  <YStack
-                    w={DOT}
-                    h={DOT}
-                    br={radius.pill}
-                    bg={serviceOn ? colors.success : colors.danger}
-                    accessibilityLabel={serviceOn ? t('on') : t('off')}
-                  />
-                  <Text
-                    flexShrink={1}
-                    col={colors.text}
-                    fos={fontSize.label}
-                    fow={selected ? fontWeight.semibold : fontWeight.regular}
-                    numberOfLines={1}
-                    ta="center"
-                  >
-                    {t(`toggle.${service}.title` as 'toggle.self_drive.title')}
-                  </Text>
-                </XStack>
-              </Pressable>
-            );
-          })}
-        </XStack>
-        <ToggleRow
-          label={t(`toggle.${active}.title` as 'toggle.self_drive.title')}
-          // Hiện bật cả lúc hộp nhập giá có tài xế đang mở; huỷ hộp thì về tắt (web `ServicesPane`).
-          checked={on}
-          disabled={!canEdit || toggle.pending}
-          onToggle={() => {
-            if (reason) toast.showInfo(reason);
-            else toggle.toggle(active, !on);
-          }}
-        />
-        {/* Web `ServicesPane`: "Chính sách thuê" trong câu gợi ý là LINK sang mục đó. */}
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t.rich('toggle.hint', {
+    <>
+      {/* `fit`: ô rộng theo nhãn - "Xe có tài xế" không bị cắt, hai ô ngắn co lại (người dùng 27/11/2026). */}
+      <SegmentedTabs items={items} value={active} onChange={onSelect} variant="neutral" fit />
+      <InfoGroupCard>
+        <SwitchRow
+          title={t(`toggle.${active}.title` as 'toggle.self_drive.title')}
+          description={t.rich('toggle.hint', {
             service: t(`toggle.${active}.target` as 'toggle.self_drive.target'),
+            // Web `ServicesPane`: tên mục trong câu gợi ý là LINK sang mục đó.
             conditions: (chunks) => (
               <Text
-                col={colors.primaryActive}
-                fow={fontWeight.semibold}
+                col={colors.brandMoney}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
                 accessibilityRole="link"
                 onPress={() =>
                   navigateOnce(
@@ -147,14 +95,27 @@ export function VehicleServiceToggles({
               </Text>
             ),
           })}
-        </Text>
+          value={on}
+          disabled={!canEdit || toggle.pending}
+          onChange={() => {
+            if (reason) toast.showInfo(reason);
+            else toggle.toggle(active, !on);
+          }}
+        />
         {on ? null : (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
             {t('offNote')}
           </Text>
         )}
-      </YStack>
+        {children ? (
+          <YStack gap={space.sm + space.xs}>
+            {/* Figma `24237:56662`: đường kẻ #fafafa giữa hai hàng công tắc của thẻ này. */}
+            <RowDivider tone="faint" />
+            {children}
+          </YStack>
+        ) : null}
+      </InfoGroupCard>
       {toggle.dialog}
-    </Card>
+    </>
   );
 }

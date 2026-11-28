@@ -21,7 +21,10 @@ export function MenuOption({
   inset = false,
   leading,
   onPress,
+  disabled = false,
 }: {
+  /** Lựa chọn không chọn được lúc này (vd tài xế trùng chuyến) - mờ, chạm không làm gì. */
+  disabled?: boolean;
   label: string;
   /** Dòng phụ dưới nhãn — chỉ khi nhãn thôi chưa đủ để chọn đúng. */
   hint?: string;
@@ -48,9 +51,10 @@ export function MenuOption({
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
       accessibilityLabel={label}
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
     >
       <XStack
@@ -58,6 +62,7 @@ export function MenuOption({
         gap={space.sm}
         minHeight={sizing.touchTarget}
         py={space.xs}
+        opacity={disabled ? 0.45 : 1}
         {...(inset ? { px: layout.screenX } : {})}
       >
         {leading ?? null}

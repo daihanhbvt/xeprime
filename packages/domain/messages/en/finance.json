@@ -726,7 +726,8 @@
       },
       "profitAll": "Profit to date"
     },
-    "allTime": "All time"
+    "allTime": "All time",
+    "viewDetail": "View vehicle finance"
   },
   "bySource": {
     "cards": {

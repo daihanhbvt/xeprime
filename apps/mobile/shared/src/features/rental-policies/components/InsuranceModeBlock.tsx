@@ -17,7 +17,7 @@ import { InlineAction } from '@/components/ui/InlineAction';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
-import { RadioOption } from '@/components/ui/RadioOption';
+import { ChoiceRow } from '@/components/ui/ChoiceRow';
 import { useDomainLabel } from '@/i18n/domain';
 import { space } from '@/theme/tokens';
 import type { PolicyFormValues } from '../schema';
@@ -53,12 +53,15 @@ export function InsuranceModeBlock<T extends PolicyFormValues>({
   disabled,
   impact,
   vehicle,
+  headless = false,
 }: {
   control: Control<T>;
   disabled: boolean;
   impact?: ShopInsuranceImpact | null | undefined;
   /** Màn giá của MỘT xe: chế độ Bắt buộc mà xe còn thiếu dữ liệu ⇒ liệt kê từng thiếu (web, 20/11/2026). */
   vehicle?: VehicleInsuranceReadiness | null | undefined;
+  /** Thẻ nơi gọi đã có tiêu đề + ⓘ (Figma `24238:57800`) - bỏ hàng nhãn lặp lại bên trong. */
+  headless?: boolean;
 }) {
   const t = useTranslations('Shop.policies.workspace.insurance');
   const domainLabel = useDomainLabel();
@@ -74,16 +77,20 @@ export function InsuranceModeBlock<T extends PolicyFormValues>({
   const names = impact?.vehicles.slice(0, IMPACT_NAMES_SHOWN).map((v) => v.name) ?? [];
 
   return (
-    <YStack gap={space.sm}>
-      <XStack ai="center" gap={space.xs}>
-        <FieldLabel label={t('title')} />
-        <InfoHint label={t('tipLabel')} content={t('hint')} />
-      </XStack>
+    <YStack gap={space.sm + space.xs}>
+      {headless ? null : (
+        <XStack ai="center" gap={space.xs}>
+          <FieldLabel label={t('title')} />
+          <InfoHint label={t('tipLabel')} content={t('hint')} />
+        </XStack>
+      )}
+      {/* Figma "Checkbox" radio v2 (`24238:58634`): hàng không khung, vòng 16. */}
       {INSURANCE_MODE_VALUES.map((value) => (
-        <RadioOption
+        <ChoiceRow
           key={value}
+          kind="radio"
           label={domainLabel('insuranceMode', value)}
-          hint={value === INSURANCE_MODE.REQUIRED ? t('modeRequired') : t('modeOptional')}
+          hint={value === INSURANCE_MODE.REQUIRED ? t('modeRequiredApp') : t('modeOptional')}
           checked={value === mode}
           disabled={disabled}
           onPress={() => field.onChange(value)}

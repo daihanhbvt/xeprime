@@ -111,3 +111,34 @@ export function useApplyVehicleDocumentOcr(vehicleId: string) {
     onSuccess: invalidate,
   });
 }
+
+/** Link ký sống ~2 phút: giữ 90 giây rồi xin lại, không dùng một link sắp hết hạn. */
+const THUMB_TTL_MS = 90_000;
+
+/**
+ * Link ảnh thu nhỏ của phiên bản ĐANG DÙNG (Figma "Document item": ảnh giấy tờ 48×48). Cùng
+ * endpoint tải xuống của nút "Xem" - chỉ gọi khi có file và quyền `view_files`. Khoá nằm DƯỚI nhánh
+ * phiên bản, nên làm mới phiên bản (thay file) kéo theo ảnh mới.
+ */
+export function useVehicleDocumentThumb(
+  vehicleId: string,
+  documentId: string | null,
+  versionId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [
+      ...queryKeys.vehicles.documentVersions(vehicleId, documentId ?? ''),
+      'thumb',
+      versionId ?? '',
+    ],
+    queryFn: () =>
+      vehicleDocumentsApi.versionDownload(vehicleId, documentId as string, versionId as string),
+    enabled: enabled && Boolean(documentId && versionId),
+    staleTime: THUMB_TTL_MS,
+    gcTime: THUMB_TTL_MS,
+    refetchInterval: THUMB_TTL_MS,
+    retry: false,
+    select: (ticket) => ticket.downloadUrl,
+  });
+}

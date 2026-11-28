@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -13,7 +13,6 @@ import {
   VEHICLE_TYPE,
   isVehicleFuelTypeAllowed,
   packageShopListingGapsOf,
-  requiredVehicleImageTypes,
   type PublishRequirement,
 } from '@xeprime/types';
 import { vehicleCreateFormSchema, type VehicleFormValues } from '@xeprime/validators';
@@ -22,8 +21,6 @@ import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
-import { DataRow } from '@/components/ui/DataRow';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { TOAST_PRESET } from '@/components/feedback/AppToast';
@@ -31,9 +28,6 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { LIST_SEPARATOR, isLogoOnlyGate } from '@xeprime/domain';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
-import { useCatalogLabels } from '@/features/catalog/use-catalog';
-import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
@@ -41,15 +35,15 @@ import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { CreateDescriptionCard, CreateFeaturesCard } from './components/VehicleFormSteps';
+import { CreateVehiclePhotosCard } from './components/CreateVehiclePhotosCard';
 import {
-  BasicStep,
-  FeaturesDescriptionCard,
-  ImagesCard,
-  SourceTypeSection,
-  SpecsSection,
-} from './components/VehicleFormSteps';
-import { RegistrationCapture } from './components/RegistrationCapture';
-import { CreateReadinessCard } from './components/CreateReadinessCard';
+  CreateBodyTypeCard,
+  CreateSourceTypeCard,
+  CreateVehicleInfoCard,
+} from './components/CreateVehicleInfoSections';
+import { CreateVehicleConfirmContent } from './components/CreateVehicleConfirmContent';
+import { CreateWizardHeader } from './components/CreateWizardHeader';
 import {
   EMPTY_REGISTRATION,
   checkRegistration,
@@ -57,14 +51,14 @@ import {
 } from './registration-capture';
 import { vehicleSettingsApi } from '@/api/vehicle-settings/api';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Pill } from '@/components/ui/Pill';
 import { CreateVehiclePricingStep } from './components/CreateVehiclePricingStep';
-import { VehicleWizardBar, type WizardStep } from './components/VehicleWizardBar';
+import type { WizardStep } from './components/VehicleWizardBar';
 import { VehicleCreateSuccess } from './components/VehicleCreateSuccess';
 import { formValuesToInput } from './mappers';
-import { missingPublishRequirementsForForm } from './publication';
+import { missingPublishRequirementsForForm, publishGapFormFields } from './publication';
 import { usePublicationLabels } from './hooks/use-publication-labels';
 import { useCreateVehicle } from './hooks/use-vehicle';
+import { useAutofillCatalogRent } from './hooks/use-autofill-catalog-rent';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
@@ -204,7 +198,7 @@ export function CreateVehicleScreen() {
   const tBranches = useTranslations('Branches');
   const tPermission = useTranslations('ManageCommon.permission');
   const tCreate = useTranslations('Vehicles.create');
-  const tSteps = useTranslations('Vehicles.form.createSteps');
+  const tCreateApp = useTranslations('Vehicles.form.appCreate');
   const tConfirm = useTranslations('Vehicles.form.confirm');
   const router = useRouter();
   const toast = useAppToast();
@@ -223,6 +217,7 @@ export function CreateVehicleScreen() {
   const shop = useMyShop(true);
   const shopGaps = useMemo(() => packageShopListingGapsOf(shop.data), [shop.data]);
   const tShopGate = useTranslations('Shop.listingGate');
+  const tValidation = useTranslations('Vehicles.form.validation');
   const navigateOnce = useNavigateOnce();
   const [step, setStep] = useState(0);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -243,6 +238,7 @@ export function CreateVehicleScreen() {
   const {
     control,
     getValues,
+    clearErrors,
     handleSubmit,
     setError,
     setValue,
@@ -252,9 +248,11 @@ export function CreateVehicleScreen() {
     resolver,
     defaultValues: EMPTY_DEFAULTS,
   });
+  // Chọn mẫu xe ⇒ tự điền giá trị xe + giá thuê tham khảo vào ô còn trống (web `VehicleForm`).
+  useAutofillCatalogRent(control, getValues, setValue);
 
   const steps = useMemo<readonly WizardStep[]>(
-    () => STEP_KEYS.map((key) => ({ key, shortTitle: t(`wizard.${key}.shortTitle`) })),
+    () => STEP_KEYS.map((key) => ({ key, shortTitle: t(`wizard.${key}.title`) })),
     [t],
   );
   const lastStep = steps.length - 1;
@@ -271,6 +269,7 @@ export function CreateVehicleScreen() {
       })),
     [branches.data, noProvince],
   );
+  const selectedBranchLabel = branchOptions.find((b) => b.value === branchId)?.label ?? null;
   const hintedBranchId = useBranchReturnParam();
   useEffect(() => {
     if (branchId) return;
@@ -325,6 +324,32 @@ export function CreateVehicleScreen() {
     return stepKey ? missing.filter((key) => REQUIREMENT_STEP[key] === stepKey) : missing;
   }
 
+  /*
+   * Ô có dấu * mà còn trống theo điều kiện lên chợ (Hộp số, Dung tích, giá…) không nằm trong schema
+   * nên resolver không tô đỏ - đánh lỗi tay để ô viền đỏ như các ô khác, gỡ khi ô đã điền.
+   */
+  const gapErrorFields = useRef<string[]>([]);
+  function markPublishGaps(missing: readonly PublishRequirement[]) {
+    const fields = publishGapFormFields(missing, getValues());
+    for (const field of fields) {
+      setError(field as keyof VehicleFormValues, {
+        type: 'publishGap',
+        message: tValidation('requiredFieldApp'),
+      });
+    }
+    gapErrorFields.current = fields;
+  }
+  const watchedValues = useWatch({ control });
+  useEffect(() => {
+    if (gapErrorFields.current.length === 0) return;
+    const still = new Set(publishGapFormFields(publishGaps(), getValues()));
+    const cleared = gapErrorFields.current.filter((field) => !still.has(field));
+    if (cleared.length === 0) return;
+    clearErrors(cleared as (keyof VehicleFormValues)[]);
+    gapErrorFields.current = gapErrorFields.current.filter((field) => still.has(field));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chạy lại theo giá trị form
+  }, [watchedValues]);
+
   const back = () => goBackOr(router, ROUTES.manage.vehicles());
   const goToStep = (key: CreateStepKey) => setStep(Math.max(0, STEP_KEYS.indexOf(key)));
 
@@ -332,6 +357,7 @@ export function CreateVehicleScreen() {
   function passesGates(): boolean {
     const missing = publishGaps();
     setPublishMissing(missing);
+    markPublishGaps(missing);
     if (missing.length > 0) {
       goToStep(REQUIREMENT_STEP[missing[0]!]);
       toast.showError(t('wizard.missingTitle'));
@@ -443,40 +469,12 @@ export function CreateVehicleScreen() {
     const valid = await trigger([...STEP_FIELDS[key]]);
     const missing = valid ? publishGaps(key) : [];
     setPublishMissing(missing);
+    markPublishGaps(missing);
     const registrationGap = key === 'basic' && !registrationCheck.ok;
     if (registrationGap) setRegistrationShowErrors(true);
     if (valid && missing.length === 0 && !registrationGap) setStep(step + 1);
   }
 
-  /* Mức "Sẵn sàng gửi duyệt" — cùng luật cổng gửi duyệt, chỉ để chủ xe thấy còn thiếu gì. */
-  // Cờ ổn định cho `useMemo` - `errors` là object mới mỗi lượt render.
-  const regPhotoError = Boolean(registrationCheck.errors.photo);
-  const regFieldsOk = Object.keys(registrationCheck.errors).every((key) => key === 'photo');
-  const watched = useWatch({ control });
-  const readiness = useMemo(() => {
-    const values = { ...EMPTY_DEFAULTS, ...watched } as VehicleFormValues;
-    const gaps = missingPublishRequirementsForForm(values);
-    const media = values.media ?? [];
-    return {
-      photos:
-        requiredVehicleImageTypes(values.vehicleType).every((slot) =>
-          media.some((item) => item.type === slot),
-        ) && !regPhotoError,
-      // Ảnh cà vẹt chỉ cần CÓ - máy đọc ra hay không không tính; tên chủ xe / số khung / số máy là ô
-      // nhập nên thuộc mục thông tin (web 18/11/2026).
-      info:
-        regFieldsOk &&
-        // Tên xe tự ghép từ dòng xe (ADR 0102) - đủ dòng xe là đủ tên.
-        Boolean(values.vehicleCatalogModelId && values.branchId) &&
-        !gaps.some((g) => REQUIREMENT_STEP[g] === 'basic' && g !== PUBLISH_REQUIREMENT.PHOTOS),
-      pricing:
-        (values.serviceTypes ?? []).length > 0 &&
-        !gaps.some((g) => REQUIREMENT_STEP[g] === 'pricing'),
-      ...(shopGaps === null ? {} : { shop: shopGaps.length === 0 }),
-      features: (values.features ?? []).length > 0 || Boolean(values.description?.trim()),
-    };
-  }, [watched, regPhotoError, regFieldsOk, shopGaps]);
-  const requiredPhotos = requiredVehicleImageTypes(vehicleType ?? VEHICLE_TYPE.CAR).length;
 
   if (!permissionsLoading && !has(PERMISSION.VEHICLE_CREATE)) {
     return (
@@ -504,7 +502,6 @@ export function CreateVehicleScreen() {
           setCreated(null);
           setStep(0);
         }}
-        onClose={back}
       />
     );
   }
@@ -516,57 +513,71 @@ export function CreateVehicleScreen() {
       ? Object.keys(registrationCheck.errors).length
       : 0);
 
+  const saveDraftButton = (
+    <Button
+      label={tCreateApp('saveDraft')}
+      variant="outline"
+      loading={create.isPending}
+      onPress={() => submitNow(false)}
+    />
+  );
+
   return (
     <>
-      <AppHeader
+      <CreateWizardHeader
         title={tCreate('title')}
+        steps={steps}
+        current={step}
+        onStepChange={setStep}
         onBack={() => (isDirty ? setConfirmCancel(true) : back())}
       />
       <Screen
         scrollReveal
         edges={['left', 'right', 'bottom']}
+        hideFooterWhileTyping
         footer={
-          <XStack gap={space.sm}>
+          /*
+            Figma: bước 1 "Lưu nháp · Tiếp tục →"; bước 2-3 "← Quay lại · Tiếp tục → / Gửi duyệt →".
+            "Lưu nháp" CHỈ ở bước 1, đúng Figma (người dùng chốt 28/11/2026, thay bản 27/11 có ở cả ba
+            bước); bước 3 vẫn lưu nháp được trong tấm xác nhận "Gửi duyệt".
+          */
+          <XStack gap={space.md}>
             {step > 0 ? (
-              <YStack flexShrink={0}>
+              <YStack f={1}>
                 <Button
                   label={tCommon('back')}
                   variant="outline"
+                  lineIcon="arrow-left"
                   onPress={() => setStep(step - 1)}
                 />
               </YStack>
-            ) : null}
-            {step < lastStep ? (
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+            ) : (
+              <YStack f={1}>{saveDraftButton}</YStack>
+            )}
+            <YStack f={1}>
+              {step < lastStep ? (
                 <Button
-                  variant="gradient"
+                  variant="outline"
                   label={tCommon('next')}
-                  icon="arrow-forward"
+                  lineIcon="arrow-right"
+                  iconEnd
                   onPress={() => void goNext()}
                 />
-              </YStack>
-            ) : (
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              ) : (
                 <Button
                   variant="gradient"
                   label={t('wizard.submit')}
-                  icon="send-outline"
+                  lineIcon="arrow-right"
+                  iconEnd
                   loading={create.isPending}
                   onPress={openConfirm}
                 />
-              </YStack>
-            )}
+              )}
+            </YStack>
           </XStack>
         }
       >
         <YStack gap={layout.section}>
-          <VehicleWizardBar steps={steps} current={step} onStepChange={setStep} />
-
-          <CreateReadinessCard
-            readiness={readiness}
-            requiredPhotos={requiredPhotos}
-          />
-
           {create.isError ? <Callout tone="danger">{errorMessage(create.error)}</Callout> : null}
           {publishMissing.length > 0 ? (
             <Callout tone="danger">
@@ -581,36 +592,29 @@ export function CreateVehicleScreen() {
 
           {stepKey === 'basic' ? (
             <>
-              <ImagesCard
+              <CreateVehiclePhotosCard
                 control={control}
-                title={tSteps('photosTitle')}
-                badge={<Pill tone="warning" label={tSteps('photosRequired', { count: requiredPhotos })} />}
-              >
-                <RegistrationCapture
-                  state={registration}
-                  onChange={setRegistration}
-                  vehiclePlate={plateNumber}
-                  showErrors={registrationShowErrors}
-                />
-              </ImagesCard>
-              <Card>
-                <YStack gap={space.md}>
-                  <BasicStep
-                    control={control}
-                    branchOptions={branchOptions}
-                    branchLoading={branches.isPending}
-                    hideServiceTypes
-                    hideBranch={commission && branchOptions.length <= 1}
-                  />
-                  <SpecsSection
-                    control={control}
-                    isCar={isCar}
-                    setValue={setValue}
-                    registrationReading={registration.reading}
-                  />
-                  {commission ? null : <SourceTypeSection control={control} />}
-                </YStack>
-              </Card>
+                vehicleType={vehicleType ?? VEHICLE_TYPE.CAR}
+                vehicleName={autoName}
+                registration={registration}
+                onRegistrationChange={setRegistration}
+                vehiclePlate={plateNumber}
+                showRegistrationErrors={registrationShowErrors}
+              />
+              <CreateVehicleInfoCard
+                control={control}
+                isCar={isCar}
+                setValue={setValue}
+                branchOptions={branchOptions}
+                branchLoading={branches.isPending}
+                hideBranch={commission && branchOptions.length <= 1}
+                registration={registration}
+                onRegistrationChange={setRegistration}
+                vehiclePlate={plateNumber}
+                showRegistrationErrors={registrationShowErrors}
+              />
+              {isCar ? <CreateBodyTypeCard control={control} /> : null}
+              {commission ? null : <CreateSourceTypeCard control={control} />}
             </>
           ) : stepKey === 'pricing' ? (
             <CreateVehiclePricingStep
@@ -621,20 +625,25 @@ export function CreateVehicleScreen() {
               shopPolicy={!commission}
             />
           ) : (
-            <FeaturesDescriptionCard control={control} title={tSteps('featuresTitle')} />
+            <>
+              <CreateFeaturesCard control={control} />
+              <CreateDescriptionCard control={control} />
+            </>
           )}
         </YStack>
       </Screen>
 
-      {/* Tấm xác nhận — thay bước "Xác nhận" cũ (Figma `24335:66465`). */}
+      {/* Tấm xác nhận - Figma Thêm xe MB `24486:112581` (bản native của web `CreateVehicleConfirmDialog`). */}
       <BottomSheet
         open={confirmSubmit}
         onClose={() => (create.isPending ? undefined : setConfirmSubmit(false))}
         title={tConfirm('title')}
         subtitle={tConfirm('subtitle')}
+        chrome="v2"
+        headerDivider
         dismissable={!create.isPending}
         footer={
-          <XStack gap={space.sm}>
+          <XStack gap={space.md}>
             <YStack flexShrink={0}>
               <Button
                 label={tConfirm('saveDraft')}
@@ -643,11 +652,12 @@ export function CreateVehicleScreen() {
                 onPress={() => submitNow(false)}
               />
             </YStack>
-            <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+            <YStack f={1}>
               <Button
                 variant="gradient"
                 label={tConfirm('submit')}
-                icon="send-outline"
+                lineIcon="arrow-right"
+                iconEnd
                 loading={create.isPending}
                 onPress={() => submitNow(true)}
               />
@@ -655,16 +665,14 @@ export function CreateVehicleScreen() {
           </XStack>
         }
       >
-        <YStack gap={space.md}>
-          <ReviewStep
-            values={{ ...getValues(), name: autoName }}
-            onEditStep={(next) => {
-              setConfirmSubmit(false);
-              setStep(next);
-            }}
-          />
-          <Callout tone="info">{tConfirm('note')}</Callout>
-        </YStack>
+        <CreateVehicleConfirmContent
+          values={{ ...getValues(), name: autoName }}
+          branchLabel={selectedBranchLabel}
+          registration={{
+            chassisNumber: registration.fields.chassisNumber,
+            engineNumber: registration.fields.engineNumber,
+          }}
+        />
       </BottomSheet>
 
       <AlertDialog
@@ -678,145 +686,5 @@ export function CreateVehicleScreen() {
         onCancel={() => setConfirmCancel(false)}
       />
     </>
-  );
-}
-
-/**
- * Bước xác nhận — bốn thẻ tổng kết đúng những gì đã nhập, mỗi thẻ có lối "Chỉnh sửa" quay về
- * ĐÚNG bước của nó. Thông số kỹ thuật nâng cao không xuất hiện: luồng tạo không thu thập chúng.
- */
-function ReviewStep({
-  values,
-  onEditStep,
-}: {
-  values: VehicleFormValues;
-  onEditStep: (step: number) => void;
-}) {
-  const colors = useColors();
-  const t = useTranslations('Vehicles.form.review');
-  const tUnits = useTranslations('Common.units');
-  const tLabels = useTranslations('Common.labels');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
-  const labels = useCatalogLabels();
-
-  const empty = tLabels('emptyValue');
-  const text = (value: string | number | null | undefined): string =>
-    value == null || value === '' ? empty : String(value);
-  const money = (value: number | null | undefined): string =>
-    value == null ? empty : fmt.money(String(value));
-
-  const brandAndModel = [labels.brandLabel(values.brand), values.model].filter(Boolean).join(' ');
-  const bodyType = values.bodyType ? labels.bodyTypeLabel(values.bodyType) : null;
-
-  const groups = [
-    {
-      key: 'basic',
-      title: t('groups.basic'),
-      step: 0,
-      items: [
-        { label: t('name'), value: text(values.name) },
-        { label: t('code'), value: text(values.code) },
-        {
-          label: t('typeAndService'),
-          value: `${domainLabel('vehicleType', values.vehicleType)} / ${fmt.serviceTypes(values.serviceTypes)}`,
-        },
-        {
-          label: t('operationStatus'),
-          value: domainLabel('vehicleOperationStatus', values.operationStatus),
-        },
-        { label: t('sourceType'), value: domainLabel('vehicleSourceType', values.sourceType) },
-      ],
-    },
-    {
-      key: 'specs',
-      title: t('groups.specs'),
-      step: 0,
-      items: [
-        { label: t('plateNumber'), value: text(values.plateNumber) },
-        {
-          label: t('brandAndBody'),
-          value: !brandAndModel
-            ? empty
-            : bodyType
-              ? t('brandWithBody', { brand: brandAndModel, bodyType })
-              : brandAndModel,
-        },
-        {
-          label: t('seatsAndFuel'),
-          value:
-            [
-              values.seatCount ? tUnits('seat', { count: values.seatCount }) : null,
-              values.fuelType ? labels.fuelTypeLabel(values.fuelType) : null,
-            ]
-              .filter(Boolean)
-              .join(' / ') || empty,
-        },
-        {
-          label: t('yearAndColor'),
-          value: [values.manufactureYear, values.color].filter(Boolean).join(' / ') || empty,
-        },
-      ],
-    },
-    {
-      key: 'pricing',
-      title: t('groups.pricing'),
-      step: 1,
-      items: [
-        { label: t('weekdayPrice'), value: money(values.weekdayPrice) },
-        { label: t('weekendPrice'), value: money(values.weekendPrice) },
-        {
-          label: t('discount'),
-          value:
-            values.discountPercent == null
-              ? empty
-              : t('discountValue', { percent: values.discountPercent }),
-        },
-        {
-          label: t('policy'),
-          value: values.deliveryEnabled ? t('policyDelivery') : t('policyNone'),
-        },
-      ],
-    },
-    {
-      key: 'media',
-      title: t('groups.media'),
-      step: 2,
-      items: [
-        {
-          label: t('overview'),
-          value: t('overviewValue', {
-            photos: (values.media ?? []).length,
-            features: (values.features ?? []).length,
-          }),
-        },
-      ],
-    },
-  ];
-
-  return (
-    <YStack gap={layout.section}>
-      {groups.map((group) => (
-        <Card key={group.key}>
-          <YStack gap={space.sm}>
-            <XStack ai="center" jc="space-between">
-              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-                {group.title}
-              </Text>
-              <Button
-                label={t('editStep')}
-                variant="ghost"
-                size="sm"
-                block={false}
-                onPress={() => onEditStep(group.step)}
-              />
-            </XStack>
-            {group.items.map((item) => (
-              <DataRow key={item.label} label={item.label} value={item.value} />
-            ))}
-          </YStack>
-        </Card>
-      ))}
-    </YStack>
   );
 }

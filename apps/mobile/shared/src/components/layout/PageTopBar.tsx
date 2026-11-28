@@ -24,6 +24,7 @@ import { fontWeight, iconSize, space, typeScale } from '@/theme/tokens';
 export const PageTopBar = memo(function PageTopBar({
   title,
   titleSuffix,
+  titleBadge,
   onBack,
   actions,
   subtitle: subtitleProp,
@@ -35,6 +36,11 @@ export const PageTopBar = memo(function PageTopBar({
    * yêu cầu hỗ trợ `24232:118901`: "Tranh chấp chuyến đi #SC10VG1E").
    */
   titleSuffix?: string;
+  /**
+   * Viên đếm XÁM ngay sau tiêu đề (Figma Lịch thuê xe "_Badge" `24729:83790`: "4 xe" - nền
+   * `bg/gray-50`, chữ 14/20 medium `text/gray/medium`, bo 16). Tiêu đề co lại để viên đứng sát nó.
+   */
+  titleBadge?: string;
   /** Dòng phụ dưới tiêu đề (Figma "Chi tiết đơn": "Tạo lúc …" + viên chặng). */
   subtitle?: ReactNode;
   /** Khối nằm trong thanh, dưới hàng tiêu đề (vd. thanh bước của đơn). */
@@ -83,7 +89,7 @@ export const PageTopBar = memo(function PageTopBar({
             {/* Nút phải nằm CÙNG hàng tiêu đề - dòng phụ (viên chặng) trải tới mép phải như Figma. */}
             <XStack ai="center" gap={space.sm}>
             <Text
-              f={1}
+              {...(titleBadge ? { flexShrink: 1 } : { f: 1 })}
               col={colors.text}
               fos={typeScale.heading.fontSize}
               lh={typeScale.heading.lineHeight}
@@ -105,6 +111,19 @@ export const PageTopBar = memo(function PageTopBar({
                 </Text>
               ) : null}
             </Text>
+            {titleBadge ? (
+              <YStack flexShrink={0} px={8} py={2} br={16} bg={colors.background}>
+                <Text
+                  col={colors.textMuted}
+                  fos={typeScale.body.fontSize}
+                  lh={typeScale.body.lineHeight}
+                  fow={fontWeight.medium}
+                >
+                  {titleBadge}
+                </Text>
+              </YStack>
+            ) : null}
+            {titleBadge ? <YStack f={1} /> : null}
             {subtitle && actions ? (
               <XStack ai="center" gap={ACTIONS_GAP} flexShrink={0}>
                 {actions}

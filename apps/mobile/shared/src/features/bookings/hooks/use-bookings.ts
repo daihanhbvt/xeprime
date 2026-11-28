@@ -13,6 +13,7 @@ import {
   type CreateBookingInput,
   type TransitionBookingInput,
   type UpdateBookingInput,
+  type UpdateBookingSourceInput,
   type UpdateDeliveryFeeInput,
   type UpdateDriverWageInput,
 } from '../api';
@@ -254,5 +255,36 @@ export function useUpdateBooking(id: string) {
       );
       invalidateBookingSurfaces(queryClient, id);
     },
+  });
+}
+
+/**
+ * Đổi nguồn của một đơn tự lập (ADR 0110) — native port of web `useUpdateBookingSource`. Response là
+ * đơn đã cập nhật; nguồn chỉ là nhãn thống kê nên không chạm tiền, lịch hay trạng thái.
+ */
+export function useUpdateBookingSource(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: UpdateBookingSourceInput) => bookingsApi.updateSource(id, body),
+    onSuccess: (booking) => {
+      queryClient.setQueryData<BookingDetail>(queryKeys.bookings.detail(id), (prev) =>
+        keepDetailExtras(prev, booking),
+      );
+      invalidateBookingSurfaces(queryClient, id);
+    },
+  });
+}
+
+/**
+ * Nhãn nguồn đơn gian hàng đã từng nhập (ADR 0110) - mới dùng nhất trước — native port of web
+ * `useBookingSourceLabels`. Nằm dưới nhánh `bookings` nên mọi lượt tạo / đổi đơn tự làm mới.
+ */
+export function useBookingSourceLabels(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: queryKeys.bookings.sourceLabels,
+    queryFn: () => bookingsApi.sourceLabels(),
+    enabled: options.enabled ?? true,
+    staleTime: 60_000,
   });
 }

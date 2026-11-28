@@ -50,3 +50,17 @@ export function useNow(enabled = true): number {
 
   return useSyncExternalStore(enabled && focused ? subscribe : subscribeFrozen, readNow, readNow);
 }
+
+/**
+ * Như {@link useNow} nhưng CHỈ render lại khi KẾT QUẢ `select(now)` đổi - cho màn lớn cần một cờ
+ * theo giờ (vd. "sắp tới giờ mà chưa có tài xế"): đọc `useNow()` thẳng ở màn đó là vẽ lại cả màn
+ * (kèm mọi tấm trượt) mỗi giây. `select` phải trả giá trị so được bằng `===` (boolean/số/chuỗi).
+ */
+export function useNowSelect<T extends string | number | boolean | null>(
+  select: (now: number) => T,
+  enabled = true,
+): T {
+  const focused = useScreenFocused();
+  const read = (): T => select(now);
+  return useSyncExternalStore(enabled && focused ? subscribe : subscribeFrozen, read, read);
+}

@@ -12,7 +12,7 @@ import {
 } from '@xeprime/domain';
 import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { InfoHint } from './InfoHint';
+import { TextWithHint } from './InfoHint';
 import { InsuranceFeeHint } from './InsuranceFeeHint';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
@@ -302,12 +302,15 @@ export function PriceBreakdown({
         {depositAmount != null ? (
           <>
             <XStack ai="baseline" jc="space-between" gap={space.sm}>
-              <XStack f={1} ai="center" gap={4}>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {tCommon('deposit')}
-                </Text>
-                <InfoHint content={tCommon('depositHint')} label={tCommon('depositHintLabel')} />
-              </XStack>
+              <TextWithHint
+                f={1}
+                hint={tCommon('depositHint')}
+                hintLabel={tCommon('depositHintLabel')}
+                col={colors.textMuted}
+                fos={fontSize.bodySm}
+              >
+                {tCommon('deposit')}
+              </TextWithHint>
               <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                 {fmt.money(depositAmount)}
               </Text>
@@ -412,12 +415,16 @@ export function PriceBreakdown({
           {fees.holdAmount ? (
             <YStack gap={6} px={layout.padX} py={space.sm} br={radius.sm} bg={colors.surfaceMuted}>
               <XStack ai="baseline" jc="space-between" gap={space.sm}>
-                <XStack f={1} ai="center" gap={4}>
-                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                    {tCommon('holdAmount')}
-                  </Text>
-                  <InfoHint content={tCommon('holdHint')} label={tCommon('holdHintLabel')} />
-                </XStack>
+                <TextWithHint
+                  f={1}
+                  hint={tCommon('holdHint')}
+                  hintLabel={tCommon('holdHintLabel')}
+                  col={colors.text}
+                  fos={fontSize.bodySm}
+                  fow={fontWeight.semibold}
+                >
+                  {tCommon('holdAmount')}
+                </TextWithHint>
                 {/* Chuyển ngay — màu nhấn thương hiệu, đây là khoản cần hành động trước. */}
                 <Text col={colors.accentText} fos={fontSize.bodyLg} fow={fontWeight.bold}>
                   {fmt.money(fees.holdAmount)}

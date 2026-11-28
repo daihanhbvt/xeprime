@@ -1,28 +1,29 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useController, useForm, type Control } from 'react-hook-form';
-import { Pressable } from 'react-native';
+import { ActivityIndicator, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import {
   EXTERNAL_DRIVER_NAME_LENGTH,
+  IMAGE_UPLOAD_MAX_BYTES,
   INTERNAL_DRIVER_NOTE_MAX,
   VN_MOBILE_PHONE_PATTERN,
   compactPhoneInput,
   normalizeVnPhoneInput,
 } from '@xeprime/types';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
+import { SheetConfirmFooter } from '@/components/ui/SheetConfirmFooter';
 import { TextField } from '@/components/ui/TextField';
 import { useImageUpload } from '@/components/ui/use-image-upload';
 import { uploadsApi } from '@/api/uploads/api';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, iconSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import type { InternalDriver } from '../api';
 import { useCreateInternalDriver, useUpdateInternalDriver } from '../hooks/use-internal-drivers';
 
@@ -73,6 +74,10 @@ export function InternalDriverFormSheet({
   onSaved?: (saved: InternalDriver) => void;
 }) {
   const t = useTranslations('Drivers.add.internal');
+  const tCommon = useTranslations('Common.actions');
+  /* Chân tấm cố định (khuôn "Thêm tài xế mới") gọi lượt gửi của form qua ref. */
+  const submitRef = useRef<() => void>(NOOP);
+  const [saving, setSaving] = useState(false);
   return (
     <BottomSheet
       open={open}
@@ -80,6 +85,16 @@ export function InternalDriverFormSheet({
       chrome="v2"
       headerDivider
       title={driver ? t('editTitle') : t('title')}
+      footer={
+        <SheetConfirmFooter
+          backLabel={tCommon('cancel')}
+          onBack={onClose}
+          confirmLabel={driver ? t('save') : t('submit')}
+          onConfirm={() => submitRef.current()}
+          tone="primary"
+          loading={saving}
+        />
+      }
     >
       {open ? (
         <InternalDriverForm
@@ -89,21 +104,32 @@ export function InternalDriverFormSheet({
             onSaved?.(saved);
           }}
           onCancel={onClose}
+          submitRef={submitRef}
+          onSaving={setSaving}
         />
       ) : null}
     </BottomSheet>
   );
 }
 
-/** Thân form — dùng lại trong tấm "Thêm tài xế mới" (tab Tài xế nội bộ). */
+const NOOP = () => undefined;
+
+/**
+ * Thân form — dùng lại trong tấm "Thêm tài xế mới" (tab Tài xế nội bộ). Có `submitRef` thì nút nằm
+ * ở CHÂN TẤM cố định của nơi gọi; không có thì form tự vẽ hàng nút cuối.
+ */
 export function InternalDriverForm({
   driver,
   onDone,
   onCancel,
+  submitRef,
+  onSaving,
 }: {
   driver: InternalDriver | null;
   onDone: (saved: InternalDriver) => void;
   onCancel: () => void;
+  submitRef?: MutableRefObject<() => void>;
+  onSaving?: (saving: boolean) => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Drivers');
@@ -146,6 +172,14 @@ export function InternalDriverForm({
     else create.mutate(body, done);
   });
 
+  useEffect(() => {
+    if (submitRef) submitRef.current = () => void submit();
+  });
+  useEffect(() => {
+    onSaving?.(pending);
+    return () => onSaving?.(false);
+  }, [pending, onSaving]);
+
   return (
     <YStack gap={space.md}>
       <DriverPhotoField control={control} disabled={pending} />
@@ -155,14 +189,12 @@ export function InternalDriverForm({
         label={t('add.internal.phone')}
         placeholder={t('add.internal.phonePlaceholder')}
         keyboardType="phone-pad"
-        required
       />
       <TextField
         control={control}
         name="name"
         label={t('add.internal.name')}
         placeholder={t('add.internal.namePlaceholder')}
-        required
       />
       <TextField
         control={control}
@@ -179,23 +211,16 @@ export function InternalDriverForm({
           {t('internal.form.snapshotNote', { count: driver.activeTripCount })}
         </Text>
       ) : null}
-      <XStack gap={12}>
-        <Button
-          label={tCommon('cancel')}
-          variant="outline"
-          block={false}
-          disabled={pending}
-          onPress={onCancel}
+      {submitRef ? null : (
+        <SheetConfirmFooter
+          backLabel={tCommon('cancel')}
+          onBack={onCancel}
+          confirmLabel={driver ? t('add.internal.save') : t('add.internal.submit')}
+          onConfirm={() => void submit()}
+          tone="primary"
+          loading={pending}
         />
-        <YStack f={1}>
-          <Button
-            label={driver ? t('add.internal.save') : t('add.internal.submit')}
-            variant="gradient"
-            loading={pending}
-            onPress={() => void submit()}
-          />
-        </YStack>
-      </XStack>
+      )}
     </YStack>
   );
 }
@@ -225,46 +250,72 @@ function DriverPhotoField({
     ...(url ? { onRemove: () => field.onChange(null) } : {}),
   });
 
+  /*
+   * Bản app (người dùng 28/11/2026): ảnh tròn ở GIỮA đầu form - trống thì viền đứt + máy ảnh, có ảnh
+   * thì huy hiệu máy ảnh vàng ở góc. Chạm ảnh mở tấm chọn ảnh (thư viện / chụp / xoá ảnh).
+   */
   return (
-    <XStack ai="center" gap={space.md} accessibilityLabel={t('photo')}>
+    <YStack ai="center" gap={space.sm} accessibilityLabel={t('photo')}>
       <Pressable
         onPress={upload.open}
         disabled={disabled || upload.busy}
         accessibilityRole="button"
         accessibilityLabel={url ? t('photoChange') : t('photoAdd')}
       >
-        {url ? (
-          <Avatar name="" url={url} size={64} />
-        ) : (
-          <YStack w={64} h={64} br={32} bg={colors.surfaceMuted} ai="center" jc="center">
-            <Ionicons name="camera-outline" size={iconSize.lg} color={colors.placeholder} />
-          </YStack>
-        )}
-      </Pressable>
-      <YStack f={1} gap={space.xs}>
-        <XStack gap={space.sm} ai="center">
-          <Button
-            label={url ? t('photoChange') : t('photoAdd')}
-            variant="secondary"
-            size="sm"
-            block={false}
-            loading={upload.busy}
-            disabled={disabled}
-            onPress={upload.open}
-          />
-          {url && !upload.busy ? (
-            <Button
-              label={t('photoRemove')}
-              variant="ghostDanger"
-              size="sm"
-              block={false}
-              disabled={disabled}
-              onPress={() => field.onChange(null)}
-            />
+        <YStack w={PHOTO} h={PHOTO}>
+          {url ? (
+            <Avatar name="" url={url} size={PHOTO} />
+          ) : (
+            <YStack
+              w={PHOTO}
+              h={PHOTO}
+              br={radius.pill}
+              bw={1}
+              borderStyle="dashed"
+              bc={colors.borderInput}
+              bg={colors.background}
+              ai="center"
+              jc="center"
+            >
+              <LineIcon name="camera" size={iconSize.lg} color={colors.placeholder} />
+            </YStack>
+          )}
+          {url || upload.busy ? (
+            <YStack
+              position="absolute"
+              right={0}
+              bottom={0}
+              w={BADGE}
+              h={BADGE}
+              br={radius.pill}
+              bg={colors.primary}
+              bw={2}
+              bc={colors.surface}
+              ai="center"
+              jc="center"
+            >
+              {upload.busy ? (
+                <ActivityIndicator size="small" color={colors.surface} />
+              ) : (
+                <LineIcon name="camera" size={iconSize.sm} color={colors.surface} />
+              )}
+            </YStack>
           ) : null}
-        </XStack>
+        </YStack>
+      </Pressable>
+      <YStack ai="center" gap={2}>
+        <Text col={colors.text} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium}>
+          {url ? t('photoChange') : t('photoAdd')}
+        </Text>
+        <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} ta="center">
+          {t('photoHint', { maxMb: PHOTO_MAX_MB })}
+        </Text>
       </YStack>
       {upload.sheet}
-    </XStack>
+    </YStack>
   );
 }
+
+const PHOTO = 88;
+const BADGE = 28;
+const PHOTO_MAX_MB = Math.round(IMAGE_UPLOAD_MAX_BYTES / (1024 * 1024));

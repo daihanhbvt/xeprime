@@ -79,6 +79,7 @@
   "form": {
     "titleInvite": "Invite new driver",
     "inviteHint": "The driver needs a XePrime account (xeprime.vn) verified with this exact phone number. They'll be notified and must accept before you can assign trips.",
+    "inviteHintRich": "The driver needs a <b>XePrime (<link>xeprime.vn</link>)</b> account verified with this exact phone number. They'll be notified and must accept before you can assign trips.",
     "titleEdit": "Edit driver",
     "name": "Driver name",
     "namePlaceholder": "Enter the driver’s name",
@@ -184,6 +185,7 @@
       "emptyAll": "No linked or in-house drivers yet",
       "loadError": "Could not load the drivers.",
       "sideTitle": "Driver",
+      "noSelectionApp": "Choose a driver",
       "noSelection": "Pick a driver from the list on the left.",
       "wageField": "Pay per day",
       "wageSuffix": "VND/day",
@@ -668,6 +670,7 @@
     },
     "trips": {
       "searchPlaceholder": "Search booking code, customer, vehicle, plate...",
+      "searchPlaceholderApp": "Booking code, customer, plate,...",
       "searchLabel": "Search trips",
       "status": "Status",
       "allStatuses": "All statuses",

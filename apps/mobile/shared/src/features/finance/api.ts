@@ -30,6 +30,7 @@ export type {
   FinanceCategory,
   FinanceCategoryBreakdown,
   FinanceCategoryBreakdownItem,
+  FinanceSourceBreakdown,
   FinanceOverviewFilters,
   FinancePeriodFilters,
   FinanceScope,

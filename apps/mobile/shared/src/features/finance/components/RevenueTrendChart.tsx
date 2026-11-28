@@ -103,6 +103,23 @@ function axisLabelStyle(color: string) {
  */
 export const SCROLL_TEST_ID = 'revenue-trend-scroll';
 
+/** Phần doanh thu theo NGUỒN ĐƠN (ADR 0110) - web `ChartSourceRole`. */
+export type ChartSourceRole = 'marketplace' | 'direct' | 'unlinked';
+
+/** Độ mờ của phần doanh thu KHÔNG được chọn - web `DIMMED_OPACITY`. */
+const DIMMED_OPACITY = 0.25;
+
+/**
+ * Làm mờ một màu `#rrggbb` bằng kênh alpha (RN đọc `#rrggbbaa`). Màu dạng khác giữ nguyên - token
+ * biểu đồ đều ở dạng hex.
+ */
+function fade(color: string, opacity: number): string {
+  if (opacity >= 1 || !/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+  return `${color}${Math.round(opacity * 255)
+    .toString(16)
+    .padStart(2, '0')}`;
+}
+
 /** Chỗ tối thiểu cho một nhãn trục X trước khi phải bỏ bớt — `minTickGap` của web, cộng bề rộng chữ. */
 const MIN_LABEL_SPACE = 44;
 
@@ -149,8 +166,16 @@ export function RevenueTrendChart({
   titleOf,
   yAxis = 'compact',
   plotHeight = PLOT_HEIGHT,
+  sources = null,
 }: {
   buckets: readonly FinanceSeriesBucket[];
+  /**
+   * Doanh thu theo NGUỒN ĐƠN (ADR 0110) — native port of web `SourceRevenueTrendChart`: cột doanh thu
+   * thành cột CHỒNG ba phần (qua sàn · tự khai thác · không gắn đơn), tổng chiều cao vẫn là doanh thu
+   * của kỳ. `highlight` = phần đang chọn ở trên; phần còn lại vẫn vẽ nhưng mờ đi (giấu hẳn thì cột
+   * không còn bằng doanh thu cả xe). `null` = biểu đồ thu chi thường.
+   */
+  sources?: { highlight: Exclude<ChartSourceRole, 'unlinked'> | null } | null;
   /**
    * Cách ghi trục Y — `compact` (mặc định, `12,7tr`) hay `million`: số TRIỆU trần kèm dòng
    * "Đơn vị: triệu đồng", như design Tổng quan doanh thu (web `yAxis="million"`, ledger 09 §3.9).
@@ -168,6 +193,7 @@ export function RevenueTrendChart({
   const AXIS_LABEL_STYLE = useMemo(() => axisLabelStyle(chartColors.axis), [chartColors.axis]);
   const t = useTranslations('Finance.entity');
   const tChart = useTranslations('Finance.overview.chart');
+  const tSource = useTranslations('Finance.bySource.chart');
   const fmt = useAppFormat();
   const width = useContentWidth();
   const [selected, setSelected] = useState<string | null>(null);
@@ -249,6 +275,65 @@ export function RevenueTrendChart({
     [chartColors, buckets, activeIndex],
   );
 
+  /* Màu ba phần nguồn - web `CHART_SOURCE_COLOR`: sàn sắc thương hiệu, tự khai thác xanh, phiếu lẻ viz-1. */
+  const sourceColor = useMemo<Record<ChartSourceRole, string>>(
+    () => ({
+      marketplace: colors.primary,
+      direct: colors.infoStrong,
+      unlinked: chartColors.series1,
+    }),
+    [colors.primary, colors.infoStrong, chartColors.series1],
+  );
+  // Phần "không gắn đơn" chỉ vào chú giải và thẻ chi tiết khi kỳ này thật sự có nó (web).
+  const hasUnlinked = useMemo(
+    () => Boolean(sources) && buckets.some((bucket) => chartValue(bucket.unlinkedRevenue) !== 0),
+    [sources, buckets],
+  );
+  const sourceRoles = useMemo<ChartSourceRole[]>(
+    () => ['marketplace', 'direct', ...(hasUnlinked ? (['unlinked'] as const) : [])],
+    [hasUnlinked],
+  );
+  const highlight = sources?.highlight ?? null;
+  const stackItems = useMemo(() => {
+    if (!sources) return null;
+    const opacityOf = (role: ChartSourceRole) =>
+      highlight === null || role === highlight ? 1 : DIMMED_OPACITY;
+    const amountOf = (bucket: FinanceSeriesBucket, role: ChartSourceRole) =>
+      chartValue(
+        role === 'marketplace'
+          ? bucket.marketplaceRevenue
+          : role === 'direct'
+            ? bucket.directRevenue
+            : bucket.unlinkedRevenue,
+      );
+    return buckets.flatMap((bucket, index) => [
+      {
+        barWidth: layout.barWidth,
+        spacing: layout.barGap,
+        // Chân cột chồng neo vào 0 - vuông cả khối cho liền (web).
+        stacks: sourceRoles.map((role) => ({
+          value: Math.max(0, amountOf(bucket, role)),
+          color: fade(sourceColor[role], opacityOf(role)),
+        })),
+        ...(shownLabels.has(index)
+          ? {
+              label: labelOf(bucket.bucket),
+              labelWidth: layout.labelWidth,
+              labelTextStyle: {
+                ...AXIS_LABEL_STYLE,
+                transform: [{ translateX: labelShiftX(layout, index) }],
+              },
+            }
+          : {}),
+      },
+      {
+        barWidth: layout.barWidth,
+        spacing: layout.groupGap,
+        stacks: [{ value: chartValue(bucket.cost), color: chartColors.cost }],
+      },
+    ]);
+  }, [sources, highlight, buckets, layout, sourceRoles, sourceColor, shownLabels, labelOf, AXIS_LABEL_STYLE, chartColors.cost]);
+
   const values = useMemo(
     () =>
       buckets.flatMap((bucket) => [
@@ -284,7 +369,13 @@ export function RevenueTrendChart({
         tiết khỏi tầm mắt đúng lúc người dùng vừa chạm để đọc nó.
       */}
       <XStack gap={space.md} ai="center" jc="center" flexWrap="wrap">
-        <LegendDot color={chartColors.revenue} label={t('revenue')} />
+        {sources ? (
+          sourceRoles.map((role) => (
+            <LegendDot key={role} color={sourceColor[role]} label={tSource(role)} />
+          ))
+        ) : (
+          <LegendDot color={chartColors.revenue} label={t('revenue')} />
+        )}
         <LegendDot color={chartColors.cost} label={t('cost')} />
         <LegendDot color={chartColors.profit} label={t('profit')} />
       </XStack>
@@ -316,7 +407,7 @@ export function RevenueTrendChart({
       >
         <YStack pos="relative" width={Y_AXIS_WIDTH + layout.contentWidth}>
           <BarChart
-            data={bars}
+            {...(stackItems ? { stackData: stackItems } : { data: bars })}
             /*
             `height` của thư viện là chiều cao NỬA TRÊN đường 0, không phải cả biểu đồ — nửa dưới
             được nối thêm bên dưới. Chia lại để khối luôn cao đúng `plotHeight` dù kỳ có lỗ hay
@@ -468,11 +559,28 @@ export function RevenueTrendChart({
           >
             {titleOf(active.bucket)}
           </Text>
-          <TooltipRow
-            color={chartColors.revenue}
-            label={t('revenue')}
-            value={fmt.money(active.revenue)}
-          />
+          {sources ? (
+            sourceRoles.map((role) => (
+              <TooltipRow
+                key={role}
+                color={sourceColor[role]}
+                label={tSource(role)}
+                value={fmt.money(
+                  role === 'marketplace'
+                    ? active.marketplaceRevenue
+                    : role === 'direct'
+                      ? active.directRevenue
+                      : active.unlinkedRevenue,
+                )}
+              />
+            ))
+          ) : (
+            <TooltipRow
+              color={chartColors.revenue}
+              label={t('revenue')}
+              value={fmt.money(active.revenue)}
+            />
+          )}
           <TooltipRow color={chartColors.cost} label={t('cost')} value={fmt.money(active.cost)} />
           <TooltipRow
             color={chartColors.profit}

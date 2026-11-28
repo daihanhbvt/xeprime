@@ -530,6 +530,7 @@
       "insuredValueRange": "Giá trị xe từ 50.000.000đ tới 20.000.000.000đ, làm tròn tới triệu đồng.",
       "insuredValueCarOnly": "Giá trị xe chỉ áp dụng cho ô tô",
       "photosRequired": "Còn {count, plural, other {# góc ảnh}} chưa có ảnh - không ô nào được để trống",
+      "requiredFieldApp": "Thông tin bắt buộc",
       "brandRequired": "Chọn hãng xe",
       "modelRequired": "Chọn mẫu xe"
     },
@@ -715,6 +716,74 @@
       "edit": "Sửa",
       "sharedTitle": "Địa chỉ này đang dùng cho {count, plural, other {# xe}}",
       "sharedBody": "Sửa ở đây sẽ đổi vị trí công khai của tất cả các xe đó."
+    },
+    "appCreate": {
+      "discountPercent": "-{percent}%",
+      "sourceTitle": "Hình thức nguồn xe",
+      "infoTitle": "Thông tin xe",
+      "chassisLabel": "Số khung xe",
+      "chassisPlaceholder": "Nhập số khung",
+      "engineLabel": "Số máy xe",
+      "enginePlaceholder": "Nhập số máy",
+      "stepCount": "Bước {current}/{total}",
+      "photosRequired": "{done}/{total} ảnh bắt buộc",
+      "registrationTile": "Cà vẹt xe",
+      "saveDraft": "Lưu nháp",
+      "policyInherit": "Kế thừa chính sách gian hàng",
+      "policyDetail": "Chi tiết →",
+      "deposit": "Cọc xe",
+      "overtime": "Phí quá giờ",
+      "delivery": "Giao xe tận nơi",
+      "discounts": "Ưu đãi thuê dài hạn",
+      "services": {
+        "self_drive": {
+          "title": "Thuê xe tự lái",
+          "description": "Tính giá theo ngày hoặc theo giờ"
+        },
+        "with_driver": {
+          "title": "Xe có tài xế",
+          "description": "Cung cấp tài xế phục vụ theo chuyến"
+        },
+        "long_term": {
+          "title": "Thuê xe dài hạn",
+          "description": "Cho thuê theo tháng hoặc dài hơn"
+        }
+      },
+      "prices": {
+        "weekday": "Ngày thường",
+        "weekend": "Cuối tuần",
+        "hourly": "Theo giờ",
+        "discount": "Giảm giá",
+        "withDriverDaily": "Giá ngày / nội thành",
+        "withDriverInterCity": "Liên tỉnh",
+        "withDriverOneWay": "Liên tỉnh 1 chiều"
+      },
+      "featuresTitle": "Tiện ích xe",
+      "descriptionTitle": "Mô tả xe",
+      "descriptionPlaceholder": "Nhập mô tả cho xe của bạn",
+      "confirm": {
+        "photoCount": "{done}/{total} Ảnh",
+        "weekday": "Giá ngày thường",
+        "weekend": "Giá cuối tuần",
+        "hourly": "Giá thuê theo giờ",
+        "discount": "Giảm giá",
+        "withDriverDaily": "Giá ngày / nội thành",
+        "withDriverInterCity": "Giá ngày / liên tỉnh",
+        "withDriverOneWay": "Giá ngày / liên tỉnh 1 chiều",
+        "monthly": "Giá dài hạn / tháng",
+        "electricRange": "Quãng đường/lần sạc",
+        "electricConsumption": "Mức tiêu thụ điện",
+        "discountValue": "{percent}%",
+        "electricConsumptionValue": "{value} kWh/100km",
+        "holderName": "Tên chủ xe (cà vẹt)",
+        "variant": "Phiên bản",
+        "insuredValue": "Giá trị xe"
+      },
+      "success": {
+        "submittedTitle": "Đã gửi duyệt xe thành công!",
+        "checklistTitle": "Hoàn thiện hồ sơ để duyệt nhanh hơn",
+        "documentsBody": "Cà vẹt, đăng kiểm, bảo hiểm,..."
+      }
     }
   },
   "publish": {
@@ -1310,10 +1379,13 @@
     "selfDrive": {
       "title": "Giá tự lái",
       "weekday": "Giá ngày thường",
+      "weekdayApp": "Giá thị trường",
       "weekdayHint": "Giá cơ sở bắt buộc của dịch vụ tự lái, dùng cho ngày thường và làm giá thay thế khi chưa nhập giá cuối tuần.",
       "weekend": "Giá cuối tuần (tuỳ chọn)",
+      "weekendApp": "Giá cuối tuần",
       "weekendHint": "Bỏ trống để dùng giá ngày thường cho cả cuối tuần.",
       "hourly": "Giá theo giờ (tuỳ chọn)",
+      "hourlyApp": "Giá theo giờ",
       "hourlyHint": "Bỏ trống nếu xe không cung cấp hình thức thuê theo giờ.",
       "tipLabel": "Giải thích giá tự lái",
       "info": "Giá cơ sở áp dụng cho dịch vụ tự lái; giá cuối tuần và giá theo giờ là tùy chọn.",
@@ -1323,6 +1395,7 @@
     },
     "discount": {
       "title": "Khuyến mãi trực tiếp",
+      "titleApp": "Khuyến mãi",
       "info": "Giảm trên tiền thuê tự lái của báo giá và đơn mới; không giảm giá thuê dài hạn, giá có tài xế, phụ phí hay tiền cọc.",
       "percent": "Mức giảm trực tiếp",
       "percentInfo": "Áp dụng cho giá ngày thường, giá cuối tuần và giá riêng theo ngày của dịch vụ tự lái.",
@@ -1340,7 +1413,11 @@
       "on": "Bật",
       "off": "Tắt",
       "previewAria": "Xem trước giá trên sàn",
-      "perHour": "/giờ"
+      "perHour": "/giờ",
+      "lead": "Khách sẽ thấy cả giá gốc & giá khuyến mãi giúp tối ưu bán hàng.",
+      "byLabel": "Giảm giá theo",
+      "byPercent": "%",
+      "savingBadge": "Tiết kiệm {percent}%"
     },
     "longTerm": {
       "title": "Thuê dài hạn",
@@ -1430,11 +1507,14 @@
       "tierPerKmLabel": "Đơn giá mỗi km của bậc {index}",
       "perKmUnit": "đ / km",
       "perKmHint": "Phí = đơn giá × khoảng cách một chiều, tính đúng tới đồng.",
-      "perKmSummary": "{amount}/km"
+      "perKmSummary": "{amount}/km",
+      "rowRadius": "Bán kính:",
+      "rowFee": "Phí giao xe:"
     },
     "overtime": {
       "title": "Phí trả xe quá giờ thỏa thuận",
       "feePerHour": "Phí mỗi giờ phát sinh",
+      "feePerHourApp": "Phí phát sinh/giờ",
       "graceMinutes": "Thời gian miễn phí tối đa",
       "roundingMinutes": "Đơn vị làm tròn tối thiểu",
       "hint": "Phí quá giờ được tính khi bàn trả xe, sau khi trừ thời gian miễn phí và áp dụng đơn vị làm tròn đã cấu hình.",
@@ -1484,7 +1564,15 @@
       "tierMonthsLabel": "Mốc gói của bậc {index}",
       "tierPercentLabel": "Mức giảm của mốc {index}",
       "tierNoteLabel": "Ghi chú mốc {index}",
-      "removeTierAt": "Xoá mốc ưu đãi {index}"
+      "removeTierAt": "Xoá mốc ưu đãi {index}",
+      "leadApp": "Giảm giá cho khách cam kết thuê theo gói tháng.",
+      "rowPackage": "Gói:",
+      "rowPercent": "Mức giảm:",
+      "rowNote": "Ghi chú:",
+      "tierName": "Mốc ưu đãi {index}",
+      "formulaTitleShort": "Công thức tính giá gói",
+      "packageFromLabel": "Gói thuê từ:",
+      "percentShort": "Mức giảm"
     },
     "inherited": {
       "title": "Chính sách kế thừa đang áp dụng",
@@ -1534,11 +1622,15 @@
       "perMonth": "{amount}/tháng",
       "suggestedLine": "Giá đề xuất: {min} - {max}/tháng",
       "notCheaperShort": "chưa rẻ hơn thuê theo ngày cả tháng ({reference})",
-      "suggestTipLabel": "Cách tính giá đề xuất"
+      "suggestTipLabel": "Cách tính giá đề xuất",
+      "suggestionRich": "Đề xuất giá thuê tháng: <b>{min} - {max}/tháng</b>. Mức giá này thấp hơn đáng kể so với <b>{reference}</b> nếu thuê theo ngày trong {days} ngày, tạo động lực để khách hàng cam kết thuê dài hạn."
     },
     "unitPerDay": "đ / ngày",
+    "unitPerDayApp": "₫/ngày",
     "unitPerHour": "đ / giờ",
+    "unitPerHourApp": "₫/giờ",
     "unitPerMonth": "đ / tháng",
+    "unitPerMonthApp": "₫/tháng",
     "discard": "Hủy bỏ",
     "validation": {
       "moneyInteger": "Số tiền phải là số nguyên VND",
@@ -1599,7 +1691,9 @@
       "excessHint": "Mức tiền đề xuất cho mỗi km chạy quá hạn mức. Bạn vẫn sửa được số tiền trước khi ghi phụ phí.",
       "excessTipLabel": "Giải thích phí mỗi km vượt",
       "unitPerDay": "km / ngày",
+      "unitPerDayApp": "km/ngày",
       "unitPerKm": "đ / km",
+      "unitPerKmApp": "₫/km",
       "previewTitle": "Khách sẽ thấy trên trang xe:",
       "preview": "Bao gồm {km}/ngày. Phụ phí {fee} cho mỗi km vượt giới hạn.",
       "previewIncomplete": "Nhập cả hai ô để khách nhìn thấy hạn mức trên trang xe.",
@@ -2036,7 +2130,12 @@
       "extras": "Khác",
       "collateralNow": "Hình thức cọc xe hiện tại: {collateral}",
       "collateralSetup": "Thiết lập tại Bảo hiểm & Giao nhận",
-      "policyInvalid": "Mục Bảo hiểm & Giao nhận xe còn ô chưa hợp lệ - mở mục đó để sửa rồi lưu lại."
+      "policyInvalid": "Mục Bảo hiểm & Giao nhận xe còn ô chưa hợp lệ - mở mục đó để sửa rồi lưu lại.",
+      "tab": {
+        "self_drive": "Xe tự lái",
+        "with_driver": "Xe có tài xế",
+        "long_term": "Xe dài hạn"
+      }
     },
     "policy": {
       "useShop": "Áp dụng chính sách của gian hàng",

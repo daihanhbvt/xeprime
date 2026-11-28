@@ -11,6 +11,7 @@ import { FIELD_V2, FieldAppearanceProvider } from '@/components/ui/Field';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
@@ -49,6 +50,11 @@ export interface FilterSelectGroup {
   readonly display?: 'all' | 'label' | 'option' | 'prefixed';
   /** Tấm lưới: hiện NHÃN chiều phía trên ô ("Trạng thái" / ô: "Tất cả"), cùng kiểu nhãn của mọi ô nhập. */
   readonly labelAbove?: boolean;
+  /**
+   * `segmented` - tấm lưới vẽ chiều này thành dải phân đoạn trọn bề ngang (`SegmentedTabs`, Figma
+   * Lịch thuê xe "Chế độ xem" `24729:83508`) thay vì ô chọn mở danh sách. Hợp với 2-3 lựa chọn ngắn.
+   */
+  readonly presentation?: 'select' | 'segmented';
 }
 
 /**
@@ -132,7 +138,13 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
   onClose,
   // Mặc định LƯỚI ô chọn (dropdown) cho mọi màn - người dùng chốt 20/11/2026.
   layout = 'grid',
+  columns = 2,
 }: {
+  /**
+   * Tấm lưới: số cột của ô chọn. `1` - mỗi chiều một hàng trọn bề ngang, nhãn ở trên (Figma Lịch
+   * thuê xe "Bộ lọc" `24729:83506`). Mặc định 2 như mọi màn danh sách.
+   */
+  columns?: 1 | 2;
   /**
    * `chips` - mỗi chiều một nhóm chip + dải tóm tắt (mặc định, các màn cũ).
    * `grid` - design v2 (Figma "_Filter Modal" `24158:105500`): ô tìm, rồi lưới ô chọn hai cột,
@@ -252,7 +264,16 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
   };
 
   if (layout === 'grid') {
-    const selects = groups.filter((group): group is FilterSelectGroup => group.kind !== 'dateRange');
+    const selects = groups.filter(
+      (group): group is FilterSelectGroup =>
+        group.kind !== 'dateRange' && group.presentation !== 'segmented',
+    );
+    const segmented = groups.filter(
+      (group): group is FilterSelectGroup =>
+        group.kind !== 'dateRange' && group.presentation === 'segmented',
+    );
+    const rows: (readonly [FilterSelectGroup] | readonly [FilterSelectGroup, FilterSelectGroup])[] =
+      columns === 1 ? selects.map((group) => [group] as const) : pairsOf(selects);
     const dateRanges = groups.filter((group): group is FilterDateRangeGroup => group.kind === 'dateRange');
     return (
       <BottomSheet
@@ -282,8 +303,18 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
               variant="field"
             />
           ) : null}
+          {segmented.map((group) => (
+            <YStack key={group.key}>
+              <GridLabel text={group.label} />
+              <SegmentedTabs
+                items={group.options.map((option) => ({ key: option.value, label: option.label }))}
+                value={draft[group.key] ?? group.value}
+                onChange={(next) => select(group.key, next)}
+              />
+            </YStack>
+          ))}
           {/* Lưới HAI cột, ô cách nhau 12 - chiều lẻ cuối cùng chiếm nửa hàng như Figma. */}
-          {pairsOf(selects).map((pair) => (
+          {rows.map((pair) => (
             <XStack key={pair[0].key} gap={GRID_GAP}>
               {pair.map((group) => (
                 <YStack key={group.key} f={1} minWidth={0}>
@@ -294,7 +325,7 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
                   />
                 </YStack>
               ))}
-              {pair.length === 1 ? <YStack f={1} /> : null}
+              {pair.length === 1 && columns === 2 ? <YStack f={1} /> : null}
             </XStack>
           ))}
           {dateRanges.map((group) => (

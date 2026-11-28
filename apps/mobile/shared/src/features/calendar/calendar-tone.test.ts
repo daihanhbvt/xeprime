@@ -120,10 +120,10 @@ describe('bảng màu lưới lịch', () => {
    * Một đơn thuê thật không bao giờ đứt nét — nếu không, tín hiệu mất nghĩa.
    */
   it('chỉ khoá xe và chờ giữ chỗ vẽ nét đứt', () => {
-    expect(isDashedEvent(OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE)).toBe(true);
-    expect(isDashedEvent(OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST)).toBe(true);
-    expect(isDashedEvent(OCCUPANCY_SOURCE_TYPE.BOOKING)).toBe(false);
-    expect(isDashedEvent(OCCUPANCY_SOURCE_TYPE.MAINTENANCE)).toBe(false);
+    expect(isDashedEvent({ type: OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE })).toBe(true);
+    expect(isDashedEvent({ type: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, occupying: false })).toBe(true);
+    expect(isDashedEvent({ type: OCCUPANCY_SOURCE_TYPE.BOOKING })).toBe(false);
+    expect(isDashedEvent({ type: OCCUPANCY_SOURCE_TYPE.MAINTENANCE })).toBe(false);
   });
 
   it('viền thanh event là màu trạng thái PHA LOÃNG, không phải màu chữ', () => {

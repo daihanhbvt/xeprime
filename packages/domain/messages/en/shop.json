@@ -206,8 +206,11 @@
         "payment": "Payment & invoices",
         "insurance": "Vehicle damage insurance",
         "collateral": "Collateral",
+        "collateralApp": "Deposit",
         "limits": "Mileage limit & late fees",
-        "conditions": "Rental conditions"
+        "limitsApp": "Mileage & Fees",
+        "conditions": "Rental conditions",
+        "paymentInsurance": "Payment & Insurance"
       },
       "actionsLabel": "Save rental policies",
       "switchType": {
@@ -233,12 +236,14 @@
         "modeRequired": "Turn on one or both forms: cash deposit & asset deposit",
         "bothOn": "2 collateral forms on",
         "methodTitle": "Accepted collateral (pick one or both)",
+        "methodTitleApp": "Deposit method",
         "cashTitle": "Cash / bank transfer deposit",
         "cashHint": "The renter leaves a security amount at pickup, refunded after the vehicle is returned.",
         "amountLabel": "Default deposit amount",
         "presetsLabel": "Suggested deposit amounts",
         "assetTitle": "Asset deposit",
         "assetHint": "The renter leaves an asset as security (original papers, a motorbike...), no cash held.",
+        "assetHintApp": "The customer leaves a motorbike with its original registration - no cash held.",
         "noneBadgeTitle": "The vehicle gets a prominent \"No collateral\" badge on XePrime",
         "noneBadgeBody": "Renters leave no cash deposit and no assets at pickup. The badge shows on the vehicle card, the vehicle page and in the \"No collateral\" filter."
       },
@@ -248,6 +253,7 @@
       "overtime": {
         "title": "Late return limit & fee",
         "hint": "Return grace time and the fee for late returns.",
+        "hintApp": "Return time rules and the late-return fee.",
         "grace": "Free grace time"
       },
       "delivery": {
@@ -277,6 +283,7 @@
         "hint": "MIC per-trip vehicle damage insurance for self-drive cars. The premium depends on the car value and rental days and is paid by the renter. A car needs its value, the required photos and its registration to be sold with insurance. The renter bears the deductible when there is a loss.",
         "modeOptional": "Renters choose whether to buy it when booking. Cars with incomplete insurance details still take bookings, without insurance.",
         "modeRequired": "Every self-drive trip includes it. Cars with incomplete insurance details stop taking self-drive bookings until they are completed.",
+        "modeRequiredApp": "Every self-drive trip must include insurance. Vehicles missing details are paused for self-drive bookings.",
         "impactTitle": "{count, plural, one {# car} other {# cars}} with incomplete insurance details will stop taking self-drive bookings",
         "impactNamesMore": "{names} and {count, plural, one {# other car} other {# other cars}}",
         "vehicleBlockedTitle": "This car stays closed to self-drive bookings until its insurance details are complete:"

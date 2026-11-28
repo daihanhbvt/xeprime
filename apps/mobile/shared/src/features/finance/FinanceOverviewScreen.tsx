@@ -44,9 +44,18 @@ import {
   FINANCE_OVERVIEW_DEFAULT_PERIOD,
   FINANCE_OVERVIEW_PERIOD_VALUES,
 } from './constants';
+import { useLocalSearchParams } from 'expo-router';
+import { RevenueSourceCards, RevenueSourceRowsBlock } from './components/RevenueSource';
+import {
+  REVENUE_SOURCE_PARAM,
+  REVENUE_SOURCE_VIEW,
+  parseRevenueSourceView,
+  type RevenueSourceView,
+} from './vehicle-finance';
 import {
   useCustomerRevenue,
   useFinanceByCategory,
+  useFinanceBySource,
   useFinanceSeries,
   useFinanceSummary,
   useVehicleProfit,
@@ -80,13 +89,37 @@ export function FinanceOverviewScreen() {
 
   const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
 
-  const [range, setRange] = useState(() => buildPeriodRange(FINANCE_OVERVIEW_DEFAULT_PERIOD));
+  const initialParams = useLocalSearchParams<{ from?: string; to?: string }>();
+  const [range, setRange] = useState(() =>
+    initialParams.from && initialParams.to
+      ? { from: initialParams.from, to: initialParams.to }
+      : buildPeriodRange(FINANCE_OVERVIEW_DEFAULT_PERIOD),
+  );
   const [granularity, setGranularity] = useState<FinanceGranularity>(FINANCE_GRANULARITY.DAY);
   /*
    * Tab của khối "Hiệu suất kinh doanh" (web `BusinessPerformanceCard`, PR #276): theo xe hoặc theo
    * khách. Chỉ bảng của tab đang mở được gọi — tab kia không tốn một lượt truy vấn.
    */
   const [perf, setPerf] = useState<FinancePerformanceView>(FINANCE_PERFORMANCE_VIEW.VEHICLES);
+  /*
+   * Góc nhìn theo NGUỒN DOANH THU (ADR 0110, web `?revenueSource=`) - chỉ đổi phần nhấn trên biểu đồ
+   * và danh sách nguồn, không gửi xuống API. Lối vào từ thẻ "Thu chi 30 ngày" mang sẵn góc nhìn.
+   */
+  const routeParams = useLocalSearchParams() as Record<string, string | undefined>;
+  const [sourceView, setSourceView] = useState<RevenueSourceView | null>(() =>
+    parseRevenueSourceView(routeParams[REVENUE_SOURCE_PARAM]),
+  );
+  /*
+   * Tab bị "đóng băng" khi rời (`freezeOnBlur`) nên state không dựng lại: mỗi LƯỢT VÀO mới (tham số
+   * route đổi) nạp lại góc nhìn + kỳ mà lối vào mang theo - chỉnh state ngay lúc render, không effect.
+   */
+  const entryKey = `${routeParams[REVENUE_SOURCE_PARAM] ?? ''}|${routeParams.from ?? ''}|${routeParams.to ?? ''}`;
+  const [seenEntry, setSeenEntry] = useState(entryKey);
+  if (entryKey !== seenEntry) {
+    setSeenEntry(entryKey);
+    setSourceView(parseRevenueSourceView(routeParams[REVENUE_SOURCE_PARAM]));
+    if (routeParams.from && routeParams.to) setRange({ from: routeParams.from, to: routeParams.to });
+  }
 
   /*
    * Ô "Chi nhánh" (ADR 0052) — mọi khối của màn theo CÙNG chi nhánh. Phần chung không gắn xe được
@@ -121,6 +154,8 @@ export function FinanceOverviewScreen() {
   const series = useFinanceSeries(period, undefined, canViewFinance);
   const income = useFinanceByCategory(period, RECEIPT_TYPE.INCOME, undefined, canViewFinance);
   const expense = useFinanceByCategory(period, RECEIPT_TYPE.EXPENSE, undefined, canViewFinance);
+  // Doanh thu theo nguồn đơn (ADR 0110): tổng · qua XePrime · tự khai thác theo từng kênh.
+  const sources = useFinanceBySource(period, undefined, canViewFinance);
   const vehicles = useVehicleProfit(
     rankingFilters,
     canViewFinance && perf === FINANCE_PERFORMANCE_VIEW.VEHICLES,
@@ -156,7 +191,8 @@ export function FinanceOverviewScreen() {
     void expense.refetch();
     void vehicles.refetch();
     void customers.refetch();
-  }, [summary, series, income, expense, vehicles, customers]);
+    void sources.refetch();
+  }, [summary, series, income, expense, vehicles, customers, sources]);
 
   const changeRange = useCallback((next: { from: string; to: string }) => setRange(next), []);
 
@@ -196,7 +232,8 @@ export function FinanceOverviewScreen() {
           income.isRefetching ||
           expense.isRefetching ||
           vehicles.isRefetching ||
-          customers.isRefetching
+          customers.isRefetching ||
+          sources.isRefetching
         }
         onRefresh={refreshAll}
       >
@@ -225,6 +262,18 @@ export function FinanceOverviewScreen() {
             loading={summary.isFetching}
             error={summary.isError}
           />
+
+          {/* Ba thẻ chọn nguồn (web `FinanceSourcePicker`) - chọn góc nhìn cho biểu đồ và danh sách nguồn. */}
+          <Card lift="flat">
+            <RevenueSourceCards
+              data={sources.data}
+              loading={sources.isFetching && !sources.data}
+              error={sources.isError && !sources.data}
+              onRetry={() => void sources.refetch()}
+              view={sourceView}
+              onChange={setSourceView}
+            />
+          </Card>
 
           {/* Biểu đồ - Figma `24228:98976`: tiêu đề + ô độ mịn "Tuần" (rộng 100) cùng một hàng. */}
           <Card lift="flat">
@@ -265,9 +314,29 @@ export function FinanceOverviewScreen() {
                   titleOf={titleOf}
                   yAxis="million"
                   plotHeight={REVENUE_TREND_PLOT_HEIGHT.financeOverview}
+                  // Cột chồng theo nguồn đơn (web `SourceRevenueTrendChart`), phần không chọn mờ đi.
+                  sources={{
+                    highlight:
+                      sourceView === REVENUE_SOURCE_VIEW.MARKETPLACE
+                        ? 'marketplace'
+                        : sourceView === REVENUE_SOURCE_VIEW.DIRECT
+                          ? 'direct'
+                          : null,
+                  }}
                 />
               )}
             </YStack>
+          </Card>
+
+          {/* "Chi tiết doanh thu từng nguồn" (web `FinanceSourceRowsCard`). */}
+          <Card lift="flat">
+            <RevenueSourceRowsBlock
+              data={sources.data}
+              loading={sources.isFetching && !sources.data}
+              error={sources.isError && !sources.data}
+              onRetry={() => void sources.refetch()}
+              view={sourceView}
+            />
           </Card>
 
           {/* Figma `24228:99092`: cơ cấu thu và cơ cấu chi chung MỘT thẻ, ngăn bằng một vạch. */}

@@ -2,7 +2,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DRIVER_WAGE_STAGE } from '@xeprime/types';
 import { driverWageLine } from '@xeprime/domain';
-import { Button } from '@/components/ui/Button';
+import { IconButton } from '@/components/ui/IconButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
@@ -17,17 +17,20 @@ export function DriverWageInfo({
   wage,
   canEdit,
   onEdit,
+  hideLine = false,
 }: {
   wage: DriverWage;
   canEdit: boolean;
   onEdit: () => void;
+  /** Số tiền đã hiện ở chỗ khác (dòng đầu lượt gán trong tấm lịch sử) - chỉ còn nút sửa + lịch sử sửa. */
+  hideLine?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Drivers.wage');
   const fmt = useAppFormat();
-  const line = driverWageLine(wage);
+  const line = hideLine ? null : driverWageLine(wage);
   const editable = canEdit && wage.editable;
-  if (!line && !editable) return null;
+  if (!line && !editable && wage.changes.length === 0) return null;
 
   const muted = (text: string, key?: string) => (
     <Text key={key} col={colors.textMuted} fos={fontSize.label}>
@@ -37,7 +40,7 @@ export function DriverWageInfo({
 
   return (
     <YStack gap={space.xs}>
-      <XStack ai="center" gap={space.sm} flexWrap="wrap">
+      <XStack ai="center" gap={space.sm} jc="space-between">
         {line ? (
           <Text
             col={line.kind === 'none' ? colors.textMuted : colors.text}
@@ -46,16 +49,16 @@ export function DriverWageInfo({
           >
             {t(`line.${line.kind}`, { amount: fmt.money(line.amount), days: wage.days ?? 0 })}
           </Text>
-        ) : null}
+        ) : (
+          <YStack f={1} />
+        )}
         {editable ? (
-          <Button
+          <IconButton
+            icon="create-outline"
             label={
               wage.stage === DRIVER_WAGE_STAGE.NOT_RUN ? t('edit.actionAgreed') : t('edit.action')
             }
-            variant="secondary"
-            size="sm"
-            icon="create-outline"
-            block={false}
+            compact
             onPress={onEdit}
           />
         ) : null}

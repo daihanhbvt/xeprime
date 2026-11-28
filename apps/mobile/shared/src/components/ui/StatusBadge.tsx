@@ -133,10 +133,13 @@ export function StatusBadge({
   label,
   color,
   size = 'md',
+  borderless = false,
 }: {
   label: string;
   color: StatusColor;
   size?: BadgeSize;
+  /** Bỏ viền - chỉ nền nhạt (danh sách dày như tấm Lịch sử gán tài xế, người dùng 28/11/2026). */
+  borderless?: boolean;
 }) {
   const colors = useColors();
   const tone = statusTone(color, colors);
@@ -156,7 +159,7 @@ export function StatusBadge({
         cũng là thứ giữ cho viên còn thấy được khi nằm trên nền đã tô màu (thẻ `muted`,
         `accent`) — chỗ mà nền nhạt của viên gần như trùng với nền dưới nó.
       */
-      bw={BORDER_WIDTH}
+      bw={borderless ? 0 : BORDER_WIDTH}
       bc={tone.fg}
       br={radius.pill}
       px={PADDING_X[size]}

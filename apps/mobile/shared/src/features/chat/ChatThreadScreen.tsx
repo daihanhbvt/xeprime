@@ -8,10 +8,10 @@ import {
   nowInAppTz,
   toAppTz,
 } from '@xeprime/domain';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -21,6 +21,7 @@ import {
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { goBackOr } from '@/navigation/go-back-or';
 import { Avatar } from '@/components/ui/Avatar';
 import { Screen } from '@/components/layout/Screen';
 import { PhotoViewer } from '@/components/ui/PhotoViewer';
@@ -99,6 +100,31 @@ export function ChatThreadScreen({
   const t = useTranslations('Chat');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
+  // Mở từ thông báo đẩy / deep link thì stack rỗng - lui về đúng hộp thư của bề mặt.
+  const goBack = useCallback(
+    () =>
+      goBackOr(router, side === CHAT_SIDE.SHOP ? ROUTES.manage.chat() : ROUTES.chat.list()),
+    [router, side],
+  );
+
+  /*
+   * Hội thoại GIAN HÀNG luôn lui về hộp thư Trò chuyện trước, kể cả khi mở từ thông báo đẩy
+   * (bên dưới là Doanh thu, Tổng quan…): lượt lui (nút header hay phím Android) bị chặn và màn
+   * này được THAY bằng hộp thư, nên lui thêm lần nữa mới về màn cũ.
+   */
+  const navigation = useNavigation();
+  useEffect(() => {
+    if (side !== CHAT_SIDE.SHOP) return undefined;
+    return navigation.addListener('beforeRemove', (event) => {
+      const type = event.data.action.type;
+      if (type !== 'GO_BACK' && type !== 'POP') return;
+      const state = navigation.getState();
+      const below = state ? state.routes[state.index - 1] : undefined;
+      if (below?.name === 'chat/index') return;
+      event.preventDefault();
+      router.replace(ROUTES.manage.chat());
+    });
+  }, [navigation, router, side]);
 
   // Trục TRUY VẤN là hộp thư của bề mặt — server kiểm phạm vi bằng chính tham số này.
   const inbox = resolveChatInbox(side);
@@ -288,7 +314,7 @@ export function ChatThreadScreen({
   if (conversationQuery.isPending) {
     return (
       <>
-        <AppHeader onBack={() => router.back()} />
+        <AppHeader onBack={goBack} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ChatThreadSkeleton />
         </Screen>
@@ -299,7 +325,7 @@ export function ChatThreadScreen({
   if (conversationQuery.isError) {
     return (
       <>
-        <AppHeader onBack={() => router.back()} />
+        <AppHeader onBack={goBack} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={conversationQuery.error}
@@ -314,7 +340,7 @@ export function ChatThreadScreen({
   return (
     <>
       <AppHeader
-        onBack={() => router.back()}
+        onBack={goBack}
         title={title}
         /*
          * Mặt gian hàng ngay cạnh tên. Một thanh chỉ có chữ buộc người dùng ĐỌC để biết mình

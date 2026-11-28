@@ -1,11 +1,12 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useController, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
+import { PAIR_GAP } from './field-layout';
 import { useTranslations } from 'use-intl';
 import { MOTORBIKE_CATEGORY_VALUES, vehicleFieldPolicy } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { Chip } from '@/components/ui/Chip';
-import { FieldLabel, FieldMessage } from '@/components/ui/Field';
+import { belowHint, FieldLabel, FieldMessage, inLabelHint } from '@/components/ui/Field';
 import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
 import { useDomainLabel } from '@/i18n/domain';
@@ -27,6 +28,7 @@ export function VehicleClassificationFields({
   control,
   vehicleType,
   bodyTypePicker,
+  seatCompanion,
   disabled,
   required = false,
   setValue,
@@ -35,6 +37,8 @@ export function VehicleClassificationFields({
   vehicleType: string;
   /** Ô kiểu dáng ô tô dùng thẻ có ảnh, nên nơi gọi tự dựng và truyền vào đây. */
   bodyTypePicker?: ReactNode;
+  /** Ô đứng CẠNH số chỗ trên cùng một hàng (màn sửa xe: Giá trị xe - Figma `24705:35094`). */
+  seatCompanion?: ReactNode;
   disabled?: boolean;
   /** Đánh dấu bắt buộc theo `vehicleFieldPolicy` (wizard thêm xe). Luật thật ở schema. */
   required?: boolean;
@@ -57,6 +61,9 @@ export function VehicleClassificationFields({
   const seatLock = useCatalogSpecLock(control, vehicleType, 'seatCount', { modelLocked: seatLocked });
   const toFieldLock = useSpecFieldLock();
   const seatLockActive = seatLock.locked && !disabled && seatCount != null;
+  // Số chỗ hiện dạng Ô NHẬP (không ẩn, không phải hàng viên chọn) thì bạn đồng hành ngồi cạnh nó.
+  const seatPaired =
+    policy.seatCount !== 'hidden' && !(!seatLockActive && spec.model && spec.seats.kind === 'choice');
   const seatLockHelp = seatLock.fromData
     ? tCatalog('specLocked')
     : seatLock.locked && spec.model
@@ -103,21 +110,32 @@ export function VehicleClassificationFields({
             })}
           />
         ) : (
-          <NumberField
-            control={control}
-            name="seatCount"
-            integer
-            label={t('seatCount')}
-            required={seatRequired}
-            placeholder={t('seatPlaceholder')}
-            min={1}
-            max={64}
-            editable={!disabled}
-            {...(seatLockActive && seatLockHelp ? { hint: seatLockHelp } : {})}
-            lock={toFieldLock(seatLock, t('seatCount'), seatLockActive)}
-          />
+          <XStack gap={PAIR_GAP} ai="flex-start">
+            <YStack f={1} minWidth={0}>
+              <NumberField
+                control={control}
+                name="seatCount"
+                integer
+                label={t('seatCount')}
+                required={seatRequired}
+                placeholder={t('seatPlaceholder')}
+                min={1}
+                max={64}
+                editable={!disabled}
+                {...(seatLockActive && seatLockHelp ? { hint: seatLockHelp } : {})}
+                lock={toFieldLock(seatLock, t('seatCount'), seatLockActive)}
+              />
+            </YStack>
+            {seatCompanion ? (
+              <YStack f={1} minWidth={0}>
+                {seatCompanion}
+              </YStack>
+            ) : null}
+          </XStack>
         )
       ) : null}
+      {/* Không có ô số chỗ dạng nhập (ẩn / hàng viên chọn) ⇒ bạn đồng hành đứng riêng một hàng. */}
+      {seatCompanion && !seatPaired ? seatCompanion : null}
 
       {policy.motorbikeCategory !== 'hidden' ? (
         <SelectField
@@ -165,7 +183,7 @@ function SeatChoiceField({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={Boolean(required)} />
+      <FieldLabel label={label} required={Boolean(required)} hint={inLabelHint(hint)} />
       <XStack flexWrap="wrap" gap={space.sm}>
         {shown.map((count) => (
           <Chip
@@ -176,7 +194,7 @@ function SeatChoiceField({
           />
         ))}
       </XStack>
-      <FieldMessage error={fieldState.error?.message} hint={hint} />
+      <FieldMessage error={fieldState.error?.message} hint={belowHint(hint)} />
     </YStack>
   );
 }

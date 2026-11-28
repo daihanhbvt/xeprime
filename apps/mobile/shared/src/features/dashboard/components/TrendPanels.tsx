@@ -10,11 +10,30 @@ import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
 import { SegmentedTabs, type SegmentedTabItem } from '@/components/ui/SegmentedTabs';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { chartValue } from '@/features/finance/components/revenue-trend-layout';
-import type { FinanceSeries } from '@/features/finance/api';
+import type { FinanceSeries, FinanceSourceBreakdown } from '@/features/finance/api';
+import {
+  RevenueSourceSegment,
+  RevenueSourceTrack,
+  sourceGroupColor,
+} from '@/features/finance/components/RevenueSource';
+import {
+  REVENUE_SOURCE_VIEW,
+  sharePercent,
+  tripsOf,
+  type RevenueSourceView,
+  type SourceGroup,
+} from '@/features/finance/vehicle-finance';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ROUTES } from '@/navigation/routes';
+import { Pressable } from 'react-native';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontWeight, radius, typeScale } from '@/theme/tokens';
-import { DASHBOARD_REVENUE_DAYS, type PartnerTrendPoint } from '../api';
+import {
+  DASHBOARD_REVENUE_DAYS,
+  dashboardRevenueSeriesFilters,
+  type PartnerTrendPoint,
+} from '../api';
 
 type TrendTab = 'revenue' | 'trips';
 
@@ -38,9 +57,15 @@ export interface TripsTrendState {
  */
 export function TrendCard({
   series,
+  bySource = null,
+  branchId,
   trips,
 }: {
   series: UseQueryResult<FinanceSeries> | null;
+  /** Doanh thu theo nguồn đơn (ADR 0110) cùng 30 ngày - đi cùng `series`, `null` khi không có tab tiền. */
+  bySource?: UseQueryResult<FinanceSourceBreakdown> | null;
+  /** Chi nhánh đang lọc - lối sang Tổng quan doanh thu mang theo (web `withBranch`). */
+  branchId?: string | undefined;
   trips: TripsTrendState | null;
 }) {
   const t = useTranslations('Dashboard.charts');
@@ -77,7 +102,7 @@ export function TrendCard({
           {first.label}
         </Text>
       )}
-      {active === 'revenue' && series ? <RevenueTab series={series} /> : null}
+      {active === 'revenue' && series ? <RevenueTab series={series} bySource={bySource} branchId={branchId} /> : null}
       {active === 'trips' && trips ? <TripsTab {...trips} /> : null}
     </InfoGroupCard>
   );
@@ -116,14 +141,27 @@ interface RevenueGroup {
   label: string;
   revenue: string;
   title: string;
+  /** Ba phần doanh thu theo nguồn của đợt (web `parts`) - cột chồng. */
+  parts: Record<SourceGroup, string>;
 }
+
+/** Thứ tự các phần trong cột chồng, từ chân lên (web `STACK_GROUPS`). */
+const STACK_GROUPS: readonly SourceGroup[] = ['marketplace', 'direct', 'unlinked'];
 
 /**
  * Tab thu chi - Figma: ba ô Doanh thu (nền vàng rất nhạt) · Chi phí (nền xám) · Lợi nhuận (nền xanh,
  * số xanh), cộng trên ĐÚNG chuỗi 30 ngày đã tải; rồi biểu đồ cột doanh thu gộp theo đợt liên tiếp
  * (5 cột như khung Figma), nhãn giá trị rút gọn trên đầu cột và ngày bắt đầu đợt dưới chân.
  */
-function RevenueTab({ series }: { series: UseQueryResult<FinanceSeries> }) {
+function RevenueTab({
+  series,
+  bySource,
+  branchId,
+}: {
+  series: UseQueryResult<FinanceSeries>;
+  bySource: UseQueryResult<FinanceSourceBreakdown> | null;
+  branchId?: string | undefined;
+}) {
   const t = useTranslations('Dashboard.charts');
   const colors = useColors();
   const fmt = useAppFormat();
@@ -148,7 +186,17 @@ function RevenueTab({ series }: { series: UseQueryResult<FinanceSeries> }) {
       const head = chunk[0];
       if (!head) continue;
       const revenue = sumMoney(chunk.map((b) => b.revenue));
-      list.push({ key: head.bucket, label: fmt.dayMonth(head.bucket), revenue, title: fmt.moneyCompact(revenue) });
+      list.push({
+        key: head.bucket,
+        label: fmt.dayMonth(head.bucket),
+        revenue,
+        title: fmt.moneyCompact(revenue),
+        parts: {
+          marketplace: sumMoney(chunk.map((b) => b.marketplaceRevenue)),
+          direct: sumMoney(chunk.map((b) => b.directRevenue)),
+          unlinked: sumMoney(chunk.map((b) => b.unlinkedRevenue)),
+        },
+      });
     }
     return list;
   }, [buckets, fmt]);
@@ -172,6 +220,7 @@ function RevenueTab({ series }: { series: UseQueryResult<FinanceSeries> }) {
           <MoneyTile label={t('cost')} value={fmt.money(totals.cost)} bg={colors.background} fg={colors.text} />
           <MoneyTile label={t('profit')} value={fmt.money(totals.profit)} bg={colors.successSurface} fg={colors.success} />
         </XStack>
+        {bySource ? <SourceSplit query={bySource} branchId={branchId} /> : null}
         <RevenueBars groups={groups} />
       </YStack>
     </TabState>
@@ -270,13 +319,31 @@ const RevenueBars = memo(function RevenueBars({ groups }: { groups: readonly Rev
             >
               {group.title}
             </Text>
+            {/* Cột CHỒNG theo nguồn đơn (ADR 0110, web `barStack`) - tổng chiều cao vẫn là doanh thu. */}
             <YStack
               w="100%"
               h={Math.round((Math.max(0, chartValue(group.revenue)) / max) * BAR_MAX)}
-              bg={colors.brandShape}
               borderTopLeftRadius={radius.control}
               borderTopRightRadius={radius.control}
-            />
+              ov="hidden"
+              jc="flex-end"
+            >
+              {(() => {
+                const partsTotal = STACK_GROUPS.reduce(
+                  (sum, g) => sum + Math.max(0, chartValue(group.parts[g])),
+                  0,
+                );
+                // Không có phần nào (dữ liệu cũ) - giữ một khối màu thương hiệu như trước.
+                if (partsTotal <= 0) return <YStack f={1} bg={colors.brandShape} />;
+                return [...STACK_GROUPS].reverse().map((g) => {
+                  const value = Math.max(0, chartValue(group.parts[g]));
+                  if (value === 0) return null;
+                  return (
+                    <YStack key={g} f={value / partsTotal} bg={sourceGroupColor(colors, g)} />
+                  );
+                });
+              })()}
+            </YStack>
           </YStack>
         ))}
       </XStack>
@@ -475,5 +542,128 @@ function Legend({ color, label }: { color: string; label: string }) {
         {label}
       </Text>
     </XStack>
+  );
+}
+
+/**
+ * Tỷ trọng doanh thu theo nguồn của 30 ngày — native port of web `SourceSplit`: thanh tỷ trọng rồi
+ * từng dòng (chấm màu · tên · số chuyến · tiền · %), chạm một dòng mở Tổng quan doanh thu ở góc nhìn
+ * đó. Kỳ chưa có doanh thu thì khối tự vắng.
+ */
+function SourceSplit({
+  query,
+  branchId,
+}: {
+  query: UseQueryResult<FinanceSourceBreakdown>;
+  branchId?: string | undefined;
+}) {
+  const t = useTranslations('Dashboard.charts.sources');
+  const tSource = useTranslations('Finance.bySource.chart');
+  const colors = useColors();
+  const fmt = useAppFormat();
+  const navigateOnce = useNavigateOnce();
+  const data = query.data;
+  // Tổng quan doanh thu đúng 30 ngày của thẻ + chi nhánh, mở sẵn một góc nhìn nguồn (web `detailHref`).
+  const openFinance = (view: RevenueSourceView | null) => {
+    const { from, to } = dashboardRevenueSeriesFilters();
+    navigateOnce(
+      ROUTES.manage.finance({
+        revenueSource: view,
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+        ...(branchId ? { branchId } : {}),
+      }),
+    );
+  };
+
+  if (query.isPending) return <Skeleton height={48} />;
+  if (!data) {
+    return query.isError ? (
+      <Text col={colors.textMuted} fos={typeScale.label.fontSize}>
+        {t('error')}
+      </Text>
+    ) : null;
+  }
+  if (isZeroMoney(data.total)) return null;
+
+  const rows: {
+    group: SourceGroup;
+    view: RevenueSourceView | null;
+    amount: string;
+    trips: number | null;
+  }[] = [
+    {
+      group: 'marketplace',
+      view: REVENUE_SOURCE_VIEW.MARKETPLACE,
+      amount: data.marketplaceAmount,
+      trips: tripsOf(data.items, REVENUE_SOURCE_VIEW.MARKETPLACE),
+    },
+    {
+      group: 'direct',
+      view: REVENUE_SOURCE_VIEW.DIRECT,
+      amount: data.directAmount,
+      trips: tripsOf(data.items, REVENUE_SOURCE_VIEW.DIRECT),
+    },
+    // Thu không gắn đơn: chỉ hiện khi có, không có chuyến, mở màn ở góc nhìn mọi nguồn.
+    ...(isZeroMoney(data.unlinkedAmount)
+      ? []
+      : [{ group: 'unlinked' as const, view: null, amount: data.unlinkedAmount, trips: null }]),
+  ];
+
+  return (
+    <YStack gap={8}>
+      <XStack ai="center" jc="space-between" gap={8}>
+        <Text col={colors.text} fos={typeScale.body.fontSize} fow={fontWeight.semibold}>
+          {t('title')}
+        </Text>
+        <Pressable
+          accessibilityRole="link"
+          hitSlop={8}
+          onPress={() => openFinance(null)}
+        >
+          <Text col={colors.brandLink} fos={typeScale.label.fontSize} fow={fontWeight.medium}>
+            {t('detail')}
+          </Text>
+        </Pressable>
+      </XStack>
+      <RevenueSourceTrack>
+        {rows.map((row) => (
+          <RevenueSourceSegment
+            key={row.group}
+            share={sharePercent(row.amount, data.total)}
+            group={row.group}
+          />
+        ))}
+      </RevenueSourceTrack>
+      <YStack accessibilityLabel={t('legend')}>
+        {rows.map((row) => (
+          <Pressable
+            key={row.group}
+            accessibilityRole="link"
+            onPress={() => openFinance(row.view)}
+          >
+            <XStack ai="center" jc="space-between" gap={8} py={4}>
+              <XStack ai="center" gap={6} f={1} minWidth={0}>
+                <YStack w={8} h={8} br={radius.pill} bg={sourceGroupColor(colors, row.group)} />
+                <Text flexShrink={1} col={colors.text} fos={typeScale.label.fontSize} numberOfLines={1}>
+                  {tSource(row.group)}
+                </Text>
+                {row.trips !== null ? (
+                  <Text col={colors.textMuted} fos={typeScale.label.fontSize}>
+                    {t('trips', { count: row.trips })}
+                  </Text>
+                ) : null}
+              </XStack>
+              <Text col={colors.text} fos={typeScale.label.fontSize} fow={fontWeight.medium}>
+                {fmt.money(row.amount)}
+                <Text col={colors.textMuted} fow={fontWeight.regular}>
+                  {` ${t('share', { percent: sharePercent(row.amount, data.total) })}`}
+                </Text>
+              </Text>
+            </XStack>
+          </Pressable>
+        ))}
+      </YStack>
+    </YStack>
   );
 }

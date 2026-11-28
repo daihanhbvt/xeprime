@@ -79,6 +79,7 @@
   "form": {
     "titleInvite": "Mời tài xế mới",
     "inviteHint": "Tài xế cần có tài khoản XePrime (xeprime.vn) đã xác minh bằng chính số điện thoại này. Họ sẽ nhận thông báo và đồng ý trước khi bạn gán chuyến.",
+    "inviteHintRich": "Tài xế cần có tài khoản <b>XePrime (<link>xeprime.vn</link>)</b> đã xác minh bằng chính số điện thoại này. Họ sẽ nhận thông báo và đồng ý trước khi bạn gán chuyến.",
     "titleEdit": "Sửa thông tin tài xế",
     "name": "Tên tài xế",
     "namePlaceholder": "Nhập tên tài xế",
@@ -184,6 +185,7 @@
       "emptyAll": "Chưa có tài xế liên kết hay tài xế nội bộ nào",
       "loadError": "Không tải được danh sách tài xế.",
       "sideTitle": "Tài xế",
+      "noSelectionApp": "Chọn tài xế",
       "noSelection": "Chọn một tài xế ở danh sách bên trái.",
       "wageField": "Tiền công/ngày",
       "wageSuffix": "đ/ngày",
@@ -668,6 +670,7 @@
     },
     "trips": {
       "searchPlaceholder": "Tìm kiếm mã đơn, khách hàng, tên xe, biển số...",
+      "searchPlaceholderApp": "Mã đơn, khách, biển số,...",
       "searchLabel": "Tìm chuyến",
       "status": "Trạng thái",
       "allStatuses": "Tất cả trạng thái",

@@ -10,7 +10,7 @@ import {
   type BranchStatus,
 } from '@xeprime/types';
 import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
-import { ActionMenuRow } from '@/components/ui/ActionMenuRow';
+import { ActionSheetButtons, type SheetAction } from '@/components/ui/ActionSheetButtons';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
 import { BRANCH_ACTION, type Branch, type BranchAction } from '@/features/branches/api';
@@ -60,6 +60,7 @@ export function ShopBranchRow({
   const t = useTranslations('Branches');
   const tAddr = useTranslations('Address');
   const tActions = useTranslations('Common.actions');
+  const tMenu = useTranslations('Bookings.detailPage.actions');
   const domainLabel = useDomainLabel();
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => setMenuOpen(true), []);
@@ -85,7 +86,7 @@ export function ShopBranchRow({
     { key: 'edit', icon: 'edit', label: tActions('edit'), disabled: locked, danger: false },
     {
       key: toggle,
-      icon: isActive ? 'danger-circle' : 'rotate-left',
+      icon: isActive ? 'lock-1' : 'rotate-left',
       label: isActive ? t('actions.deactivate') : t('actions.activate'),
       disabled: locked || !actionState[toggle].enabled,
       danger: isActive,
@@ -94,7 +95,7 @@ export function ShopBranchRow({
       ? [
           {
             key: BRANCH_ACTION.SET_DEFAULT as MenuKey,
-            icon: 'tick-circle' as const,
+            icon: 'star' as const,
             label: t('actions.setDefault'),
             disabled: locked || !actionState[BRANCH_ACTION.SET_DEFAULT].enabled,
             danger: false,
@@ -108,6 +109,20 @@ export function ShopBranchRow({
     if (key === 'edit') onEdit(branch);
     else onAction(branch, key);
   }
+
+  /* Khuôn tấm "Thao tác" chung (Đơn thuê - `ActionSheetButtons`): nút phụ viền, nguy hiểm viền đỏ. */
+  const sheetActions: SheetAction[] = menu.map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    /* Không icon (người dùng chốt 27/11/2026); "Sửa" hẹp lại để "Ngừng hoạt động" không bị cắt "…". */
+    grow: entry.key === 'edit' ? 1 : 2,
+    danger: entry.danger,
+    /* "Đặt làm mặc định" là nút CHÍNH: dải vàng trải hết hàng ở dưới cùng (khuôn Đơn thuê). */
+    primary: entry.key === BRANCH_ACTION.SET_DEFAULT,
+    disabled: entry.disabled,
+    loading: pendingAction !== null && pendingAction === entry.key,
+    onPress: () => runMenu(entry.key),
+  }));
 
   const bodyText = {
     col: colors.slateText,
@@ -162,8 +177,11 @@ export function ShopBranchRow({
       <XStack ai="flex-start" gap={space.sm}>
         <LineIcon name="location" size={iconSize.lg} color={colors.textPlaceholder} />
         {addressLine && branch.provinceCode ? (
-          <Text f={1} {...bodyText}>
-            {addressLine}
+          /* Cần soát địa chỉ: dòng địa chỉ chuyển cam + đuôi "· Cần soát địa chỉ" (người dùng chốt 27/11/2026). */
+          <Text f={1} {...bodyText} {...(branch.needsLocationReview ? { col: colors.warningHigh } : {})}>
+            {branch.needsLocationReview
+              ? `${addressLine}${LIST_SEPARATOR}${tAddr('review.badge')}`
+              : addressLine}
           </Text>
         ) : (
           <Text f={1} {...bodyText} col={colors.warningHigh}>
@@ -189,29 +207,13 @@ export function ShopBranchRow({
         </YStack>
       </XStack>
 
-      {branch.needsLocationReview ? (
-        <XStack>
-          <Pill label={tAddr('review.badge')} tone="warning" />
-        </XStack>
-      ) : null}
 
-      <BottomSheet open={menuOpen} onClose={closeMenu} title={branch.name} padded={false}>
-        <YStack pb={space.sm}>
-          {menu.map((entry) => (
-            <ActionMenuRow
-              key={entry.key}
-              icon={entry.icon}
-              label={entry.label}
-              danger={entry.danger}
-              disabled={entry.disabled}
-              onPress={() => runMenu(entry.key)}
-            />
-          ))}
+      <BottomSheet open={menuOpen} onClose={closeMenu} title={tMenu('menuTitle')} chrome="v2" headerDivider>
+        <YStack gap={space.sm}>
+          <ActionSheetButtons actions={sheetActions} />
           {reasons.map((reason) => (
             <Text
               key={reason}
-              px={space.md}
-              pt={space.xs}
               col={colors.placeholder}
               fos={typeScale.label.fontSize}
               lh={typeScale.label.lineHeight}

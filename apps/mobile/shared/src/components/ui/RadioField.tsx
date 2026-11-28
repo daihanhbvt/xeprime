@@ -1,9 +1,16 @@
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { Pressable } from 'react-native';
+import { Text, XStack, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, inLabelHint, belowHint } from './Field';
 import { RadioOption } from './RadioOption';
 import type { IconName } from './Chip';
-import { space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
+
+/** Figma "Radio Group" (`24238:61817`): vòng 16, chấm 6, hai lựa chọn cách 20, vòng ↔ chữ 8. */
+const DOT_RING = 16;
+const DOT = 6;
+const INLINE_GAP = 20;
 
 export interface RadioFieldOption {
   value: string;
@@ -31,6 +38,7 @@ export function RadioField<T extends FieldValues>({
   hint,
   required = false,
   disabled = false,
+  inline = false,
 }: {
   control: Control<T>;
   name: Path<T>;
@@ -40,8 +48,64 @@ export function RadioField<T extends FieldValues>({
   hint?: string;
   required?: boolean;
   disabled?: boolean;
+  /**
+   * Lựa chọn NGẮN nằm ngang, không khung (Figma "Phương pháp tính lãi" `24238:61815`): vòng 16 +
+   * chữ 14/20; hàng chật thì tự xuống dòng.
+   */
+  inline?: boolean;
 }) {
   const { field, fieldState } = useController({ control, name });
+  const colors = useColors();
+
+  if (inline) {
+    return (
+      <YStack gap={space.sm}>
+        {label ? <FieldLabel label={label} required={required} hint={inLabelHint(hint)} /> : null}
+        <XStack flexWrap="wrap" columnGap={INLINE_GAP} rowGap={space.sm} accessibilityRole="radiogroup">
+          {options.map((option) => {
+            const checked = field.value === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                disabled={disabled}
+                onPress={() => field.onChange(option.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked, disabled }}
+                accessibilityLabel={option.label}
+                hitSlop={space.xs}
+              >
+                <XStack gap={space.sm} ai="flex-start" opacity={disabled ? 0.6 : 1}>
+                  <YStack pt={2}>
+                    <YStack
+                      w={DOT_RING}
+                      h={DOT_RING}
+                      br={radius.pill}
+                      bw={1}
+                      bc={checked ? colors.primary : colors.borderInput}
+                      bg={checked ? colors.primary : colors.surface}
+                      ai="center"
+                      jc="center"
+                    >
+                      {checked ? <YStack w={DOT} h={DOT} br={radius.pill} bg={colors.surface} /> : null}
+                    </YStack>
+                  </YStack>
+                  <Text
+                    col={colors.textMuted}
+                    fos={typeScale.body.fontSize}
+                    lh={typeScale.body.lineHeight}
+                    fow={fontWeight.medium}
+                  >
+                    {option.label}
+                  </Text>
+                </XStack>
+              </Pressable>
+            );
+          })}
+        </XStack>
+        <FieldMessage error={fieldState.error?.message} hint={belowHint(hint)} />
+      </YStack>
+    );
+  }
 
   return (
     <YStack gap={space.xs}>

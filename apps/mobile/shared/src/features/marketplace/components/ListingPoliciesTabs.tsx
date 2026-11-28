@@ -17,6 +17,9 @@ import { Card } from '@/components/ui/Card';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { LEGAL_DOC } from '@xeprime/domain';
+import { LinkArrow } from '@/components/ui/LinkArrow';
+import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 
 
 const TABS = ['general', 'documents', 'collateral', 'cancellation'] as const;
@@ -41,6 +44,7 @@ export function ListingPoliciesTabs({
   const colors = useColors();
   const t = useTranslations('Listings.detail.policies');
   const tDetail = useTranslations('Listings.detail');
+  const openLegalDoc = useOpenLegalDoc();
   const fmt = useAppFormat();
   const describeCollateral = useDescribeCollateral();
   const [tab, setTab] = useState<PolicyTab>('general');
@@ -227,7 +231,11 @@ export function ListingPoliciesTabs({
                 })}
               </Rule>
               <Rule>{t('cancellation.release')}</Rule>
+              {/* Hậu quả khi huỷ muộn phải nằm NGAY ở đây, trước khi khách gửi yêu cầu (web #347). */}
+              <Rule>{t.rich('cancellation.late', { strong })}</Rule>
               <Tip>{`🛡️ ${t('cancellation.protection')}`}</Tip>
+              {/* Toàn văn mở trong lớp xem văn bản của app (web: hộp xem nhanh) - khách vẫn ở trang xe. */}
+              <LinkArrow label={t('cancellation.viewFull')} onPress={() => openLegalDoc(LEGAL_DOC.CANCELLATION)} />
             </>
           ) : null}
         </YStack>

@@ -256,7 +256,7 @@ export function RefundSheet({
           placeholder={t('correctionReasonPlaceholder')}
           hint={t('correctionReasonHint')}
           multiline
-          rows={2}
+          rows={3}
           maxLength={REASON_MAX}
           required
         />

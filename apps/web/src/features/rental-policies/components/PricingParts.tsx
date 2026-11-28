@@ -3,6 +3,10 @@
 import { Switch } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import {
+  LONG_TERM_PRICE_HINT_DAYS_PER_MONTH,
+  LONG_TERM_SUGGEST_RATIO,
+} from '@xeprime/types';
 import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 
 import { DiscountTag } from '@/components/data-display/DiscountTag';
@@ -190,5 +194,36 @@ export function LongTermPriceHintLive({
       discountEnabled={discountEnabled}
       compact={compact}
     />
+  );
+}
+
+/**
+ * Câu "Đề xuất giá thuê tháng: …" của khung "Công thức tính giá gói" (Figma `24789:85376`) - theo
+ * giá ngày thường ĐANG GÕ của xe. Chưa có giá ngày ⇒ công thức chữ như chính sách gian hàng.
+ * Cùng phép tính với `LongTermPriceHint` (65-80% × giá ngày × 30, làm tròn trăm nghìn).
+ */
+export function LongTermSuggestionLive({
+  control,
+}: {
+  control: Control<VehiclePricingFormValues>;
+}) {
+  const t = useTranslations('Vehicles.pricing.longTermHint');
+  const tDiscount = useTranslations('Vehicles.pricing.longTermDiscount');
+  const fmt = useAppFormat();
+  const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
+  const weekday = weekdayPrice == null ? null : Number(weekdayPrice);
+  if (weekday == null || !Number.isFinite(weekday) || weekday <= 0) return <>{tDiscount('formula')}</>;
+  const reference = weekday * LONG_TERM_PRICE_HINT_DAYS_PER_MONTH;
+  const round = (value: number) => Math.round(value / 100_000) * 100_000;
+  return (
+    <>
+      {t.rich('suggestionRich', {
+        min: fmt.money(String(round(reference * LONG_TERM_SUGGEST_RATIO.min))),
+        max: fmt.money(String(round(reference * LONG_TERM_SUGGEST_RATIO.max))),
+        reference: fmt.money(String(reference)),
+        days: LONG_TERM_PRICE_HINT_DAYS_PER_MONTH,
+        b: (chunks) => <strong>{chunks}</strong>,
+      })}
+    </>
   );
 }

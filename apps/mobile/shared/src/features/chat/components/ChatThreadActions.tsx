@@ -231,7 +231,7 @@ function ReportSheet({
           placeholder={t('reportNote')}
           maxLength={CHAT_REPORT_NOTE_MAX_LENGTH}
           multiline
-          rows={2}
+          rows={3}
         />
       </YStack>
     </BottomSheet>

@@ -10,7 +10,14 @@ import { useColors } from '@/theme/ThemeProvider';
  * Màu lấy theo theme (sáng/tối) thay cho mã xám cứng của Figma; bóng đổ của Figma bỏ vì
  * `react-native-svg` không vẽ được bộ lọc mờ.
  */
-export function HandoverSlotSample({ width }: { slot: HandoverPhotoSlot; color?: string; width: number }) {
+export function HandoverSlotSample({
+  width,
+}: {
+  /** Không dùng nữa - hình chung mọi góc; còn để chỗ gọi cũ không vỡ. Ô ảnh xe không truyền. */
+  slot?: HandoverPhotoSlot;
+  color?: string;
+  width: number;
+}) {
   const colors = useColors();
   return (
     <Svg viewBox={`0 0 ${VIEW} ${VIEW}`} width={width} height={width} accessibilityElementsHidden>

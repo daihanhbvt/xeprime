@@ -38,6 +38,7 @@ export type {
   CreateBookingInput,
   TransitionBookingInput,
   UpdateBookingInput,
+  UpdateBookingSourceInput,
   UpdateDeliveryFeeInput,
 } from '@/api/bookings/api';
 export type { AssignableDriver, AssignableWindow } from '@/api/drivers/api';

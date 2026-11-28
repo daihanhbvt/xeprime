@@ -91,6 +91,8 @@ function RosterCardImpl({
         : t('roster.branchCount', { count: branchNames.length });
 
   // Người dùng 26/11/2026: bỏ "Xem chi tiết" khỏi menu - chạm thẻ đã mở chi tiết.
+  // Thứ tự + hàng (người dùng 27/11/2026): Chỉnh sửa + Tạm khoá chung một hàng, rồi Đặt lại mật khẩu
+  // một hàng, nút nguy hiểm (Gỡ khỏi gian hàng / Thu hồi lời mời) ở hàng CUỐI để khó bấm nhầm.
   const menu: SheetAction[] = [
     {
       key: 'edit',
@@ -100,20 +102,19 @@ function RosterCardImpl({
       danger: false,
     },
     {
-      key: 'resetPassword',
-      icon: 'password' as const,
-      label: t('roster.actions.resetPassword'),
-      show: abilities.resetPassword,
-      danger: false,
-    },
-    {
       key: 'lock',
       icon: locked ? ('lock-1' as const) : ('lock' as const),
       label: t(locked ? 'roster.actions.unlock' : 'roster.actions.lock'),
       show: abilities.lock,
       danger: false,
-      // "Tạm khoá" ngắn hơn "Gỡ khỏi gian hàng" đứng cùng hàng: chia 2 : 3 thay vì đều.
-      grow: 2,
+    },
+    {
+      key: 'resetPassword',
+      icon: 'password' as const,
+      label: t('roster.actions.resetPassword'),
+      show: abilities.resetPassword,
+      danger: false,
+      block: true,
     },
     {
       key: 'remove',
@@ -121,7 +122,7 @@ function RosterCardImpl({
       label: t('roster.actions.remove'),
       show: abilities.remove,
       danger: true,
-      grow: 3,
+      block: true,
     },
     {
       key: 'revoke',
@@ -129,6 +130,7 @@ function RosterCardImpl({
       label: t('roster.actions.revoke'),
       show: abilities.revoke,
       danger: true,
+      block: true,
     },
   ]
     .filter((entry) => entry.show)
@@ -239,7 +241,7 @@ function RosterCardImpl({
         chrome="v2"
         headerDivider
       >
-        <ActionSheetButtons actions={menu} />
+        <ActionSheetButtons actions={menu} autoSize />
       </BottomSheet>
     </>
   );

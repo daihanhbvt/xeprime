@@ -1,8 +1,8 @@
 import { Pressable } from 'react-native';
 import { Text, YStack } from 'tamagui';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { fieldFontSize, fontWeight, space } from '@/theme/tokens';
 import { FieldLabel, FieldMessage, FieldShell, inLabelHint, belowHint } from './Field';
 
 /**
@@ -57,7 +57,8 @@ export function LockedValueField({
           accessibilityRole="button"
           accessibilityLabel={lock.editLabel}
         >
-          <Ionicons name="create-outline" size={iconSize.sm} color={colors.primaryActive} />
+          {/* Cùng icon "Edit 2" với nút sửa ảnh xe (Figma `24231:106772`). */}
+          <LineIcon name="edit" color={colors.placeholder} />
         </Pressable>
       </FieldShell>
       <FieldMessage error={error} hint={belowHint(hint)} />

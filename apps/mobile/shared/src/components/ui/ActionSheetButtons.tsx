@@ -24,6 +24,8 @@ export interface SheetAction {
   readonly width?: number;
   /** Tỉ lệ chia bề ngang với nút cùng hàng (mặc định 1 - chia đều): nhãn ngắn cho số nhỏ hơn nhãn dài. */
   readonly grow?: number;
+  /** Đứng MỘT MÌNH một hàng, trải hết bề ngang (không ghép đôi với nút kề). */
+  readonly block?: boolean;
   /** Nút VUÔNG chỉ có icon (Figma "Thao tác" của chi tiết xe: thùng rác đỏ 40x40) - chữ chỉ đọc cho trợ năng. */
   readonly iconOnly?: boolean;
 }
@@ -38,14 +40,45 @@ export interface SheetAction {
  * Dựng riêng thay vì dùng `Button`: `Button` cỡ `md` cao 44 và chữ 16, lệch Figma. Nơi gọi tự đóng tấm
  * trong `onPress` nếu cần - thành phần này không biết nó nằm trong tấm nào.
  */
-export function ActionSheetButtons({ actions }: { actions: readonly SheetAction[] }) {
+export function ActionSheetButtons({
+  actions,
+  autoSize = false,
+  primaryFirst = false,
+}: {
+  actions: readonly SheetAction[];
+  /**
+   * Hai nút một hàng chia bề ngang THEO ĐỘ DÀI NHÃN thay vì đều - nhãn ngắn ("Tạm khoá") không phải
+   * rộng bằng nhãn dài ("Gỡ khỏi gian hàng") và nhãn dài không bị cắt. Mặc định tắt: các tấm đã dùng
+   * (chi tiết đơn, chi tiết xe) giữ chia đều như Figma.
+   */
+  autoSize?: boolean;
+  /** Nút CHÍNH đứng TRÊN CÙNG thay vì dưới cùng (tấm chọn ảnh: "Chọn từ thư viện" đầu tiên). */
+  primaryFirst?: boolean;
+}) {
   const secondary = actions.filter((action) => !action.primary);
   const primary = actions.filter((action) => action.primary);
+  // Theo thứ tự khai: nút `block` một hàng riêng, các nút còn lại ghép đôi liên tiếp.
   const rows: SheetAction[][] = [];
-  for (let i = 0; i < secondary.length; i += 2) rows.push(secondary.slice(i, i + 2));
+  let pair: SheetAction[] = [];
+  for (const action of secondary) {
+    if (action.block) {
+      if (pair.length > 0) rows.push(pair);
+      pair = [];
+      rows.push([action]);
+    } else {
+      pair.push(action);
+      if (pair.length === 2) {
+        rows.push(pair);
+        pair = [];
+      }
+    }
+  }
+  if (pair.length > 0) rows.push(pair);
 
+  const primaryButtons = primary.map((action) => <ActionButton key={action.key} action={action} />);
   return (
     <YStack gap={GAP}>
+      {primaryFirst ? primaryButtons : null}
       {rows.map((row) => (
         <XStack key={row.map((action) => action.key).join('|')} gap={GAP}>
           {row.map((action) => (
@@ -55,16 +88,14 @@ export function ActionSheetButtons({ actions }: { actions: readonly SheetAction[
                 ? { w: BUTTON_HEIGHT, flexShrink: 0 }
                 : action.width
                 ? { w: action.width, flexShrink: 0 }
-                : { f: action.grow ?? 1, flexBasis: 0, minWidth: 0 })}
+                : { f: action.grow ?? (autoSize ? action.label.length + ICON_CHARS : 1), flexBasis: 0, minWidth: 0 })}
             >
               <ActionButton action={action} />
             </YStack>
           ))}
         </XStack>
       ))}
-      {primary.map((action) => (
-        <ActionButton key={action.key} action={action} />
-      ))}
+      {primaryFirst ? null : primaryButtons}
     </YStack>
   );
 }
@@ -161,6 +192,8 @@ const ActionButton = memo(function ActionButton({ action }: { action: SheetActio
 });
 
 /** Figma `_Filter Modal`: các nút cách nhau 12; nút cao 40, đệm ngang 16, icon ↔ chữ 6. */
+/** Phần icon + khe quy ra "ký tự" khi chia bề ngang theo độ dài nhãn (`autoSize`). */
+const ICON_CHARS = 5;
 const GAP = 12;
 const BUTTON_HEIGHT = 40;
 const PAD_X = 16;

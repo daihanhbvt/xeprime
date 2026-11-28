@@ -74,6 +74,22 @@ export function useFinanceByCategory(
 }
 
 /**
+ * Doanh thu theo nguồn đơn (ADR 0110) — native port of web `useFinanceBySource`: cùng kỳ và phạm vi
+ * với thẻ tổng. `enabled` tắt khi không có kỳ để hỏi (vd kỳ so sánh của một kỳ chưa bắt đầu).
+ */
+export function useFinanceBySource(
+  filters: FinancePeriodFilters,
+  scope?: FinanceScope,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.finance.bySource(financeRangeParams(filters, scope)),
+    queryFn: () => financeApi.bySource(filters, scope),
+    enabled,
+  });
+}
+
+/**
  * Hai bảng xếp hạng có phân trang và sắp xếp RIÊNG.
  *
  * `placeholderData` giữ trang đang đọc trong lúc trang mới về — bảng nháy về skeleton ở mỗi cú

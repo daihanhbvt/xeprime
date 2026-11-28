@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SubFormSave } from '@/hooks/use-report-dirty';
-import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
-import type { ScrollView } from 'react-native';
+import { Pressable, type ScrollView } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
-import { useForm, useWatch, type Control, type Path, type UseFormSetValue } from 'react-hook-form';
+import { useController, useForm, useWatch, type Control, type Path } from 'react-hook-form';
 import { CatalogRentHintFor } from '@/features/vehicles/components/CatalogSuggestions';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -22,6 +21,10 @@ import {
   type PolicySection,
 } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { FieldLabel, FieldShell } from '@/components/ui/Field';
+import { RowDivider, SwitchRow } from '@/components/ui/SwitchRow';
 import { VehicleEditHeader } from '@/features/vehicles/components/VehicleEditHeader';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { Screen } from '@/components/layout/Screen';
@@ -46,7 +49,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useFormRefresh } from '@/hooks/use-form-refresh';
+import { useFormRefresh, RESET_DISCARD } from '@/hooks/use-form-refresh';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { VehicleServiceToggles } from '@/features/vehicles/components/VehicleServiceToggles';
 import type { VehicleDetail } from '@/features/vehicles/api';
@@ -59,10 +62,9 @@ import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import {
   CollateralPolicySection,
   DeliveryPolicySection,
@@ -577,12 +579,17 @@ function VehiclePricingForm({
   const subRegistrars = useMemo(
     () => ({
       handover: registerSubSave('handover'),
+      autoExtras: registerSubSave('autoExtras'),
       termsSelf: registerSubSave('termsSelf'),
       termsDriver: registerSubSave('termsDriver'),
     }),
     [registerSubSave],
   );
   const [subSaving, setSubSaving] = useState(false);
+  /* Đổi khoá ⇒ form thời gian chết dựng lại từ số đã lưu (nút Hoàn tác). */
+  const [handoverKey, setHandoverKey] = useState(0);
+  /* Hai tab có nút Lưu chung gộp cả form con (Dịch vụ xe: thẻ "Khác" có tài xế). */
+  const subSavePane = policyPane || servicesPane;
   const leave = useLeaveGuard(formState.isDirty || anySubDirty);
   const refresh = useFormRefresh(formState.isDirty, refreshing, onRefetch);
 
@@ -669,7 +676,7 @@ function VehiclePricingForm({
    */
   async function saveAll() {
     const pricingDirty = formState.isDirty || (showPolicy && !direct && inheritedChanged);
-    if (policyPane && anySubDirty) {
+    if (subSavePane && anySubDirty) {
       setSubSaving(true);
       try {
         for (const run of Object.values(subSavers.current)) {
@@ -718,9 +725,24 @@ function VehiclePricingForm({
             onConfirm: () => commit(pending.body),
           };
 
-  const calendarHref = vehicleSchedulePath(
-    { name: vehicleName, plateNumber: vehiclePlate },
-    { back: true, customerScope },
+
+  const saveButton = (
+    <Button
+      variant="gradient"
+      label={tActions('saveChanges')}
+      lineIcon="tick"
+      loading={save.isPending || subSaving}
+      /*
+       * Chuyển nguồn kế thừa ↔ tuỳ chỉnh là thay đổi CẦN LƯU dù chưa gõ ô nào — so ý định
+       * (`editMode`) với nguồn đã lưu (`overriding`). Tab chính sách tính cả form con.
+       */
+      disabled={
+        !formState.isDirty &&
+        !(showPolicy && !direct && inheritedChanged) &&
+        !(subSavePane && anySubDirty)
+      }
+      onPress={() => void saveAll()}
+    />
   );
 
   return (
@@ -744,63 +766,71 @@ function VehiclePricingForm({
         {...refresh}
         footer={
           canEdit ? (
-            <Button
-              variant="gradient"
-              label={tActions('saveChanges')}
-              lineIcon="tick"
-              loading={save.isPending || subSaving}
-              /*
-               * Chuyển nguồn kế thừa ↔ tuỳ chỉnh là thay đổi CẦN LƯU dù chưa gõ ô nào — so ý định
-               * (`editMode`) với nguồn đã lưu (`overriding`). Tab chính sách tính cả form con.
-               */
-              disabled={
-                !formState.isDirty &&
-                !(showPolicy && !direct && inheritedChanged) &&
-                !(policyPane && anySubDirty)
-              }
-              onPress={() => void saveAll()}
-            />
+            servicesPane || policyPane ? (
+              /* Figma `24237:38746`: hai nút Hoàn tác · Lưu thay đổi dính đáy (như các màn sửa xe khác). */
+              <XStack gap={space.sm}>
+                <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+                  <Button
+                    label={tEdit('revert')}
+                    variant="outline"
+                    disabled={
+                      !(formState.isDirty || inheritedChanged || (subSavePane && anySubDirty)) ||
+                      save.isPending
+                    }
+                    onPress={() => {
+                      reset(undefined, RESET_DISCARD);
+                      setInherited(savedInherited);
+                      // Form con (thời gian chết) tự giữ state - dựng lại là về đúng số đã lưu.
+                      if (subSavePane) setHandoverKey((key) => key + 1);
+                    }}
+                  />
+                </YStack>
+                <YStack f={2}>
+                  {saveButton}
+                </YStack>
+              </XStack>
+            ) : (
+              saveButton
+            )
           ) : undefined
         }
       >
         <YStack gap={layout.section}>
-          {customerScope ? null : (
-            <VehicleEditSummaryCard
-              vehicleId={vehicle.id}
-              tab={policyPane ? VEHICLE_EDIT_TAB.POLICY : VEHICLE_EDIT_TAB.PRICING}
-              guard={leave.guard}
-            />
-          )}
+          {/*
+            Không có thẻ tóm tắt xe (ảnh, tên, hoàn thiện, trên chợ…) ở hai tab này - Figma `24237:38682`
+            và `24238:57782` vào thẳng nội dung (người dùng chốt 27/11/2026).
+          */}
           {legacyMerged || policyPane ? null : (
             <VehicleServiceToggles
               vehicle={vehicle}
               canEdit={canEdit}
               active={serviceTab}
               onSelect={setServiceTab}
-              // Link "Chính sách thuê" trong câu gợi ý — mục của ĐÚNG khu đang đứng.
+              // Link trong câu gợi ý - mục Bảo hiểm & Giao nhận xe của ĐÚNG khu đang đứng.
               policyHref={
                 customerScope
                   ? ROUTES.account.vehicleManageSection(vehicleId, VEHICLE_MANAGE_SECTION.POLICY)
                   : ROUTES.manage.vehicleEditTab(vehicleId, VEHICLE_EDIT_TAB.POLICY)
               }
-            />
+            >
+              {/*
+                Web `ServicesPane`: hàng "Nhận chuyến tự động" nằm NGAY dưới công tắc dịch vụ - Figma
+                `24237:38685` gộp hai hàng chung một thẻ. Chỉ tab tự lái và khi dịch vụ đang bật (có
+                tài xế không tự nhận - 19/11/2026, web PR #338).
+              */}
+              {servicesPane &&
+              serviceTab === SERVICE_TYPE.SELF_DRIVE &&
+              (services as readonly string[]).includes(serviceTab) ? (
+                <AutoAcceptBody
+                  vehicleId={vehicleId}
+                  serviceType={serviceTab}
+                  canEdit={canEdit}
+                  part="toggle"
+                  onDirtyChange={subReporters.autoToggle}
+                />
+              ) : null}
+            </VehicleServiceToggles>
           )}
-          {/*
-            Web `ServicesPane`: hàng "Nhận chuyến tự động" (công tắc, năng lực tài xế, luật) nằm NGAY
-            dưới công tắc dịch vụ, trước thẻ giá - chỉ khi dịch vụ của tab đang bật.
-          */}
-          {/* Có tài xế không tự nhận (19/11/2026, web PR #338) - chỉ tab tự lái có công tắc. */}
-          {servicesPane &&
-          serviceTab === SERVICE_TYPE.SELF_DRIVE &&
-          (services as readonly string[]).includes(serviceTab) ? (
-            <AutoAcceptBody
-              vehicleId={vehicleId}
-              serviceType={serviceTab}
-              canEdit={canEdit}
-              part="toggle"
-              onDirtyChange={subReporters.autoToggle}
-            />
-          ) : null}
           {/* Tiêu đề + phụ đề của MỤC — `SectionCard` bao quanh workspace ở `VehiclePricingSection`. */}
           {legacyMerged ? (
             <YStack gap={space.xs}>
@@ -839,7 +869,7 @@ function VehiclePricingForm({
                       return;
                     }
                     setInherited(POLICY_SECTION_VALUES);
-                    reset();
+                    reset(undefined, RESET_DISCARD);
                   }}
                 />
                 <Text col={editMode ? colors.warning : colors.textMuted} fos={fontSize.bodySm}>
@@ -869,64 +899,58 @@ function VehiclePricingForm({
             />
           ) : null}
 
-          {formState.isDirty ? (
+          {formState.isDirty && !servicesPane ? (
             <YStack bg={colors.warningSurface} br={radius.sm} p={space.sm} gap={space.xs}>
               <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                 {t('dirty')}
               </Text>
-              <InlineAction label={t('discard')} onPress={() => reset()} />
+              <InlineAction label={t('discard')} onPress={() => reset(undefined, RESET_DISCARD)} />
             </YStack>
           ) : null}
 
           {showSelfDrive ? (
-            <Card lift="flat">
-              <YStack gap={space.sm}>
-                <SectionHeader>
-                  {servicesPane ? tServices('price.titlePromo') : t('selfDrive.title')}
-                </SectionHeader>
-                <MoneyField
-                  control={control}
-                  name="weekdayPrice"
-                  unit={t('unitPerDay')}
-                  label={t('selfDrive.weekday')}
-                  hint={t('selfDrive.weekdayHint')}
-                  required
-                  editable={canEdit}
-                />
-                {/* Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) - như web `ServicesPane`; bù 17/11/2026. */}
-                <CatalogRentHintFor
-                  modelId={vehicle.vehicleCatalogModelId}
-                  variantId={vehicle.vehicleCatalogVariantId}
-                  year={vehicle.manufactureYear}
-                  vehicleId={vehicle.id}
-                  field="weekdayPrice"
-                  {...(canEdit
-                    ? {
-                        onApply: (price: number) =>
-                          setValue('weekdayPrice', price, { shouldDirty: true, shouldValidate: true }),
-                      }
-                    : {})}
-                />
-                <MoneyField
-                  control={control}
-                  name="weekendPrice"
-                  unit={t('unitPerDay')}
-                  label={t('selfDrive.weekend')}
-                  hint={t('selfDrive.weekendHint')}
-                  editable={canEdit}
-                />
-                <MoneyField
-                  control={control}
-                  name="hourlyPrice"
-                  unit={t('unitPerHour')}
-                  label={t('selfDrive.hourly')}
-                  hint={t('selfDrive.hourlyHint')}
-                  editable={canEdit}
-                />
-                <DirectDiscount control={control} setValue={setValue} canEdit={canEdit} />
-                <CalendarPriceLink href={calendarHref} />
-              </YStack>
-            </Card>
+            <InfoGroupCard title={servicesPane ? tServices('price.titlePromo') : t('selfDrive.title')}>
+              <MoneyField
+                control={control}
+                name="weekdayPrice"
+                unit={t('unitPerDayApp')}
+                label={t('selfDrive.weekdayApp')}
+                hint={t('selfDrive.weekdayHint')}
+                required
+                editable={canEdit}
+              />
+              {/* Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) - như web `ServicesPane`; bù 17/11/2026. */}
+              <CatalogRentHintFor
+                modelId={vehicle.vehicleCatalogModelId}
+                variantId={vehicle.vehicleCatalogVariantId}
+                year={vehicle.manufactureYear}
+                vehicleId={vehicle.id}
+                field="weekdayPrice"
+                {...(canEdit
+                  ? {
+                      onApply: (price: number) =>
+                        setValue('weekdayPrice', price, { shouldDirty: true, shouldValidate: true }),
+                    }
+                  : {})}
+              />
+              <MoneyField
+                control={control}
+                name="weekendPrice"
+                unit={t('unitPerDayApp')}
+                label={t('selfDrive.weekendApp')}
+                hint={t('selfDrive.weekendHint')}
+                editable={canEdit}
+              />
+              <MoneyField
+                control={control}
+                name="hourlyPrice"
+                unit={t('unitPerHourApp')}
+                label={t('selfDrive.hourlyApp')}
+                hint={t('selfDrive.hourlyHint')}
+                editable={canEdit}
+              />
+              <DirectDiscount control={control} canEdit={canEdit} />
+            </InfoGroupCard>
           ) : null}
 
           {/*
@@ -947,6 +971,7 @@ function VehiclePricingForm({
                 disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.USAGE_LIMITS)}
                 numbered={false}
                 blocks={[POLICY_BLOCK.MILEAGE, POLICY_BLOCK.OVERTIME]}
+                compact
               />
               <CollateralStrip
                 control={sectionControl(POLICY_SECTION.COLLATERAL)}
@@ -962,29 +987,27 @@ function VehiclePricingForm({
           ) : null}
 
           {showLongTerm ? (
-            <Card lift="flat">
-              <YStack gap={space.sm}>
-                <SectionHeader>
-                  {servicesPane ? tServices('price.title') : t('longTerm.title')}
-                </SectionHeader>
-                <MoneyField
-                  control={control}
-                  name="monthlyPrice"
-                  unit={t('unitPerMonth')}
-                  label={t('longTerm.monthly')}
-                  hint={t('longTerm.monthlyHint', {
-                    packages: LONG_TERM_PACKAGE_MONTHS.join(', '),
-                  })}
-                  editable={canEdit}
-                />
-                <LongTermPriceHint
-                  weekdayPrice={watchedWeekday}
-                  monthlyPrice={watchedMonthly}
-                  discountTiers={watchedTiers}
-                  discountEnabled={watchedDiscountEnabled}
-                />
-              </YStack>
-            </Card>
+            <InfoGroupCard title={servicesPane ? tServices('price.title') : t('longTerm.title')}>
+              <MoneyField
+                control={control}
+                name="monthlyPrice"
+                unit={t('unitPerMonthApp')}
+                label={t('longTerm.monthly')}
+                hint={t('longTerm.monthlyHint', {
+                  packages: LONG_TERM_PACKAGE_MONTHS.join(', '),
+                })}
+                editable={canEdit}
+              />
+              <LongTermPriceHint
+                weekdayPrice={watchedWeekday}
+                monthlyPrice={watchedMonthly}
+                discountTiers={watchedTiers}
+                discountEnabled={watchedDiscountEnabled}
+                preview={servicesPane}
+                /* Thẻ ưu đãi bên dưới đã có khung "Công thức tính giá gói" nói đúng câu đề xuất này. */
+                hideSuggestion={servicesPane && !customerScope && showPolicy}
+              />
+            </InfoGroupCard>
           ) : null}
 
           {/*
@@ -1011,6 +1034,8 @@ function VehiclePricingForm({
                 }
                 numbered={false}
                 blocks={[POLICY_BLOCK.DISCOUNT]}
+                compact
+                discountWeekdayPrice={watchedWeekday}
                 legacyDiscountTiers={
                   (isInherited(POLICY_SECTION.LONG_TERM_DISCOUNT)
                     ? pricing.shopPolicy
@@ -1021,67 +1046,63 @@ function VehiclePricingForm({
           ) : null}
 
           {showWithDriver ? (
-            <Card lift="flat">
-              <YStack gap={space.sm}>
-                <SectionHeader>
-                  {servicesPane ? tServices('price.title') : t('withDriver.title')}
-                </SectionHeader>
-                {/* Web `ServicesPane` (`!isManage`): cảnh báo giá tạm tính NGAY trong thẻ giá. */}
-                {/* Web `WithDriverPriceReminder` (20/11/2026): giá có tài xế tuỳ chọn - nhắc khách đang thấy giá nào. */}
-                {servicesPane ? <WithDriverPriceReminder control={control} /> : null}
-                <MoneyField
-                  control={control}
-                  name="withDriverDailyPrice"
-                  unit={t('unitPerDay')}
-                  label={t('withDriver.daily')}
-                  hint={t('withDriver.dailyHint')}
-                  editable={canEdit}
-                />
-                {/* Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) - như web `ServicesPane`; bù 17/11/2026. */}
-                <CatalogRentHintFor
-                  modelId={vehicle.vehicleCatalogModelId}
-                  variantId={vehicle.vehicleCatalogVariantId}
-                  year={vehicle.manufactureYear}
-                  vehicleId={vehicle.id}
-                  field="withDriverDailyPrice"
-                  {...(canEdit
-                    ? {
-                        onApply: (price: number) =>
-                          setValue('withDriverDailyPrice', price, { shouldDirty: true, shouldValidate: true }),
-                      }
-                    : {})}
-                />
-                <MoneyField
-                  control={control}
-                  name="withDriverInterCityPrice"
-                  unit={t('unitPerDay')}
-                  label={t('withDriver.interCity')}
-                  hint={t('withDriver.interCityHint')}
-                  editable={canEdit}
-                />
-                <MoneyField
-                  control={control}
-                  name="withDriverOneWayPrice"
-                  unit={t('unitPerDay')}
-                  label={t('withDriver.oneWay')}
-                  hint={t('withDriver.oneWayHint')}
-                  editable={canEdit}
-                />
-                {/* Giá trên là tiền KHÁCH trả; tiền công tài xế là mức chung của bên thuê (ADR 0075). */}
-                <WithDriverWageNote />
-                <CalendarPriceLink href={calendarHref} />
-              </YStack>
-            </Card>
+            <InfoGroupCard title={servicesPane ? tServices('price.title') : t('withDriver.title')}>
+              {/* Web `ServicesPane` (`!isManage`): cảnh báo giá tạm tính NGAY trong thẻ giá. */}
+              {/* Web `WithDriverPriceReminder` (20/11/2026): giá có tài xế tuỳ chọn - nhắc khách đang thấy giá nào. */}
+              {servicesPane ? <WithDriverPriceReminder control={control} /> : null}
+              <MoneyField
+                control={control}
+                name="withDriverDailyPrice"
+                unit={t('unitPerDayApp')}
+                label={t('withDriver.daily')}
+                hint={t('withDriver.dailyHint')}
+                editable={canEdit}
+              />
+              {/* Giá thuê tham khảo theo Dữ liệu xe (ADR 0090) - như web `ServicesPane`; bù 17/11/2026. */}
+              <CatalogRentHintFor
+                modelId={vehicle.vehicleCatalogModelId}
+                variantId={vehicle.vehicleCatalogVariantId}
+                year={vehicle.manufactureYear}
+                vehicleId={vehicle.id}
+                field="withDriverDailyPrice"
+                {...(canEdit
+                  ? {
+                      onApply: (price: number) =>
+                        setValue('withDriverDailyPrice', price, { shouldDirty: true, shouldValidate: true }),
+                    }
+                  : {})}
+              />
+              <MoneyField
+                control={control}
+                name="withDriverInterCityPrice"
+                unit={t('unitPerDayApp')}
+                label={t('withDriver.interCity')}
+                hint={t('withDriver.interCityHint')}
+                editable={canEdit}
+              />
+              <MoneyField
+                control={control}
+                name="withDriverOneWayPrice"
+                unit={t('unitPerDayApp')}
+                label={t('withDriver.oneWay')}
+                hint={t('withDriver.oneWayHint')}
+                editable={canEdit}
+              />
+              {/* Giá trên là tiền KHÁCH trả; tiền công tài xế là mức chung của bên thuê (ADR 0075). */}
+              <WithDriverWageNote />
+            </InfoGroupCard>
           ) : null}
 
           {/* Web `WithDriverExtras`: thẻ "Khác" của có tài xế, sau thẻ giá. */}
           {servicesPane && (services as readonly string[]).includes(serviceTab) ? (
             <AutoAcceptBody
+              key={handoverKey}
               vehicleId={vehicleId}
               serviceType={serviceTab}
               canEdit={canEdit}
               part="extras"
               onDirtyChange={subReporters.autoExtras}
+              registerSave={subRegistrars.autoExtras}
             />
           ) : null}
 
@@ -1095,7 +1116,7 @@ function VehiclePricingForm({
               {insuranceApplies ? (
                 <VehiclePolicySectionCard
                   title={tWorkspace('insurance.title')}
-                  subtitle={tWorkspace('insurance.hint')}
+                  titleHint={tWorkspace('insurance.hint')}
                   {...withInherit(
                     inheritControl(POLICY_SECTION.INSURANCE, tWorkspace('insurance.title')),
                   )}
@@ -1105,6 +1126,7 @@ function VehiclePricingForm({
                     control={sectionControl(POLICY_SECTION.INSURANCE)}
                     disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.INSURANCE)}
                     vehicle={{ vehicleId, gaps: insuranceStatus.data?.gaps ?? [] }}
+                    headless
                   />
                 </VehiclePolicySectionCard>
               ) : null}
@@ -1120,6 +1142,7 @@ function VehiclePricingForm({
                   control={sectionControl(POLICY_SECTION.COLLATERAL)}
                   disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.COLLATERAL)}
                   bare
+                  headless
                 />
               </VehiclePolicySectionCard>
               <VehiclePolicySectionCard
@@ -1132,6 +1155,21 @@ function VehiclePricingForm({
                   key={isInherited(POLICY_SECTION.DELIVERY) ? 'shop' : 'own'}
                   control={sectionControl(POLICY_SECTION.DELIVERY)}
                   disabled={!canEdit || save.isPending || isInherited(POLICY_SECTION.DELIVERY)}
+                  bare
+                  headless
+                />
+                {/*
+                  Thời gian chết giữa hai chuyến nằm TRONG thẻ Giao nhận (Figma `24705:45807`, người dùng
+                  chốt 27/11/2026) - vẫn là form + cơ chế "theo gian hàng" riêng của nó, không ăn theo
+                  công tắc kế thừa của mục giao nhận.
+                */}
+                <RowDivider />
+                <HandoverBody
+                  key={handoverKey}
+                  vehicleId={vehicleId}
+                  canEdit={canEdit}
+                  onDirtyChange={subReporters.handover}
+                  registerSave={subRegistrars.handover}
                   bare
                 />
               </VehiclePolicySectionCard>
@@ -1182,17 +1220,6 @@ function VehiclePricingForm({
             )
           ) : null}
 
-          {/* Web `PolicyPane`: thời gian chết rồi điều kiện thuê của từng dịch vụ đang bật. */}
-          {policyPane ? (
-            <>
-              <HandoverBody
-                vehicleId={vehicleId}
-                canEdit={canEdit}
-                onDirtyChange={subReporters.handover}
-                registerSave={subRegistrars.handover}
-              />
-            </>
-          ) : null}
         </YStack>
       </Screen>
 
@@ -1219,7 +1246,7 @@ function VehiclePricingForm({
         cancelLabel={tEdit('discard.cancel')}
         destructive
         onConfirm={() => {
-          reset();
+          reset(undefined, RESET_DISCARD);
           leave.confirm();
         }}
         onCancel={leave.cancel}
@@ -1268,12 +1295,32 @@ function CollateralStrip({
     }),
   );
   if (!text) return null;
+  /* Figma `24705:45287`: nền `status/information-low`, chữ `status/information-high`, hàng link + mũi tên. */
   return (
-    <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.infoSurface} bw={1} bc={colors.info}>
-      <Text col={colors.text} fos={fontSize.bodySm}>
+    <YStack p={DISCOUNT_PAD} br={radius.control} bg={colors.infoLow} gap={space.sm}>
+      <Text
+        col={colors.infoStrong}
+        fos={typeScale.label.fontSize}
+        lh={typeScale.label.lineHeight}
+        fow={fontWeight.medium}
+      >
         {t('collateralNow', { collateral: text })}
       </Text>
-      {onOpen ? <BlockLink label={t('collateralSetup')} onPress={onOpen} /> : null}
+      {onOpen ? (
+        <Pressable onPress={onOpen} accessibilityRole="link" accessibilityLabel={t('collateralSetup')}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text
+              col={colors.infoStrong}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {t('collateralSetup')}
+            </Text>
+            <LineIcon name="arrow-right" size={20} color={colors.infoStrong} />
+          </XStack>
+        </Pressable>
+      ) : null}
     </YStack>
   );
 }
@@ -1302,11 +1349,9 @@ function confirmBody(t: PricingTranslator, kind: ConfirmKind, vehicle: string): 
  */
 function DirectDiscount({
   control,
-  setValue,
   canEdit,
 }: {
   control: Control<VehiclePricingFormValues>;
-  setValue: UseFormSetValue<VehiclePricingFormValues>;
   canEdit: boolean;
 }) {
   const colors = useColors();
@@ -1314,8 +1359,6 @@ function DirectDiscount({
   const fmt = useAppFormat();
 
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
-  const weekendPrice = useWatch({ control, name: 'weekendPrice' });
-  const hourlyPrice = useWatch({ control, name: 'hourlyPrice' });
   const discountPercent = useWatch({ control, name: 'discountPercent' });
 
   /* Không có cờ bật/tắt riêng trong DTO: mức giảm > 0 CHÍNH LÀ trạng thái bật. */
@@ -1325,141 +1368,154 @@ function DirectDiscount({
     weekdayPrice == null ? null : String(weekdayPrice),
     discountPercent,
   );
-  const discountedWeekend = discountedPriceVnd(
-    weekendPrice == null ? null : String(weekendPrice),
-    discountPercent,
-  );
   const saving =
     weekdayPrice != null && discountedWeekday != null
       ? Math.max(0, Math.round(weekdayPrice) - Number(discountedWeekday))
       : null;
 
+  /*
+   * Ghi qua CONTROLLER của ô (luôn đăng ký, kể cả khi ô % đang ẩn): `setValue` lên một trường chưa có
+   * ô nào đăng ký không đánh dấu form "đã đổi" - bật khuyến mãi mà nút Lưu / Hoàn tác vẫn mờ.
+   */
+  const { field: percentField } = useController({ control, name: 'discountPercent' });
+  const toggle = () =>
+    // Bật thì mồi 10% như web - một ô rỗng bắt buộc ngay sau khi bật là một lỗi chờ sẵn.
+    percentField.onChange(enabled ? null : DEFAULT_DISCOUNT_PERCENT);
+
   return (
-    <YStack gap={space.sm}>
-      <ToggleRow
-        label={t('title')}
-        checked={enabled}
-        disabled={!canEdit}
-        onToggle={() =>
-          // Bật thì mồi 10% như web — một ô rỗng bắt buộc ngay sau khi bật là một lỗi chờ sẵn.
-          setValue('discountPercent', enabled ? null : DEFAULT_DISCOUNT_PERCENT, {
-            shouldDirty: true,
-            shouldValidate: true,
-          })
-        }
-      />
-      {/* Web treo câu này trong tooltip; native không có hover nên nó thành dòng phụ. */}
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {t('info')}
-      </Text>
+    <>
+      {/* Figma `24237:56919`: khung viền trong thẻ giá - công tắc + hai ô. */}
+      <YStack bw={1} bc={colors.border} br={radius.control} p={DISCOUNT_PAD} gap={space.md}>
+        <SwitchRow
+          title={t('titleApp')}
+          description={t('lead')}
+          value={enabled}
+          disabled={!canEdit}
+          onChange={toggle}
+        />
+        {enabled ? (
+          <XStack gap={DISCOUNT_PAD} ai="flex-start">
+            {/*
+              "Giảm giá theo": hiện chỉ giảm theo % - giảm theo số tiền để đợt sau (ADR 0112 "Để đợt
+              sau"). Ô khoá ở "%", không bấm đổi được (người dùng chốt 27/11/2026).
+            */}
+            <YStack w={DISCOUNT_BY_WIDTH} gap={FIELD_LABEL_GAP}>
+              <FieldLabel label={t('byLabel')} required />
+              <FieldShell disabled>
+                <Text f={1} py={space.sm} col={colors.text} fos={typeScale.body.fontSize}>
+                  {t('byPercent')}
+                </Text>
+                <LineIcon name="chevron-down-md" size={20} color={colors.placeholder} />
+              </FieldShell>
+            </YStack>
+            <YStack f={1} minWidth={0}>
+              <NumberField
+                control={control}
+                name="discountPercent"
+                percent
+                label={t('percent')}
+                hint={t('info')}
+                required
+                editable={canEdit}
+              />
+            </YStack>
+          </XStack>
+        ) : null}
+      </YStack>
 
-      {enabled ? (
-        <YStack gap={space.xs}>
-          <NumberField
-            control={control}
-            name="discountPercent"
-            percent
-            label={t('percent')}
-            editable={canEdit}
-          />
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('percentInfo')}
-          </Text>
-        </YStack>
-      ) : (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('offHint')}
-        </Text>
-      )}
-
-      <Card tone="accent" lift="flat">
-        <YStack gap={space.xs}>
-          {/* HOA là quyết định TRÌNH BÀY — message giữ chữ thường, viết hoa ở đây. */}
-          <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.semibold}>
+      {/* Figma `24237:56965`: "KHÁCH SẼ THẤY TRÊN SÀN" - nền vàng nhạt, ô giá trắng ở giữa. */}
+      <YStack bg={colors.brandLow} br={radius.control} px={space.md} py={DISCOUNT_PAD} gap={DISCOUNT_PAD}>
+        <YStack gap={2}>
+          {/* HOA là quyết định TRÌNH BÀY - message giữ chữ thường, viết hoa ở đây. */}
+          <Text
+            col={colors.brandLink}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            fow={fontWeight.semibold}
+          >
             {t('previewEyebrow').toUpperCase()}
           </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('previewLabel')}
+          <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+            {t('lead')}
           </Text>
-
+        </YStack>
+        <YStack bg={colors.surface} br={radius.control} p={DISCOUNT_PAD} gap={space.xs} ai="center">
           {weekdayPrice == null ? (
-            <Text col={colors.placeholder} fos={fontSize.bodySm}>
+            <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
               {t('previewEmpty')}
             </Text>
-          ) : enabled && discountedWeekday ? (
+          ) : (
             <>
-              <XStack ai="center" gap={space.xs}>
+              {/* Giá gốc gạch ngang ở RIÊNG một dòng - nhồi chung với giá mới + nhãn thì vỡ dòng trên máy chữ to. */}
+              {enabled && discountedWeekday ? (
                 <Text
-                  col={colors.textMuted}
-                  fos={fontSize.bodySm}
+                  col={colors.placeholder}
+                  fos={typeScale.label.fontSize}
+                  lh={typeScale.label.lineHeight}
                   textDecorationLine="line-through"
                 >
                   {fmt.money(String(weekdayPrice))}
                 </Text>
-                <XStack bg={colors.discount} br={radius.sm} px={space.sm} py={2}>
-                  <Text col={colors.onDiscount} fos={fontSize.label} fow={fontWeight.bold}>
-                    -{discountPercent}%
+              ) : null}
+              <XStack ai="center" jc="center" gap={space.sm} flexWrap="wrap" rowGap={space.xs}>
+                <XStack ai="flex-end" gap={2}>
+                  <Text
+                    col={colors.primary}
+                    fos={typeScale.heading.fontSize}
+                    lh={typeScale.heading.lineHeight}
+                    fow={fontWeight.semibold}
+                  >
+                    {fmt.money(enabled && discountedWeekday ? discountedWeekday : String(weekdayPrice))}
+                  </Text>
+                  <Text
+                    col={colors.placeholder}
+                    fos={typeScale.body.fontSize}
+                    lh={typeScale.body.lineHeight}
+                    pb={2}
+                  >
+                    {t('perDay')}
                   </Text>
                 </XStack>
+                {enabled ? (
+                  <YStack bg={colors.successSurface} br={radius.pill} px={space.sm} py={2}>
+                    <Text
+                      col={colors.success}
+                      fos={typeScale.label.fontSize}
+                      lh={typeScale.label.lineHeight}
+                      fow={fontWeight.medium}
+                    >
+                      {t('savingBadge', { percent: discountPercent ?? 0 })}
+                    </Text>
+                  </YStack>
+                ) : null}
               </XStack>
-              <PreviewPrice amount={fmt.money(discountedWeekday)} suffix={t('perDay')} />
-              {saving != null ? (
-                <Text col={colors.success} fos={fontSize.bodySm} fow={fontWeight.medium}>
+              {enabled && saving != null ? (
+                <Text
+                  col={colors.text}
+                  fos={typeScale.label.fontSize}
+                  lh={typeScale.label.lineHeight}
+                  fow={fontWeight.medium}
+                  ta="center"
+                >
                   {t('saving', { amount: fmt.money(String(saving)) })}
                 </Text>
               ) : null}
             </>
-          ) : (
-            <PreviewPrice amount={fmt.money(String(weekdayPrice))} suffix={t('perDay')} />
           )}
-
-          {enabled && discountedWeekend ? (
-            <PreviewLine label={t('weekendAfter')} value={fmt.pricePerDay(discountedWeekend)} />
-          ) : null}
-          {hourlyPrice != null ? (
-            <PreviewLine
-              label={t('hourlyNoDiscount')}
-              value={fmt.pricePerHour(String(hourlyPrice))}
-            />
-          ) : null}
         </YStack>
-      </Card>
-    </YStack>
+      </YStack>
+    </>
   );
 }
+
+/** Figma "Discount Details": đệm 12; ô "Giảm giá theo" rộng 120. */
+const DISCOUNT_PAD = 12;
+const DISCOUNT_BY_WIDTH = 120;
+/** Khoảng nhãn → ô của ô nhập v2 (Figma `_Select input base` gap 6). */
+const FIELD_LABEL_GAP = 6;
 
 /** Mức giảm mồi sẵn khi bật công tắc — cùng con số với web. */
 const DEFAULT_DISCOUNT_PERCENT = 10;
-
-/** Con số lớn của khối xem trước: tiền nổi bật, đơn vị nhỏ đi kèm — đúng `<small>` của web. */
-function PreviewPrice({ amount, suffix }: { amount: string; suffix: string }) {
-  const colors = useColors();
-  return (
-    <XStack ai="flex-end" gap={space.xs}>
-      <Text col={colors.price} fos={fontSize.h3} fow={fontWeight.bold}>
-        {amount}
-      </Text>
-      <Text col={colors.textMuted} fos={fontSize.bodySm} pb={2}>
-        {suffix}
-      </Text>
-    </XStack>
-  );
-}
-
-/** Dòng phụ của khối xem trước — giá cuối tuần sau giảm, giá theo giờ không giảm. */
-function PreviewLine({ label, value }: { label: string; value: string }) {
-  const colors = useColors();
-  return (
-    <YStack gap={2} pt={space.xs}>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {label}
-      </Text>
-      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-        {value}
-      </Text>
-    </YStack>
-  );
-}
 
 /**
  * Chính sách ĐANG ÁP DỤNG khi xe kế thừa của gian hàng — bản native của `InheritedPolicyCard`.
@@ -1593,29 +1649,6 @@ function InheritedPolicyCard({
   );
 }
 
-/**
- * Lối sang lịch xe để đặt giá riêng theo ngày — bản native của `CalendarPriceLink` bên web.
- *
- * Ở CẢ hai khối giá (tự lái · có tài xế), đúng hai chỗ web đặt nó. Lý do nó tồn tại quan trọng
- * hơn chỗ đặt: giá lễ/cuối tuần/mùa cao điểm chỉ có MỘT nguồn là lịch xe, nên màn này phải chỉ
- * đường sang đó thay vì mọc thêm một bảng giá mùa vụ thứ hai.
- *
- * Lọc theo biển số như mọi lối "Xem lịch" khác (`vehicleSchedulePath` của web).
- */
-function CalendarPriceLink({ href }: { href: Href }) {
-  const colors = useColors();
-  const t = useTranslations('Vehicles.pricing');
-  const navigateOnce = useNavigateOnce();
-
-  return (
-    <YStack gap={space.xs}>
-      <InlineAction label={t('calendarLink')} onPress={() => navigateOnce(href)} />
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {t('calendarHint')}
-      </Text>
-    </YStack>
-  );
-}
 
 /**
  * Nhắc chủ xe khách đang thấy giá nào cho chuyến có tài xế - bản native của web

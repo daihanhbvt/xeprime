@@ -101,6 +101,16 @@ Pick the control by what a tap DOES to the content below, not by how the frame h
 - Chips must stay light and small (user feedback: chips "thô và to"): take height, padding, font size and border from the Figma frame (`get_design_context`), small size, medium weight - not bold, no icons, no heavy shadow.
 - When a screen in code uses a different control than this table says, list it in the gap table (🎨 row) instead of keeping the old one silently.
 
+## Action popups (user rule 27/11/2026)
+
+- "⋮" menu / any action popup = `BottomSheet chrome="v2" headerDivider` + `ActionSheetButtons` (icon buttons, 2 per row, danger = red border, primary = yellow) - same as booking detail "Thao tác" and Công nợ. Never a list of rows, even if Figma draws a dropdown ("CRUD Action").
+- Confirm popup = `AlertDialog`/`ConfirmSheet`: title = SHORT action label ("Tạm khoá"), the explanatory sentence goes in `message`. Never pass `scroll={false}` to a sheet without a virtualised list (it fixes the height to the ceiling ⇒ tall empty sheet). Check the popup on device.
+
+## Action popups (Partner app, user rule 27/11/2026)
+
+- "⋮" menu of a card/header = `BottomSheet chrome="v2" headerDivider` + `ActionSheetButtons` (icon buttons, two per row, danger = red border, primary = yellow) - same as booking detail "Thao tác" / Công nợ. Never a list of rows, even if Figma draws a dropdown ("CRUD Action").
+- Confirm popup (`AlertDialog`/`ConfirmSheet`): title = SHORT action label ("Tạm khoá"), the explanation sentence goes in `message`. Never pass `scroll={false}` to a sheet without a list - it pins the sheet to full height.
+
 ## Hard rules
 
 - No IAP in either app; the Partner app never mentions plans ("gói") - use neutral wording.

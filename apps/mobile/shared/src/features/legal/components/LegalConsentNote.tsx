@@ -10,6 +10,8 @@ export type LegalConsentPlace =
   | 'booking'
   | 'bookingCheck'
   | 'bookingCheckHost'
+  | 'bookingAgree'
+  | 'bookingAgreeHost'
   | 'subscription'
   | 'shop'
   /** Câu dưới bộ nút đăng nhập của app Partner - cùng câu web `MarketAuthForms` (Figma `24464:24614`). */
@@ -29,6 +31,9 @@ const CONSENT_KEY = {
   // điều khoản riêng — cùng một ô phủ luôn điều khoản đó.
   bookingCheck: 'consent.bookingCheck',
   bookingCheckHost: 'consent.bookingCheckHost',
+  // Câu đồng ý hiện hành của màn Xem lại (web #347): hai văn bản - Điều khoản sử dụng + Chính sách huỷ chuyến.
+  bookingAgree: 'consent.bookingAgree',
+  bookingAgreeHost: 'consent.bookingAgreeHost',
   subscription: 'consent.subscription',
   shop: 'consent.shop',
   marketAuth: 'consent.marketAuth',

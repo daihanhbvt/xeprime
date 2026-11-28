@@ -234,7 +234,6 @@ export function InAppCameraProvider() {
               <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={t('usePhoto')}
-                  icon="checkmark-outline"
                   onPress={() => finish(preview)}
                 />
               </YStack>

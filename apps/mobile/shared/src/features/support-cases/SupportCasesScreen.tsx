@@ -9,6 +9,7 @@ import { useTranslations } from 'use-intl';
 import {
   SUPPORT_CASE_CATEGORY_VALUES,
   SUPPORT_CASE_STATUS_META,
+  SUPPORT_CASE_STATUS_OPEN,
   SUPPORT_CASE_STATUS_VALUES,
   PERMISSION,
   STATUS_COLOR,
@@ -62,7 +63,7 @@ import {
   type SupportSurface,
 } from './api';
 import { OpenCaseSheet } from './components/OpenCaseSheet';
-import { useCanWriteSupportCase, useSupportCases } from './hooks/use-support-cases';
+import { useCanWriteSupportCase, useSupportCaseStatusCounts, useSupportCases } from './hooks/use-support-cases';
 
 /** Sentinel "mọi giá trị" của giao diện — không endpoint nào nhận `status=all`. */
 const ALL = FILTER_ALL;
@@ -93,7 +94,6 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   const permissions = usePermissions();
   const tPermission = useTranslations('ManageCommon.permission');
   const tLabels = useTranslations('Common.labels');
-  const tActions = useTranslations('Common.actions');
 
   const isTenant = surface === SUPPORT_SURFACE.TENANT;
   // Kiểu union, không phải `string`: sentinel "tất cả" là giá trị của GIAO DIỆN, còn khi đã
@@ -200,15 +200,29 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
 
   /** Trạng thái là NHÓM chính của màn - dải `ChipTabs` như chặng của Đơn thuê; Loại ở tấm Lọc. */
   const { gutter } = useResponsive();
+  /*
+   * Số trên từng chip ("Đang mở (3)") như Sổ khách / Công nợ - cùng bộ lọc Loại + ô tìm. "Tất cả"
+   * là mặc định server = các case còn MỞ, nên số của nó là tổng ba trạng thái mở.
+   */
+  const statusCounts = useSupportCaseStatusCounts(
+    surface,
+    { ...(category === ALL ? {} : { category }), ...(q ? { q } : {}) },
+    { enabled: isTenant && !permissions.isLoading && permissions.has(PERMISSION.SUPPORT_VIEW) },
+  );
+  const openCounts = SUPPORT_CASE_STATUS_OPEN.map((value) => statusCounts[value]);
+  const allCount = openCounts.every((n) => typeof n === 'number')
+    ? openCounts.reduce<number>((sum, n) => sum + (n ?? 0), 0)
+    : undefined;
   const statusTabs = useMemo<ChipTabItem<SupportCaseStatus | typeof ALL>[]>(
     () => [
-      { value: ALL, label: tLabels('all') },
+      { value: ALL, label: tLabels('all'), count: allCount },
       ...SUPPORT_CASE_STATUS_VALUES.map((value) => ({
         value,
         label: domainLabel('supportCaseStatus', value),
+        count: statusCounts[value],
       })),
     ],
-    [tLabels, domainLabel],
+    [tLabels, domainLabel, allCount, statusCounts],
   );
   const selectStatus = useCallback((next: SupportCaseStatus | typeof ALL) => {
     setStatus(next);
@@ -220,13 +234,6 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
     else setCategory(isSupportCaseCategory(value) ? value : ALL);
     setPage(1);
   }, []);
-
-  const clearFilters = () => {
-    setStatus(ALL);
-    setCategory(ALL);
-    setSearch('');
-    setPage(1);
-  };
 
   /*
    * Bề mặt GIAN HÀNG gác bằng quyền `SUPPORT_VIEW`, đúng như trang web tương ứng — và KHÔNG gác
@@ -325,17 +332,14 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
               ) : items.length === 0 ? (
                 inStateScroll(
                   filtered ? (
-                    <ScreenMessage
-                      icon="search-outline"
-                      title={tLabels('none')}
-                      actionLabel={tActions('clear')}
-                      onAction={clearFilters}
-                    />
+                    /* Không có kết quả: không còn nút "Xoá bộ lọc" (người dùng chốt 27/11/2026). */
+                    <ScreenMessage icon="search-outline" title={tLabels('none')} placement="top" />
                   ) : (
                     // Web `SupportCasesView`: khối rỗng có nút "Mở yêu cầu" (khi được mở).
                     <ScreenMessage
                       icon="chatbubbles-outline"
                       title={t('page.empty')}
+                      placement="top"
                       {...(canOpen
                         ? { actionLabel: t('page.openButton'), onAction: () => setFormOpen(true) }
                         : {})}

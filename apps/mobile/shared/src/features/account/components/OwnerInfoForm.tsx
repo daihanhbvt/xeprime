@@ -14,6 +14,7 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { space } from '@/theme/tokens';
 import type { UserProfile } from '../api';
 import { useUpdateMyProfile } from '../hooks/use-account';
+import { RESET_DISCARD } from '@/hooks/use-form-refresh';
 
 /** Độ dài tối đa của lời giới thiệu — cùng trần với `ownerAccountProfileSchema` (`bioMax`). */
 const BIO_MAX = 2000;
@@ -133,7 +134,7 @@ export function OwnerInfoForm({
               label={tCommon('cancel')}
               variant="secondary"
               disabled={saving}
-              onPress={() => reset()}
+              onPress={() => reset(undefined, RESET_DISCARD)}
             />
           </YStack>
         ) : null}

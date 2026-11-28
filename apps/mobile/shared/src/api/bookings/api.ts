@@ -12,6 +12,8 @@ export type BookingListItem = Schemas['BookingListItemDto'];
 export type BookingDetail = Schemas['BookingDetailDto'];
 export type CreateBookingInput = Schemas['CreateBookingDto'];
 export type UpdateBookingInput = Schemas['UpdateBookingDto'];
+/** Đổi nguồn của một đơn tự lập (ADR 0110). */
+export type UpdateBookingSourceInput = Schemas['UpdateBookingSourceDto'];
 export type TransitionBookingInput = Schemas['TransitionBookingDto'];
 export type UpdateDeliveryFeeInput = Schemas['UpdateBookingDeliveryFeeDto'];
 export type CheckConflictInput = Schemas['CheckConflictDto'];
@@ -54,6 +56,8 @@ export interface BookingHistoryFilters {
   q?: string;
   serviceType?: string;
   branchId?: string;
+  /** Nguồn đơn (ADR 0110) — mã nguồn hoặc `direct` (mọi đơn ngoài sàn). */
+  source?: string;
   page?: number;
   limit?: number;
 }
@@ -68,6 +72,7 @@ export function historyFiltersToParams(filters: BookingHistoryFilters): QueryPar
     q: filters.q ?? null,
     serviceType: filters.serviceType ?? null,
     branchId: filters.branchId ?? null,
+    source: filters.source ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BOOKING_HISTORY_DEFAULT_LIMIT,
   };
@@ -95,6 +100,10 @@ export interface BookingFilters {
   serviceType?: string;
   /** Chi nhánh của XE trong đơn. */
   branchId?: string;
+  /** Nguồn đơn (ADR 0110) — mã nguồn hoặc `direct`; loại trừ với `sourceLabel`. */
+  source?: string;
+  /** Nhãn nguồn tự nhập, khớp đúng chuỗi — lọc một nền tảng / nguồn cụ thể. */
+  sourceLabel?: string;
   /** Lọc theo ngày TRẢ — nuôi các panel "sắp trả" / "quá hạn". */
   returnFrom?: string;
   returnTo?: string;
@@ -113,6 +122,8 @@ export function bookingFiltersToParams(filters: BookingFilters): QueryParams {
     vehicleId: filters.vehicleId ?? null,
     serviceType: filters.serviceType ?? null,
     branchId: filters.branchId ?? null,
+    source: filters.source ?? null,
+    sourceLabel: filters.sourceLabel ?? null,
     returnFrom: filters.returnFrom ?? null,
     returnTo: filters.returnTo ?? null,
     sort: filters.sort ?? null,
@@ -156,6 +167,18 @@ export const bookingsApi = {
 
   update(id: string, body: UpdateBookingInput): Promise<BookingDetail> {
     return getApiClient().patch<BookingDetail>(`/bookings/${encodeURIComponent(id)}`, body);
+  },
+
+  /** Đổi nguồn của một đơn TỰ LẬP (ADR 0110) - đơn qua sàn trả 409 `BOOKING_SOURCE_LOCKED`. */
+  updateSource(id: string, body: UpdateBookingSourceInput): Promise<BookingDetail> {
+    return getApiClient().patch<BookingDetail>(`/bookings/${encodeURIComponent(id)}/source`, body);
+  },
+
+  /** Nhãn nguồn gian hàng đã từng nhập - nuôi ô gợi ý của form lập đơn / đổi nguồn và bộ lọc. */
+  sourceLabels(): Promise<string[]> {
+    return getApiClient()
+      .get<{ labels: string[] }>('/bookings/source-labels')
+      .then((res) => res.labels);
   },
 
   /**
@@ -269,6 +292,18 @@ export const bookingsApi = {
   addCollateral(id: string, body: BookingCollateralInput): Promise<BookingCollateral[]> {
     return getApiClient().post<BookingCollateral[]>(
       `/bookings/${encodeURIComponent(id)}/collaterals`,
+      body,
+    );
+  },
+
+  /** Sửa loại / mô tả một món chưa trả (26/11/2026) — native port of web `updateBookingCollateral`. */
+  updateCollateral(
+    id: string,
+    collateralId: string,
+    body: BookingCollateralInput,
+  ): Promise<BookingCollateral[]> {
+    return getApiClient().patch<BookingCollateral[]>(
+      `/bookings/${encodeURIComponent(id)}/collaterals/${encodeURIComponent(collateralId)}`,
       body,
     );
   },

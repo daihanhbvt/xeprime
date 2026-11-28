@@ -70,16 +70,18 @@ export function TextControl({
   const inputStyle = useMemo(
     () => ({
       flex: 1,
-      color: colors.text,
+      // Chữ của ô khoá MỜ như web `disabled`.
+      color: editable ? colors.text : colors.textPlaceholder,
       fontSize: inputFontSize,
       fontFamily: FONT_FAMILY.body,
-      minHeight: multiline ? rows * lineHeight : inputHeight,
+      // Cộng đệm trên dưới: ô hiện TRỌN `rows` dòng chữ (cùng `TextField`).
+      minHeight: multiline ? rows * lineHeight + space.sm * 2 : inputHeight,
       paddingVertical: multiline ? space.sm : 0,
       // Android tự đệm ~4dp hai bên TextInput: chữ gõ lệch khỏi chữ ô chọn/ngày cùng form.
       paddingHorizontal: 0,
       ...(multiline && scrollable ? { maxHeight: rows * lineHeight + space.sm * 2 } : {}),
     }),
-    [colors, multiline, rows, scrollable, lineHeight, inputFontSize, inputHeight],
+    [colors, multiline, rows, scrollable, lineHeight, inputFontSize, inputHeight, editable],
   );
 
   return (

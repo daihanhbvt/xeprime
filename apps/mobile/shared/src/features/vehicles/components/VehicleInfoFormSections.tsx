@@ -8,6 +8,7 @@ import {
   VEHICLE_TYPE_VALUES,
   isVehicleServiceTypeAllowed,
   vehicleFeatureAppliesTo,
+  type VehicleRegistrationReading,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { Chip } from '@/components/ui/Chip';
@@ -26,6 +27,8 @@ import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
 import { BodyTypePicker, FeaturesField, InsuredValueField, Notice } from './VehicleFormSteps';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
+import { RegistrationTextField } from './RegistrationTextField';
+import { PAIR_GAP } from './field-layout';
 
 /*
  * Các khối của mục "Thông tin xe & tiện ích" trên màn sửa xe (cổng quản lý) — bản native của
@@ -55,7 +58,10 @@ export function VehicleGeneralFields({
   branchOptions,
   branchLoading,
   branchDisabled,
+  lockedNotice,
 }: SectionProps & {
+  /** Xe đã duyệt: biển số khoá (server chặn bằng `VEHICLE_FIELD_LOCKED`). */
+  lockedNotice?: string | undefined;
   branchOptions: readonly { value: string; label: string }[];
   branchLoading: boolean;
   /** Web `branchDisabled={!canUpdate}`. */
@@ -77,13 +83,21 @@ export function VehicleGeneralFields({
         placeholder={t('namePlaceholder')}
         required
       />
-      <TextField
-        control={control}
-        name="code"
-        label={t('code')}
-        placeholder={t('codePlaceholder')}
-        editable={false}
-      />
+      {/* Figma: Mã xe | Biển số cùng một hàng. */}
+      <XStack gap={PAIR_GAP} ai="flex-start">
+        <YStack f={1} minWidth={0}>
+          <TextField
+            control={control}
+            name="code"
+            label={t('code')}
+            placeholder={t('codePlaceholder')}
+            editable={false}
+          />
+        </YStack>
+        <YStack f={1} minWidth={0}>
+          <PlateNumberField control={control} lockedNotice={lockedNotice} />
+        </YStack>
+      </XStack>
       <SelectField
         control={control}
         name="branchId"
@@ -102,6 +116,26 @@ export function VehicleGeneralFields({
       />
       <VehicleTypePolicyWarning control={control} />
     </YStack>
+  );
+}
+
+/** Ô biển số - đứng cạnh Mã xe ở thẻ "Thông tin chung". */
+function PlateNumberField({
+  control,
+  lockedNotice,
+}: SectionProps & { lockedNotice?: string | undefined }) {
+  const t = useTranslations('Vehicles.form.specs');
+  return (
+    <TextField
+      control={control}
+      name="plateNumber"
+      label={t('plateNumber')}
+      publishRequired
+      placeholder={t('platePlaceholder')}
+      hint={lockedNotice ?? t('plateHelp')}
+      autoCapitalize="characters"
+      editable={!lockedNotice}
+    />
   );
 }
 
@@ -184,10 +218,19 @@ export function VehicleIdentityCardFields({
   lockedNotice,
   setValue,
   bodyTypeElsewhere = false,
+  registrationReading,
+  creating = false,
 }: SectionProps & {
+  /** Wizard thêm xe - giá trị xe tham khảo đã tự điền, câu tham khảo vào chú thích ô. */
+  creating?: boolean;
   isCar: boolean;
   lockedNotice?: string | undefined;
   setValue: UseFormSetValue<VehicleFormValues>;
+  /**
+   * Wizard thêm xe: lượt đọc cà vẹt mới nhất - màu sơn khớp nó thì khoá (ADR 0102 điều 6). Vắng =
+   * màn sửa xe, ô màu là ô nhập thường.
+   */
+  registrationReading?: VehicleRegistrationReading | null;
   /** Kiểu dáng vẽ ở THẺ RIÊNG (màn sửa xe, web `bodyTypeElsewhere`) — không lặp ở đây. */
   bodyTypeElsewhere?: boolean;
 }) {
@@ -196,22 +239,14 @@ export function VehicleIdentityCardFields({
 
   return (
     <YStack gap={space.md}>
-      <TextField
-        control={control}
-        name="plateNumber"
-        label={t('plateNumber')}
-        publishRequired
-        placeholder={t('platePlaceholder')}
-        hint={lockedNotice ?? t('plateHelp')}
-        autoCapitalize="characters"
-        editable={!lockedNotice}
-      />
       <VehicleIdentityFields
         control={control}
         vehicleType={vehicleType}
         disabled={Boolean(lockedNotice)}
         {...(lockedNotice ? { lockedNotice } : {})}
         setValue={setValue}
+        // Thêm xe: hãng/mẫu/năm/số chỗ là điều kiện bắt buộc - hiện dấu * (người dùng chốt 28/11/2026).
+        required={creating}
       />
       {/* Figma: Năm sản xuất | Màu sắc cùng một hàng. */}
       <XStack gap={space.md}>
@@ -222,6 +257,7 @@ export function VehicleIdentityCardFields({
             grouped={false}
             integer
             label={t('manufactureYear')}
+            required={creating}
             placeholder={String(new Date().getFullYear())}
             min={1980}
             max={new Date().getFullYear() + 1}
@@ -230,23 +266,40 @@ export function VehicleIdentityCardFields({
           />
         </YStack>
         <YStack f={1} minWidth={0}>
-          <TextField
-            control={control}
-            name="color"
-            label={t('color')}
-            placeholder={t('colorPlaceholder')}
-          />
+          {registrationReading !== undefined ? (
+            <RegistrationTextField
+              control={control}
+              name="color"
+              reading={registrationReading}
+              label={t('color')}
+              placeholder={t('colorPlaceholder')}
+            />
+          ) : (
+            <TextField
+              control={control}
+              name="color"
+              label={t('color')}
+              placeholder={t('colorPlaceholder')}
+            />
+          )}
         </YStack>
       </XStack>
+      {/* Giá trị xe (ADR 0088) - cạnh số chỗ trên cùng hàng (Figma). */}
       <VehicleClassificationFields
         control={control}
         vehicleType={vehicleType}
         {...(bodyTypeElsewhere ? {} : { bodyTypePicker: <BodyTypePicker control={control} /> })}
+        {...(isCar
+          ? {
+              seatCompanion: (
+                <InsuredValueField control={control} setValue={setValue} creating={creating} />
+              ),
+            }
+          : {})}
         disabled={Boolean(lockedNotice)}
         setValue={setValue}
+        required={creating}
       />
-      {/* Giá trị xe (ADR 0088) - cạnh số chỗ như web; bù 17/11/2026. */}
-      {isCar ? <InsuredValueField control={control} setValue={setValue} /> : null}
     </YStack>
   );
 }
@@ -257,7 +310,10 @@ export function VehicleEnergyCardFields({
   isCar,
   lockedNotice,
   setValue,
+  fuelTypeRequired = false,
 }: SectionProps & {
+  /** Wizard thêm xe: nhiên liệu bắt buộc (dấu `*`). */
+  fuelTypeRequired?: boolean;
   isCar: boolean;
   lockedNotice?: string | undefined;
   setValue: UseFormSetValue<VehicleFormValues>;
@@ -271,6 +327,7 @@ export function VehicleEnergyCardFields({
       control={control}
       vehicleType={vehicleType}
       transmissionOptions={transmissionOptions}
+      fuelTypeRequired={fuelTypeRequired}
       disabled={Boolean(lockedNotice)}
       {...(lockedNotice ? { lockedNotice } : {})}
       setValue={setValue}
@@ -311,7 +368,7 @@ export function FeaturesOnlyFields({ control, isCar }: SectionProps & { isCar: b
   const features = (catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? []).filter((item) =>
     vehicleFeatureAppliesTo(item.key, vehicleType),
   );
-  return <FeaturesField control={control} features={features} />;
+  return <FeaturesField control={control} features={features} variant="checkbox" />;
 }
 
 /** Thẻ "Mô tả xe" của màn sửa xe — ô mô tả không nhãn (tiêu đề thẻ đã nói), như web. */

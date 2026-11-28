@@ -1163,6 +1163,7 @@
         "takeDeposit": "Xác nhận đã thu",
         "empty": "Chưa ghi tài sản thế chấp nào.",
         "returnedTag": "Đã trả",
+        "heldTagApp": "Đang giữ",
         "returnedBy": "{name} trả lúc {time}",
         "returnedAt": "Đã trả lúc {time}",
         "markReturned": "Trả lại",

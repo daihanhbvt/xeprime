@@ -34,7 +34,17 @@ export const ReceiptAttachmentRow = memo(function ReceiptAttachmentRow({
   onOpen,
   removeLabel,
   onRemove,
+  name: nameProp,
+  downloadLabel,
+  onDownload,
+  downloading = false,
 }: {
+  /** Tên hiển thị khi URL không mang tên tệp (vd hồ sơ riêng tư chỉ có id). */
+  name?: string;
+  /** Icon Download xám trước nút gỡ (Figma "Hợp đồng & Chứng từ" `24238:61831`). */
+  downloadLabel?: string;
+  onDownload?: (url: string) => void;
+  downloading?: boolean;
   url: string;
   openLabel?: string;
   onOpen?: (url: string) => void;
@@ -42,7 +52,7 @@ export const ReceiptAttachmentRow = memo(function ReceiptAttachmentRow({
   onRemove?: (url: string) => void;
 }) {
   const colors = useColors();
-  const name = fileNameOf(url);
+  const name = nameProp ?? fileNameOf(url);
   const body = (
     <XStack
       ai="flex-start"
@@ -79,6 +89,19 @@ export const ReceiptAttachmentRow = memo(function ReceiptAttachmentRow({
           </Text>
         </XStack>
       </YStack>
+      {onDownload ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={downloadLabel ?? name}
+          hitSlop={space.sm}
+          disabled={downloading}
+          onPress={() => onDownload(url)}
+        >
+          <YStack pt={2} opacity={downloading ? 0.4 : 1}>
+            <LineIcon name="download" size={16} color={colors.placeholder} />
+          </YStack>
+        </Pressable>
+      ) : null}
       {onRemove ? (
         <Pressable
           accessibilityRole="button"

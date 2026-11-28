@@ -1,9 +1,11 @@
 {
   "toolbar": {
     "searchPlaceholder": "Tìm xe, mã hoặc biển số",
+    "searchPlaceholderApp": "Biển số, xe...",
     "searchAriaLabel": "Tìm xe trên lịch",
     "allVehicleTypes": "Tất cả",
     "sortAriaLabel": "Sắp xếp hàng xe",
+    "sortAriaLabelApp": "Sắp xếp theo",
     "sort": {
       "next_booking": "Lịch gần nhất",
       "name": "Tên xe",
@@ -17,7 +19,14 @@
     "previousRange": "Lùi {count, plural, other {# ngày}}",
     "nextRange": "Tiến {count, plural, other {# ngày}}",
     "pagerAriaLabel": "Điều hướng khoảng xem",
-    "rangeLabel": "{from} - {to}"
+    "rangeLabel": "{from} - {to}",
+    "viewMode": "Chế độ xem",
+    "view": {
+      "list": "Danh sách",
+      "month": "Lịch tháng"
+    },
+    "previousMonth": "Tháng trước",
+    "nextMonth": "Tháng sau"
   },
   "grid": {
     "ariaLabel": "Lịch thuê xe theo ngày",
@@ -120,7 +129,8 @@
     "free": "Ngày trống",
     "busy": "Đã có lịch",
     "dateStatus": "{date} - {status}",
-    "bookingFrom": "Từ ngày {from} → {to}"
+    "bookingFrom": "Từ ngày {from} → {to}",
+    "title": "Thao tác"
   },
   "block": {
     "createTitle": "Khóa xe",
@@ -290,7 +300,9 @@
   "page": {
     "title": "Lịch thuê xe",
     "subtitle": "Theo dõi toàn bộ lịch nhận - trả xe, tránh trùng lặp và tối ưu hóa thời gian trống cho đội xe của bạn.",
-    "create": "Tạo đơn thuê"
+    "create": "Tạo đơn thuê",
+    "createApp": "Tạo đơn thuê",
+    "vehicleCount": "{count} xe"
   },
   "event": {
     "blocked": "Đã khóa",
@@ -300,9 +312,29 @@
     "paidFull": "Đã thu đủ",
     "paidPartial": "Đã thu {percent}%",
     "unpaid": "Chưa thu",
-    "sourceAria": "nguồn {source}"
+    "sourceAria": "nguồn {source}",
+    "hours": "{from} - {to}"
   },
   "requestDialog": {
     "loading": "Chi tiết yêu cầu thuê xe"
+  },
+  "quick": {
+    "title": "Chi tiết nhanh đơn",
+    "vehicle": "Xe",
+    "pickup": "Nhận xe",
+    "return": "Trả xe",
+    "amount": "Giá trị đơn",
+    "contact": "Liên hệ khách",
+    "detail": "Chi tiết đơn"
+  },
+  "month": {
+    "gridAriaLabel": "Lịch tháng - số xe kín theo ngày",
+    "cellAria": "Ngày {date}: {busy}/{total} xe kín",
+    "daySummary": "{date} - {busy}/{total} xe kín",
+    "free": "{count} xe trống",
+    "busy": "{rent} thuê{off, plural, =0 {} other { · # BD}}",
+    "freeAllDay": "Trống cả ngày",
+    "freeAllDayPrice": "Trống cả ngày · {price}",
+    "create": "Tạo đơn"
   }
 }

@@ -38,6 +38,7 @@ export function ProgressBar({
   size = 'md',
   label,
   color,
+  trackColor,
 }: {
   percent: number;
   tone?: Tone;
@@ -45,6 +46,8 @@ export function ProgressBar({
   label?: string;
   /** Màu thanh riêng (vd `successVivid` của design v2) - thắng `tone`. */
   color?: string;
+  /** Màu rãnh riêng (vd rãnh xanh nhạt của thanh "Hoàn thiện" Figma) - mặc định `surfaceMuted`. */
+  trackColor?: string;
 }) {
   const colors = useColors();
   const TONE = useTone();
@@ -64,7 +67,7 @@ export function ProgressBar({
       <YStack
         h={height}
         br={radius.pill}
-        bg={colors.surfaceMuted}
+        bg={trackColor ?? colors.surfaceMuted}
         ov="hidden"
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped) }}

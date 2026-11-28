@@ -570,7 +570,7 @@ export const ROUTES = {
     bookingsEnded: (
       tab?: string,
       /** Bộ lọc chung mang sang từ "Đơn thuê xe" - web `endedHref`: cùng câu hỏi, khác chặng. */
-      carry?: { q?: string; branchId?: string; serviceType?: string },
+      carry?: { q?: string; branchId?: string; serviceType?: string; source?: string },
     ): Href => {
       const params = Object.fromEntries(
         Object.entries({ tab, ...carry }).filter(([, value]) => Boolean(value)),
@@ -659,6 +659,11 @@ export const ROUTES = {
     vehicleNew: (): Href => '/manage/vehicles/new',
     vehicleDetail: (vehicleId: string): Href => ({
       pathname: '/manage/vehicles/[id]',
+      params: { id: vehicleId },
+    }),
+    /** Tài chính của MỘT xe (web tab Tài chính của hồ sơ xe, ADR 0110 · 0111) - màn riêng trên app. */
+    vehicleFinance: (vehicleId: string): Href => ({
+      pathname: '/manage/vehicles/[id]/finance',
       params: { id: vehicleId },
     }),
     /** Hub sửa xe — menu sáu nhóm của web `editNavGroups`, mỗi mục một màn riêng. */
@@ -922,7 +927,23 @@ export const ROUTES = {
       track
         ? { pathname: MANAGE_REGISTER_PATHNAME, params: { [REGISTRATION_TRACK_PARAM]: track } }
         : MANAGE_REGISTER_PATHNAME,
-    finance: (): Href => '/manage/finance',
+    /**
+     * Tổng quan doanh thu. Lối vào từ thẻ "Thu chi 30 ngày" mang đúng cửa sổ của thẻ (`from`/`to`),
+     * chi nhánh và góc nhìn nguồn (ADR 0110) - web `detailHref` của `DashboardView`.
+     */
+    finance: (open?: {
+      revenueSource?: string | null;
+      from?: string;
+      to?: string;
+      branchId?: string;
+    }): Href => {
+      const params = Object.fromEntries(
+        Object.entries(open ?? {}).filter(([, value]) => Boolean(value)),
+      ) as Record<string, string>;
+      return Object.keys(params).length > 0
+        ? { pathname: '/manage/finance', params }
+        : '/manage/finance';
+    },
 
     /** Công nợ (FIN-04) — các đơn còn nợ, lọc và phân trang ở server. */
     debts: (filters?: { branchId?: string }): Href =>

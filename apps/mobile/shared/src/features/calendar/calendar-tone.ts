@@ -274,3 +274,59 @@ export const legendExtraToneOf = byPalette(
 export function useCalSurface() {
   return calSurfaceOf(useColors());
 }
+
+/**
+ * Sắc của THẺ ĐƠN lịch v2 (Figma Lịch thuê xe `24729:82244`): nền nhạt + vạch trái 4px + mã đơn
+ * cùng sắc ĐẬM, theo DỊCH VỤ - cùng phép phân loại với `serviceTone`, chỉ đổi bậc màu cho đúng hex
+ * Figma (`information-low/high`, `rose-25/high`, `purple-low/high`). Ô chú giải cũng tô bằng `accent`.
+ */
+export interface ServiceAccent {
+  /** Vạch trái, mã đơn, ô chú giải. */
+  accent: string;
+  /** Nền thẻ trên lưới. */
+  wash: string;
+  /** Nền thẻ ở khối chi tiết ngày của Lịch tháng (`information-25`). */
+  card: string;
+}
+
+export const serviceAccentOf = byPalette(
+  (colors) =>
+    ({
+      selfDrive: { accent: colors.infoStrong, wash: colors.infoLow, card: colors.infoWash },
+      withDriver: {
+        accent: XP_TOKENS['color-event-with-driver'],
+        wash: colors.roseWash,
+        card: colors.roseWash,
+      },
+      longTerm: { accent: colors.purpleStrong, wash: colors.purpleSurface, card: colors.purpleSurface },
+      neutral: { accent: colors.placeholder, wash: colors.surfaceMuted, card: colors.surfaceMuted },
+    }) as const satisfies Readonly<Record<ServiceTone, ServiceAccent>>,
+);
+
+export function serviceAccent(
+  serviceType: string | null | undefined,
+  colors: AppColors,
+): ServiceAccent {
+  return serviceAccentOf(colors)[serviceTone(serviceType)];
+}
+
+/**
+ * Nền ĐẶC của viên chặng trên thẻ đơn lịch v2 (Figma "Đang thuê" `success-high` #039855 · "Chờ
+ * thanh toán" `warning-500` #f79009 · "Chờ giao xe" `information-high` #1570ef), chữ trắng. Tông
+ * lấy từ `RENTAL_STAGE_TONE` - cùng phép phân nhóm với màn Đơn thuê.
+ */
+export function stageFill(
+  tone: 'danger' | 'warning' | 'info' | 'success',
+  colors: AppColors,
+): string {
+  switch (tone) {
+    case 'danger':
+      return colors.danger;
+    case 'warning':
+      return colors.warningVivid;
+    case 'info':
+      return colors.infoStrong;
+    default:
+      return colors.success;
+  }
+}

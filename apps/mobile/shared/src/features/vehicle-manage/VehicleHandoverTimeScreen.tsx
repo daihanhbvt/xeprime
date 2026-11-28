@@ -1,7 +1,7 @@
 import { useRegisterSave, useReportDirty, type SubFormSave } from '@/hooks/use-report-dirty';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import { TURNAROUND_BUFFER_MAX_MINUTES } from '@xeprime/types';
@@ -17,7 +17,8 @@ import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-tra
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight, space, typeScale } from '@/theme/tokens';
 import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { VehicleOperationSettings } from './api';
 import {
@@ -72,6 +73,7 @@ export function HandoverBody({
   canEdit,
   onDirtyChange,
   registerSave,
+  bare = false,
 }: {
   vehicleId: string;
   canEdit: boolean;
@@ -79,6 +81,11 @@ export function HandoverBody({
   onDirtyChange?: (dirty: boolean) => void;
   /** Màn chứa có MỘT nút Lưu chung - form này ẩn nút riêng (`useRegisterSave`). */
   registerSave?: (save: SubFormSave | null) => void;
+  /**
+   * Nằm TRONG thẻ Giao nhận xe của màn sửa xe (Figma `24705:45807`): không thẻ riêng - tiêu đề 14 đậm
+   * vừa + mô tả 12, rồi khay lựa chọn (người dùng chốt 27/11/2026).
+   */
+  bare?: boolean;
 }) {
   const t = useTranslations('VehicleManage');
   const settings = useVehicleOperationSettings(vehicleId);
@@ -100,6 +107,7 @@ export function HandoverBody({
       canEdit={canEdit}
       onDirtyChange={onDirtyChange}
       registerSave={registerSave}
+      bare={bare}
     />
   );
 }
@@ -110,7 +118,9 @@ function HandoverForm({
   canEdit,
   onDirtyChange,
   registerSave,
+  bare,
 }: {
+  bare: boolean;
   settings: VehicleOperationSettings;
   vehicleId: string;
   canEdit: boolean;
@@ -186,11 +196,7 @@ function HandoverForm({
   return (
     <YStack gap={space.md}>
       {/* Khung giờ giao/nhận đã gỡ (ADR 0078) — xe nhận và trả mọi giờ; chỉ còn thời gian chuẩn bị. */}
-      <Card>
-        <YStack gap={space.sm}>
-          <SectionHeader icon="time-outline" lead={t('handover.bufferHint')}>
-            {t('handover.bufferTitle')}
-          </SectionHeader>
+      <HandoverShell bare={bare} title={t('handover.bufferTitle')} hint={t('handover.bufferHintApp')}>
           <TurnaroundBufferField
             control={control}
             name="turnaroundBufferMinutes"
@@ -212,8 +218,7 @@ function HandoverForm({
                 }
               : {})}
           />
-        </YStack>
-      </Card>
+      </HandoverShell>
 
       {canEdit && !registerSave ? (
         <XStack gap={space.sm}>
@@ -230,7 +235,7 @@ function HandoverForm({
           <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
             <Button
               label={tActions('saveChanges')}
-              icon="checkmark-outline"
+              lineIcon="tick"
               loading={save.isPending}
               disabled={!formState.isDirty}
               onPress={() => void submit()}
@@ -238,6 +243,51 @@ function HandoverForm({
           </YStack>
         </XStack>
       ) : null}
+    </YStack>
+  );
+}
+
+/** Vỏ của khối thời gian chuẩn bị: thẻ riêng (màn đứng một mình) hoặc chỉ đầu mục v2 (trong thẻ nơi gọi). */
+function HandoverShell({
+  bare,
+  title,
+  hint,
+  children,
+}: {
+  bare: boolean;
+  title: string;
+  hint: string;
+  children: ReactNode;
+}) {
+  const colors = useColors();
+  if (!bare) {
+    return (
+      <Card>
+        <YStack gap={space.sm}>
+          <SectionHeader icon="time-outline" lead={hint}>
+            {title}
+          </SectionHeader>
+          {children}
+        </YStack>
+      </Card>
+    );
+  }
+  return (
+    <YStack gap={space.sm + space.xs}>
+      <YStack gap={2}>
+        <Text
+          col={colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.semibold}
+        >
+          {title}
+        </Text>
+        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+          {hint}
+        </Text>
+      </YStack>
+      {children}
     </YStack>
   );
 }

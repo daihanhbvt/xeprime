@@ -52,6 +52,8 @@
     "bookingCheckHostPlain": "I have read and agree to the owner's rental terms and XePrime's Terms of Use, Cancellation and Refund Policy and Personal Data Protection Policy.",
     "bookingAgree": "I have read and agree to XePrime's <terms>Terms of Use</terms> and <cancellation>Cancellation Policy</cancellation>.",
     "bookingAgreeHost": "I have read and agree to the owner's rental terms and XePrime's <terms>Terms of Use</terms> and <cancellation>Cancellation Policy</cancellation>.",
+    "bookingAgreePlain": "I have read and agree to XePrime's Terms of Use and Cancellation Policy.",
+    "bookingAgreeHostPlain": "I have read and agree to the owner's rental terms and XePrime's Terms of Use and Cancellation Policy.",
     "subscription": "Buying a plan means you agree to the <terms>Terms of Use</terms> and the <rules>Marketplace Operating Rules</rules>.",
     "packagePurchase": "Buying a plan means you agree to the <subscription>Shop Service Plan Terms</subscription>, the <terms>Terms of Use</terms> and the <rules>Marketplace Operating Rules</rules>.",
     "shop": "Creating a shop means you agree to the <rules>Marketplace Operating Rules</rules> and the <terms>Terms of Use</terms>.",

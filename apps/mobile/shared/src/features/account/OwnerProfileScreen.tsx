@@ -49,6 +49,7 @@ import { OwnerInfoForm } from './components/OwnerInfoForm';
 import { SubscriptionWorkspace } from '@/features/subscription/SubscriptionScreen';
 import { useMyProfile } from './hooks/use-account';
 import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
+import { RESET_DISCARD } from '@/hooks/use-form-refresh';
 
 
 /**
@@ -168,7 +169,7 @@ function OwnerProfileSections({
 
   const [editingAddress, setEditingAddress] = useState(false);
   const closeAddress = () => {
-    reset();
+    reset(undefined, RESET_DISCARD);
     setEditingAddress(false);
   };
   const saveAddress = handleSubmit((values) => {

@@ -7,11 +7,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  BOOKING_DIRECT_SOURCE_VALUES,
   BOOKING_LIST_PRESET,
   BOOKING_REQUEST_STATUS,
+  BOOKING_SOURCE,
+  BOOKING_SOURCE_FILTER_DIRECT,
   HANDOVER_TYPE,
   PERMISSION,
   SERVICE_TYPE_VALUES,
+  isMarketplaceBooking,
 } from '@xeprime/types';
 import { ChipTabs, type ChipTabItem } from '@/components/ui/ChipTabs';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
@@ -72,7 +76,7 @@ import {
   type RentalView,
 } from '@/lib/rentals-view-memory';
 import { useBookingHistory } from './hooks/use-booking-history';
-import { useBookingsPage } from './hooks/use-bookings';
+import { useBookingSourceLabels, useBookingsPage } from './hooks/use-bookings';
 import { useCanCreateBooking } from './hooks/use-can-create-booking';
 import { usePaymentArrivalToast } from './hooks/use-payment-arrival-toast';
 import {
@@ -95,6 +99,22 @@ const COUNT_ONLY_LIMIT = 1;
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
 const ALL = 'all';
+/** Tiền tố giá trị của một NHÃN nguồn tự nhập trong ô lọc "Nguồn đơn" — phân biệt với mã nguồn (web). */
+const SOURCE_LABEL_OPTION_PREFIX = 'label:';
+
+/**
+ * Nhóm yêu cầu khi bộ lọc nguồn đơn loại hẳn yêu cầu ra ngoài — rỗng, không tải, không lỗi (web
+ * `emptyStage`). Dựng ở cấp module để không đổi tham chiếu mỗi render.
+ */
+const EMPTY_REQUEST_STAGE = {
+  data: { items: [], meta: { page: FIRST_PAGE, limit: 0, total: 0, hasNext: false, statusCounts: [] } },
+  isPending: false,
+  isError: false,
+  isFetching: false,
+  isRefetching: false,
+  error: null,
+  refetch: () => Promise.resolve(),
+} as const;
 /** Làm mới nền khi màn đang mở (sổ cái §3.2b dòng 17). */
 const BACKGROUND_REFRESH_MS = 30_000;
 
@@ -156,6 +176,7 @@ export function RentalsScreen({
   const tList = useTranslations('Bookings.list');
   const tApp = useTranslations('Bookings.board.kanban.partnerApp');
   const tCommon = useTranslations('Common');
+  const tSource = useTranslations('Bookings.source');
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
@@ -237,6 +258,15 @@ export function RentalsScreen({
   }
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<string>(ALL);
+  /*
+   * Nguồn đơn (ADR 0110) - MỘT ô chọn, hai tham số loại trừ nhau: mã nguồn (`source`, gồm `direct`)
+   * hoặc một nhãn tự nhập (`sourceLabel`), như web `BookingsListView`.
+   */
+  const [sourceFilter, setSourceFilter] = useState<string>(ALL);
+  const sourceLabelFilter = sourceFilter.startsWith(SOURCE_LABEL_OPTION_PREFIX)
+    ? sourceFilter.slice(SOURCE_LABEL_OPTION_PREFIX.length)
+    : undefined;
+  const sourceCode = sourceFilter === ALL || sourceLabelFilter !== undefined ? undefined : sourceFilter;
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
@@ -249,6 +279,18 @@ export function RentalsScreen({
     ...(vehicleId ? { vehicleId } : {}),
     ...(q ? { q } : {}),
   };
+  /*
+   * NGUỒN ĐƠN là thuộc tính của ĐƠN. Yêu cầu (hai nhóm đầu) luôn đến từ sàn, nên khi lọc một nguồn
+   * ngoài sàn thì hai nhóm đó RỖNG — không gọi API, và không vẽ dữ liệu cũ còn trong cache (khoá truy
+   * vấn của yêu cầu không mang nguồn). Web `requestsInScope`.
+   */
+  const requestsInScope = !sourceLabelFilter && (!sourceCode || isMarketplaceBooking(sourceCode));
+  const bookingScope = {
+    ...scope,
+    ...(sourceCode ? { source: sourceCode } : {}),
+    ...(sourceLabelFilter ? { sourceLabel: sourceLabelFilter } : {}),
+  };
+  const sourceLabels = useBookingSourceLabels({ enabled: canViewBookings });
   /*
    * Ô "Tất cả" tải ĐÚNG trang đầu của nhóm (10 thẻ - cùng khoá cache với khi chọn nhóm đó) rồi chỉ
    * HIỆN 3 thẻ đầu. Bấm chip nhóm đọc thẳng cache, không gọi API mới + khung chờ (người dùng báo
@@ -271,7 +313,7 @@ export function RentalsScreen({
       page: pageFor(RENTAL_STAGE.NEEDS_ACTION),
       limit: sizeFor(RENTAL_STAGE.NEEDS_ACTION, true),
     },
-    canViewRequests,
+    canViewRequests && requestsInScope,
   );
   const payQ = useRequestStage(
     {
@@ -281,13 +323,13 @@ export function RentalsScreen({
       page: pageFor(RENTAL_STAGE.AWAITING_PAYMENT),
       limit: Math.max(sizeFor(RENTAL_STAGE.AWAITING_PAYMENT, false), COUNT_ONLY_LIMIT),
     },
-    canViewRequests && (isAll || rail === RENTAL_STAGE.AWAITING_PAYMENT),
+    canViewRequests && requestsInScope && (isAll || rail === RENTAL_STAGE.AWAITING_PAYMENT),
   );
   const bookingSort = (stage: 'awaiting_pickup' | 'renting') =>
     rail === stage ? (sort ?? DEFAULT_BOOKING_SORT[stage]) : DEFAULT_BOOKING_SORT[stage];
   const pickupQ = useBookingsPage(
     {
-      ...scope,
+      ...bookingScope,
       preset: BOOKING_LIST_PRESET.AWAITING_PICKUP,
       sort: bookingSort(RENTAL_STAGE.AWAITING_PICKUP),
       page: pageFor(RENTAL_STAGE.AWAITING_PICKUP),
@@ -297,7 +339,7 @@ export function RentalsScreen({
   );
   const rentingQ = useBookingsPage(
     {
-      ...scope,
+      ...bookingScope,
       preset: BOOKING_LIST_PRESET.RENTING,
       sort: bookingSort(RENTAL_STAGE.RENTING),
       page: pageFor(RENTAL_STAGE.RENTING),
@@ -312,6 +354,7 @@ export function RentalsScreen({
   const ended = useBookingHistory({
     ...(branchId ? { branchId } : {}),
     ...(serviceType === ALL ? {} : { serviceType }),
+    ...(sourceCode ? { source: sourceCode } : {}),
     ...(q ? { q } : {}),
     page: FIRST_PAGE,
     limit: COUNT_ONLY_LIMIT,
@@ -323,6 +366,7 @@ export function RentalsScreen({
   const countOf = useCallback(
     (stage: RentalStage): number | undefined => {
       if (stage === RENTAL_STAGE.NEEDS_ACTION || stage === RENTAL_STAGE.AWAITING_PAYMENT) {
+        if (!requestsInScope) return 0;
         if (!statusCounts) return undefined;
         return statusCountOf(
           statusCounts,
@@ -334,7 +378,7 @@ export function RentalsScreen({
       if (!presetCounts) return undefined;
       return presetCounts.find((c) => c.preset === stage)?.count ?? 0;
     },
-    [statusCounts, presetCounts],
+    [statusCounts, presetCounts, requestsInScope],
   );
   const allCount = visibleStages.reduce<number | undefined>((sum, stage) => {
     const c = countOf(stage);
@@ -342,7 +386,10 @@ export function RentalsScreen({
   }, 0);
 
   const stageQuery = (stage: RentalStage) =>
-    stage === RENTAL_STAGE.NEEDS_ACTION
+    (stage === RENTAL_STAGE.NEEDS_ACTION || stage === RENTAL_STAGE.AWAITING_PAYMENT) &&
+    !requestsInScope
+      ? (EMPTY_REQUEST_STAGE as unknown as typeof needsQ)
+      : stage === RENTAL_STAGE.NEEDS_ACTION
       ? needsQ
       : stage === RENTAL_STAGE.AWAITING_PAYMENT
         ? payQ
@@ -438,7 +485,11 @@ export function RentalsScreen({
   const bookingStageView =
     rail === RENTAL_STAGE.AWAITING_PICKUP || rail === RENTAL_STAGE.RENTING;
   const filtered =
-    serviceType !== ALL || q.length > 0 || Boolean(vehicleId) || Boolean(branchId);
+    serviceType !== ALL ||
+    sourceFilter !== ALL ||
+    q.length > 0 ||
+    Boolean(vehicleId) ||
+    Boolean(branchId);
   const groups = useMemo<readonly FilterGroup[]>(
     () => [
       {
@@ -451,6 +502,30 @@ export function RentalsScreen({
           ...SERVICE_TYPE_VALUES.map((value) => ({ value, label: domainLabel('serviceType', value) })),
         ],
       },
+      // Nguồn đơn (ADR 0110): sàn XePrime, mọi kênh tự khai thác, từng kênh, và từng nhãn đã nhập.
+      ...(canViewBookings
+        ? [
+            {
+              key: 'source',
+              label: tSource('filter.label'),
+              value: sourceFilter,
+              resetValue: ALL,
+              options: [
+                { value: ALL, label: tSource('filter.all') },
+                { value: BOOKING_SOURCE.XEPRIME, label: domainLabel('bookingSource', BOOKING_SOURCE.XEPRIME) },
+                { value: BOOKING_SOURCE_FILTER_DIRECT, label: tSource('filter.direct') },
+                ...BOOKING_DIRECT_SOURCE_VALUES.map((value) => ({
+                  value,
+                  label: domainLabel('bookingSource', value),
+                })),
+                ...(sourceLabels.data ?? []).map((value) => ({
+                  value: `${SOURCE_LABEL_OPTION_PREFIX}${value}`,
+                  label: value,
+                })),
+              ],
+            },
+          ]
+        : []),
       // Ô "Sắp xếp" chỉ ở nhóm ĐƠN (web: hai nhóm yêu cầu xếp theo hạn đang chạy).
       ...(bookingStageView
         ? [
@@ -468,10 +543,11 @@ export function RentalsScreen({
           ]
         : []),
     ],
-    [tList, domainLabel, serviceType, sort, rail, bookingStageView],
+    [tList, tSource, domainLabel, serviceType, sourceFilter, sourceLabels.data, canViewBookings, sort, rail, bookingStageView],
   );
   const changeFilter = useCallback((key: string, value: string) => {
     if (key === 'serviceType') setServiceType(value);
+    else if (key === 'source') setSourceFilter(value || ALL);
     else setSort(value as BookingSort);
     setPage(FIRST_PAGE);
   }, []);
@@ -482,6 +558,7 @@ export function RentalsScreen({
   const clearFilters = useCallback(() => {
     setSearch('');
     setServiceType(ALL);
+    setSourceFilter(ALL);
     setPage(FIRST_PAGE);
     // Web `clearFilters` xoá cả chi nhánh.
     branchFilter.select(undefined);
@@ -539,7 +616,7 @@ export function RentalsScreen({
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `stageQuery` đọc bốn truy vấn đã có trong deps.
-  }, [isAll, isBoard, rail, singleItems, visibleStages, countOf, filtered, needsQ.data, payQ.data, pickupQ.data, rentingQ.data, needsQ.isError, payQ.isError, pickupQ.isError, rentingQ.isError]);
+  }, [isAll, isBoard, rail, singleItems, visibleStages, countOf, filtered, needsQ.data, payQ.data, pickupQ.data, rentingQ.data, requestsInScope, needsQ.isError, payQ.isError, pickupQ.isError, rentingQ.isError]);
 
   const activeQueries = isAll ? visibleStages.map(stageQuery) : [stageQuery(rail as RentalStage)];
   const pending = activeQueries.length > 0 && activeQueries.every((query) => query.isPending);
@@ -696,6 +773,7 @@ export function RentalsScreen({
         ...(q ? { q } : {}),
         ...(branchId ? { branchId } : {}),
         ...(serviceType !== ALL ? { serviceType } : {}),
+        ...(sourceCode ? { source: sourceCode } : {}),
       }),
     );
   const openCreate = () => navigateOnce(withBranchReturn(ROUTES.manage.bookingCreate(), branchId));
@@ -814,7 +892,7 @@ export function RentalsScreen({
             if (!hasItems && (isAll || filtered)) {
               return inStateScroll(
                 /* Chỉ lọc theo chi nhánh: câu riêng của chi nhánh (vẫn có lối gỡ lọc). */
-                branchEmpty && serviceType === ALL && q.length === 0 && !vehicleId ? (
+                branchEmpty && serviceType === ALL && sourceFilter === ALL && q.length === 0 && !vehicleId ? (
                   <ScreenMessage
                     icon="location-outline"
                     title={branchEmpty.title}
