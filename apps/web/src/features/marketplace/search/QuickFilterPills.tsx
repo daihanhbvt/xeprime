@@ -66,7 +66,7 @@ export function QuickFilterPills({
       (b) => selected.has(b.key) || catalogItemAppliesTo(b, filters.vehicleType),
     );
   }, [brandItems, filters.brand, filters.vehicleType]);
-  const priceBands = priceBandsFor(filters.vehicleType);
+  const priceBands = priceBandsFor(filters.vehicleType, filters.serviceType);
   const transmissions = quickTransmissionsFor(filters.vehicleType);
   const priceBandLabel = usePriceBandLabel();
   const withCount = (label: string, count: number | undefined) =>

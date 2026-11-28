@@ -69,6 +69,7 @@ Gradient của nút chính (`Gradient/Brand/600 -> 500 (90deg)`) chưa thành to
 | `--xp-color-bg-container` | `#ffffff` | `BG/white` | `colorBgContainer` |
 | `--xp-color-bg-elevated` | `#ffffff` | `BG/white` | `colorBgElevated` + seed `colorBgBase` |
 | `--xp-color-bg-muted` | `#f5f5f5` | `BG/gray-100` | — |
+| `--xp-color-bg-subtle` | `#fdfdfd` (tối `#121a25`) | `BG/gray-25` | — (rail hộp Bộ lọc, viên tóm tắt hành trình, thẻ kiểu dáng) |
 | `--xp-color-bg-selected` | `#fff5e5` | = `primary-light` (`BG/primary-low`) | `colorPrimaryBg` — AntD và CSS Module chung một nền "đang chọn" |
 | `--xp-color-bg-overlay` | `rgba(26,26,26,.45)` | *chưa có trong v2* | `colorBgMask` |
 
@@ -514,6 +515,7 @@ code của màn trang chủ Figma `19695:40693`.
 | | `--xp-elevation-{soft,panel}` | xám `#7d7d7d` 15% | thẻ gian hàng/đánh giá, bảng tìm kiếm |
 | | `--xp-elevation-{glow,ambient,header}` | — | nút gradient, header |
 | | `--xp-elevation-xl` | v2 `Shadow/xl` | popup nổi trên hộp thoại khác (xác minh OTP, đặt lại mật khẩu xong) |
+| | `--xp-elevation-tray` | `0 20 36 -8` tông `#0F1729` 16% | khay trượt phủ nội dung hộp thoại (khay "Đổi hành trình" của hộp Bộ lọc) |
 | Kính mờ | `--xp-color-glass` / `-strong` / `-faint` / `-gold`, `--xp-color-scrim-light` | trắng 10/32/5%, kem 20% | chip hero, huy hiệu store, dấu tích |
 | Bo góc | `--xp-border-radius-chip` / `-control` / `-card` | 8 / 12 / 16 | huy hiệu · ô nhập, nút · thẻ |
 | Khoảng cách | `--xp-space-{2,6,12,20,40,48,64,80}` | px | bậc mịn của v2 (§9) |

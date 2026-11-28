@@ -78,6 +78,7 @@ const SHOP_CARD_BRAND_LIMIT = 3;
 import {
   buildListingWhere,
   buildListingWhereSql,
+  listingPriceField,
   publicListingScope,
   seatBucketOf,
   type ListingFilterQuery,
@@ -167,9 +168,19 @@ interface VehicleRating {
  * `createdAt` vẫn là khoá phụ: hai xe cùng điểm phải có một thứ tự XÁC ĐỊNH, nếu không phân
  * trang sẽ trả về cùng một xe ở hai trang khác nhau.
  */
-function listingOrderBy(sort: string | undefined): Prisma.PublicListingOrderByWithRelationInput[] {
-  if (sort === 'price_asc') return [{ weekdayPrice: 'asc' }, { createdAt: 'desc' }];
-  if (sort === 'price_desc') return [{ weekdayPrice: 'desc' }, { createdAt: 'desc' }];
+function listingOrderBy(
+  sort: string | undefined,
+  serviceType: string | undefined,
+): Prisma.PublicListingOrderByWithRelationInput[] {
+  // Dài hạn xếp theo GIÁ THÁNG - đúng con số thẻ xe đang hiện (`listingPriceField`).
+  const price = listingPriceField(serviceType);
+  // Xe chưa có giá (dài hạn chưa niêm yết giá tháng) luôn xuống CUỐI - Postgres mặc định đưa NULL
+  // lên đầu khi xếp giảm dần, tức "giá cao nhất" lại mở đầu bằng xe không có giá.
+  if (sort === 'price_asc')
+    return [{ [price]: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }];
+  if (sort === 'price_desc') {
+    return [{ [price]: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }];
+  }
   if (sort === 'newest') return [{ createdAt: 'desc' }];
   return [{ rankScore: 'desc' }, { createdAt: 'desc' }];
 }
@@ -230,7 +241,7 @@ export class PublicListingsService {
       this.prisma.publicListing.count({ where }),
       this.prisma.publicListing.findMany({
         where,
-        orderBy: listingOrderBy(query.sort),
+        orderBy: listingOrderBy(query.sort, query.serviceType),
         skip: paging.skip,
         take: paging.take,
         select: listingCardSelect(now),
@@ -428,8 +439,8 @@ export class PublicListingsService {
       this.prisma.publicListing.count({ where: buildListingWhere(query) }),
       this.prisma.publicListing.aggregate({
         where: buildListingWhere(query, 'price'),
-        _min: { weekdayPrice: true },
-        _max: { weekdayPrice: true },
+        _min: { weekdayPrice: true, monthlyPrice: true },
+        _max: { weekdayPrice: true, monthlyPrice: true },
       }),
       this.prisma.publicListing.groupBy({
         by: ['bodyType'],
@@ -492,8 +503,9 @@ export class PublicListingsService {
     return {
       total,
       price: {
-        min: priceAgg._min.weekdayPrice as unknown as string | null,
-        max: priceAgg._max.weekdayPrice as unknown as string | null,
+        // Cùng cột với bộ lọc giá: giá tháng khi đang xem dài hạn (`listingPriceField`).
+        min: priceAgg._min[listingPriceField(query.serviceType)] as unknown as string | null,
+        max: priceAgg._max[listingPriceField(query.serviceType)] as unknown as string | null,
       },
       bodyType: bodyTypeRows
         .filter((r): r is typeof r & { bodyType: string } => r.bodyType != null)
@@ -1251,7 +1263,7 @@ export class PublicListingsService {
       this.prisma.publicListing.count({ where }),
       this.prisma.publicListing.findMany({
         where,
-        orderBy: listingOrderBy(query.sort),
+        orderBy: listingOrderBy(query.sort, query.serviceType),
         skip: paging.skip,
         take: paging.take,
         select: listingCardSelect(now),

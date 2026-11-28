@@ -63,6 +63,7 @@ export const XP_TOKENS = {
   'color-bg-container': '#ffffff', // v2 BG/white
   'color-bg-elevated': '#ffffff', // v2 BG/white
   'color-bg-muted': '#f5f5f5', // v2 BG/gray-100 - header bảng, ô disabled
+  'color-bg-subtle': '#fdfdfd', // v2 BG/gray-25 - mảng nền gần trắng (rail bộ lọc, viên tóm tắt hành trình)
   'color-bg-selected': '#fff5e5', // = primary-light (v2 BG/primary-low)
   'color-bg-overlay': 'rgba(26, 26, 26, 0.45)', // lớp phủ sau modal/drawer - chưa có trong v2
 
@@ -398,6 +399,8 @@ export const XP_TOKENS = {
   'elevation-header': '0 0 0 1px rgba(0, 0, 0, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.05)',
   // v2 Shadow/xl - popup nổi trên một hộp thoại khác (xác minh OTP, đặt lại mật khẩu thành công).
   'elevation-xl': '0 20px 24px -4px rgba(10, 13, 18, 0.08), 0 8px 8px -4px rgba(10, 13, 18, 0.03)',
+  // Khay trượt xuống phủ lên nội dung hộp thoại (khay "Đổi hành trình" của hộp Bộ lọc - 22588:74815).
+  'elevation-tray': '0 20px 36px -8px rgba(15, 23, 41, 0.16)',
   // Bo góc v2: badge 8 · ô nhập/nút 12 · thẻ/khung 16.
   'border-radius-chip': '8px',
   'border-radius-control': '12px',

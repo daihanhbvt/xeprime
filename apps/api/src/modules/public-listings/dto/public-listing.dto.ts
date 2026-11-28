@@ -243,14 +243,20 @@ export class PublicListingQueryDto {
   @IsString()
   province?: string;
 
-  @ApiPropertyOptional({ description: 'Giá thuê/ngày tối thiểu (VND)', minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Giá thuê tối thiểu (VND) - theo ngày; theo THÁNG khi serviceType=long_term',
+    minimum: 0,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
   priceMin?: number;
 
-  @ApiPropertyOptional({ description: 'Giá thuê/ngày tối đa (VND)', minimum: 0 })
+  @ApiPropertyOptional({
+    description: 'Giá thuê tối đa (VND) - theo ngày; theo THÁNG khi serviceType=long_term',
+    minimum: 0,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

@@ -48,6 +48,7 @@ let vProvB: string;
 let vDriver: string;
 let vBothSvc: string;
 let vLongTerm: string;
+let vLongTermCheap: string;
 
 /** Chi nhánh mặc định của mỗi tenant trong spec — xe lấy tỉnh từ đây. */
 const branchByTenant = new Map<string, string>();
@@ -75,6 +76,7 @@ async function seedVehicle(
   tenantId: string,
   price: string,
   serviceTypes?: string[],
+  monthlyPrice?: string,
 ): Promise<string> {
   const id = newId();
   await prisma.vehicle.create({
@@ -88,6 +90,7 @@ async function seedVehicle(
       publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
       mainImageUrl: 'https://img.example/vios.jpg',
       weekdayPrice: price,
+      ...(monthlyPrice ? { monthlyPrice } : {}),
       ...(serviceTypes ? { serviceTypes: [...serviceTypes].sort() } : {}),
     },
   });
@@ -132,7 +135,9 @@ beforeAll(async () => {
     SERVICE_TYPE.SELF_DRIVE,
     SERVICE_TYPE.WITH_DRIVER,
   ]);
-  vLongTerm = await seedVehicle(tenantA, '400000', [SERVICE_TYPE.LONG_TERM]);
+  // Giá NGÀY và giá THÁNG cố ý xếp ngược nhau: lọc/sắp dài hạn mà đọc nhầm giá ngày là lộ ngay.
+  vLongTerm = await seedVehicle(tenantA, '400000', [SERVICE_TYPE.LONG_TERM], '20000000');
+  vLongTermCheap = await seedVehicle(tenantA, '900000', [SERVICE_TYPE.LONG_TERM], '12000000');
 
   await prisma.vehicleOccupancy.create({
     data: {
@@ -147,7 +152,17 @@ beforeAll(async () => {
   });
 
   // Reads đọc từ public_listings (ADR 0008) → sync mọi xe seed vào snapshot.
-  for (const id of [vCheap, vMid, vHigh, vBusy, vProvB, vDriver, vBothSvc, vLongTerm])
+  for (const id of [
+    vCheap,
+    vMid,
+    vHigh,
+    vBusy,
+    vProvB,
+    vDriver,
+    vBothSvc,
+    vLongTerm,
+    vLongTermCheap,
+  ])
     await listings.syncFromVehicle(id);
   // 8 xe + 8 lượt sync tuần tự: chạy chung 4 worker trên một DB thì vượt mức 5s mặc định của hook.
 }, 60_000);
@@ -263,6 +278,37 @@ describe('Marketplace filter (loại dịch vụ — mảng năng lực, tab t�
     const res = await service.search(
       q({ provinceCode: PROV_A, serviceType: SERVICE_TYPE.LONG_TERM }),
     );
-    expect(res.data.map((v) => v.id)).toEqual([vLongTerm]);
+    expect(res.data.map((v) => v.id).sort()).toEqual([vLongTerm, vLongTermCheap].sort());
+  });
+
+  maybe('long_term lọc khoảng giá theo GIÁ THÁNG, không theo giá ngày', async () => {
+    const res = await service.search(
+      q({
+        provinceCode: PROV_A,
+        serviceType: SERVICE_TYPE.LONG_TERM,
+        priceMin: 10_000_000,
+        priceMax: 15_000_000,
+      }),
+    );
+    expect(res.data.map((v) => v.id)).toEqual([vLongTermCheap]);
+
+    // Một khoảng cỡ giá NGÀY không khớp xe dài hạn nào (giá ngày 400k/900k bị bỏ qua).
+    const daily = await service.search(
+      q({ provinceCode: PROV_A, serviceType: SERVICE_TYPE.LONG_TERM, priceMax: 1_000_000 }),
+    );
+    expect(daily.data).toEqual([]);
+  });
+
+  maybe('long_term sắp theo giá tháng; facet giá trả khoảng giá tháng', async () => {
+    const desc = await service.search(
+      q({ provinceCode: PROV_A, serviceType: SERVICE_TYPE.LONG_TERM, sort: 'price_desc' }),
+    );
+    expect(desc.data.map((v) => v.id)).toEqual([vLongTerm, vLongTermCheap]);
+
+    const facets = await service.facets(
+      q({ provinceCode: PROV_A, serviceType: SERVICE_TYPE.LONG_TERM }),
+    );
+    expect(Number(facets.price.min)).toBe(12_000_000);
+    expect(Number(facets.price.max)).toBe(20_000_000);
   });
 });

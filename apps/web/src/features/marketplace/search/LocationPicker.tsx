@@ -37,34 +37,45 @@ const POPULAR_COUNT = 6;
  * không còn xe nào sẽ biến mất khỏi mọi bộ chọn cùng lúc.
  *
  * Trình bày theo `variant`: `field` là ô nhập trong thẻ hero (có nhãn hoa nhỏ ở ngoài),
- * `chip` là viên gọn trong thanh thu gọn. Cả hai mở CÙNG một panel, neo vào CHÍNH nút của mình.
+ * `chip` là viên gọn trong thanh thu gọn, `select` là ô chọn có mũi tên của khay "Đổi hành trình"
+ * trong hộp Bộ lọc. Cả ba mở CÙNG một panel, neo vào CHÍNH nút của mình.
+ *
+ * Mặc định ô đọc/ghi thẳng ngữ cảnh tìm kiếm. Truyền `value` + `onChange` thì ô thành ô ĐIỀU KHIỂN:
+ * lựa chọn chỉ đi vào bản nháp của nơi gọi (khay hành trình áp khi khách bấm "Cập nhật").
  */
 export function LocationPicker({
   variant = 'field',
   className,
   popupContainer,
+  value,
+  onChange,
 }: {
-  variant?: 'field' | 'chip';
+  variant?: 'field' | 'chip' | 'select';
   className?: string;
   /** Xem `SearchPopover` — ô nằm trong thanh `position: fixed` phải neo panel vào chính thanh đó. */
   popupContainer?: () => HTMLElement;
+  /** Mã tỉnh của ô điều khiển (`''` = toàn quốc). Bỏ trống ⇒ đọc ngữ cảnh tìm kiếm. */
+  value?: string;
+  onChange?: (provinceCode: string) => void;
 }) {
   const t = useTranslations('HomeSearch.location');
   const { draft, setProvinceCode, destinations, destinationsLoading, destinationsError } =
     useSearchExperience();
+  const selectedCode = value ?? draft.provinceCode;
+  const selectProvince = onChange ?? setProvinceCode;
 
   const selectedLabel = useMemo(
     () =>
       // Cùng hàm tra tên với `/search` và "Địa điểm nổi bật" — ba bề mặt, một cách dịch mã → tên.
-      provinceLabelOf(destinations, draft.provinceCode) ??
-      (!draft.provinceCode
+      provinceLabelOf(destinations, selectedCode) ??
+      (!selectedCode
         ? t('nationwide')
         : // Lựa chọn cũ không còn khả dụng thì nói thẳng — âm thầm hiện "Toàn quốc" trong khi
           // vẫn đang lọc theo mã tỉnh đó là nói dối người dùng.
           destinationsLoading
           ? '…'
           : t('unavailable')),
-    [draft.provinceCode, destinations, destinationsLoading, t],
+    [selectedCode, destinations, destinationsLoading, t],
   );
 
   return (
@@ -72,16 +83,24 @@ export function LocationPicker({
       title={t('panelTitle')}
       popupContainer={popupContainer}
       triggerLabel={t('triggerLabel', { value: selectedLabel })}
-      triggerClassName={cx(variant === 'chip' ? styles.chip : styles.field, className)}
+      triggerClassName={cx(
+        variant === 'chip' ? styles.chip : variant === 'select' ? styles.select : styles.field,
+        className,
+      )}
       trigger={
-        variant === 'field' ? (
+        variant === 'select' ? (
+          <>
+            <span className={styles.triggerValue}>{selectedLabel}</span>
+            <LineIcon name="chevron-down" className={styles.selectCaret} />
+          </>
+        ) : variant === 'field' ? (
           /*
            * Ô của thẻ tìm kiếm trang chủ v2 (ADR 0062): chữ trước, icon địa điểm ở CUỐI. Chưa chọn
            * tỉnh nào thì hiện chữ gợi ý — "Toàn quốc" vẫn là một lựa chọn trong bảng, chỉ là ô
            * mở đầu bằng một lời mời thay vì một giá trị không ai chọn.
            */
           <>
-            {draft.provinceCode ? (
+            {selectedCode ? (
               <span className={styles.triggerValue}>{selectedLabel}</span>
             ) : (
               <span className={styles.triggerPlaceholder}>{t('placeholder')}</span>
@@ -103,9 +122,9 @@ export function LocationPicker({
           destinations={destinations}
           loading={destinationsLoading}
           error={destinationsError}
-          selectedCode={draft.provinceCode}
+          selectedCode={selectedCode}
           onSelect={(code) => {
-            setProvinceCode(code);
+            selectProvince(code);
             close();
           }}
         />

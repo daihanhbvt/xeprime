@@ -100,10 +100,6 @@
   width: 100%;
 }
 
-.fieldsCompact .cellLocation {
-  flex: 1 1 0;
-}
-
 .cell {
   display: flex;
   min-width: 0;
@@ -122,6 +118,21 @@
 .cellRental {
   flex: 1.35 1 0;
   min-width: 250px;
+}
+
+/* Thuê dài hạn (Figma `22647:39581`): "Từ 28/12/2026" rộng như ô địa điểm, ô gói hẹp cố định. */
+.cellLongTermDate {
+  flex: 1 1 0;
+  min-width: 170px;
+}
+
+.cellLongTermMonths {
+  flex: 0 0 140px;
+}
+
+.selectCaret {
+  font-size: 16px;
+  color: var(--xp-color-text-tertiary);
 }
 
 /* Ô nhập địa điểm dạng pill */
@@ -263,6 +274,11 @@
 
   .cellVehicle {
     width: 100%;
+  }
+
+  /* Xếp dọc: bề rộng cố định 140px của desktop KHÔNG được thành chiều cao 140px. */
+  .cellLongTermMonths {
+    flex: none;
   }
 
   .submit {

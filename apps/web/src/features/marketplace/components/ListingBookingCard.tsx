@@ -25,7 +25,12 @@ import {
   type RouteType,
   vnDayStart,
 } from '@xeprime/types';
-import { bestDiscountPackageMonths } from '@xeprime/domain';
+import {
+  bestDiscountPackageMonths,
+  longTermPickFromFilters,
+  nearestPackageMonths,
+  startOfAppDay,
+} from '@xeprime/domain';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
 import { applyDiscountPercent, isZeroMoney } from '@/lib/money';
 import { cx } from '@/lib/cx';
@@ -182,8 +187,12 @@ export function ListingBookingCard({
    * "liên hệ báo giá" thay vì mời chọn 1/3/6/12 tháng không có thật.
    */
   const longTermPackages = listing.longTermPackages ?? [];
-  const [selectedMonths, setSelectedMonths] = useState<number | null>(
-    () => longTermPackages[0]?.packageMonths ?? null,
+  const [selectedMonths, setSelectedMonths] = useState<number | null>(() =>
+    // Gói khách chọn lúc tìm (`ltMonths`) - xe không bán gói đó thì gói gần nhất của chính xe.
+    nearestPackageMonths(
+      longTermPackages.map((pkg) => pkg.packageMonths),
+      Number(searchParams.get('ltMonths')) || null,
+    ),
   );
 
   // 3b. Quản lý điểm đón & điểm đến cho "Có tài xế"
@@ -210,7 +219,13 @@ export function ListingBookingCard({
    * cụ thể (bỏ "càng sớm càng tốt" 11/11/2026 theo yêu cầu sản phẩm) — gian hàng vẫn chốt lịch thật
    * lúc duyệt (ADR 0011).
    */
-  const [requestedPickupDate, setRequestedPickupDate] = useState<Dayjs | null>(null);
+  const [requestedPickupDate, setRequestedPickupDate] = useState<Dayjs | null>(() => {
+    // Ngày nhận khách chọn lúc tìm (`ltFrom`). Ngày đã qua hay hỏng thì để trống cho khách tự chọn,
+    // không điền một gợi ý khách chưa từng thấy.
+    const fromUrl = searchParams.get('ltFrom');
+    if (!fromUrl || longTermPickFromFilters({ ltFrom: fromUrl }).fromDate !== fromUrl) return null;
+    return toAppTz(startOfAppDay(fromUrl));
+  });
 
   /*
    * Ngày trả DỰ KIẾN = ngày nhận + N THÁNG LỊCH theo giờ VN — cùng hàm server dùng (ADR 0011), không

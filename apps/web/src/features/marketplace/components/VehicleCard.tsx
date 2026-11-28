@@ -3,7 +3,7 @@
 import { ArrowRightOutlined } from '@ant-design/icons';
 import Image from 'next/image';
 import Link from 'next/link';
-import { isNewListing } from '@xeprime/domain';
+import { isNewListing, longTermPickFromFilters } from '@xeprime/domain';
 import {
   SERVICE_TYPE,
   VEHICLE_TYPE,
@@ -121,6 +121,12 @@ export function VehicleCard({
     dateQs.set('serviceType', activeService);
     if (activeService === SERVICE_TYPE.WITH_DRIVER && filters.routeType) {
       dateQs.set('routeType', filters.routeType);
+    }
+    // Dài hạn: ngày nhận + gói đã chọn khi tìm - thẻ đặt xe của xe điền sẵn hai giá trị này.
+    if (activeService === SERVICE_TYPE.LONG_TERM && filters.ltFrom) {
+      const pick = longTermPickFromFilters(filters);
+      dateQs.set('ltFrom', pick.fromDate);
+      dateQs.set('ltMonths', String(pick.months));
     }
   }
   const detailQs = filterQueryString(dateQs);

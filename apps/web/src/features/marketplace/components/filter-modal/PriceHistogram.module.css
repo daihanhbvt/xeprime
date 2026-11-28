@@ -1,0 +1,99 @@
+/*
+ * Biểu đồ minh hoạ phân bố giá (Figma 22588:72174): 20 cột bo đỉnh 2px, cách nhau 5px, cao tối đa
+ * 46px. Cột trong khoảng chọn vàng (primary-bright #edbb4f), ngoài khoảng xám (border #e9eaeb).
+ * Lề ngang 10px = lề của thanh trượt bên dưới, để cột đứng thẳng trên đúng đoạn giá của nó.
+ */
+.histogram {
+  display: flex;
+  height: 46px;
+  align-items: flex-end;
+  gap: 5px;
+  margin: 0 10px -6px;
+}
+
+.bar {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 2px 2px 0 0;
+  background: var(--xp-color-border);
+  transition: background-color 0.16s ease;
+}
+
+.barActive {
+  background: var(--xp-color-primary-bright);
+}
+
+/* Hình dáng cố định: lên nhanh tới đỉnh ở cột 5, đuôi dài thoải về phía giá cao. */
+.bar:nth-child(1) {
+  height: 26%;
+}
+.bar:nth-child(2) {
+  height: 43%;
+}
+.bar:nth-child(3) {
+  height: 72%;
+}
+.bar:nth-child(4) {
+  height: 91%;
+}
+.bar:nth-child(5) {
+  height: 100%;
+}
+.bar:nth-child(6) {
+  height: 96%;
+}
+.bar:nth-child(7) {
+  height: 85%;
+}
+.bar:nth-child(8) {
+  height: 76%;
+}
+.bar:nth-child(9) {
+  height: 61%;
+}
+.bar:nth-child(10) {
+  height: 48%;
+}
+.bar:nth-child(11) {
+  height: 35%;
+}
+.bar:nth-child(12) {
+  height: 28%;
+}
+.bar:nth-child(13) {
+  height: 24%;
+}
+.bar:nth-child(14) {
+  height: 20%;
+}
+.bar:nth-child(15) {
+  height: 17%;
+}
+.bar:nth-child(16) {
+  height: 15%;
+}
+.bar:nth-child(17) {
+  height: 13%;
+}
+.bar:nth-child(18) {
+  height: 11%;
+}
+.bar:nth-child(19) {
+  height: 10%;
+}
+.bar:nth-child(20) {
+  height: 9%;
+}
+
+@media (max-width: 768px) {
+  .histogram {
+    height: 40px;
+    gap: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}

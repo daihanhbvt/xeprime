@@ -1,0 +1,464 @@
+/* ─── Viên tóm tắt hành trình — Figma 22588:63421 (desktop) · 22600:78243 (điện thoại) ───── */
+.pill {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: var(--xp-space-sm) 14px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-subtle);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.pill:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.pill:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Khay đang mở (22600:80574): nền primary-25, viền primary, nút đổi thành "Thu gọn". */
+.pillOpen,
+.pillOpen:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+}
+
+.pillStrong,
+.pillTime {
+  flex-shrink: 0;
+  overflow: hidden;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pillTime {
+  flex-shrink: 1;
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.pillMuted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.pillDot {
+  flex-shrink: 0;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  color: var(--xp-color-text-placeholder);
+}
+
+.pillAction {
+  flex-shrink: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-primary);
+}
+
+.onlyNarrow {
+  display: none;
+}
+
+/* ─── Khay — Figma "Inline Trip Switcher Tray" 22588:74815 ───────────────────────────────── */
+.tray {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-20);
+  border-bottom: 1.5px solid var(--xp-color-primary-bright);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-tray);
+}
+
+.trayTop {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-40);
+}
+
+.group {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.groupGrow {
+  flex: 1;
+}
+
+.label {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+/* Loại xe (22588:74879): khay gray-50 viền gray-200 cao 40, mục chọn nổi trắng viền gray-300. */
+.segmented {
+  display: flex;
+  height: 40px;
+  align-items: center;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+.segment {
+  display: inline-flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  background: transparent;
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.segmentActive {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary-hover);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+.segment:focus-visible,
+.suggestChip:focus-visible,
+.cancelBtn:focus-visible,
+.commitBtn:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.segmentArt {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+/* Địa điểm + thời gian hai cột, hàng gợi ý trải dưới cả hai (22588:75433). */
+.fields {
+  display: grid;
+  grid-template-areas:
+    'area time'
+    'suggest suggest';
+  grid-template-columns: 1fr 1fr;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+/* Dài hạn (22647:49462): Khu vực · Thời gian nhận xe · Thời gian thuê - ba cột bằng nhau. */
+.fieldsLongTerm {
+  grid-template-areas:
+    'area pickup duration'
+    'suggest suggest suggest';
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.fieldArea {
+  grid-area: area;
+}
+
+.fieldTime {
+  grid-area: time;
+}
+
+.fieldPickup {
+  grid-area: pickup;
+}
+
+.fieldDuration {
+  grid-area: duration;
+}
+
+/* Ô AntD (lịch ngày, chọn gói) trong khung "Giá trị": cùng đệm 10/14 với ô thời gian ở trên. */
+.longTermInput {
+  min-height: 40px;
+  padding: 9px 14px;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/* Ô thời gian: viên lịch dùng chung không viền — bọc khung "Giá trị" của Figma ở ngoài. */
+.inputShell {
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+.inputShell > button {
+  padding: 10px 14px;
+}
+
+.timeSuffix {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.duration {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.caret {
+  font-size: 16px;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Gợi ý (22588:75424): "Gợi ý:" 12/18 xám + viên gray-50 đệm 3/8, chữ 12/18 medium. */
+.suggest {
+  grid-area: suggest;
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-6);
+}
+
+.suggestLabel {
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  color: var(--xp-color-text-tertiary);
+}
+
+.suggestChip {
+  padding: 3px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.suggestChip:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.suggestChipActive,
+.suggestChipActive:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-text);
+}
+
+/* Hàng hành động (22588:74858): ghi chú trái, Hủy + Cập nhật phải. */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.note {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  color: var(--xp-color-text-tertiary);
+}
+
+.buttons {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.cancelBtn,
+.commitBtn {
+  padding: 10px var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  font: inherit;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  border: 1px solid var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+}
+
+.cancelBtn:hover {
+  background: var(--xp-color-bg-muted);
+}
+
+.commitBtn {
+  border: none;
+  background: var(--xp-gradient-special);
+  color: var(--xp-color-primary-contrast);
+}
+
+.commitBtn:hover {
+  filter: brightness(0.96);
+}
+
+/* ─── Điện thoại — khay nằm TRONG "Header cố định" (22600:80568) ─────────────────────────── */
+@media (max-width: 768px) {
+  .pill {
+    display: flex;
+    width: 100%;
+    gap: var(--xp-space-6);
+  }
+
+  .pillStrong,
+  .pillTime {
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+  }
+
+  .pillTime {
+    flex: 1;
+  }
+
+  .pillAction {
+    margin-left: auto;
+  }
+
+  .onlyWide {
+    display: none;
+  }
+
+  .onlyNarrow {
+    display: inline;
+  }
+
+  .tray {
+    padding: 0;
+    border-bottom: none;
+    box-shadow: none;
+  }
+
+  .trayTop {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--xp-space-md);
+  }
+
+  /* Loại xe trải hết chiều ngang, hai nửa bằng nhau; nhãn chỉ còn cho trình đọc màn hình. */
+  .vehicleLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .segment {
+    flex: 1;
+  }
+
+  /* Điện thoại xếp dọc: địa điểm → gợi ý → thời gian; nhãn ô đậm hơn (gray-medium). */
+  .fields {
+    grid-template-areas:
+      'area'
+      'suggest'
+      'time';
+    grid-template-columns: 1fr;
+    gap: var(--xp-space-sm);
+  }
+
+  .fieldsLongTerm {
+    grid-template-areas:
+      'area'
+      'suggest'
+      'pickup'
+      'duration';
+  }
+
+  .fieldTime,
+  .fieldPickup {
+    margin-top: var(--xp-space-sm);
+  }
+
+  .longTermInput {
+    padding: var(--xp-space-sm) 14px;
+  }
+
+  /* Ô chọn điện thoại cao 40 (22600:80606): đệm 8/14. */
+  .inputShell > button,
+  .fieldArea > button {
+    padding: var(--xp-space-sm) 14px;
+  }
+
+  .fieldLabel {
+    color: var(--xp-color-text-secondary);
+  }
+
+  .suggestLabel {
+    display: none;
+  }
+
+  .note {
+    display: none;
+  }
+
+  .buttons {
+    width: 100%;
+  }
+
+  .cancelBtn,
+  .commitBtn {
+    padding-block: var(--xp-space-sm);
+  }
+
+  .cancelBtn {
+    padding-inline: var(--xp-space-lg);
+  }
+
+  .commitBtn {
+    flex: 1;
+    padding-inline: 14px;
+  }
+}

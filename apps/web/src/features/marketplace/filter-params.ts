@@ -1,5 +1,6 @@
-import { SEARCH_QUERY_MAX_LENGTH } from '@xeprime/domain';
+import { SEARCH_QUERY_MAX_LENGTH, longTermAvailabilityWindow } from '@xeprime/domain';
 import {
+  SERVICE_TYPE,
   LISTING_AMENITY_VALUES,
   LISTING_MIN_RATING_VALUES,
   LISTING_SORT_VALUES,
@@ -78,6 +79,8 @@ export function filterQueryString(params: URLSearchParams): string {
  * chiều lọc (xe không khai lộ trình phục vụ; lọc theo nó chỉ tạo kết quả rỗng giả).
  */
 export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
+  // Dài hạn hỏi xe RẢNH trong phần lõi của ngày nhận + gói, qua chính bộ lọc xe rảnh đang có.
+  const longTermWindow = longTermAvailabilityWindow(filters);
   return {
     q: filters.q ?? null,
     vehicleType: filters.vehicleType ?? null,
@@ -102,8 +105,8 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     minSeats: filters.minSeats ?? null,
     priceMin: filters.priceMin ?? null,
     priceMax: filters.priceMax ?? null,
-    pickupAt: filters.pickupAt ?? null,
-    returnAt: filters.returnAt ?? null,
+    pickupAt: longTermWindow?.pickupAt ?? filters.pickupAt ?? null,
+    returnAt: longTermWindow?.returnAt ?? filters.returnAt ?? null,
   };
 }
 
@@ -129,7 +132,7 @@ const ARRAY_KEYS = [
  * một bộ lọc bấm được nhưng mất khi tải lại trang, và "Xoá bộ lọc" không xoá được nó.
  */
 const BOOLEAN_KEYS: readonly ListingAmenity[] = LISTING_AMENITY_VALUES;
-const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit'] as const;
+const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit', 'ltMonths'] as const;
 const STRING_KEYS = [
   // Từ khoá (09/10, quay lại sau lần gỡ 17/08): lý do gỡ là "gõ không dấu / tách chữ số thì
   // không ra xe" — server nay gấp chuỗi trước khi so (`searchTokens`), nên khớp cả hai cách gõ.
@@ -144,6 +147,8 @@ const STRING_KEYS = [
   'province',
   'pickupAt',
   'returnAt',
+  // Thuê dài hạn: ngày nhận mong muốn (YYYY-MM-DD), đi cùng `ltMonths` (gói).
+  'ltFrom',
 ] as const;
 
 /**
@@ -223,6 +228,14 @@ export function parseFilters(searchParams: URLSearchParams): MarketplaceFilters 
 }
 
 /**
+ * Giá dài hạn tính theo THÁNG, mọi dịch vụ khác theo NGÀY (server: `listingPriceField`). Một câu hỏi
+ * cho mọi bề mặt giá - mốc, thanh trượt, đơn vị và luật xoá khoảng giá khi đổi dịch vụ.
+ */
+export function priceIsMonthly(serviceType: string | null | undefined): boolean {
+  return serviceType === SERVICE_TYPE.LONG_TERM;
+}
+
+/**
  * Ghi một patch filter vào searchParams (mutate tại chỗ). `undefined`/`null`/`''`/mảng rỗng/
  * boolean false = xoá param. Đổi filter thì về trang 1, trừ khi chính `page` đang được đổi.
  */
@@ -230,6 +243,7 @@ export function applyFilterPatch(
   params: URLSearchParams,
   patch: Partial<MarketplaceFilters>,
 ): void {
+  const monthlyBefore = priceIsMonthly(params.get('serviceType'));
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined || value === null || value === '') {
       params.delete(key);
@@ -242,6 +256,19 @@ export function applyFilterPatch(
     } else {
       params.set(key, isDateTimeKey(key) ? formatDateTimeParam(String(value)) : String(value));
     }
+  }
+  /*
+   * Đổi dịch vụ qua lại giữa giá NGÀY và giá THÁNG: khoảng giá cũ hết nghĩa (800k/ngày đặt lên giá
+   * tháng là danh sách rỗng) ⇒ xoá, trừ khi chính patch này đặt khoảng giá mới.
+   */
+  if (
+    'serviceType' in patch &&
+    !('priceMin' in patch) &&
+    !('priceMax' in patch) &&
+    priceIsMonthly(params.get('serviceType')) !== monthlyBefore
+  ) {
+    params.delete('priceMin');
+    params.delete('priceMax');
   }
   if (!('page' in patch)) params.delete('page');
 }

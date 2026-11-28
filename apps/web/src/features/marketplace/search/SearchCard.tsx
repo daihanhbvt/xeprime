@@ -14,7 +14,9 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { cx } from '@/lib/cx';
 import { CtaButton } from '../components/CtaButton';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { LocationPicker } from './LocationPicker';
+import { LongTermDateField, LongTermMonthsField } from './LongTermFields';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useSearchExperience } from './search-context';
 import { serviceUsesRentalRange } from './search-draft';
@@ -34,8 +36,9 @@ import styles from './SearchCard.module.css';
  *   - **Tự lái**: Địa điểm · Thời gian thuê · Tìm xe.
  *   - **Có tài xế**: LỘ TRÌNH thay chỗ nhóm "Loại xe" ở đầu hàng — ngữ cảnh để gian hàng báo
  *     giá đúng khi duyệt, không phải chiều lọc danh sách xe (xe không khai lộ trình phục vụ).
- *   - **Dài hạn**: Địa điểm · Tìm xe. **Không** hỏi ngày (ADR 0011) — khách chọn gói
- *     1/2/3/6/9/12 tháng và nêu nguyện vọng ngày nhận SAU khi đã chọn được xe.
+ *   - **Dài hạn**: Địa điểm · "Từ ngày" · gói · Tìm xe (Figma `22647:39581`). Ngày là NGUYỆN VỌNG,
+ *     không phải lịch (ADR 0011): kết quả lọc xe rảnh trong phần lõi của khoảng đó, thẻ đặt xe
+ *     điền sẵn, gian hàng chốt giờ nhận lúc duyệt.
  *
  * Bố cục desktop/mobile khác nhau hoàn toàn bằng CSS (cùng một cây DOM): không nhánh `isMobile`
  * ở đây, nên hai bố cục không thể trôi ra hai bộ hành vi khác nhau.
@@ -48,6 +51,7 @@ export function SearchCard() {
     setRouteType,
     setRentalRange,
     setRentalMode,
+    setLongTerm,
     submit,
   } = useSearchExperience();
   const t = useTranslations('HomeSearch');
@@ -128,7 +132,7 @@ export function SearchCard() {
           })}
           className={styles.panel}
         >
-          <div className={cx(styles.fields, longTerm && styles.fieldsCompact)}>
+          <div className={styles.fields}>
             {/*
               Có tài xế chỉ phục vụ ô tô, nên nhóm "Loại xe" chỉ còn một lựa chọn — ô đầu hàng
               nhường chỗ cho LỘ TRÌNH (Figma `21902:31701`).
@@ -183,6 +187,38 @@ export function SearchCard() {
                   className={styles.box}
                 />
               </div>
+            ) : null}
+
+            {longTerm ? (
+              <>
+                <div className={cx(styles.cell, styles.cellLongTermDate)}>
+                  <LongTermDateField
+                    value={draft.longTerm}
+                    onChange={setLongTerm}
+                    withFromPrefix
+                    className={styles.box}
+                    suffix={
+                      <span className={styles.boxIcon}>
+                        <Image
+                          src="/home/field-calendar.svg"
+                          alt=""
+                          width={16}
+                          height={18}
+                          unoptimized
+                        />
+                      </span>
+                    }
+                  />
+                </div>
+                <div className={cx(styles.cell, styles.cellLongTermMonths)}>
+                  <LongTermMonthsField
+                    value={draft.longTerm}
+                    onChange={setLongTerm}
+                    className={styles.box}
+                    suffix={<LineIcon name="chevron-down" className={styles.selectCaret} />}
+                  />
+                </div>
+              </>
             ) : null}
 
             <CtaButton

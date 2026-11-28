@@ -1,0 +1,85 @@
+/*
+ * Figma "Chip" (22588:51428): đệm 8/16, bo 999, viền gray-200, nền trắng, chữ 14/22 medium
+ * gray-medium; đang chọn = nền primary-25, viền primary, chữ semibold gray-high.
+ * Điện thoại (22600:80602): đệm 8/12, chữ 12/18 - viên cao 36.
+ */
+.chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-6);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.chip:hover {
+  border-color: var(--xp-color-border-strong);
+  color: var(--xp-color-text);
+}
+
+.chip:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.active,
+.active:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Hàng điều kiện thuê (22588:63847): đệm 4/12, cùng cỡ chữ - viên cao 32. */
+.small {
+  padding: var(--xp-space-xs) var(--xp-space-12);
+}
+
+/* "+14 hãng xe khác" (22588:63516): nền gray-50. */
+.more {
+  background: var(--xp-color-bg);
+}
+
+.leading {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  min-width: 0;
+}
+
+.star {
+  color: var(--xp-color-star);
+}
+
+@media (max-width: 768px) {
+  .chip {
+    padding: var(--xp-space-sm) var(--xp-space-12);
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+  }
+
+  /* Điện thoại (22600:80737): viên điều kiện cao 28 - đệm 4/12. */
+  .small {
+    padding: var(--xp-space-xs) var(--xp-space-12);
+  }
+}

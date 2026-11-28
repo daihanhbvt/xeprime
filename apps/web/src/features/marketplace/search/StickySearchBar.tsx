@@ -18,6 +18,7 @@ import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeF
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
 import { LocationPicker } from './LocationPicker';
+import { LongTermDateField, LongTermMonthsField } from './LongTermFields';
 import { SearchPopover } from './SearchPopover';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useSearchExperience } from './search-context';
@@ -50,7 +51,7 @@ const TRANSITION_MS = 200;
 export function StickySearchBar({ active }: { active: boolean }) {
   const t = useTranslations('HomeSearch');
   const { mounted, entered } = useEnterExit(active, TRANSITION_MS);
-  const { draft, setRentalRange, setRentalMode, submit } = useSearchExperience();
+  const { draft, setRentalRange, setRentalMode, setLongTerm, submit } = useSearchExperience();
   const isMobile = useIsMobile();
   /** Panel neo TRONG thanh cố định — xem docblock. */
   const barRef = useRef<HTMLDivElement>(null);
@@ -99,7 +100,26 @@ export function StickySearchBar({ active }: { active: boolean }) {
             compactPoint
             getPopupContainer={popupContainer}
           />
-        ) : null}
+        ) : (
+          <>
+            {/* Dài hạn: ngày nhận mong muốn + gói, cùng hai ô của thẻ tìm kiếm. */}
+            <LongTermDateField
+              value={draft.longTerm}
+              onChange={setLongTerm}
+              withFromPrefix
+              prefix={<CalendarOutlined className={styles.chipIcon} aria-hidden="true" />}
+              getPopupContainer={popupContainer}
+              className={cx(styles.dateChip, styles.longTermDateChip)}
+            />
+            <LongTermMonthsField
+              value={draft.longTerm}
+              onChange={setLongTerm}
+              suffix={<DownOutlined className={styles.caret} aria-hidden="true" />}
+              getPopupContainer={popupContainer}
+              className={cx(styles.dateChip, styles.monthsChip)}
+            />
+          </>
+        )}
 
         {/* Mobile: nút thu về đúng biểu tượng — nhãn chữ ăn mất chỗ của hai ô kia. */}
         <Button

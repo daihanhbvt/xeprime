@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { APP_TIME_ZONE, dayjs } from './datetime';
-import { DEFAULT_PICKUP_HOURS, defaultRentalRange } from './search-draft';
+import { SERVICE_TYPE } from '@xeprime/types';
+import { nearestPackageMonths } from './long-term';
+import {
+  DEFAULT_PICKUP_HOURS,
+  defaultLongTermPick,
+  defaultRentalRange,
+  draftFromFilters,
+  draftToFilterPatch,
+  longTermAvailabilityWindow,
+  longTermPickFromFilters,
+  longTermReturnDate,
+} from './search-draft';
 
 /**
  * Khoảng thuê GỢI Ý — thứ khách nhìn thấy trong ô thời gian khi chưa tự chọn gì.
@@ -72,5 +83,75 @@ describe('defaultRentalRange', () => {
       expect(pickupAt.minute()).toBe(0);
       expect(pickupAt.diff(now, 'minute')).toBeGreaterThanOrEqual(4 * 60);
     }
+  });
+});
+
+describe('thuê dài hạn - ngày nhận + gói ở bước tìm (28/11/2026)', () => {
+  const now = vn('2026-11-28T10:00');
+
+  it('gợi ý sẵn: hôm nay + 7 ngày, gói 3 tháng', () => {
+    expect(defaultLongTermPick(now)).toEqual({ fromDate: '2026-12-05', months: 3 });
+  });
+
+  it('URL hợp lệ thì giữ nguyên; ngày hỏng, ngày đã qua, gói lạ rơi về gợi ý', () => {
+    expect(longTermPickFromFilters({ ltFrom: '2026-12-28', ltMonths: 2 }, now)).toEqual({
+      fromDate: '2026-12-28',
+      months: 2,
+    });
+    expect(longTermPickFromFilters({ ltFrom: '2026-11-28' }, now).fromDate).toBe('2026-11-28');
+    expect(longTermPickFromFilters({ ltFrom: '2026-11-27' }, now).fromDate).toBe('2026-12-05');
+    expect(longTermPickFromFilters({ ltFrom: '2026-02-30' }, now).fromDate).toBe('2026-12-05');
+    expect(longTermPickFromFilters({ ltFrom: 'rác' }, now).fromDate).toBe('2026-12-05');
+    expect(longTermPickFromFilters({ ltMonths: 4 }, now).months).toBe(3);
+  });
+
+  it('ngày trả dự kiến là N tháng LỊCH, kẹp cuối tháng (ADR 0011)', () => {
+    expect(longTermReturnDate({ fromDate: '2026-10-13', months: 2 })).toBe('2026-12-13');
+    expect(longTermReturnDate({ fromDate: '2027-01-31', months: 1 })).toBe('2027-02-28');
+  });
+
+  it('khoảng hỏi xe rảnh = phần LÕI: hết ngày nhận → đầu ngày trả, giờ Việt Nam', () => {
+    const window = longTermAvailabilityWindow(
+      { serviceType: SERVICE_TYPE.LONG_TERM, ltFrom: '2026-12-28', ltMonths: 2 },
+      now,
+    );
+    expect(window).toEqual({
+      pickupAt: '2026-12-28T17:00:00.000Z', // 00:00 ngày 29/12 giờ VN
+      returnAt: '2027-02-27T17:00:00.000Z', // 00:00 ngày 28/02 giờ VN
+    });
+  });
+
+  it('không phải dài hạn, hoặc URL chưa mang ngày nhận ⇒ không lọc lịch', () => {
+    expect(
+      longTermAvailabilityWindow(
+        { serviceType: SERVICE_TYPE.SELF_DRIVE, ltFrom: '2026-12-28' },
+        now,
+      ),
+    ).toBeNull();
+    expect(longTermAvailabilityWindow({ serviceType: SERVICE_TYPE.LONG_TERM }, now)).toBeNull();
+  });
+
+  it('chỉ dài hạn phát ltFrom/ltMonths; tự lái xoá chúng khỏi URL', () => {
+    const draft = draftFromFilters(
+      { serviceType: SERVICE_TYPE.LONG_TERM, ltFrom: '2026-12-28', ltMonths: 6 },
+      now,
+    );
+    expect(draftToFilterPatch(draft)).toMatchObject({ ltFrom: '2026-12-28', ltMonths: 6 });
+    expect(draftToFilterPatch(draft).pickupAt).toBeUndefined();
+
+    const selfDrive = draftToFilterPatch({ ...draft, serviceType: SERVICE_TYPE.SELF_DRIVE });
+    expect(selfDrive.ltFrom).toBeUndefined();
+    expect(selfDrive.ltMonths).toBeUndefined();
+    expect(selfDrive.pickupAt).toBeDefined();
+  });
+});
+
+describe('nearestPackageMonths - gói của xe gần nhất với gói khách chọn lúc tìm', () => {
+  it('có đúng gói thì lấy, không có thì gói gần nhất, cách đều thì gói ngắn hơn', () => {
+    expect(nearestPackageMonths([1, 3, 6], 3)).toBe(3);
+    expect(nearestPackageMonths([1, 6, 12], 3)).toBe(1);
+    expect(nearestPackageMonths([6, 12], 9)).toBe(6);
+    expect(nearestPackageMonths([3, 6], null)).toBe(3);
+    expect(nearestPackageMonths([], 3)).toBeNull();
   });
 });

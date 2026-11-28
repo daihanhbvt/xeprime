@@ -9,7 +9,7 @@ import {
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import { ROUTES } from '@/constants/routes';
 import type { FooterKey, ServiceLabelKey } from '@/i18n/keys';
-import { marketplaceSearchHref } from './filter-params';
+import { marketplaceSearchHref, priceIsMonthly } from './filter-params';
 
 /**
  * Cấu trúc TĨNH của marketplace: thứ tự tab, thứ tự bước, cột chân trang.
@@ -173,10 +173,40 @@ export const PRICE_BANDS: Readonly<Record<VehicleType, readonly PriceBand[]>> = 
 };
 
 /** Chưa chọn loại xe (URL không nói) ⇒ mốc của ô tô — cùng mặc định với thẻ tìm kiếm. */
-export function priceBandsFor(vehicleType: string | null | undefined): readonly PriceBand[] {
+/**
+ * Mốc giá / THÁNG của thuê dài hạn (28/11/2026): server so khoảng giá với `monthly_price` khi
+ * `serviceType=long_term` (`listingPriceField` ở api) - đúng con số thẻ xe dài hạn hiện "/tháng".
+ * Mặt bằng theo giá tháng phổ biến trên chợ (ô tô ~10-30tr, xe máy ~1,5-5tr).
+ */
+export const LONG_TERM_PRICE_BANDS: Readonly<Record<VehicleType, readonly PriceBand[]>> = {
+  [VEHICLE_TYPE.CAR]: [
+    { max: 10_000_000 },
+    { min: 10_000_000, max: 15_000_000 },
+    { min: 15_000_000, max: 25_000_000 },
+    { min: 25_000_000 },
+  ],
+  [VEHICLE_TYPE.MOTORBIKE]: [
+    { max: 2_000_000 },
+    { min: 2_000_000, max: 3_000_000 },
+    { min: 3_000_000, max: 5_000_000 },
+    { min: 5_000_000 },
+  ],
+};
+
+function byVehicle<T>(
+  table: Readonly<Record<VehicleType, T>>,
+  vehicleType: string | null | undefined,
+): T {
   return vehicleType === VEHICLE_TYPE.MOTORBIKE
-    ? PRICE_BANDS[VEHICLE_TYPE.MOTORBIKE]
-    : PRICE_BANDS[VEHICLE_TYPE.CAR];
+    ? table[VEHICLE_TYPE.MOTORBIKE]
+    : table[VEHICLE_TYPE.CAR];
+}
+
+export function priceBandsFor(
+  vehicleType: string | null | undefined,
+  serviceType?: string | null,
+): readonly PriceBand[] {
+  return byVehicle(priceIsMonthly(serviceType) ? LONG_TERM_PRICE_BANDS : PRICE_BANDS, vehicleType);
 }
 
 /**
@@ -188,13 +218,21 @@ export const PRICE_SLIDER: Readonly<Record<VehicleType, { max: number; step: num
   [VEHICLE_TYPE.MOTORBIKE]: { max: 500_000, step: 10_000 },
 };
 
-export function priceSliderFor(vehicleType: string | null | undefined): {
-  max: number;
-  step: number;
-} {
-  return vehicleType === VEHICLE_TYPE.MOTORBIKE
-    ? PRICE_SLIDER[VEHICLE_TYPE.MOTORBIKE]
-    : PRICE_SLIDER[VEHICLE_TYPE.CAR];
+/** Thanh trượt giá / THÁNG của thuê dài hạn - đầu phải vẫn là "không giới hạn". */
+export const LONG_TERM_PRICE_SLIDER: Readonly<Record<VehicleType, { max: number; step: number }>> =
+  {
+    [VEHICLE_TYPE.CAR]: { max: 40_000_000, step: 500_000 },
+    [VEHICLE_TYPE.MOTORBIKE]: { max: 8_000_000, step: 100_000 },
+  };
+
+export function priceSliderFor(
+  vehicleType: string | null | undefined,
+  serviceType?: string | null,
+): { max: number; step: number } {
+  return byVehicle(
+    priceIsMonthly(serviceType) ? LONG_TERM_PRICE_SLIDER : PRICE_SLIDER,
+    vehicleType,
+  );
 }
 
 /** Mốc đang được chọn khi khoảng giá hiện tại TRÙNG KHÍT nó (cả hai đầu). */

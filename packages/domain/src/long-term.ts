@@ -88,3 +88,26 @@ export function bestDiscountPackageMonths(
   }
   return best?.months ?? null;
 }
+
+/**
+ * Gói của xe GẦN NHẤT với gói khách chọn lúc tìm (`ltMonths`) — xe không bán đủ sáu gói. Cách đều
+ * hai phía thì lấy gói NGẮN hơn: cam kết ít hơn, khách tự kéo dài được. Xe không có gói ⇒ `null`.
+ */
+export function nearestPackageMonths(
+  available: readonly number[],
+  wanted: number | null | undefined,
+): number | null {
+  if (available.length === 0) return null;
+  if (wanted == null) return available[0] ?? null;
+  let best: number | null = null;
+  for (const months of available) {
+    if (
+      best === null ||
+      Math.abs(months - wanted) < Math.abs(best - wanted) ||
+      (Math.abs(months - wanted) === Math.abs(best - wanted) && months < best)
+    ) {
+      best = months;
+    }
+  }
+  return best;
+}

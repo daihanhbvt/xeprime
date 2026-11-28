@@ -1,7 +1,7 @@
 /*
- * Hộp "Bộ lọc" — Figma `19719:47126` (1000 rộng). Chữ: tiêu đề 18/28 semibold, tiêu đề nhóm
- * 16/24 semibold, lựa chọn 14/20, gợi ý 12/18. Phần đầu đứng yên, hai cột tiêu chí cuộn, dải
- * "Đang chọn" + chân hộp cố định.
+ * Hộp "Bộ lọc" — Figma `22588:63913` (desktop 1000 rộng, cao 800) · điện thoại `22600:78527`.
+ * Chữ: tiêu đề 18/28 semibold, tiêu đề nhóm 16/24 semibold, viên 14/22 (điện thoại 12/18),
+ * nhãn nhóm con 14/22 medium xám. Đầu hộp + chân hộp cố định, rail trái + vùng nhóm cuộn riêng.
  */
 .overlay {
   position: fixed;
@@ -22,14 +22,14 @@
 
 .modal {
   position: relative;
-  background: var(--xp-color-bg-container);
-  border-radius: var(--xp-border-radius-lg);
+  display: flex;
   width: 100%;
   max-width: 1000px;
-  max-height: min(950px, calc(100vh - 48px));
-  display: flex;
+  height: min(800px, calc(100dvh - 48px));
   flex-direction: column;
   overflow: hidden;
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
   box-shadow: var(--xp-elevation-xl);
   animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -45,15 +45,36 @@
   }
 }
 
-/* ─── Đầu hộp ─────────────────────────────────────────────────────────────── */
+.onlyNarrow {
+  display: none;
+}
+
+/* ─── Đầu hộp (22588:63417) ───────────────────────────────────────────────────── */
 .header {
   position: relative;
+  z-index: 3;
   flex-shrink: 0;
-  padding: var(--xp-space-lg) 64px var(--xp-space-20) 32px;
+  padding: var(--xp-space-20) 64px var(--xp-space-20) var(--xp-space-20);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-container);
+}
+
+.headTop {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+/* Viên hành trình nhường chỗ cho tiêu đề — tên tỉnh dài cắt gọn bên trong viên. */
+.headTop > :last-child {
+  flex: 0 1 auto;
+  max-width: 62%;
 }
 
 .titleArea {
   display: flex;
+  min-width: 0;
+  flex: 1;
   flex-direction: column;
   gap: var(--xp-space-2);
 }
@@ -61,7 +82,7 @@
 .title {
   margin: 0;
   font-size: var(--xp-font-size-h3);
-  line-height: var(--xp-line-height-h3);
+  line-height: 28px;
   font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
 }
@@ -69,122 +90,193 @@
 .subtitle {
   margin: 0;
   font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
+  line-height: var(--xp-line-height-body-relaxed);
   color: var(--xp-color-text-tertiary);
+}
+
+/* Desktop: khay trượt xuống PHỦ lên rail + nhóm (22588:74815), không đẩy bố cục. */
+.trayWrap {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
 }
 
 .closeBtn {
   position: absolute;
-  top: var(--xp-space-20);
-  right: var(--xp-space-20);
+  top: var(--xp-space-md);
+  right: var(--xp-space-md);
   display: inline-flex;
+  width: 24px;
+  height: 24px;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--xp-color-text-tertiary);
-  font-size: 18px;
-  border-radius: 50%;
+  font-size: 24px;
   cursor: pointer;
-  transition:
-    background-color 0.16s ease,
-    color 0.16s ease;
 }
 
 .closeBtn:hover {
-  background: var(--xp-color-bg-muted);
   color: var(--xp-color-text);
 }
 
-/* ─── Thân: phần đầu đứng yên + phần cuộn ─────────────────────────────────── */
-.body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+.tabs {
+  display: none;
 }
 
-.context {
+.dimmed {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+/* ─── Thân: rail + vùng cuộn ──────────────────────────────────────────────────── */
+.main {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Rail "Danh mục lọc" (22588:63430): nền gray-25, viền phải, đệm 20/16, khe 6. */
+.rail {
+  display: flex;
+  width: 240px;
   flex-shrink: 0;
-  display: flex;
   flex-direction: column;
-  gap: var(--xp-space-md);
-  padding: 0 32px var(--xp-space-md);
-}
-
-.scroll {
-  flex: 1;
-  min-height: 0;
+  gap: var(--xp-space-6);
   overflow-y: auto;
-  padding: var(--xp-space-md) 32px var(--xp-space-lg);
+  padding: var(--xp-space-20) var(--xp-space-md);
+  border-right: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-subtle);
 }
 
-/* Dải tab nền xám, mục chọn nổi trắng — dùng cho dịch vụ và loại xe. */
-.segmented {
+.railHeading {
+  margin: 0;
+  padding: 0 10px var(--xp-space-6);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-tertiary);
+}
+
+.navItem {
   display: flex;
-  gap: var(--xp-space-2);
-  padding: 0;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-control);
-  background: var(--xp-color-bg);
-  box-shadow: var(--xp-elevation-xs);
-}
-
-.segmentedInline {
-  align-self: flex-start;
-}
-
-.segment {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: var(--xp-space-sm);
-  min-height: 44px;
-  padding: var(--xp-space-sm) var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-12);
   border: 1px solid transparent;
   border-radius: var(--xp-border-radius-control);
   background: transparent;
   color: var(--xp-color-text-secondary);
   font: inherit;
-  font-size: var(--xp-font-size-body-lg);
-  line-height: var(--xp-line-height-body-lg);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
   font-weight: var(--xp-font-weight-medium);
-  white-space: nowrap;
+  text-align: left;
   cursor: pointer;
-  transition:
-    background-color 0.16s ease,
-    color 0.16s ease,
-    border-color 0.16s ease;
 }
 
-.segmentFill {
-  flex: 1;
+.navItem:hover {
+  background: var(--xp-color-bg-muted);
+}
+
+.navItemActive,
+.navItemActive:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.navLabel {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.segment:hover {
+.navBadge {
+  flex-shrink: 0;
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.navItemActive .navBadge {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+}
+
+/* "Hình thức thuê" (22588:63438): hộp trắng viền gray-200, mục chọn nền primary-low + chấm vàng. */
+.railService {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+}
+
+.railServiceLabel {
+  margin: 0;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-tertiary);
+}
+
+.railServiceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-12);
+  border: none;
+  border-radius: var(--xp-border-radius-chip);
+  background: transparent;
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: left;
+  cursor: pointer;
+}
+
+.railServiceItem:hover {
+  background: var(--xp-color-bg-muted);
+}
+
+.railServiceItemActive,
+.railServiceItemActive:hover {
+  background: var(--xp-color-primary-light);
   color: var(--xp-color-text);
 }
 
-.segmentActive,
-.segmentActive:hover {
-  border-color: var(--xp-color-border-strong);
-  background: var(--xp-color-bg-container);
-  color: var(--xp-color-primary-hover);
-  box-shadow: var(--xp-elevation-xs);
+.railDot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
 }
 
-.segmentIcon {
-  display: inline-flex;
-  font-size: 20px;
-}
-
-.segment:focus-visible,
-.seeMore:focus-visible,
-.chip:focus-visible,
-.resetBtn:focus-visible,
+.navItem:focus-visible,
+.railServiceItem:focus-visible,
+.tab:focus-visible,
+.typeCard:focus-visible,
+.brandSearch:focus-visible,
+.tag:focus-visible,
+.clearAll:focus-visible,
 .clearBtn:focus-visible,
 .applyBtn:focus-visible,
 .closeBtn:focus-visible {
@@ -192,93 +284,36 @@
   outline-offset: 2px;
 }
 
-.dashedDivider {
-  width: 100%;
-  margin: 0;
-  border: none;
-  border-top: 1px dashed var(--xp-color-border-strong);
-}
-
-.fieldsRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
-}
-
-.field {
+/* Vùng nhóm (22588:63447): đệm 20, khe 20. `position: relative` để offsetTop của nhóm tính theo nó. */
+.scroll {
+  position: relative;
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.fieldLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-  font-weight: var(--xp-font-weight-medium);
-  color: var(--xp-color-text-secondary);
-}
-
-.fieldIcon {
-  color: var(--xp-color-primary);
-  font-size: 16px;
-}
-
-.fieldControl {
-  display: flex;
-  min-width: 0;
-  min-height: 40px;
-  align-items: center;
-  padding: 2px 14px;
-  border: 1px solid var(--xp-color-border-strong);
-  border-radius: var(--xp-border-radius-control);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-elevation-xs);
-}
-
-/* Viên địa điểm nằm TRONG ô nhập — bỏ viền/nền của viên để không thành hai lớp khung. */
-.fieldControl .locationTrigger {
-  width: 100%;
-  min-height: 0;
-  justify-content: flex-start;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  font-size: var(--xp-font-size-body);
-}
-
-/* ─── Hai cột tiêu chí ───────────────────────────────────────────────────── */
-.columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
-}
-
-.column {
-  display: flex;
-  min-width: 0;
+  flex: 1;
   flex-direction: column;
   gap: var(--xp-space-20);
+  overflow-y: auto;
+  padding: var(--xp-space-20);
 }
 
-.group {
+.section {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-md);
 }
 
-.groupHeader {
+.sectionHeader {
   display: flex;
+  min-height: 24px;
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-12);
 }
 
-.groupTitle {
+.sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-6);
   margin: 0;
   font-size: var(--xp-font-size-body-lg);
   line-height: var(--xp-line-height-body-lg);
@@ -286,243 +321,273 @@
   color: var(--xp-color-text);
 }
 
-.groupHint {
-  flex-shrink: 0;
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
-}
-
-.options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--xp-space-2) var(--xp-space-12);
-}
-
-.optionsSingle {
-  grid-template-columns: 1fr;
-}
-
-.option {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-  min-height: 30px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.optionLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-xs);
-  min-width: 0;
-}
-
-.optionText {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body-relaxed);
-  color: var(--xp-color-text-secondary);
-}
-
-/* "4 chỗ" cạnh kiểu xe — Figma "Seat Count". */
-.optionPill {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
-  white-space: nowrap;
-}
-
-.note {
-  margin: 0;
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
-}
-
-.seeMore {
-  align-self: flex-start;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--xp-color-primary);
-  font: inherit;
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-  font-weight: var(--xp-font-weight-medium);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.seeMore:hover {
-  color: var(--xp-color-primary-hover);
-}
-
 .divider {
+  flex-shrink: 0;
   width: 100%;
   margin: 0;
   border: none;
-  border-top: 1px solid var(--xp-color-border);
-}
-
-/* ─── Khoảng giá ─────────────────────────────────────────────────────────── */
-.priceBlock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-12);
-}
-
-.priceSlider {
-  margin: var(--xp-space-xs) 6px 0;
-}
-
-.priceScale {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
-}
-
-/* ─── Không cần xác nhận ─────────────────────────────────────────────────── */
-.toggleBlock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-12);
-}
-
-.toggleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-md);
-}
-
-.toggleText {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
-}
-
-.policyNote {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-12);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-warning-bg);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-secondary);
-}
-
-.policyIcon {
-  flex-shrink: 0;
-  margin-top: 1px;
-  font-size: 16px;
-  color: var(--xp-color-warning);
-}
-
-/* ─── Đang chọn ──────────────────────────────────────────────────────────── */
-.selectedBar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-sm) 32px var(--xp-space-12);
-}
-
-.selectedLabel {
-  flex-shrink: 0;
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
+  border-top: 1px solid var(--xp-color-border-subtle);
 }
 
 .chips {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  color: var(--xp-color-text-tertiary);
+}
+
+.infoText {
+  margin: 0;
+}
+
+.infoText + .infoText {
+  margin-top: var(--xp-space-sm);
+}
+
+/* ─── Khoảng giá (22588:63468): khung gray-25 bo 16, thanh trượt + hai ô Tối thiểu/Tối đa ──── */
+.priceBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  padding: 14px var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-subtle);
+}
+
+.priceSlider {
+  margin: var(--xp-space-sm) 10px;
+}
+
+.priceBounds {
+  display: flex;
+  gap: var(--xp-space-12);
+}
+
+.priceBound {
+  display: flex;
   min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: 10px 14px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+.priceBoundLabel {
+  flex-shrink: 0;
+  color: var(--xp-color-text-tertiary);
+}
+
+.priceBoundValue {
+  overflow: hidden;
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Hãng xe & Kiểu dáng ─────────────────────────────────────────────────────── */
+/* "Tìm nhanh hãng xe..." (22588:63505): 180 rộng, nền gray-25, viền gray-200, bo 12, đệm 6/12. */
+.brandSearch {
+  width: 180px;
+  flex-shrink: 0;
+  padding: var(--xp-space-6) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-subtle);
+  color: var(--xp-color-text);
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+}
+
+.brandSearch::placeholder {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Thẻ kiểu dáng (22588:63517): 4 cột khe 12, nền gray-25, viền gray-200, bo 12, đệm 12. */
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--xp-space-12);
+}
+
+.typeCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-12);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-subtle);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.typeCard:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.typeCardActive,
+.typeCardActive:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+}
+
+.typeTitle {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typeDesc {
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ─── Nhóm con (Hộp số · Nhiên liệu…) — hai nhóm một hàng, rộng theo nội dung ─────────────── */
+.subRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.subRow > .subGroup {
+  flex: 1 1 auto;
+}
+
+.subGroup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.subLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-relaxed);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ─── Chân hộp (22588:63539): tag đang chọn trái, hai nút phải ──────────────────────────── */
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-20);
+  border-top: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.tags {
+  display: flex;
+  min-width: 0;
+  flex: 1;
   align-items: center;
   gap: var(--xp-space-sm);
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.chip {
+.tags::-webkit-scrollbar {
+  display: none;
+}
+
+.tagsSpacer {
+  flex: 1;
+}
+
+.tag {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 2px;
-  padding: 2px 4px 2px 10px;
-  border: 1px solid var(--xp-color-primary-bright);
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-primary-border);
   border-radius: var(--xp-border-radius-pill);
   background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary-hover);
+  color: var(--xp-color-primary);
   font: inherit;
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-  font-weight: var(--xp-font-weight-medium);
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-semibold);
   white-space: nowrap;
   cursor: pointer;
 }
 
-.chip:hover {
-  background: var(--xp-color-primary-muted);
+.tag:hover {
+  border-color: var(--xp-color-primary);
 }
 
-.chipIcon {
-  font-size: 12px;
+.tagIcon {
+  font-size: 16px;
 }
 
-.resetBtn {
-  display: inline-flex;
+.clearAll {
   flex-shrink: 0;
-  align-items: center;
-  padding: 2px;
+  padding: 0;
   border: none;
   background: transparent;
-  color: var(--xp-color-primary);
-  font-size: 16px;
+  color: var(--xp-color-text-secondary);
+  font: inherit;
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.resetBtn:hover {
-  color: var(--xp-color-primary-hover);
+.clearAll:hover {
+  color: var(--xp-color-text);
 }
 
-/* ─── Chân hộp ───────────────────────────────────────────────────────────── */
-.footer {
-  flex-shrink: 0;
+.actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--xp-space-12);
-  padding: var(--xp-space-20) 32px var(--xp-space-20);
-  border-top: 1px solid var(--xp-color-border);
-  background: var(--xp-color-bg-container);
 }
 
 .clearBtn,
 .applyBtn {
-  min-height: 48px;
-  padding: var(--xp-space-12) var(--xp-space-20);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-6);
+  padding: 10px var(--xp-space-md);
   border-radius: var(--xp-border-radius-control);
   font: inherit;
   font-size: var(--xp-font-size-body-lg);
   line-height: var(--xp-line-height-body-lg);
   font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.16s ease,
@@ -540,9 +605,8 @@
 }
 
 .applyBtn {
-  min-width: 160px;
   border: none;
-  background: var(--xp-gradient-primary);
+  background: var(--xp-gradient-special);
   color: var(--xp-color-primary-contrast);
 }
 
@@ -550,68 +614,172 @@
   filter: brightness(0.96);
 }
 
-/* ─── Màn hẹp: toàn màn hình, cả thân cuộn chung ─────────────────────────── */
+.applyIcon {
+  font-size: 20px;
+}
+
+/* ─── Điện thoại / máy tính bảng hẹp — Figma 22600:78527 ───────────────────────────────── */
 @media (max-width: 768px) {
+  .onlyWide {
+    display: none;
+  }
+
+  .onlyNarrow {
+    display: inline;
+  }
+
+  /* Tấm trượt từ đáy, chừa 44px trên cùng (Figma "_Filter Modal" y=44), bo 16 hai góc trên. */
   .overlay {
+    align-items: flex-end;
     padding: 0;
   }
 
   .modal {
     max-width: none;
-    height: 100%;
-    max-height: none;
-    border-radius: 0;
+    height: calc(100dvh - 44px);
+    border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0;
   }
 
+  /* "Header cố định" (22600:78237): đệm 16, khe 16; tiêu đề → viên → (khay) → dải tab. */
   .header {
-    padding: var(--xp-space-md) 56px var(--xp-space-12) var(--xp-space-md);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    border-bottom-color: var(--xp-color-border);
   }
 
-  .body {
-    overflow-y: auto;
+  .headerTripOpen {
+    border-bottom-color: var(--xp-color-primary);
   }
 
-  .context {
-    padding: 0 var(--xp-space-md) var(--xp-space-md);
+  .headTop {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
   }
 
-  .scroll {
-    flex: none;
-    overflow: visible;
-    padding: var(--xp-space-sm) var(--xp-space-md) var(--xp-space-lg);
+  .headTop > :last-child {
+    max-width: none;
   }
 
-  .segment {
-    padding-inline: var(--xp-space-sm);
-    font-size: var(--xp-font-size-body);
+  .titleArea {
+    padding-right: 40px;
   }
 
-  /* Ba tab dịch vụ trên 390px: bỏ icon, cho nhãn xuống dòng thay vì bị cắt ở mép. */
-  .segmentFill {
-    white-space: normal;
-    text-align: center;
-    line-height: var(--xp-line-height-body-sm);
+  .trayWrap {
+    position: static;
   }
 
-  .segmentFill .segmentIcon {
+  .tabs {
+    display: flex;
+    gap: var(--xp-space-6);
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 0 16px;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
     display: none;
   }
 
-  .fieldsRow,
-  .columns {
-    grid-template-columns: 1fr;
-    gap: var(--xp-space-md);
+  .tab {
+    flex-shrink: 0;
+    padding: var(--xp-space-6) var(--xp-space-12);
+    border: 1px solid var(--xp-color-border);
+    border-radius: var(--xp-border-radius-pill);
+    background: var(--xp-color-bg-container);
+    color: var(--xp-color-text-secondary);
+    font: inherit;
+    font-size: var(--xp-font-size-label);
+    line-height: var(--xp-line-height-label);
+    font-weight: var(--xp-font-weight-medium);
+    white-space: nowrap;
+    cursor: pointer;
   }
 
-  .selectedBar {
-    padding-inline: var(--xp-space-md);
+  .tabActive {
+    border-color: var(--xp-color-bg-inverse);
+    background: var(--xp-color-bg-inverse);
+    color: var(--xp-color-text-on-dark);
+    font-weight: var(--xp-font-weight-semibold);
   }
 
+  .rail {
+    display: none;
+  }
+
+  .scroll {
+    gap: 0;
+    padding: 0;
+  }
+
+  .section {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .section + .section {
+    border-top: 1px solid var(--xp-color-border-subtle);
+  }
+
+  .brandSearch {
+    display: none;
+  }
+
+  .typeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--xp-space-sm);
+  }
+
+  .typeCard {
+    padding: var(--xp-space-sm) var(--xp-space-12);
+  }
+
+  /* Nhóm con không nhãn, ngăn bằng vạch mảnh (22600:78335) — nhãn còn cho trình đọc màn hình. */
+  .subRow {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .subGroup {
+    padding-top: 12px;
+    border-top: 1px solid var(--xp-color-border-subtle);
+  }
+
+  .sectionHeader + .subRow > .subGroup:first-child {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .subLabel {
+    display: none;
+  }
+
+  .priceBox {
+    padding: 13px;
+  }
+
+  .priceBound {
+    padding: var(--xp-space-sm) 14px;
+  }
+
+  /* "Footer cố định" (22600:78380): chỉ hai nút, "Xem kết quả" giãn hết phần còn lại. */
   .footer {
-    padding: var(--xp-space-12) var(--xp-space-md);
+    padding: 16px;
+    border-top-color: var(--xp-color-border);
   }
 
-  .clearBtn,
+  .tags,
+  .tagsSpacer {
+    display: none;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
   .applyBtn {
     flex: 1;
     min-width: 0;

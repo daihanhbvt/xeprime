@@ -104,11 +104,29 @@ function instantBookFilter(serviceType?: string): Prisma.PublicListingWhereInput
     : { instantBookServiceTypes: { isEmpty: false } };
 }
 
-/** Lọc khoảng giá thuê/ngày. Listing chưa có giá không lọt khi có ràng buộc giá. */
-function priceFilter(min?: number, max?: number): Prisma.PublicListingWhereInput {
+/**
+ * Cột giá mà khoảng giá và sắp xếp theo giá đọc. Dài hạn so GIÁ THÁNG (`monthly_price` - thẻ xe dài
+ * hạn hiện "/tháng", ADR 0011); mọi trường hợp khác so giá ngày tự lái như trước. Một hàm cho cả
+ * `where`, bản SQL sinh đôi, `orderBy` và facet giá, để bốn chỗ không thể so bốn cột khác nhau.
+ */
+export function listingPriceField(serviceType?: string): 'monthlyPrice' | 'weekdayPrice' {
+  return serviceType === SERVICE_TYPE.LONG_TERM ? 'monthlyPrice' : 'weekdayPrice';
+}
+
+const PRICE_COLUMN_SQL = {
+  monthlyPrice: Prisma.sql`pl."monthly_price"`,
+  weekdayPrice: Prisma.sql`pl."weekday_price"`,
+} as const;
+
+/** Lọc khoảng giá (ngày, hoặc tháng với dài hạn). Listing chưa có giá không lọt khi có ràng buộc giá. */
+function priceFilter(
+  min: number | undefined,
+  max: number | undefined,
+  serviceType: string | undefined,
+): Prisma.PublicListingWhereInput {
   if (min == null && max == null) return {};
   return {
-    weekdayPrice: {
+    [listingPriceField(serviceType)]: {
       ...(min != null ? { gte: min } : {}),
       ...(max != null ? { lte: max } : {}),
     },
@@ -235,7 +253,7 @@ export function buildListingWhere(
     and.push({ features: { hasEvery: query.features } });
   }
   if (exclude !== 'price') {
-    const price = priceFilter(query.priceMin, query.priceMax);
+    const price = priceFilter(query.priceMin, query.priceMax, query.serviceType);
     if (Object.keys(price).length > 0) and.push(price);
   }
   if (exclude !== 'hourly' && query.hourly) and.push({ hourlyPrice: { not: null } });
@@ -357,8 +375,9 @@ export function buildListingWhereSql(
     and.push(Prisma.sql`pl."features" @> ARRAY[${Prisma.join(query.features)}]::text[]`);
   }
   if (exclude !== 'price') {
-    if (query.priceMin != null) and.push(Prisma.sql`pl."weekday_price" >= ${query.priceMin}`);
-    if (query.priceMax != null) and.push(Prisma.sql`pl."weekday_price" <= ${query.priceMax}`);
+    const column = PRICE_COLUMN_SQL[listingPriceField(query.serviceType)];
+    if (query.priceMin != null) and.push(Prisma.sql`${column} >= ${query.priceMin}`);
+    if (query.priceMax != null) and.push(Prisma.sql`${column} <= ${query.priceMax}`);
   }
   if (exclude !== 'hourly' && query.hourly) and.push(Prisma.sql`pl."hourly_price" IS NOT NULL`);
   if (exclude !== 'delivery' && query.delivery) and.push(Prisma.sql`pl."delivery_enabled" = true`);

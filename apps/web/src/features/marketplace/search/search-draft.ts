@@ -16,6 +16,7 @@ export {
   draftToFilterPatch,
   resolveServiceType,
   serviceUsesRentalRange,
+  type LongTermPick,
   type RentalMode,
   type SearchDraft,
 } from '@xeprime/domain';

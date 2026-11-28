@@ -69,6 +69,28 @@ describe('parseFilters - URL searchParams → MarketplaceFilters', () => {
   });
 });
 
+describe('applyFilterPatch - đổi giữa giá ngày và giá tháng (dài hạn)', () => {
+  const base = () => new URLSearchParams('serviceType=self_drive&priceMin=800000&priceMax=1500000');
+
+  it('tự lái → dài hạn: khoảng giá NGÀY bị xoá (đặt lên giá tháng là danh sách rỗng)', () => {
+    const params = base();
+    applyFilterPatch(params, { serviceType: 'long_term' });
+    expect(params.has('priceMin')).toBe(false);
+    expect(params.has('priceMax')).toBe(false);
+  });
+
+  it('cùng đơn vị (tự lái → có tài xế) thì giữ; patch tự đặt giá thì dùng giá đó', () => {
+    const sameUnit = base();
+    applyFilterPatch(sameUnit, { serviceType: 'with_driver' });
+    expect(sameUnit.get('priceMin')).toBe('800000');
+
+    const withPrice = base();
+    applyFilterPatch(withPrice, { serviceType: 'long_term', priceMin: 10_000_000 });
+    expect(withPrice.get('priceMin')).toBe('10000000');
+    expect(withPrice.get('priceMax')).toBe('1500000');
+  });
+});
+
 describe('applyFilterPatch - patch → searchParams', () => {
   it('mảng join CSV; mảng rỗng / false / undefined xoá param', () => {
     const params = new URLSearchParams('bodyType=sedan&hourly=1&serviceType=self_drive');
@@ -111,6 +133,26 @@ describe('toListingQueryParams - filter → query API', () => {
     expect(q.priceMin).toBe(500000);
     expect(q.brand).toBeNull();
     expect(q.hourly).toBeNull();
+  });
+
+  it('dài hạn: ngày nhận + gói trên URL → hỏi API xe rảnh trong phần LÕI của khoảng đó', () => {
+    const filters = parseFilters(
+      new URLSearchParams('serviceType=long_term&ltFrom=2099-01-15&ltMonths=2'),
+    );
+    expect(filters).toEqual({ serviceType: 'long_term', ltFrom: '2099-01-15', ltMonths: 2 });
+
+    const q = toListingQueryParams(filters);
+    // Hết ngày nhận (00:00 16/01 giờ VN) → đầu ngày trả (00:00 15/03 giờ VN).
+    expect(q.pickupAt).toBe('2099-01-15T17:00:00.000Z');
+    expect(q.returnAt).toBe('2099-03-14T17:00:00.000Z');
+    // Hai khoá của URL không đi thẳng lên API.
+    expect(q).not.toHaveProperty('ltFrom');
+    expect(q).not.toHaveProperty('ltMonths');
+    // Là ngữ cảnh tìm kiếm, không phải facet: "Xoá bộ lọc" giữ nguyên.
+    expect(FACET_FILTER_KEYS as readonly string[]).not.toContain('ltFrom');
+
+    // Tự lái không đọc hai khoá đó.
+    expect(toListingQueryParams({ ...filters, serviceType: 'self_drive' }).pickupAt).toBeNull();
   });
 
   it('hoá đơn VAT (ADR 0059): sống trên URL, gửi đúng tham số, "Xoá bộ lọc" xoá được', () => {

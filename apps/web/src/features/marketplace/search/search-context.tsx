@@ -44,6 +44,7 @@ import {
   draftToFilterPatch,
   resolveServiceType,
   searchContextSignature,
+  type LongTermPick,
   type SearchDraft,
 } from './search-draft';
 
@@ -61,6 +62,14 @@ interface SearchExperienceValue {
   setRouteType: (next: RouteType) => void;
   setRentalRange: (next: RentalRange) => void;
   setRentalMode: (next: RentalMode) => void;
+  /** Ngày nhận mong muốn + gói của thuê DÀI HẠN (ADR 0011 - nguyện vọng, gian hàng chốt lịch). */
+  setLongTerm: (next: LongTermPick) => void;
+  /**
+   * Ghi trọn MỘT hành trình (loại xe · dịch vụ · tỉnh · khoảng thuê) trong một lượt — khay "Đổi
+   * hành trình" của hộp Bộ lọc giữ bản nháp riêng và chỉ áp khi khách bấm "Cập nhật hành trình".
+   * Cùng luật với từng setter lẻ ở trên, chỉ khác là một lần ghi URL thay vì bốn.
+   */
+  applyTrip: (next: TripDraft) => void;
   /** Điều hướng sang `/search` với ngữ cảnh hiện tại. */
   submit: () => void;
   /** Tỉnh/thành có xe — nạp MỘT lần cho cả hero lẫn sticky, không hai subscription. */
@@ -68,6 +77,12 @@ interface SearchExperienceValue {
   destinationsLoading: boolean;
   destinationsError: unknown;
 }
+
+/** Phần hành trình của thẻ tìm kiếm mà khay "Đổi hành trình" sửa được. */
+export type TripDraft = Pick<
+  SearchDraft,
+  'vehicleType' | 'serviceType' | 'provinceCode' | 'rental' | 'longTerm'
+>;
 
 const SearchExperienceContext = createContext<SearchExperienceValue | null>(null);
 
@@ -138,6 +153,7 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
           vehicleType: filters.vehicleType ? fromUrl.vehicleType : prev.vehicleType,
           rental: filters.pickupAt && filters.returnAt ? fromUrl.rental : prev.rental,
           routeType: filters.routeType ? fromUrl.routeType : prev.routeType,
+          longTerm: filters.ltFrom ? fromUrl.longTerm : prev.longTerm,
         };
       });
     }
@@ -170,12 +186,7 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
    * khách một thứ họ chưa bấm. Không bật `userEditedRef`: đây là điền sẵn, không phải thao tác.
    */
   const [restoredVehicleType, setRestoredVehicleType] = useState(false);
-  if (
-    !restoredVehicleType &&
-    rememberedVehicleType &&
-    !isResultsPage &&
-    !filters.vehicleType
-  ) {
+  if (!restoredVehicleType && rememberedVehicleType && !isResultsPage && !filters.vehicleType) {
     setRestoredVehicleType(true);
     setDraft((prev) => ({
       ...prev,
@@ -342,6 +353,34 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
         rememberRentalRange({ ...draft.rental, mode });
         edit((prev) => ({ ...prev, rental: { ...prev.rental, mode } }));
       },
+      setLongTerm: (longTerm) => edit((prev) => ({ ...prev, longTerm })),
+      /*
+       * Bộ nhớ trình duyệt chỉ ghi phần khách THỰC SỰ đổi trong khay — bấm "Cập nhật" mà giữ nguyên
+       * khoảng thuê gợi ý sẵn thì không đóng dấu nó thành lựa chọn của khách (cùng lý do với
+       * `setRentalRange`). Đổi sang xe máy dọn số chỗ/kiểu dáng ô tô, và ngược lại — đúng như
+       * `setVehicleType`.
+       */
+      applyTrip: (next) => {
+        const serviceType = resolveServiceType(next.vehicleType, next.serviceType);
+        if (next.vehicleType !== draft.vehicleType) rememberVehicleType(next.vehicleType);
+        if (next.provinceCode !== draft.provinceCode) rememberProvince(next.provinceCode);
+        const rentalChanged =
+          next.rental.mode !== draft.rental.mode ||
+          !sameMoment(next.rental.pickupAt, draft.rental.pickupAt) ||
+          !sameMoment(next.rental.returnAt, draft.rental.returnAt);
+        if (rentalChanged) rememberRentalRange(next.rental);
+
+        const merged: SearchDraft = { ...draft, ...next, serviceType };
+        edit(() => merged);
+        if (isResultsPage) {
+          setFilters({
+            ...draftToFilterPatch(merged),
+            ...(next.vehicleType === VEHICLE_TYPE.MOTORBIKE
+              ? { seats: undefined, bodyType: undefined }
+              : { motorbikeCategory: undefined }),
+          });
+        }
+      },
       /*
        * Trang kết quả đã lọc sống theo từng thay đổi, nên "Tìm xe" ở đó chỉ cần đảm bảo URL
        * khớp nháp (trường hợp người dùng chưa đổi gì thì đây là lần ghi đầu tiên).
@@ -365,4 +404,9 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
   return (
     <SearchExperienceContext.Provider value={value}>{children}</SearchExperienceContext.Provider>
   );
+}
+
+function sameMoment(a: RentalRange['pickupAt'], b: RentalRange['pickupAt']): boolean {
+  if (!a || !b) return a === b;
+  return a.isSame(b);
 }
