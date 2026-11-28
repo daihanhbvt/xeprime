@@ -8,10 +8,10 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { IconSquareButton } from '@/components/ui/IconSquareButton';
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { useColors } from '@/theme/ThemeProvider';
 import { iconSize } from '@/theme/tokens';
-import { Callout } from '@/components/ui/Callout';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { SkeletonText } from '@/components/ui/Skeleton';
@@ -70,7 +70,7 @@ export function DriverWageSettingsButton({ iconOnly = false }: { iconOnly?: bool
           {...(canManage ? {} : { disabled: true })}
           onPress={() => setEditing(true)}
         >
-          <Ionicons name="wallet-outline" size={iconSize.lg} color={colors.text} />
+          <LineIcon name="wallet" size={iconSize.lg} color={colors.text} />
         </IconSquareButton>
         {editing ? <DriverWageSettingsSheet settings={data} onClose={() => setEditing(false)} /> : null}
       </>
@@ -81,7 +81,7 @@ export function DriverWageSettingsButton({ iconOnly = false }: { iconOnly?: bool
     <>
       <Button
         label={label}
-        icon="wallet-outline"
+        lineIcon="wallet"
         variant={data.dailyWage ? 'secondary' : 'outline'}
         size="sm"
         block={false}
@@ -164,6 +164,8 @@ function DriverWageSettingsSheet({
       open
       onClose={onClose}
       title={t('dialogTitle')}
+      // "Áp dụng cho các lượt gán sau…" nằm trong ⓘ cạnh tiêu đề (người dùng 28/11/2026).
+      titleAdornment={<InfoHint content={t('appliesNext')} label={t('dialogTitle')} />}
       footer={
         <Button
           variant="gradient"
@@ -195,7 +197,6 @@ function DriverWageSettingsSheet({
           }
         />
       )}
-      <Callout tone="info" title={t('appliesNext')} />
       {settings.dailyWage ? (
         <Button
           label={t('clear')}

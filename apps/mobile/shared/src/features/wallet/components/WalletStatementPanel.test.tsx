@@ -87,7 +87,7 @@ describe('WalletStatementPanel', () => {
    */
   it('luôn hiện và luôn tải, không cần mở khối', async () => {
     const view = await render(
-      withIntl(<WalletStatementPanel filters={filters} onFiltersChange={jest.fn()} />),
+      withIntl(<WalletStatementPanel filters={filters} onFiltersChange={jest.fn()} loadMoreRef={{ current: null }} />),
     );
 
     expect(useWalletStatementMock).toHaveBeenLastCalledWith(filters, true);
@@ -106,6 +106,7 @@ describe('WalletStatementPanel', () => {
         <WalletStatementPanel
           filters={{ period: current, page: 3 }}
           onFiltersChange={onFiltersChange}
+          loadMoreRef={{ current: null }}
         />,
       ),
     );
@@ -127,6 +128,7 @@ describe('WalletStatementPanel', () => {
         <WalletStatementPanel
           filters={{ period: '2024-01', page: 1 }}
           onFiltersChange={onFiltersChange}
+          loadMoreRef={{ current: null }}
         />,
       ),
     );
@@ -143,7 +145,7 @@ describe('WalletStatementPanel', () => {
       refetch: jest.fn(),
     });
     const view = await render(
-      withIntl(<WalletStatementPanel filters={filters} onFiltersChange={jest.fn()} />),
+      withIntl(<WalletStatementPanel filters={filters} onFiltersChange={jest.fn()} loadMoreRef={{ current: null }} />),
     );
 
     expect(view.getByText('4,6')).toBeTruthy();

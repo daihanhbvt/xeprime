@@ -1163,6 +1163,7 @@
         "takeDeposit": "Mark as collected",
         "empty": "No collateral recorded yet.",
         "returnedTag": "Returned",
+        "heldTagApp": "Holding",
         "returnedBy": "Returned by {name} at {time}",
         "returnedAt": "Returned at {time}",
         "markReturned": "Mark returned",

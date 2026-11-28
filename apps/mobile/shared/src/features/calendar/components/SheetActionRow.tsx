@@ -1,72 +1,81 @@
-import { Ionicons } from '@/components/icons/Ionicons';
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import type { IconName } from '@/components/ui/Chip';
-import { IconDisc } from '@/components/ui/IconDisc';
-import { themed, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { LineIcon, type LineIconName } from '@/components/icons/LineIcon';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight, radius, typeScale } from '@/theme/tokens';
 
-const useTone = themed(
-  (colors) =>
-    ({
-      neutral: { fg: colors.textMuted, bg: colors.surfaceMuted },
-      primary: { fg: colors.primaryActive, bg: colors.primaryLight },
-      danger: { fg: colors.danger, bg: colors.dangerSurface },
-    }) as const,
-);
+/** Ô icon 36 (đệm 8 quanh icon 20) bo 12 - Figma "Filter Categories" `24729:82792`. */
+const ICON_BOX_PAD = 8;
+const ICON_SIZE = 20;
+const ROW_PAD = 12;
+const ROW_GAP = 8;
 
 /**
- * Một dòng HÀNH ĐỘNG trong tấm trượt của lịch — không phải một lựa chọn giá trị.
+ * Một dòng thao tác của các tấm lịch - Figma Lịch thuê xe "Thao tác" (`24729:82791`): thẻ viền
+ * `stroke/gray-100` bo 16, đệm 12; ô icon nền `bg/gray-50` bo 12; nhãn 14/20 semibold + gợi ý 12/18
+ * `text/gray/medium`; mũi tên "Right 2" bên phải.
  *
- * Cố ý không dùng [`MenuOption`](../../../components/ui/MenuOption.tsx): dòng đó mang
- * `accessibilityRole="radio"` vì nó CHỌN một giá trị trong nhóm. "Đặt xe", "Khóa xe", "Đặt giá"
- * thì mỗi dòng mở một luồng riêng và không có cái nào "đang được chọn" — đọc ra là radio thì
- * người dùng trình đọc màn hình nghe thấy một nhóm lựa chọn không có mục nào bật, và chờ một
- * trạng thái không bao giờ tới.
- *
- * `trailing` chở phần điều khiển của riêng dòng (công tắc khoá nhanh của thẻ ngày); có nó thì cả
- * dòng KHÔNG còn là một nút — xem `pressable`.
+ * `highlighted` - dòng NỔI của Figma (dòng "Đặt xe"): nền `bg/primary-25`, viền `stroke/primary`,
+ * ô icon `bg/primary-low`, nhãn `text/brand/primary`.
  */
 export function SheetActionRow({
   label,
   hint,
   icon,
-  tone = 'neutral',
+  highlighted = false,
   trailing,
   disabled = false,
   onPress,
 }: {
   label: string;
   hint?: string;
-  icon: IconName;
-  tone?: 'neutral' | 'primary' | 'danger';
+  icon: LineIconName;
+  highlighted?: boolean;
   trailing?: ReactNode;
   disabled?: boolean;
   onPress?: () => void;
 }) {
   const colors = useColors();
-  const TONE = useTone();
   const body = (
     <XStack
       ai="center"
-      gap={space.sm}
-      py={space.sm}
-      minHeight={sizing.touchTarget}
+      gap={ROW_GAP}
+      p={ROW_PAD}
+      br={radius.card}
+      bw={1}
+      bc={highlighted ? colors.brandShape : colors.borderSubtle}
+      bg={highlighted ? colors.brandWash : colors.surface}
       opacity={disabled ? 0.5 : 1}
     >
-      <IconDisc icon={icon} tone={TONE[tone].fg} surface={TONE[tone].bg} />
-      <YStack f={1} gap={1}>
-        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
+      <YStack p={ICON_BOX_PAD} br={radius.control} bg={highlighted ? colors.brandLow : colors.background}>
+        <LineIcon
+          name={icon}
+          size={ICON_SIZE}
+          color={highlighted ? colors.brandShape : colors.placeholder}
+        />
+      </YStack>
+      <YStack f={1} minWidth={0} gap={2}>
+        <Text
+          col={highlighted ? colors.brandShape : colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.semibold}
+        >
           {label}
         </Text>
         {hint ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          <Text
+            col={colors.textMuted}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            fow={fontWeight.regular}
+          >
             {hint}
           </Text>
         ) : null}
       </YStack>
-      {trailing ?? <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} />}
+      {trailing ?? <LineIcon name="chevron-right" size={ICON_SIZE} color={colors.placeholder} />}
     </XStack>
   );
 
@@ -81,7 +90,7 @@ export function SheetActionRow({
       accessibilityHint={hint}
       accessibilityState={{ disabled }}
     >
-      {body}
+      {({ pressed }) => <YStack opacity={pressed ? 0.7 : 1}>{body}</YStack>}
     </Pressable>
   );
 }

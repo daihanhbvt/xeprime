@@ -1,39 +1,44 @@
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import type { LineIconName } from '@/components/icons/LineIcon';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import type { IconName } from '@/components/ui/Chip';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { fontWeight, typeScale } from '@/theme/tokens';
 import { startOfAppDay } from '@xeprime/domain';
 import { SheetActionRow } from './SheetActionRow';
 
 export type CellActionKey = 'booking' | 'block' | 'price';
 
-/** Ô lịch được chạm — xe + ngày ĐẦU khoảng (web `CellActionTarget`). */
+/** Ô lịch được chạm - xe + ngày ĐẦU khoảng (web `CellActionTarget`). */
 export interface CellActionTarget {
   vehicleId: string;
   vehicleName: string;
   date: string;
 }
 
-const ACTION_ICON: Readonly<Record<CellActionKey, IconName>> = {
-  booking: 'calendar-outline',
-  block: 'lock-closed-outline',
-  price: 'pricetag-outline',
+/** Icon Figma "Thao tác" (`24729:82791`): Calender 2 · Lock 2 · Dollar Square. */
+const ACTION_ICON: Readonly<Record<CellActionKey, LineIconName>> = {
+  booking: 'calendar',
+  block: 'lock-2',
+  price: 'dollar-square',
 };
 
+/** Thân tấm: các khối cách nhau 12, các dòng thao tác cách nhau 8 (Figma "Filter Form"). */
+const BODY_GAP = 12;
+const ROW_GAP = 8;
+
 /**
- * Bảng thao tác cho một ô / một KHOẢNG ngày của một xe — native port of web `CalendarCellActions`
- * (lịch v2, 25/11/2026). Web kéo chuột qua nhiều ô để chọn khoảng; trên điện thoại kéo ngang đã là
- * cuộn lịch, nên khoảng chọn bằng ô "Đến ngày" ngay trong tấm (mặc định = ngày được chạm).
+ * Bảng thao tác cho một ô / một KHOẢNG ngày của một xe - native port of web `CalendarCellActions`,
+ * khoác Figma Lịch thuê xe "Thao tác" (`24729:82777`): tiêu đề "Thao tác", dòng phụ là tên xe ·
+ * biển số, ba dòng thẻ - "Đặt xe" là dòng NỔI.
  *
- * Đầu tấm nói ngày (hoặc "từ - đến · N ngày") và trạng thái "Ngày trống / Đã có lịch" của khoảng —
- * cùng phép kiểm `isRangeFree` (chỉ event CHIẾM lịch). Gợi ý từng dòng đổi theo một / nhiều ngày;
- * "Đặt xe" nói rõ khoảng thuê (nhận ngày đầu, trả sáng hôm sau ngày cuối).
+ * Figma không vẽ dòng "ngày · Ngày trống/Đã có lịch" và ô "Đến ngày" - người dùng chốt GIỮ cả hai
+ * (27/11/2026): trên điện thoại kéo ngang đã là cuộn lịch, nên ô "Đến ngày" là đường duy nhất để
+ * khoá / đặt giá / đặt xe nhiều ngày.
  */
 export function CellActionsSheet({
   target,
@@ -44,16 +49,20 @@ export function CellActionsSheet({
 }: {
   target: CellActionTarget | null;
   actions: readonly CellActionKey[];
-  /** Khoảng [ngày đầu, ngày cuối] (tính cả) của xe có trống không — chỉ để hiển thị trạng thái. */
+  /** Khoảng [ngày đầu, ngày cuối] (tính cả) của xe có trống không - chỉ để hiển thị trạng thái. */
   isFree: (vehicleId: string, fromKey: string, toKey: string) => boolean;
   onSelect: (action: CellActionKey, endDate: string) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations('Calendar');
   return (
     <BottomSheet
       open={target !== null && actions.length > 0}
       onClose={onClose}
-      title={target?.vehicleName ?? ''}
+      title={t('cellActions.title')}
+      subtitle={target?.vehicleName ?? ''}
+      chrome="v2"
+      headerDivider
     >
       {/* Mỗi lần mở là một khoảng mới, bắt đầu từ ô vừa chạm. */}
       {target ? (
@@ -108,8 +117,13 @@ function CellActionsBody({
       : t(`cellActions.${key}.${multi ? 'hintRange' : 'hint'}`);
 
   return (
-    <YStack gap={space.sm}>
-      <Text col={free ? colors.textMuted : colors.warning} fos={fontSize.bodySm}>
+    <YStack gap={BODY_GAP}>
+      <Text
+        col={free ? colors.textMuted : colors.warning}
+        fos={typeScale.body.fontSize}
+        lh={typeScale.body.lineHeight}
+        fow={fontWeight.medium}
+      >
         {t('cellActions.dateStatus', { date: dateLabel, status })}
       </Text>
       <FieldBox
@@ -119,18 +133,15 @@ function CellActionsBody({
         value={fmt.dateKey(endDate)}
         onPress={() => setPicking(true)}
       />
-      <YStack accessibilityLabel={t('cellActions.menuAriaLabel')}>
+      <YStack gap={ROW_GAP} accessibilityLabel={t('cellActions.menuAriaLabel')}>
         {actions.map((key) => (
           <SheetActionRow
             key={key}
             label={t(`cellActions.${key}.label`)}
             hint={hintFor(key)}
-            /*
-              CÙNG một tông cho cả ba — web tô cả ba đĩa icon bằng một class duy nhất: ba LỐI ĐI
-              ngang hàng, không có cái nào là hành động chính.
-            */
             icon={ACTION_ICON[key]}
-            tone="primary"
+            /* Figma tô NỔI dòng "Đặt xe" - lối đi chính của một ô trống. */
+            highlighted={key === 'booking'}
             onPress={() => onSelect(key, endDate)}
           />
         ))}

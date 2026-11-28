@@ -66,7 +66,7 @@ import {
   useVehicleBusyDays,
 } from '@/features/booking-requests/hooks/use-booking-request-flow';
 import { toQuoteParams } from '@/features/booking-requests/quote-params';
-import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { InsuranceOfferCard } from '@/features/insurance/components/InsuranceOfferCard';
 import { useListingTripBlock } from '../hooks/use-listing-trip-block';
 import { InsuranceFeeHint } from '@/components/ui/InsuranceFeeHint';
 import { Callout } from '@/components/ui/Callout';
@@ -857,9 +857,8 @@ export function ListingBookingCard({
           */
           <YStack gap={space.md}>
             <DashedDivider color={colors.border} />
-            <YStack gap={space.sm}>
-            <Label text={t('insurance.title')} />
-            <InsuranceOptionList
+            {/* Thẻ "Bảo hiểm chuyến đi" (web #347 `InsuranceOfferCard`) - tự có tiêu đề + ghi chú tự nguyện. */}
+            <InsuranceOfferCard
               items={insuranceOffer.items}
               selected={{
                 [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: trip.vehicleProtectionSelected,
@@ -867,13 +866,6 @@ export function ListingBookingCard({
               }}
               onChange={setInsuranceSelected}
             />
-            {/* "Tự nguyện" chỉ đúng với ô khách tự tích; dòng bắt buộc (ADR 0088) có câu riêng. */}
-            {insuranceOffer.items.some((item) => !item.mandatory) ? (
-              <Text col={colors.placeholder} fos={fontSize.bodySm} fontStyle="italic">
-                {t('insurance.note')}
-              </Text>
-            ) : null}
-            </YStack>
           </YStack>
         ) : null}
 

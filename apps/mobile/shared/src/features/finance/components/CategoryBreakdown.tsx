@@ -19,6 +19,7 @@ import type {
   FinanceCategoryBreakdown,
   FinanceCategoryBreakdownItem,
   FinancePeriodFilters,
+  FinanceScope,
 } from '../api';
 
 /** Chiều cao thanh tỷ trọng — đủ dày để đọc được ở đuôi mắt, không dày tới mức thành một khối. */
@@ -43,6 +44,7 @@ export function CategoryBreakdown({
   tone,
   data,
   filters,
+  scope,
   loading,
   error,
 }: {
@@ -52,6 +54,8 @@ export function CategoryBreakdown({
   tone: 'revenue' | 'cost';
   data: FinanceCategoryBreakdown | undefined;
   filters: FinancePeriodFilters;
+  /** Thu hẹp về một xe (Tài chính xe) - đường ra sổ mang theo để mở đúng phiếu của xe đó (web). */
+  scope?: FinanceScope;
   loading: boolean;
   error: boolean;
 }) {
@@ -98,6 +102,7 @@ export function CategoryBreakdown({
             onPress={() =>
               navigateOnce(
                 ROUTES.manage.receipts({
+                  ...(scope?.vehicleId ? { vehicleId: scope.vehicleId } : {}),
                   type,
                   status: RECEIPT_STATUS.APPROVED,
                   ...(item.categoryId ? { categoryId: item.categoryId } : {}),

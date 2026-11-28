@@ -249,49 +249,54 @@ export function CustomerSideCard({
   const tel = telHref(booking.customerPhone);
 
   return (
-    <SideCard>
-      {/* Figma "Nhóm thông tin" `24145:102920`: tên + viên "Khách quen" · SĐT, nút sửa bên phải. */}
-      <XStack ai="center" gap={space.sm}>
-        <YStack f={1} minWidth={0} gap={6}>
-          <XStack ai="center" flexWrap="wrap" gap={space.sm}>
-            <Text
-              col={colors.text}
-              fos={fontSize.body}
-              fow={fontWeight.semibold}
-              numberOfLines={1}
-              {...(onViewProfile
-                ? { onPress: onViewProfile, accessibilityRole: 'link' as const, accessibilityHint: t('viewProfile') }
-                : {})}
-            >
-              {booking.customerName}
-            </Text>
-            {booking.customerCompletedRentals != null &&
-            booking.customerCompletedRentals >= TENANT_CUSTOMER_RETURNING_MIN_RENTALS ? (
-              <Pill label={t('returningCustomer')} tone="success" />
-            ) : null}
-          </XStack>
-          {booking.customerPhone ? (
-            <Text
-              col={colors.text}
-              fos={fontSize.body}
-              alignSelf="flex-start"
-              {...(tel ? { onPress: () => void Linking.openURL(tel), accessibilityRole: 'link' as const } : {})}
-            >
-              {booking.customerPhone}
-            </Text>
-          ) : (
-            <Text col={colors.placeholder} fos={fontSize.label}>
-              {t('noPhone')}
-            </Text>
-          )}
-        </YStack>
+    <SideCard label={t('customer')}>
+      {/* Web/Figma: hàng đầu "Khách hàng" + "Chỉnh sửa" (bút vàng), dưới là tên + "Khách quen" · SĐT. */}
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <SideTitle>{t('customer')}</SideTitle>
         {onEdit ? (
-          // Figma "Edit 2" vàng thương hiệu (bộ `LineIcon`).
           <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel={t('edit')} hitSlop={space.sm}>
-            <LineIcon name="edit" size={20} color={colors.primary} />
+            <XStack ai="center" gap={6}>
+              <LineIcon name="edit" size={16} color={colors.primary} />
+              <Text col={colors.primary} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight} fow={fontWeight.medium}>
+                {t('edit')}
+              </Text>
+            </XStack>
           </Pressable>
         ) : null}
       </XStack>
+      <YStack gap={2}>
+        <XStack ai="center" flexWrap="wrap" gap={space.sm}>
+          <Text
+            col={colors.text}
+            fos={fontSize.body}
+            fow={fontWeight.semibold}
+            numberOfLines={1}
+            {...(onViewProfile
+              ? { onPress: onViewProfile, accessibilityRole: 'link' as const, accessibilityHint: t('viewProfile') }
+              : {})}
+          >
+            {booking.customerName}
+          </Text>
+          {booking.customerCompletedRentals != null &&
+          booking.customerCompletedRentals >= TENANT_CUSTOMER_RETURNING_MIN_RENTALS ? (
+            <Pill label={t('returningCustomer')} tone="success" />
+          ) : null}
+        </XStack>
+        {booking.customerPhone ? (
+          <Text
+            col={colors.textMuted}
+            fos={fontSize.body}
+            alignSelf="flex-start"
+            {...(tel ? { onPress: () => void Linking.openURL(tel), accessibilityRole: 'link' as const } : {})}
+          >
+            {booking.customerPhone}
+          </Text>
+        ) : (
+          <Text col={colors.placeholder} fos={fontSize.label}>
+            {t('noPhone')}
+          </Text>
+        )}
+      </YStack>
     </SideCard>
   );
 }

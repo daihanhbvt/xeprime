@@ -12,7 +12,7 @@ import { IconSquareButton, type IconSquareSize } from './IconSquareButton';
 /** Web `.zaloLogo { width: 18px; height: 18px }`. */
 const ZALO_LOGO = { width: 18, height: 18 } as const;
 /** Figma "Buttons group": các nút cách 8 (cỡ 36); cỡ 44 của màn cũ cách 12. */
-const GAP: Readonly<Record<IconSquareSize, number>> = { md: 8, lg: 12 };
+const GAP: Readonly<Record<IconSquareSize, number>> = { sm: 8, md: 8, card: 8, lg: 12 };
 
 /**
  * Cụm liên hệ dạng ICON — Nhắn tin · Gọi · Zalo (Figma "Buttons group", web `CustomerContactButtons

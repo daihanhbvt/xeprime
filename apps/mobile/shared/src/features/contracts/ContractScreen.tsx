@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { ServiceType, VehicleType } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LEGAL_DOC, LIST_SEPARATOR, legalPath } from '@xeprime/domain';
+import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
@@ -286,11 +287,24 @@ function ContractBody({
           {/* Điều khoản */}
           <Card>
             <YStack gap={space.sm}>
-              <SectionTitle>{t('termsHeading')}</SectionTitle>
-              <Term index={1}>{t('term1')}</Term>
-              <Term index={2}>{t('term2')}</Term>
-              <Term index={3}>{t('term3')}</Term>
-              <Term index={4}>{t('term4')}</Term>
+              <SectionTitle>{tDoc('terms.title')}</SectionTitle>
+              {/*
+                Cùng sáu điều khoản của tờ hợp đồng web (`ContractDocument`, #347): thêm "không giữ bản gốc
+                giấy tờ tuỳ thân" và viện dẫn Điều kiện chung hợp đồng thuê xe (địa chỉ in dạng đọc được).
+              */}
+              <Term index={1}>{tDoc('terms.handover')}</Term>
+              <Term index={2}>{tDoc('terms.liability')}</Term>
+              <Term index={3}>{tDoc('terms.deposit')}</Term>
+              <Term index={4}>{tDoc('terms.idDocs')}</Term>
+              <Term index={5}>{tDoc('terms.platform')}</Term>
+              <Term index={6}>
+                {tDoc('terms.general', {
+                  url: `${resolveWebBaseUrl()}${legalPath.doc(LEGAL_DOC.RENTAL_CONTRACT)}`.replace(
+                    /^https?:\/\//,
+                    '',
+                  ),
+                })}
+              </Term>
             </YStack>
           </Card>
 

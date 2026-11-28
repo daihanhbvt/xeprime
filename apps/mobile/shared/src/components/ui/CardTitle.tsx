@@ -4,9 +4,10 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { InfoHint } from '@/components/ui/InfoHint';
+import { TextWithHint } from '@/components/ui/InfoHint';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -32,8 +33,12 @@ export function CardTitle({
   const colors = useColors();
   // Feedback thiết kế 20/11/2026 (dòng 2 "All Page"): app Partner - tiêu đề khối chỉ chữ, không icon.
   const icon = IS_PARTNER_APP ? undefined : iconProp;
+  // ⓘ lồng sau chữ cuối (`TextWithHint`) - tiêu đề dài xuống dòng vẫn bám chữ và cân giữa dòng.
   const text = (
-    <Text
+    <TextWithHint
+      hint={hint}
+      hintLabel={hintLabel ?? children}
+      hintSize={fontSize.body}
       flexShrink={1}
       col={colors.text}
       fos={typeScale.title.fontSize}
@@ -42,18 +47,9 @@ export function CardTitle({
       accessibilityRole="header"
     >
       {children}
-    </Text>
+    </TextWithHint>
   );
-  const title = hint ? (
-    <XStack f={icon ? 1 : undefined} ai="center" gap={space.xs}>
-      {text}
-      <InfoHint content={hint} label={hintLabel ?? children} />
-    </XStack>
-  ) : icon ? (
-    <YStack f={1}>{text}</YStack>
-  ) : (
-    text
-  );
+  const title = icon ? <YStack f={1}>{text}</YStack> : text;
   if (!icon) return title;
   return (
     <XStack ai="center" gap={space.sm}>
@@ -118,11 +114,8 @@ export function SectionHeader({
       </YStack>
       {action}
       {collapsible ? (
-        <Ionicons
-          name={collapsed ? 'chevron-down' : 'chevron-up'}
-          size={iconSize.sm}
-          color={colors.textMuted}
-        />
+        // Figma "Up 2" / "Down 2" (khung 20) - không dùng glyph Ionicons.
+        <LineIcon name={collapsed ? 'chevron-down-md' : 'chevron-up-md'} color={colors.textMuted} />
       ) : null}
     </XStack>
   );

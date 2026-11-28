@@ -1,30 +1,28 @@
 import { useState } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
-import { ActivityIndicator, Linking, Pressable, StyleSheet } from 'react-native';
+import { Linking } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { useTranslations } from 'use-intl';
 import { SOURCE_CONTRACT_MAX_FILES } from '@xeprime/types';
-import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
+import { ImageSourceSheet } from '@/components/ui/ImageSourceSheet';
 import { FieldLabel } from '@/components/ui/Field';
+import { UploadingFileRow } from '@/components/ui/UploadingFileRow';
+import { Button } from '@/components/ui/Button';
+import { ReceiptAttachmentRow } from '@/features/finance/components/ReceiptAttachmentRow';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { getErrorMessage } from '@/lib/get-error-message';
 import {
-  IMAGE_SOURCE,
   pickImages,
+  pickPdfFile,
+  uploadPrivateFileToR2,
   uploadPrivateImageToR2,
   type ImageSource,
 } from '@/lib/r2-image-upload';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { fontSize, iconSize, radius, space, typeScale } from '@/theme/tokens';
 import { vehiclesApi } from '../api';
-
-const styles = StyleSheet.create({
-  /** Tên tệp phải chiếm hết chiều ngang còn lại; nút gỡ đứng yên ở mép phải. */
-  nameArea: { flex: 1 },
-});
 
 /**
  * Một tài liệu trong form — CHỈ metadata server phát, KHÔNG có URL nào (Wave 4.1).
@@ -64,7 +62,6 @@ export function SourceContractFiles<T extends FieldValues>({
 }) {
   const colors = useColors();
   const t = useTranslations('Common.components.fileList');
-  const tActions = useTranslations('Common.actions');
   const tImage = useTranslations('Common.image');
   const toast = useAppToast();
   /*
@@ -121,6 +118,28 @@ export function SourceContractFiles<T extends FieldValues>({
     }
   }
 
+  /** PDF hợp đồng (web nhận `application/pdf`) - kiểm MIME + dung lượng trong `uploadPrivateFileToR2`. */
+  async function addPdf() {
+    setChoosing(false);
+    setBusy(true);
+    try {
+      const file = await pickPdfFile();
+      if (!file) return;
+      const { fileId } = await uploadPrivateFileToR2(file, (meta) =>
+        vehiclesApi.presignSourceContract(vehicleId, meta),
+      );
+      const uploaded = await vehiclesApi.completeSourceContract(vehicleId, fileId);
+      field.onChange([
+        ...((field.value as ContractFileItem[] | null) ?? []),
+        { id: uploaded.id ?? fileId, name: uploaded.name, size: uploaded.size ?? null, status: 'ready' as const },
+      ]);
+    } catch (error) {
+      toast.showError(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function open(item: ContractFileItem) {
     if (!item.id) return;
     setDownloadingId(item.id);
@@ -136,20 +155,14 @@ export function SourceContractFiles<T extends FieldValues>({
   }
 
   return (
-    <YStack gap={space.xs}>
-      <XStack ai="center" jc="space-between">
-        <FieldLabel label={label} />
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {`${items.length}/${SOURCE_CONTRACT_MAX_FILES}`}
-        </Text>
-      </XStack>
-
-      {items.length === 0 && !busy ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('empty')}
-        </Text>
-      ) : null}
-
+    <YStack gap={space.sm + space.xs}>
+      {/*
+        Figma "Hợp đồng & Chứng từ" `24238:61831` (chốt 27/11/2026): không nhãn ô/đếm riêng (tiêu đề
+        thẻ đã nói) - mỗi tệp một dòng "_File upload item base" (icon loại tệp, tên, ✓ 100%, Tải về ·
+        Xoá), rồi nút viền "+ Tải lên tài liệu" kèm dòng định dạng nghiêng bên phải.
+      */}
+      {/* Nhãn ô + ⓘ định dạng (PDF, JPG, PNG - tối đa 10MB) - người dùng chốt 27/11/2026. */}
+      <FieldLabel label={label} hint={t('hint')} />
       {items.map((item, index) =>
         item.status === 'legacy' ? (
           /* Bản ghi Wave 4 cũ (từng là URL công khai): không mở, không gỡ — chờ tải lên lại. */
@@ -171,107 +184,58 @@ export function SourceContractFiles<T extends FieldValues>({
             </Text>
           </YStack>
         ) : (
-          <XStack key={item.id} ai="center" gap={space.xs}>
-            <Pressable
-              onPress={() => void open(item)}
-              accessibilityRole="button"
-              accessibilityLabel={t('downloadFile', { name: item.name })}
-              style={styles.nameArea}
-            >
-              <XStack ai="center" gap={space.xs} minHeight={sizing.touchTarget}>
-                <Ionicons
-                  name={
-                    item.name.toLowerCase().endsWith('.pdf')
-                      ? 'document-text-outline'
-                      : 'image-outline'
-                  }
-                  size={iconSize.sm}
-                  color={colors.textMuted}
-                />
-                <Text f={1} col={colors.primaryActive} fos={fontSize.bodySm} numberOfLines={1}>
-                  {item.name}
-                </Text>
-              </XStack>
-            </Pressable>
-
-            {/*
-              Nút tải xuống HIỆN RA thành chữ, không chỉ là cái tên tệp bấm được.
-
-              Web có `<Button icon={<DownloadOutlined />}>Tải xuống</Button>` cho từng tệp; ở đây
-              chỉ có tên tệp tô màu nhấn, mà trên điện thoại không có con trỏ chuột để hé lộ rằng
-              nó bấm được — người dùng đọc ra là "app không tải xuống được".
-            */}
-            <Button
-              label={tActions('download')}
-              icon="download-outline"
-              variant="ghost"
-              size="sm"
-              block={false}
-              loading={downloadingId === item.id}
-              onPress={() => void open(item)}
-            />
-
-            {canEdit ? (
-              <Pressable
-                onPress={() => field.onChange(items.filter((entry) => entry.id !== item.id))}
-                accessibilityRole="button"
-                accessibilityLabel={t('removeFile', { name: item.name })}
-                hitSlop={space.xs}
-              >
-                <Ionicons name="trash-outline" size={iconSize.sm} color={colors.danger} />
-              </Pressable>
-            ) : null}
-          </XStack>
+          <ReceiptAttachmentRow
+            key={item.id}
+            url={item.id ?? item.name}
+            name={item.name}
+            downloadLabel={t('downloadFile', { name: item.name })}
+            onDownload={() => void open(item)}
+            downloading={downloadingId === item.id}
+            {...(canEdit
+              ? {
+                  removeLabel: t('removeFile', { name: item.name }),
+                  onRemove: () => field.onChange(items.filter((entry) => entry.id !== item.id)),
+                }
+              : {})}
+          />
         ),
       )}
 
-      {busy ? (
-        <XStack ai="center" gap={space.xs}>
-          <ActivityIndicator size="small" color={colors.textMuted} />
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('uploading')}
-          </Text>
+      {busy ? <UploadingFileRow label={t('uploading')} /> : null}
+
+      {canEdit && !full ? (
+        <XStack>
+          <Button
+            label={t('upload')}
+            lineIcon="add"
+            variant="neutral"
+            size="card"
+            shape="square"
+            block={false}
+            loading={busy}
+            onPress={() => setChoosing(true)}
+          />
         </XStack>
       ) : null}
-
       {fieldState.error?.message ? (
         <Text col={colors.danger} fos={fontSize.bodySm}>
           {fieldState.error.message}
         </Text>
-      ) : (
+      ) : full ? (
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {full ? t('maxReached', { count: SOURCE_CONTRACT_MAX_FILES }) : t('hintImageOnly')}
+          {t('maxReached', { count: SOURCE_CONTRACT_MAX_FILES })}
         </Text>
-      )}
-
-      {canEdit && !full ? (
-        <Button
-          label={t('upload')}
-          icon="cloud-upload-outline"
-          variant="outline"
-          size="sm"
-          block={false}
-          loading={busy}
-          onPress={() => setChoosing(true)}
-        />
       ) : null}
 
-      <BottomSheet open={choosing} onClose={() => setChoosing(false)} title={label}>
-        <YStack gap={space.sm}>
-          <Button
-            label={tImage('takePhoto')}
-            icon="camera-outline"
-            variant="outline"
-            onPress={() => void add(IMAGE_SOURCE.CAMERA)}
-          />
-          <Button
-            label={tImage('chooseFromLibrary')}
-            icon="images-outline"
-            variant="outline"
-            onPress={() => void add(IMAGE_SOURCE.LIBRARY)}
-          />
-        </YStack>
-      </BottomSheet>
+      {/* Cùng tấm chọn nguồn của cả app: Chụp ảnh · Chọn tệp PDF, "Chọn từ thư viện" là nút chính. */}
+      <ImageSourceSheet
+        open={choosing}
+        onClose={() => setChoosing(false)}
+        title={label}
+        onPick={(source) => void add(source)}
+        extraAction={{ label: tImage('sourcePdf'), lineIcon: 'doc-align-left-6', onPress: () => void addPdf() }}
+        libraryPrimary
+      />
     </YStack>
   );
 }

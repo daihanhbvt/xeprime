@@ -40,6 +40,7 @@ type Variant =
   | 'primary'
   | 'gradient'
   | 'outline'
+  | 'outlineDark'
   | 'secondary'
   | 'neutral'
   | 'ghost'
@@ -84,6 +85,8 @@ const useVariant = themed<Record<Variant, { bg: string; fg: string; border: stri
     // Nền thật do `LinearGradient` vẽ; màu đặc chỉ là nền lót.
     gradient: { bg: colors.primary, fg: colors.onPrimary, border: colors.primaryHover },
     outline: { bg: colors.surface, fg: colors.primary, border: colors.primaryMuted },
+    /** Viền như `outline`, CHỮ ĐEN (Figma màn thêm xe thành công: "Danh sách xe" · "Thêm xe mới"). */
+    outlineDark: { bg: colors.surface, fg: colors.text, border: colors.primaryMuted },
     secondary: { bg: colors.surface, fg: colors.text, border: colors.borderInput },
     /** = `CtaButton variant="neutral"` web: nền `bg-container`, viền `border-strong`, chữ `text-secondary`. */
     neutral: { bg: colors.surface, fg: colors.textMuted, border: colors.borderInput },
@@ -350,7 +353,7 @@ export function Button({
           <ActivityIndicator color={fg} size="small" />
         ) : (
           <>
-            {lineIcon ? (
+            {lineIcon && !iconEnd ? (
               <XStack flexShrink={0}>
                 <LineIcon name={lineIcon} size={iconSize.lg} color={fg} />
               </XStack>
@@ -382,6 +385,12 @@ export function Button({
             >
               {label}
             </Text>
+            {/* `iconEnd` áp cho CẢ `lineIcon` (Figma "Gửi duyệt →", "Hoàn thiện hồ sơ xe →"). */}
+            {lineIcon && iconEnd ? (
+              <XStack flexShrink={0}>
+                <LineIcon name={lineIcon} size={iconSize.lg} color={fg} />
+              </XStack>
+            ) : null}
             {icon && iconEnd ? (
               <XStack flexShrink={0}>
                 {icon === 'arrow-forward' ? (

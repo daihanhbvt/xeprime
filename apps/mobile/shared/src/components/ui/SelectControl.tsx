@@ -9,7 +9,7 @@ import { FIELD_V2, FieldLabel, FieldMessage, FieldShell, useFieldAppearance, inL
 import { MenuOption, MenuOptionList } from './MenuOption';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
-import { fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { fieldFontSize, fontWeight, iconSize, radius, sizing, space, typeScale } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
 /**
@@ -37,6 +37,8 @@ export interface SelectControlOption {
   readonly leading?: ReactNode;
   /** Phần tử đứng trước giá trị ĐÃ CHỌN trong ô - vd logo ngân hàng nhỏ (Figma `24228:102448`). */
   readonly valueLeading?: ReactNode;
+  /** Hiện trong danh sách nhưng không chọn được (mờ) - vd tài xế đang trùng chuyến. */
+  readonly disabled?: boolean;
 }
 
 /**
@@ -68,7 +70,14 @@ export function SelectControl({
   emptyText,
   allowClear = false,
   hideLabel = false,
+  compact = false,
+  inline = false,
 }: {
+  /**
+   * Ô chọn dạng CHỮ (Figma "Discount Toggle" `24789:85353`): "Nhãn giá trị ▾" trên một dòng, không
+   * khung ô - mốc ưu đãi dài hạn. Bấm vẫn mở cùng tấm chọn.
+   */
+  inline?: boolean;
   label: string;
   value: string | null;
   options: readonly SelectControlOption[];
@@ -111,6 +120,8 @@ export function SelectControl({
    * web dùng `Select` trần với `aria-label` (nhãn đứng trên đẩy ô lệch khỏi nút cùng hàng).
    */
   hideLabel?: boolean;
+  /** Khung thấp 40 + chữ "chưa chọn" màu đậm - ô lọc nằm cạnh ô tìm (Figma "Tab List"). */
+  compact?: boolean;
 }) {
   const colors = useColors();
   const styles = useStyles();
@@ -121,6 +132,103 @@ export function SelectControl({
   const current = options.find((option) => option.value === value);
   /** Bộ ô `v2` (Figma Partner-XePrime): chữ trong ô 16, mũi tên 20, placeholder `text/gray/very-low`. */
   const v2 = useFieldAppearance() === 'v2';
+
+  const sheet = (
+    <BottomSheet
+      open={open}
+      onClose={() => {
+        setOpen(false);
+        // Đóng là xoá chữ tìm: mở lại mà còn nguyên bộ lọc cũ trông như danh mục bị mất dòng.
+        setSearch('');
+        onSearch?.('');
+      }}
+      title={label}
+    >
+      {onSearch ? (
+        <XStack
+          ai="center"
+          gap={space.sm}
+          px={layout.padX}
+          h={sizing.touchTarget}
+          br={radius.md}
+          bw={1}
+          bc={colors.border}
+        >
+          <Ionicons name="search" size={iconSize.sm} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={(next) => {
+              setSearch(next);
+              onSearch(next);
+            }}
+            placeholder={searchPlaceholder ?? t('search')}
+            placeholderTextColor={colors.placeholder}
+            autoCorrect={false}
+            accessibilityLabel={searchPlaceholder ?? t('search')}
+          />
+        </XStack>
+      ) : null}
+
+      {options.length === 0 && emptyText ? (
+        <Text col={colors.textMuted} fos={fieldFontSize.message}>
+          {emptyText}
+        </Text>
+      ) : null}
+
+      <MenuOptionList>
+        {options.map((option) => (
+          <MenuOption
+            key={option.value}
+            label={option.label}
+            {...(option.hint === undefined ? {} : { hint: option.hint })}
+            {...(option.leading === undefined ? {} : { leading: option.leading })}
+            disabled={option.disabled ?? false}
+            selected={option.value === value}
+            onPress={() => {
+              onChange(option.value);
+              setOpen(false);
+              setSearch('');
+              onSearch?.('');
+            }}
+          />
+        ))}
+      </MenuOptionList>
+    </BottomSheet>
+  );
+
+  if (inline) {
+    return (
+      <YStack gap={space.xs}>
+        <Pressable
+          onPress={() => {
+            if (!disabled) setOpen(true);
+          }}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityState={{ disabled }}
+        >
+          <XStack ai="center" gap={space.sm} opacity={disabled ? 0.6 : 1}>
+            <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1}>
+              {label}
+            </Text>
+            <Text
+              col={current ? colors.text : colors.textPlaceholder}
+              fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+            >
+              {current?.label ?? placeholder ?? t('choose')}
+            </Text>
+            <LineIcon name="chevron-down-md" size={FIELD_V2.icon} color={colors.text} />
+          </XStack>
+        </Pressable>
+        <FieldMessage error={error} />
+        {sheet}
+      </YStack>
+    );
+  }
 
   return (
     <YStack gap={v2 ? FIELD_V2.labelGap : space.xs}>
@@ -141,11 +249,12 @@ export function SelectControl({
         accessibilityLabel={label}
         accessibilityState={{ disabled }}
       >
-        <FieldShell focused={false} invalid={Boolean(error)} disabled={disabled} align="center">
+        <FieldShell focused={false} invalid={Boolean(error)} disabled={disabled} align="center" compact={compact}>
           {current?.valueLeading ?? null}
           <Text
             f={1}
-            col={current ? colors.text : v2 ? colors.textPlaceholder : colors.placeholder}
+            // Ô khoá: chữ MỜ như web `disabled`, không đậm như ô chọn được.
+            col={(current || compact) && !disabled ? colors.text : v2 ? colors.textPlaceholder : colors.placeholder}
             fos={v2 ? FIELD_V2.selectFontSize : fieldFontSize.value}
             numberOfLines={1}
           >
@@ -185,66 +294,7 @@ export function SelectControl({
 
       <FieldMessage error={error} hint={belowHint(hint)} />
 
-      <BottomSheet
-        open={open}
-        onClose={() => {
-          setOpen(false);
-          // Đóng là xoá chữ tìm: mở lại mà còn nguyên bộ lọc cũ trông như danh mục bị mất dòng.
-          setSearch('');
-          onSearch?.('');
-        }}
-        title={label}
-      >
-        {onSearch ? (
-          <XStack
-            ai="center"
-            gap={space.sm}
-            px={layout.padX}
-            h={sizing.touchTarget}
-            br={radius.md}
-            bw={1}
-            bc={colors.border}
-          >
-            <Ionicons name="search" size={iconSize.sm} color={colors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
-              value={search}
-              onChangeText={(next) => {
-                setSearch(next);
-                onSearch(next);
-              }}
-              placeholder={searchPlaceholder ?? t('search')}
-              placeholderTextColor={colors.placeholder}
-              autoCorrect={false}
-              accessibilityLabel={searchPlaceholder ?? t('search')}
-            />
-          </XStack>
-        ) : null}
-
-        {options.length === 0 && emptyText ? (
-          <Text col={colors.textMuted} fos={fieldFontSize.message}>
-            {emptyText}
-          </Text>
-        ) : null}
-
-        <MenuOptionList>
-          {options.map((option) => (
-            <MenuOption
-              key={option.value}
-              label={option.label}
-              {...(option.hint === undefined ? {} : { hint: option.hint })}
-              {...(option.leading === undefined ? {} : { leading: option.leading })}
-              selected={option.value === value}
-              onPress={() => {
-                onChange(option.value);
-                setOpen(false);
-                setSearch('');
-                onSearch?.('');
-              }}
-            />
-          ))}
-        </MenuOptionList>
-      </BottomSheet>
+      {sheet}
     </YStack>
   );
 }

@@ -196,14 +196,15 @@ function EditForm({ member, onDone }: { member: MemberRosterItem; onDone: () => 
         label={t('staff.contactPhone')}
         placeholder={t('staff.contactPhonePlaceholder')}
         hint={t('staff.contactPhoneHelp')}
+        hintInLabel
         keyboardType="phone-pad"
         autoComplete="tel"
       />
       <XStack gap={space.sm}>
         <YStack flexShrink={0}>
           <Button
-            label={tActions('close')}
-            variant="ghost"
+            label={tActions('cancel')}
+            variant="secondary"
             disabled={update.isPending}
             onPress={onDone}
           />
@@ -211,7 +212,7 @@ function EditForm({ member, onDone }: { member: MemberRosterItem; onDone: () => 
         <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('edit.submit')}
-            icon="checkmark-outline"
+            variant="gradient"
             loading={update.isPending}
             onPress={() => void submit()}
           />

@@ -14,6 +14,7 @@ import { DashedDivider } from '@/components/ui/DashedDivider';
 import type { IconSquareSize } from '@/components/ui/IconSquareButton';
 import { Pill, type PillTone } from '@/components/ui/Pill';
 import { ServiceTypeChip } from '@/components/ui/ServiceTypeChip';
+import { BookingSourceChip } from '@/components/ui/BookingSourceChip';
 import { makeStyles, useColors } from '@/theme/ThemeProvider';
 import { fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
 
@@ -105,6 +106,7 @@ function RentalCardImpl({
   stamp,
   status,
   serviceType,
+  source,
   price,
   notice,
   vehicle,
@@ -134,6 +136,11 @@ function RentalCardImpl({
   /** Nhãn trạng thái góc phải đầu thẻ. */
   status?: { label: string; tone: PillTone } | null;
   serviceType: string;
+  /**
+   * Nguồn đơn (ADR 0110) - viên cạnh viên dịch vụ, như web `BookingCard`. Đơn qua sàn (và yêu cầu)
+   * không có viên.
+   */
+  source?: { code: string; label: string | null } | null;
   /** Số tiền nổi bên phải viên dịch vụ (đã định dạng) + tên của nó cho trình đọc màn hình. */
   price?: { value: string; label: string } | null;
   /** Câu cảnh báo cả chiều ngang dưới đầu thẻ — chỉ khi có. */
@@ -199,7 +206,10 @@ function RentalCardImpl({
             ) : null}
           </XStack>
           <XStack ai="center" jc="space-between" gap={HEAD_GAP}>
-            <ServiceTypeChip value={serviceType} />
+            <XStack ai="center" gap={space.xs} flexShrink={1} minWidth={0}>
+              <ServiceTypeChip value={serviceType} />
+              {source ? <BookingSourceChip source={source.code} sourceLabel={source.label} /> : null}
+            </XStack>
             {price ? (
               <Text
                 col={colors.brandLink}

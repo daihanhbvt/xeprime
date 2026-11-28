@@ -13,6 +13,8 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { provinceCenter, toGeoPoint, type GeoPoint } from '@xeprime/domain';
 import { LOCATION_SOURCE } from '@xeprime/types';
+import { TOAST_PRESET } from '@/components/feedback/AppToast';
+import { useAppToast } from '@/components/feedback/use-app-toast';
 import { MapPreview } from '@/components/map/MapPreview';
 import { Callout } from '@/components/ui/Callout';
 import { FieldLabel } from '@/components/ui/Field';
@@ -83,6 +85,7 @@ export function AddressFields<T extends FieldValues>({
   prefillRememberedProvince = false,
   labels,
   inlineAdmin = false,
+  noticesAsToast = false,
 }: {
   control: Control<T>;
   names: AddressFieldNames<T>;
@@ -120,8 +123,14 @@ export function AddressFields<T extends FieldValues>({
   labels?: AddressFieldLabels;
   /** Tỉnh/thành và xã/phường nằm cùng một hàng hai cột (mặc định xếp dọc). */
   inlineAdmin?: boolean;
+  /**
+   * Lời nhắc sau khi chọn gợi ý (lệch tỉnh, tra địa điểm hỏng) hiện bằng TOAST thay cho hộp trong
+   * form - tấm sửa "Địa chỉ & pháp lý" của Quản lý gian hàng (người dùng chốt 27/11/2026).
+   */
+  noticesAsToast?: boolean;
 }) {
   const t = useTranslations('Address');
+  const toast = useAppToast();
   const province = useController({ control, name: names.provinceCode });
   const ward = useController({ control, name: names.wardCode });
 
@@ -290,7 +299,7 @@ export function AddressFields<T extends FieldValues>({
             tên đơn vị hành chính TRƯỚC sắp xếp 01/07/2025, nên "tin bản đồ" nghĩa là ghi mã sai
             một cách có hệ thống (ADR 0035 điều 4). Người dùng là người chốt.
           */}
-          {provinceMismatch ? (
+          {provinceMismatch && !noticesAsToast ? (
             <Callout tone="warning" title={t('provinceMismatchTitle')}>
               {t('provinceMismatchHint')}
             </Callout>
@@ -314,11 +323,18 @@ export function AddressFields<T extends FieldValues>({
             onConfirmedManually={() => {
               setProvinceMismatch(false);
             }}
+            noticesAsToast={noticesAsToast}
             onPlaceResolved={(place) => {
-              setProvinceMismatch(
-                Boolean(place.suggestedProvinceCode) &&
-                  place.suggestedProvinceCode !== provinceCode,
-              );
+              const mismatch =
+                Boolean(place.suggestedProvinceCode) && place.suggestedProvinceCode !== provinceCode;
+              setProvinceMismatch(mismatch);
+              if (mismatch && noticesAsToast) {
+                toast.showNotice({
+                  title: t('provinceMismatchTitle'),
+                  body: t('provinceMismatchHint'),
+                  tone: TOAST_PRESET.WARNING,
+                });
+              }
               /*
                * Tự điền lại XÃ theo địa điểm vừa chọn (ADR 0077): server khớp được đúng một xã trong
                * tỉnh đã chọn thì địa điểm cụ thể thắng bộ chọn. Tỉnh không bao giờ tự đổi.
@@ -376,6 +392,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   disabled,
   onPlaceResolved,
   onConfirmedManually,
+  noticesAsToast = false,
 }: {
   control: Control<T>;
   addressLineName: Path<T>;
@@ -421,9 +438,12 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    * địa điểm trước đó (cảnh báo lệch tỉnh, tỉnh của địa điểm cũ). Khớp web.
    */
   onConfirmedManually?: () => void;
+  /** Tra địa điểm hỏng thì báo bằng toast thay cho hộp dưới ô (xem `AddressFields`). */
+  noticesAsToast?: boolean;
 }) {
   const colors = useColors();
   const t = useTranslations('Address');
+  const toast = useAppToast();
   const tStates = useTranslations('Common.states');
 
   const addressLine = useController({ control, name: addressLineName });
@@ -628,6 +648,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     if (!place) {
       addressLine.field.onChange(confirmedRef.current as PathValue<T, Path<T>>);
       setDetailFailed(true);
+      if (noticesAsToast) toast.showNotice({ title: t('placeDetailFailed'), tone: TOAST_PRESET.WARNING });
       return;
     }
 
@@ -911,7 +932,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
         sống ở component dùng chung này — nó chỉ có nghĩa khi có một ô tỉnh đứng trên để so, nên
         `AddressFields` (chủ xe) tự vẽ và tự quản, còn `RenterAddressBlock` (khách) không có.
       */}
-      {detailFailed ? <Callout tone="warning" title={t('placeDetailFailed')} /> : null}
+      {detailFailed && !noticesAsToast ? <Callout tone="warning" title={t('placeDetailFailed')} /> : null}
 
       {/*
         Ảnh bản đồ TĨNH của địa điểm vừa chọn — để người dùng nhìn lại "đúng chỗ này chưa", không

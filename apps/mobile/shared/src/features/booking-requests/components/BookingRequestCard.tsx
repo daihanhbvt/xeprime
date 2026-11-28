@@ -333,11 +333,15 @@ export interface RequestPaymentRow {
   key: string;
   label: string;
   amount: string;
+  /** Chữ thay cho số tiền ("Miễn phí") - chỉ dòng phí giao xe (web #349). */
+  text?: string;
   state?: 'expected' | 'awaiting' | 'unpaid' | 'paid';
 }
 
 export function requestPaymentRows(
   request: Pick<BookingRequestItem, 'pricing'> & {
+    /** Khách xin giao tận nơi - dòng phí giao xe chỉ có khi đúng vậy (web #349). */
+    deliveryRequested?: boolean | undefined;
     approvalPreview?: BookingRequestItem['approvalPreview'] | undefined;
     /** Vắng ở tấm duyệt (yêu cầu còn chờ duyệt - chưa có chặng chờ khách trả). */
     status?: string | undefined;
@@ -347,9 +351,31 @@ export function requestPaymentRows(
   const pricing = request.pricing;
   if (!pricing) return [];
   const preview = request.approvalPreview ?? null;
+  /*
+   * Phí giao xe tận nơi `G` (web #349, QC 27/11/2026): chủ xe chốt ở hộp duyệt, nằm trong `rentalTotal`
+   * và trong phần trả tay, không vào tiền giữ chỗ (ADR 0064 điều 4). Tách thành dòng riêng để "Tiền
+   * thuê" là tiền thuê thật và các dòng cộng lại khớp "Khách trả". Chưa duyệt thì chưa có số - không dòng.
+   */
+  const deliveryFee = request.deliveryRequested ? (pricing.deliveryFee ?? null) : null;
   const rows: RequestPaymentRow[] = [
-    { key: 'rental', label: t('card.rentalTotal'), amount: pricing.rentalTotal },
+    {
+      key: 'rental',
+      label: t('card.rentalTotal'),
+      amount: deliveryFee ? subtractMoney(pricing.rentalTotal, deliveryFee) : pricing.rentalTotal,
+    },
   ];
+  if (deliveryFee != null) {
+    rows.push(
+      isPositiveMoney(deliveryFee)
+        ? { key: 'delivery', label: t('card.deliveryFee'), amount: deliveryFee }
+        : {
+            key: 'delivery',
+            label: t('card.deliveryFee'),
+            amount: '0',
+            text: t('card.deliveryFeeFree'),
+          },
+    );
+  }
   if (pricing.customerTotalAmount !== pricing.rentalTotal) {
     rows.push({
       key: 'customer',

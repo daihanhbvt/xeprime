@@ -11,9 +11,9 @@ import {
   RENTAL_MODE,
   API_ERROR_CODE,
   LONG_TERM_PACKAGE_MONTHS,
-  PERMISSION,
   PICKUP_PREFERENCE,
   PRICE_ROW,
+  BOOKING_SOURCE_LABEL_MAX,
   ROUTE_TYPE,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
@@ -50,7 +50,6 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { calendarApi } from '@/api/calendar/api';
 import { BookingJourney } from '@/features/booking-requests/components/BookingJourney';
@@ -94,12 +93,11 @@ import type { CreateBookingInput, VehicleListItem } from './api';
 import {
   PICKUP_METHOD,
   STAFF_BOOKING_NOTE_MAX,
-  STAFF_COLLATERAL_MODE,
-  collateralModeHasAssets,
-  collateralModeHasCash,
   staffBookingSchema,
   type StaffBookingValues,
 } from './staff-booking-schema';
+import { bookingSourcePayload } from './source-schema';
+import { BookingSourceFields } from './components/BookingSourceFields';
 
 /**
  * Ba chặng của biểu mẫu chuyến (web `StaffBookingFlow`) — cùng tên với `StaffJourneyStage` của thanh
@@ -124,16 +122,15 @@ type Step = (typeof STEP)[keyof typeof STEP];
  * NỘI BỘ `/calendar/quote` (cùng `PricingService` với báo giá công khai — client không cộng trừ);
  * xe chưa cấu hình giá thì server 400 và màn Xem lại rơi về ô nhập tiền tay.
  *
- * Lập đơn tay chỉ dành cho gian hàng TUYẾN GÓI (`useCanCreateBooking`) — chặn thật là
- * `@SubscriptionTrackOnly()` ở `POST /bookings`.
+ * Lập đơn tay mở cho MỌI chủ xe, cả hai tuyến (ADR 0110) - chỉ còn quyền `bookings.create`
+ * (`useCanCreateBooking`); chặn thật là `@RequirePermissions` ở `POST /bookings`. Đơn tự lập nằm ngoài
+ * sàn và mang nguồn chủ xe chọn.
  */
 export function CreateBookingScreen() {
   const t = useTranslations('BookingRequests.staffFlow');
   const tCreate = useTranslations('Bookings.create');
-  const tErrors = useTranslations('Errors');
   const router = useRouter();
   const permissions = usePermissions();
-  const me = useCurrentUser();
   const canCreate = useCanCreateBooking();
   /*
    * Điền sẵn khách khi vào từ hồ sơ một khách đã có trong sổ — cùng tham số web đặt lên URL
@@ -161,12 +158,8 @@ export function CreateBookingScreen() {
 
   const back = () => goBackOr(router, ROUTES.manage.bookings());
 
-  /*
-   * Cổng có HAI trục (`useCanCreateBooking`): quyền và TUYẾN. Tuyến đọc từ `/auth/me` — chưa về thì
-   * tuyến tính ra "không xác định" và chủ xe tuyến hoa hồng sẽ thoáng thấy luồng trước khi bị chặn.
-   * Chờ cả hai rồi mới quyết.
-   */
-  if (permissions.isLoading || me.isPending) {
+  // Cổng chỉ còn quyền (ADR 0110) - chờ bộ quyền về rồi mới quyết.
+  if (permissions.isLoading) {
     return (
       <>
         <AppHeader title={t('title')} onBack={back} />
@@ -178,14 +171,7 @@ export function CreateBookingScreen() {
   }
 
   if (!canCreate) {
-    /*
-     * Nói ĐÚNG lý do: thiếu quyền `bookings.create` là chuyện phân quyền trong gian hàng; còn đủ quyền
-     * mà bị chặn là chuyện TUYẾN (chủ xe tuyến hoa hồng) — câu `Errors.appCode.SUBSCRIPTION_TRACK_ONLY`
-     * là bản dành cho app (không nhắc mua gói — app Partner đi IAP).
-     */
-    const message = permissions.has(PERMISSION.BOOKING_CREATE)
-      ? tErrors('appCode.SUBSCRIPTION_TRACK_ONLY')
-      : tCreate('permissionDenied');
+    const message = tCreate('permissionDenied');
     return (
       <>
         <AppHeader title={t('title')} onBack={back} />
@@ -361,6 +347,7 @@ function StaffBookingTrip({
   const colors = useColors();
   const t = useTranslations('BookingRequests.staffFlow');
   const tFlow = useTranslations('BookingRequests.flow');
+  const tSource = useTranslations('Bookings.source');
   const fmt = useAppFormat();
   const router = useRouter();
   const errorMessage = useErrorMessage();
@@ -399,7 +386,15 @@ function StaffBookingTrip({
     setServiceType(vehicleServices[0] as ServiceType);
   }
 
-  const schema = useMemo(() => staffBookingSchema(t), [t]);
+  const schema = useMemo(
+    () =>
+      staffBookingSchema(t, {
+        required: tSource('validation.required'),
+        nameRequired: tSource('validation.nameRequired'),
+        nameMax: tSource('validation.nameMax', { max: BOOKING_SOURCE_LABEL_MAX }),
+      }),
+    [t, tSource],
+  );
   const { control, trigger, getValues, setValue, formState } = useForm<StaffBookingValues>({
     resolver: yupResolver(schema),
     // Dịch vụ nằm ở state — đưa vào schema qua yup context ($serviceType).
@@ -417,13 +412,14 @@ function StaffBookingTrip({
       pickupAddress: '',
       destination: '',
       note: '',
+      source: '',
+      sourceLabel: '',
       manualBaseAmount: null,
       depositAmount: null,
       negotiated: false,
       manualDiscount: null,
       manualDeliveryFee: null,
       extraCharges: [],
-      collateralMode: STAFF_COLLATERAL_MODE.CASH,
       collaterals: [],
     },
   });
@@ -485,15 +481,7 @@ function StaffBookingTrip({
     if (!formState.dirtyFields.depositAmount) {
       setValue('depositAmount', Number(quote.depositAmount ?? 0));
     }
-    // Chế độ bảo đảm mở theo chính sách xe: có cọc tiền ⇒ "Tiền", không ⇒ "Không cọc" — trừ khi
-    // nhân viên đã tự chọn (ADR 0109: mức cọc thay đổi theo từng khách).
-    if (!formState.dirtyFields.collateralMode) {
-      setValue(
-        'collateralMode',
-        Number(quote.depositAmount ?? 0) > 0 ? STAFF_COLLATERAL_MODE.CASH : STAFF_COLLATERAL_MODE.NONE,
-      );
-    }
-  }, [quote, formState.dirtyFields.depositAmount, formState.dirtyFields.collateralMode, setValue]);
+  }, [quote, formState.dirtyFields.depositAmount, setValue]);
 
   /**
    * Bật "Giá thoả thuận" (ADR 0109): giá hệ thống thành GỢI Ý — điền sẵn các ô còn trống từ báo giá
@@ -588,13 +576,14 @@ function StaffBookingTrip({
     setStepError(null);
     // Xe chưa có giá ⇒ giá thoả thuận là con đường DUY NHẤT (không tạo đơn 0đ âm thầm).
     const negotiated = quoteUnavailable || getValues('negotiated');
-    const mode = getValues('collateralMode');
     const fields = [
       'customerName',
       'customerPhone',
       'note',
-      ...(collateralModeHasCash(mode) ? (['depositAmount'] as const) : []),
-      ...(collateralModeHasAssets(mode) ? (['collaterals'] as const) : []),
+      'source',
+      'sourceLabel',
+      'depositAmount',
+      'collaterals',
       ...(negotiated
         ? ([
             'manualBaseAmount',
@@ -667,8 +656,9 @@ function StaffBookingTrip({
               // Giao tận nơi phí 0 lúc tạo — chủ xe chốt phí đã thoả thuận sau.
               deliveryFee: '0',
             }),
-        depositAmount: collateralModeHasCash(mode) ? String(v.depositAmount ?? 0) : '0',
-        ...(collateralModeHasAssets(mode) && v.collaterals.length > 0
+        // Cọc & thế chấp (ADR 0109): nhập khoản nào ghi khoản đó - cọc 0 và không tài sản là không cọc.
+        depositAmount: String(v.depositAmount ?? 0),
+        ...(v.collaterals.length > 0
           ? {
               collaterals: v.collaterals.map((c) => ({
                 collateralType: c.collateralType,
@@ -676,6 +666,8 @@ function StaffBookingTrip({
               })),
             }
           : {}),
+        // Nguồn đơn (ADR 0110) — server từ chối `xeprime`; nhãn chỉ đi kèm nguồn nhận nhãn.
+        ...bookingSourcePayload(v),
         ...(note ? { note } : {}),
       } satisfies CreateBookingInput,
       {
@@ -845,6 +837,8 @@ function StaffBookingTrip({
                   keyboardType="phone-pad"
                   required
                 />
+                {/* Nguồn đơn (ADR 0110): khách tới từ kênh nào — nhãn để lọc và thống kê về sau. */}
+                <BookingSourceFields control={control} sourceName="source" labelName="sourceLabel" />
                 {/* `TextAreaField` 2 dòng, đếm ký tự tới `STAFF_BOOKING_NOTE_MAX`. */}
                 <TextField
                   control={control}
@@ -870,7 +864,7 @@ function StaffBookingTrip({
               isDelivery={isDelivery}
               onToggleNegotiated={toggleNegotiated}
             />
-            <StaffBookingCollateralCard control={control} setValue={setValue} />
+            <StaffBookingCollateralCard control={control} />
 
             {/* `.card.submitCard` — lỗi · nút gradient full · gợi ý body-sm `text-tertiary` căn giữa. */}
             <Card>
@@ -884,9 +878,7 @@ function StaffBookingTrip({
                   loading={submitting}
                   onPress={() => void submitBooking()}
                 />
-                <Text col={colors.placeholder} fos={fontSize.bodySm} ta="center">
-                  {t('review.submit.hint')}
-                </Text>
+                {/* Câu gợi ý dưới nút đã gỡ ở bước Xem lại của web (#344) - "Sau khi tạo" nói thay. */}
               </YStack>
             </Card>
 

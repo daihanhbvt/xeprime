@@ -6,13 +6,14 @@ import {
   type Path,
   type PathValue,
 } from 'react-hook-form';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { TURNAROUND_BUFFER_MAX_MINUTES, TURNAROUND_BUFFER_PRESET_MINUTES } from '@xeprime/types';
-import { Callout } from '@/components/ui/Callout';
-import { Chip } from '@/components/ui/Chip';
 import { NumberField } from '@/components/ui/NumberField';
-import { space } from '@/theme/tokens';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { SwitchRow } from '@/components/ui/SwitchRow';
+import { useColors } from '@/theme/ThemeProvider';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 
 const INHERIT = 'shop';
 const CUSTOM = 'custom';
@@ -45,6 +46,7 @@ export function TurnaroundBufferField<T extends FieldValues>({
   notice?: boolean;
 }) {
   const t = useTranslations('VehicleManage');
+  const colors = useColors();
   const minutes = useController({ control, name });
   const value = useWatch({ control, name }) as number | null;
   const isPreset =
@@ -64,32 +66,46 @@ export function TurnaroundBufferField<T extends FieldValues>({
     );
   };
 
+  const tabValue = selected === INHERIT ? CUSTOM : String(selected);
+  const items = [
+    ...TURNAROUND_BUFFER_PRESET_MINUTES.map((preset) => ({
+      key: String(preset),
+      label: preset === 0 ? t('handover.bufferNone') : t('common.hours', { count: preset / 60 }),
+    })),
+    { key: CUSTOM, label: t('handover.bufferCustom') },
+  ];
+
   return (
-    <YStack gap={space.sm}>
-      <XStack gap={space.xs} flexWrap="wrap" accessibilityRole="radiogroup" accessibilityLabel={label}>
-        {inherit ? (
-          <Chip
-            label={inherit.label}
-            selected={selected === INHERIT}
-            {...(disabled ? {} : { onPress: () => select(INHERIT) })}
-          />
-        ) : null}
-        {TURNAROUND_BUFFER_PRESET_MINUTES.map((preset) => (
-          <Chip
-            key={preset}
-            label={
-              preset === 0 ? t('handover.bufferNone') : t('common.hours', { count: preset / 60 })
-            }
-            selected={selected === preset}
-            {...(disabled ? {} : { onPress: () => select(preset) })}
-          />
-        ))}
-        <Chip
-          label={t('handover.bufferCustom')}
-          selected={selected === CUSTOM}
-          {...(disabled ? {} : { onPress: () => select(CUSTOM) })}
+    <YStack gap={space.sm + space.xs}>
+      {/*
+        "Theo gian hàng (X)" (chỉ xe của gian hàng): Figma `24705:45812` chỉ vẽ khay 4 ô - năm ô không
+        vừa bề ngang điện thoại, nên lựa chọn kế thừa thành MỘT hàng công tắc ngay trên khay. Bật = theo
+        gian hàng (khay ẩn); tắt = chọn số riêng của xe, bắt đầu từ chính số gian hàng (nơi gọi lo).
+      */}
+      {inherit ? (
+        <SwitchRow
+          title={inherit.label}
+          value={inherit.active}
+          disabled={disabled ?? false}
+          onChange={(next) => (next ? select(INHERIT) : inherit.onChange(false))}
         />
-      </XStack>
+      ) : null}
+
+      {selected === INHERIT ? null : (
+        <XStack
+          opacity={disabled ? 0.6 : 1}
+          pointerEvents={disabled ? 'none' : 'auto'}
+          accessibilityLabel={label}
+        >
+          <SegmentedTabs
+            variant="neutral"
+            fit
+            items={items}
+            value={tabValue}
+            onChange={(key) => select(key === CUSTOM ? CUSTOM : Number(key))}
+          />
+        </XStack>
+      )}
 
       {selected === CUSTOM ? (
         <NumberField
@@ -105,7 +121,19 @@ export function TurnaroundBufferField<T extends FieldValues>({
         />
       ) : null}
 
-      {notice ? <Callout tone="info">{t('handover.scopeNote')}</Callout> : null}
+      {/* Figma "Schedule Notice" `24705:45842`: nền `status/information-low`, chữ xanh 14 medium. */}
+      {notice ? (
+        <YStack bg={colors.infoLow} br={radius.control} p={space.sm + space.xs}>
+          <Text
+            col={colors.infoStrong}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+          >
+            {t('handover.scopeNote')}
+          </Text>
+        </YStack>
+      ) : null}
     </YStack>
   );
 }

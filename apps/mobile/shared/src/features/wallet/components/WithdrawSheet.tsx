@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { getErrorCode } from '@xeprime/api-client';
 import { API_ERROR_CODE } from '@xeprime/types';
+import { LEGAL_DOC } from '@xeprime/domain';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -20,7 +21,9 @@ import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-account
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { queryKeys } from '@/queries/query-keys';
-import { space } from '@/theme/tokens';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { useColors } from '@/theme/ThemeProvider';
+import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 import { BANK_ACCOUNT_SCOPE, type BankAccountScope } from '@/api/bank-accounts/api';
 import { WALLET_SCOPE, type WalletScope } from '@/api/wallet/api';
 import { useCreateWithdrawal, useWalletSummary } from '../hooks/use-wallet';
@@ -48,6 +51,8 @@ export function WithdrawSheet({
   onClose: () => void;
 }) {
   const t = useTranslations('Wallet.withdraw');
+  const colors = useColors();
+  const openLegalDoc = useOpenLegalDoc();
   const tBank = useTranslations('BankAccounts');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
@@ -130,9 +135,30 @@ export function WithdrawSheet({
         titleAdornment={
           <InfoHint
             label={t('title')}
-            content={t('commitment', {
-              days: summary.data?.maxBusinessDays ?? FALLBACK_BUSINESS_DAYS,
-            })}
+            content={
+              <YStack gap={space.xs}>
+                <Text col={colors.text} fos={fontSize.body}>
+                  {t('commitment', {
+                    days: summary.data?.maxBusinessDays ?? FALLBACK_BUSINESS_DAYS,
+                  })}
+                </Text>
+                {/* Điều kiện rút tiền - văn bản Chính sách thanh toán và Ví điểm (web #347). */}
+                <Text col={colors.text} fos={fontSize.body}>
+                  {t.rich('policyLink', {
+                    policy: (chunks) => (
+                      <Text
+                        col={colors.brandLink}
+                        fow={fontWeight.medium}
+                        accessibilityRole="link"
+                        onPress={() => openLegalDoc(LEGAL_DOC.PAYMENT)}
+                      >
+                        {chunks}
+                      </Text>
+                    ),
+                  })}
+                </Text>
+              </YStack>
+            }
           />
         }
         footer={

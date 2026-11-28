@@ -75,6 +75,8 @@ interface TextFieldProps<T extends FieldValues> {
    * người dùng gõ xong mới phát hiện bị cắt.
    */
   maxLength?: number;
+  /** Bộ đếm đặt chỗ khác (vd đầu thẻ - Figma "Mô tả xe") - ô không tự vẽ bộ đếm dưới nữa. */
+  hideCount?: boolean;
   /**
    * Không vẽ nhãn phía trên ô — chỉ giữ `label` làm tên cho trình đọc màn hình. Dùng khi web để ô
    * không nhãn nhìn thấy (`aria-label`), vd ô nhận xét của thẻ đánh giá chuyến.
@@ -121,6 +123,7 @@ export function TextField<T extends FieldValues>({
   lineIcon,
   hint,
   hintInLabel = false,
+  hideCount = false,
   required = false,
   publishRequired = false,
   secureTextEntry,
@@ -170,7 +173,8 @@ export function TextField<T extends FieldValues>({
       color: colors.text,
       fontSize: v2 ? FIELD_V2.valueFontSize : fieldFontSize.value,
       fontFamily: FONT_FAMILY.body,
-      minHeight: multiline ? rows * LINE_HEIGHT : v2 ? FIELD_V2.height - 2 : sizing.touchTarget,
+      // `minHeight` của RN tính CẢ đệm: cộng đệm trên dưới để ô hiện TRỌN `rows` dòng chữ.
+      minHeight: multiline ? rows * LINE_HEIGHT + space.sm * 2 : v2 ? FIELD_V2.height - 2 : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
       // Android tự đệm ~4dp hai bên TextInput: chữ gõ lệch khỏi chữ ô chọn/ngày cùng form.
       paddingHorizontal: 0,
@@ -283,7 +287,7 @@ export function TextField<T extends FieldValues>({
         web. Bản cũ giấu nó tới khi dùng quá 60% trần: người dùng gõ một đoạn dài mà không hề
         biết có giới hạn, rồi bị chặn ở đâu đó giữa chừng không rõ vì sao.
       */}
-      {maxLength !== undefined ? (
+      {maxLength !== undefined && !hideCount ? (
         <Text col={colors.textMuted} fos={fieldFontSize.affix} ta="right">
           {String(field.value ?? '').length}/{maxLength}
         </Text>

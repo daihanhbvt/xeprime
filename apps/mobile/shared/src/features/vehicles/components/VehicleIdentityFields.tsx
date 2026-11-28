@@ -7,6 +7,7 @@ import {
   type UseFormSetValue,
 } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
+import { PAIR_GAP } from './field-layout';
 import { useTranslations } from 'use-intl';
 import {
   CATALOG_REVIEW_STATUS,
@@ -128,18 +129,44 @@ export function VehicleIdentityFields({
 
   usePrefillFromModel(control, vehicleType, modelId, setValue);
 
+  const brandField = (
+    <SelectField
+      control={control}
+      name="brand"
+      label={t('brand')}
+      required={required}
+      options={brandOptions}
+      placeholder={t('brandPlaceholder')}
+      disabled={disabled}
+      {...(lockedNotice ? { hint: lockedNotice } : {})}
+    />
+  );
+
+  // Figma "Chỉnh sửa xe": Hãng xe | Dòng xe cùng một hàng. Nhập tay (nhiều ô + lối quay lại) giữ dọc.
+  if (!(manual && setValue)) {
+    return (
+      <XStack gap={PAIR_GAP} ai="flex-start">
+        <YStack f={1} minWidth={0}>
+          {brandField}
+        </YStack>
+        <YStack f={1} minWidth={0}>
+          <ModelVariantSelect
+            control={control}
+            vehicleType={vehicleType}
+            required={required}
+            disabled={disabled}
+            lockedNotice={lockedNotice}
+            setValue={setValue}
+            onManual={editable ? () => setManual(true) : undefined}
+          />
+        </YStack>
+      </XStack>
+    );
+  }
+
   return (
     <YStack gap={space.md}>
-      <SelectField
-        control={control}
-        name="brand"
-        label={t('brand')}
-        required={required}
-        options={brandOptions}
-        placeholder={t('brandPlaceholder')}
-        disabled={disabled}
-        {...(lockedNotice ? { hint: lockedNotice } : {})}
-      />
+      {brandField}
       {manual && setValue ? (
         <ManualModelFields
           control={control}
@@ -389,12 +416,13 @@ function ModelVariantSelect({
 
   return (
     <SelectControl
-      label={tCatalog('modelVariant')}
+      // Figma "Dòng xe" / "Chọn dòng xe" (người dùng chốt 27/11/2026); ô tìm vẫn gợi ý cả phiên bản.
+      label={tCatalog('modelVariantShort')}
       required={required}
       value={variantId ? variantValue(variantId) : modelId ? modelValue(modelId) : null}
       options={options}
       onChange={handleChange}
-      placeholder={tCatalog('modelVariantPlaceholder')}
+      placeholder={tCatalog('modelVariantPick')}
       hint={hint}
       {...(error ? { error } : {})}
       // Khoá tới khi có hãng: danh sách mẫu xe không kèm hãng là vài trăm dòng vô nghĩa.

@@ -1,5 +1,5 @@
-import { memo, useCallback } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { Pill } from '@/components/ui/Pill';
 import { useColors } from '@/theme/ThemeProvider';
@@ -44,6 +44,24 @@ export function UnderlineTabs<K extends string>({
   size?: 'md' | 'lg';
 }) {
   const colors = useColors();
+  /*
+   * Dải CUỘN: đưa tab đang chọn vào khung nhìn (Figma kéo sẵn dải tới tab hiện tại) - vào thẳng
+   * tab thứ 7 qua deep link mà dải vẫn đứng ở đầu thì người dùng không biết mình đang ở đâu.
+   * Không hoạt cảnh (màn sửa xe bỏ animation - 27/11/2026).
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  const tabX = useRef<Record<string, number>>({});
+  const [laidOut, setLaidOut] = useState(0);
+  const onTabLayout = useCallback((key: string, e: LayoutChangeEvent) => {
+    tabX.current[key] = e.nativeEvent.layout.x;
+    setLaidOut((n) => n + 1);
+  }, []);
+  useEffect(() => {
+    if (stretch) return;
+    const x = tabX.current[value];
+    if (x == null) return;
+    scrollRef.current?.scrollTo({ x: Math.max(0, x - SCROLL_INSET), animated: false });
+  }, [value, laidOut, stretch]);
   if (stretch) {
     return (
       <XStack
@@ -68,6 +86,7 @@ export function UnderlineTabs<K extends string>({
   return (
     <YStack borderBottomWidth={1} borderBottomColor={colors.border}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
@@ -80,6 +99,7 @@ export function UnderlineTabs<K extends string>({
             active={item.key === value}
             onChange={onChange as (next: string) => void}
             size={size}
+            onLayout={onTabLayout}
           />
         ))}
       </ScrollView>
@@ -93,12 +113,14 @@ const UnderlineTab = memo(function UnderlineTab({
   onChange,
   stretch = false,
   size = 'md',
+  onLayout,
 }: {
   item: UnderlineTabItem<string>;
   active: boolean;
   onChange: (next: string) => void;
   stretch?: boolean;
   size?: 'md' | 'lg';
+  onLayout?: (key: string, e: LayoutChangeEvent) => void;
 }) {
   const lg = size === 'lg';
   const type = lg ? typeScale.title : typeScale.body;
@@ -107,6 +129,7 @@ const UnderlineTab = memo(function UnderlineTab({
   return (
     <Pressable
       onPress={onPress}
+      {...(onLayout ? { onLayout: (e: LayoutChangeEvent) => onLayout(item.key, e) } : {})}
       style={stretch ? STRETCH : undefined}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
@@ -165,6 +188,9 @@ const UNDERLINE = 2;
 const STRETCH = { flex: 1, minWidth: 0 } as const;
 /** Cỡ `lg` - Figma `24612:145585`: h 36 · px 16 · pb 12 · gap 12. */
 const LG = { height: 36, padX: 16, padBottom: 12, gap: 12 } as const;
+
+/** Chừa một khoảng bên trái tab được cuộn tới - còn thấy mép tab trước đó, biết dải cuộn được. */
+const SCROLL_INSET = 24;
 
 const styles = StyleSheet.create({
   row: { gap: 8 },

@@ -12,7 +12,7 @@ import {
   STATUS_COLOR,
 } from '@xeprime/types';
 import { LineIcon } from '@/components/icons/LineIcon';
-import { ActionMenuRow } from '@/components/ui/ActionMenuRow';
+import { ActionSheetButtons } from '@/components/ui/ActionSheetButtons';
 import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Card } from '@/components/ui/Card';
@@ -218,22 +218,22 @@ function DriverCardImpl({
         </YStack>
       </Pressable>
 
-      <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title={driver.name} chrome="v2" headerDivider padded={false}>
-        <YStack pb={space.sm}>
-          {menu.map((item) => (
-            <ActionMenuRow
-              key={item.key}
-              icon={item.icon}
-              label={item.label}
-              danger={item.danger}
-              disabled={pending}
-              onPress={() => {
-                setMenuOpen(false);
-                onIntent(driver, item.key);
-              }}
-            />
-          ))}
-        </YStack>
+      {/* Tấm ⋮ theo khuôn "Thao tác" chung (chi tiết đơn, Công nợ): lưới nút có icon, không phải danh sách dòng. */}
+      <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title={driver.name} chrome="v2" headerDivider>
+        <ActionSheetButtons
+          autoSize
+          actions={menu.map((item) => ({
+            key: item.key,
+            icon: item.icon,
+            label: item.label,
+            danger: item.danger,
+            disabled: pending,
+            onPress: () => {
+              setMenuOpen(false);
+              onIntent(driver, item.key);
+            },
+          }))}
+        />
       </BottomSheet>
     </Card>
   );
@@ -392,29 +392,22 @@ function InternalDriverCardImpl({
         </YStack>
       </Pressable>
 
-      <BottomSheet
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        title={driver.name}
-        chrome="v2"
-        headerDivider
-        padded={false}
-      >
-        <YStack pb={space.sm}>
-          {menu.map((item) => (
-            <ActionMenuRow
-              key={item.key}
-              icon={item.icon}
-              label={item.label}
-              danger={item.danger}
-              disabled={pending}
-              onPress={() => {
-                setMenuOpen(false);
-                onIntent(driver, item.key);
-              }}
-            />
-          ))}
-        </YStack>
+      {/* Tấm ⋮ theo khuôn "Thao tác" chung (chi tiết đơn, Công nợ). */}
+      <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title={driver.name} chrome="v2" headerDivider>
+        <ActionSheetButtons
+          autoSize
+          actions={menu.map((item) => ({
+            key: item.key,
+            icon: item.icon,
+            label: item.label,
+            danger: item.danger,
+            disabled: pending,
+            onPress: () => {
+              setMenuOpen(false);
+              onIntent(driver, item.key);
+            },
+          }))}
+        />
       </BottomSheet>
     </Card>
   );

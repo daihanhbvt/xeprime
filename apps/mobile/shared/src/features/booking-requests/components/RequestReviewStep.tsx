@@ -48,7 +48,7 @@ interface RequestReviewStepProps {
    * vẽ bộ tải bằng nhúng (`uploader`) ngay trong thẻ, và màn cha khoá nút Gửi.
    */
   licenceGate?: { ready: boolean; loading: boolean; uploader: ReactNode };
-  /** Ô đồng ý có phủ điều khoản của CHỦ XE không — đổi câu đồng ý (`bookingCheckHost`). */
+  /** Ô đồng ý có phủ điều khoản của CHỦ XE không — đổi câu đồng ý (`bookingAgreeHost`). */
   agreementCoversHostTerms: boolean;
   nextStep: BookingReviewNextStep;
   /** Khách bấm gửi khi chưa tick ô đồng ý. */
@@ -262,7 +262,7 @@ export function RequestReviewStep({
 
       {/*
         Ô ĐỒNG Ý — BẮT BUỘC cho mọi chuyến (web #205). Khi chủ xe có điều khoản riêng, CÙNG ô đó phủ
-        luôn điều khoản ấy (`bookingCheckHost`) và server kiểm lại khi xe bắt buộc
+        luôn điều khoản ấy (`bookingAgreeHost`) và server kiểm lại khi xe bắt buộc
         (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`). Liên kết trong câu mở webview trong app, nên biểu mẫu
         đang điền không mất.
       */}
@@ -284,8 +284,8 @@ export function RequestReviewStep({
               accessibilityState={{ checked: Boolean(field.value) }}
               accessibilityLabel={tLegal(
                 agreementCoversHostTerms
-                  ? 'consent.bookingCheckHostPlain'
-                  : 'consent.bookingCheckPlain',
+                  ? 'consent.bookingAgreeHostPlain'
+                  : 'consent.bookingAgreePlain',
               )}
             >
               <XStack ai="flex-start" gap={space.sm} minHeight={sizing.touchTarget} py={space.xs}>
@@ -294,7 +294,7 @@ export function RequestReviewStep({
                 </YStack>
                 <YStack f={1}>
                   <LegalConsentNote
-                    place={agreementCoversHostTerms ? 'bookingCheckHost' : 'bookingCheck'}
+                    place={agreementCoversHostTerms ? 'bookingAgreeHost' : 'bookingAgree'}
                   />
                 </YStack>
               </XStack>

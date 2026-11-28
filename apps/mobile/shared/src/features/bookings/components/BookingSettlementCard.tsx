@@ -1,12 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Ionicons } from '@/components/icons/Ionicons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
+import { isNegativeMoney, isZeroMoney } from '@xeprime/domain';
 import {
   DEPOSIT_STATUS,
   DEPOSIT_STATUS_META,
-  PAYMENT_KIND,
   PERMISSION,
   type DepositStatus,
   type RefundMethod,
@@ -18,7 +17,6 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
 import { useSettlement } from '@/features/settlement/hooks/use-settlement';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -61,11 +59,10 @@ export function BookingSettlementCard({
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
-  const [takingDeposit, setTakingDeposit] = useState(false);
 
   const canView = permissions.has(PERMISSION.BOOKING_VIEW);
   const canRecord = permissions.has(PERMISSION.PAYMENT_RECORD);
-  // Ghi tiền MỚI (phát sinh, thu cọc) — hoàn cọc dùng `canRecord` trần, vẫn mở trên đơn huỷ.
+  // Ghi tiền MỚI (phát sinh) — hoàn cọc dùng `canRecord` trần, vẫn mở trên đơn huỷ.
   const canRecordNew = canRecord && !moneyClosed;
   /*
    * Ghi nhận hoàn cần `payments.record`; ĐIỀU CHỈNH một bản ghi đã có cần `payments.void` —
@@ -129,25 +126,15 @@ export function BookingSettlementCard({
     status === DEPOSIT_STATUS.AWAITING_REFUND ||
     status === DEPOSIT_STATUS.REFUNDED ||
     status === DEPOSIT_STATUS.PARTIALLY_REFUNDED;
+  /*
+   * Gom cọc về MỘT nhà (26/11/2026, web `SettlementCard`): trước lúc quyết toán, cọc theo đơn / đã
+   * nhận / nút thu cọc sống ở thẻ "Cọc & thế chấp". Thẻ này chỉ đưa cọc trở lại ở chặng QUYẾT TOÁN.
+   */
+  const settling = showRefundLine || status === DEPOSIT_STATUS.SETTLED;
 
   /* So sánh trên CHUỖI tiền, không `Number` — ADR 0007 (web còn dùng `Number` ở chỗ này). */
   const needsMore = !isZeroMoney(data.additionalDue) && !isNegativeMoney(data.additionalDue);
 
-  /*
-   * Cọc còn THIẾU so với cấu hình trên đơn — phép trừ trên CHUỖI tiền, không `Number` (ADR 0007).
-   * Đây cũng là số điền sẵn vào ô nhập khi mở tấm trượt thu tiền.
-   */
-  const depositOutstanding = subtractMoney(data.depositRequired, data.depositReceived);
-
-  /*
-   * Chỉ mời thu cọc khi còn thiếu VÀ chưa bước sang giai đoạn hoàn: sau khi đã hoàn thì "thu
-   * thêm" là một nghiệp vụ khác hẳn, không phải thu nốt cọc. Điều kiện gương y web.
-   */
-  const canTakeDeposit =
-    canRecordNew &&
-    !isNegativeMoney(depositOutstanding) &&
-    !isZeroMoney(depositOutstanding) &&
-    (status === DEPOSIT_STATUS.NOT_RECEIVED || status === DEPOSIT_STATUS.RECEIVED);
 
   return (
     /*
@@ -157,14 +144,15 @@ export function BookingSettlementCard({
     */
     <SectionCard
       title={t('cardTitle')}
+      // Chặng cọc chỉ nêu ở lúc quyết toán - trước đó thẻ "Cọc & thế chấp" đã nói.
       extra={
-        status === DEPOSIT_STATUS.NOT_RECEIVED ? undefined : (
+        settling ? (
           <StatusBadge
             label={domainLabel('depositStatus', status, meta.label)}
             color={meta.color}
             size="sm"
           />
-        )
+        ) : undefined
       }
     >
       <YStack gap={space.md} minWidth={0}>
@@ -219,22 +207,10 @@ export function BookingSettlementCard({
           </YStack>
         ) : null}
 
+        {settling ? (
         <YStack gap={space.md}>
-          <SettleRow label={t('depositRequiredShort')}>
-            <Money>{fmt.money(data.depositRequired)}</Money>
-          </SettleRow>
           <SettleRow label={t('depositReceivedShort')}>
-            {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
-              // Nói THẲNG là chưa có bằng chứng thu tiền, không hiện một số 0 mập mờ.
-              <Text col={colors.text} fos={fontSize.body} ta="right">
-                {t('depositNotRecorded')}
-              </Text>
-            ) : (
-              <Money>{fmt.money(data.depositReceived)}</Money>
-            )}
-            {canTakeDeposit ? (
-              <InlineLink label={t('takeDeposit')} onPress={() => setTakingDeposit(true)} />
-            ) : null}
+            <Money>{fmt.money(data.depositReceived)}</Money>
           </SettleRow>
           {hasSurcharges ? (
             <SettleRow label={t('surchargeTotalShort')}>
@@ -252,6 +228,7 @@ export function BookingSettlementCard({
             </SettleRow>
           ) : null}
         </YStack>
+        ) : null}
 
         {needsMore ? (
           <Notice
@@ -304,22 +281,6 @@ export function BookingSettlementCard({
         ) : null}
       </YStack>
 
-      {/*
-        Dùng LẠI đúng tấm trượt thu tiền của đơn, chỉ đổi `kind` — hai loại tiền cùng đi qua một
-        đường ghi (`PaymentsService`), nên dựng một form thứ hai cho cọc là mở đường cho hai
-        luồng ghi tiền lệch nhau. Web làm y hệt.
-
-        Gắn/tháo theo cờ mở chứ không giữ mãi trong cây: giá trị điền sẵn chỉ đọc lúc dựng.
-      */}
-      {takingDeposit ? (
-        <RecordPaymentSheet
-          open
-          onClose={() => setTakingDeposit(false)}
-          bookingId={bookingId}
-          kind={PAYMENT_KIND.DEPOSIT}
-          debtAmount={depositOutstanding}
-        />
-      ) : null}
     </SectionCard>
   );
 }

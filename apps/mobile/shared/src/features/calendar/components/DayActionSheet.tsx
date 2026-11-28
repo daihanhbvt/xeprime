@@ -94,18 +94,16 @@ export function DayActionSheet({
         </YStack>
       ) : null}
 
-      <YStack>
+      <YStack gap={8}>
         {actions.includes('block') ? (
           <>
             {/*
-              Cả ba dòng CÙNG tông gold — giống bộ chọn hành động của ô, và cùng lý do: đây là ba
-              lối đi ngang hàng, không có cái nào phụ. Để hai dòng khoá xám còn dòng đặt giá gold
-              thì hai cái kia đọc ra như đang bị vô hiệu.
+              Cả ba dòng CÙNG khuôn thẻ của tấm "Thao tác" (Figma `24729:82798`): ba lối đi ngang
+              hàng, không dòng nào được tô nổi để khỏi đọc ra như hai dòng kia đang bị vô hiệu.
             */}
             <SheetActionRow
               label={t('dayPanel.blockAll')}
-              icon="lock-closed-outline"
-              tone="primary"
+              icon="lock-2"
               trailing={
                 <Switch
                   value={blockState.batchId !== null}
@@ -121,8 +119,7 @@ export function DayActionSheet({
             />
             <SheetActionRow
               label={t('dayPanel.blockMultiDay')}
-              icon="calendar-number-outline"
-              tone="primary"
+              icon="calendar"
               onPress={onOpenBlockDialog}
             />
           </>
@@ -132,8 +129,7 @@ export function DayActionSheet({
           <SheetActionRow
             label={t('dayPanel.priceAll')}
             hint={t('dayPanel.priceAllHint')}
-            icon="pricetag-outline"
-            tone="primary"
+            icon="dollar-square"
             onPress={onPrice}
           />
         ) : null}

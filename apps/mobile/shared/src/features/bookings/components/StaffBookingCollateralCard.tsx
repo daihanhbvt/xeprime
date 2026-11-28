@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useFieldArray, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -9,48 +9,29 @@ import {
   BOOKING_COLLATERAL_TYPE_VALUES,
 } from '@xeprime/types';
 import { Ionicons } from '@/components/icons/Ionicons';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MoneyField } from '@/components/ui/MoneyField';
-import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
-import {
-  STAFF_COLLATERAL_MODE,
-  STAFF_COLLATERAL_MODE_VALUES,
-  collateralModeHasAssets,
-  collateralModeHasCash,
-  type StaffBookingValues,
-  type StaffCollateralMode,
-} from '../staff-booking-schema';
+import type { StaffBookingValues } from '../staff-booking-schema';
 
 /**
- * Thẻ "Cọc & thế chấp" của luồng ĐẶT HỘ (ADR 0109) — native port of web
- * `StaffBookingCollateralCard`: khách cọc TIỀN, để lại TÀI SẢN (CCCD, bằng lái, xe máy kèm biển
- * số…), cả hai, hoặc không cọc. Cọc tiền điền sẵn từ chính sách xe; danh sách tài sản in lên đơn và
- * hợp đồng, đánh dấu đã trả ở chi tiết đơn.
+ * Thẻ "Cọc & thế chấp" của luồng ĐẶT HỘ (ADR 0109) — native port of web `StaffBookingCollateralCard`
+ * (26/11/2026): một ô tiền cọc và một danh sách tài sản (CCCD, bằng lái, xe máy kèm biển số…). Nhập
+ * khoản nào thì đơn ghi khoản đó - tiền cọc để 0 và danh sách trống nghĩa là không cọc. Không có ô
+ * chọn "hình thức": server suy chế độ từ dữ liệu.
  */
-export function StaffBookingCollateralCard({
-  control,
-  setValue,
-}: {
-  control: Control<StaffBookingValues>;
-  setValue: UseFormSetValue<StaffBookingValues>;
-}) {
+export function StaffBookingCollateralCard({ control }: { control: Control<StaffBookingValues> }) {
   const colors = useColors();
   const t = useTranslations('BookingRequests.staffFlow.review.collateral');
   const domainLabel = useDomainLabel();
-  const mode = useWatch({ control, name: 'collateralMode' }) as StaffCollateralMode;
   const items = useFieldArray({ control, name: 'collaterals' });
   const rows = useWatch({ control, name: 'collaterals' });
+  const canAdd = items.fields.length < BOOKING_COLLATERAL_MAX_ITEMS;
 
-  const modeItems = useMemo(
-    () => STAFF_COLLATERAL_MODE_VALUES.map((value) => ({ key: value, label: t(`mode.${value}`) })),
-    [t],
-  );
   const typeOptions = useMemo(
     () =>
       BOOKING_COLLATERAL_TYPE_VALUES.map((value) => ({
@@ -59,14 +40,6 @@ export function StaffBookingCollateralCard({
       })),
     [domainLabel],
   );
-
-  const changeMode = (next: StaffCollateralMode) => {
-    setValue('collateralMode', next, { shouldDirty: true });
-    // Chọn có tài sản mà danh sách còn trống ⇒ mở sẵn một dòng (CCCD là thứ khách hay để lại nhất).
-    if (collateralModeHasAssets(next) && items.fields.length === 0) {
-      items.append({ collateralType: BOOKING_COLLATERAL_TYPE.CITIZEN_ID, description: '' });
-    }
-  };
 
   return (
     <Card>
@@ -79,28 +52,39 @@ export function StaffBookingCollateralCard({
             {t('lead')}
           </Text>
         </YStack>
-        <SegmentedTabs<StaffCollateralMode>
-          items={modeItems}
-          value={mode}
-          onChange={changeMode}
-          fit
-        />
 
-        {collateralModeHasCash(mode) ? (
-          <MoneyField control={control} name="depositAmount" label={t('cash')} hint={t('cashHint')} />
-        ) : null}
+        <MoneyField control={control} name="depositAmount" label={t('cash')} hint={t('cashHint')} />
 
-        {collateralModeHasAssets(mode) ? (
-          <>
-            <YStack gap={2}>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                {t('assetsTitle')}
-              </Text>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {t('assetsHint')}
-              </Text>
-            </YStack>
-            {items.fields.map((field, index) => {
+        <YStack gap={space.sm}>
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {t('assetsTitle')}
+            </Text>
+            {canAdd ? (
+              <Pressable
+                onPress={() =>
+                  items.append({ collateralType: BOOKING_COLLATERAL_TYPE.CITIZEN_ID, description: '' })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={t('add')}
+                hitSlop={space.sm}
+              >
+                <XStack ai="center" gap={space.xs}>
+                  <Ionicons name="add" size={iconSize.md} color={colors.brandLink} />
+                  <Text col={colors.brandLink} fos={fontSize.body} fow={fontWeight.medium}>
+                    {t('add')}
+                  </Text>
+                </XStack>
+              </Pressable>
+            ) : null}
+          </XStack>
+
+          {items.fields.length === 0 ? (
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {t('assetsHint')}
+            </Text>
+          ) : (
+            items.fields.map((field, index) => {
               const type = rows?.[index]?.collateralType;
               return (
                 <XStack key={field.id} gap={space.sm} ai="flex-start">
@@ -137,28 +121,9 @@ export function StaffBookingCollateralCard({
                   </YStack>
                 </XStack>
               );
-            })}
-            {items.fields.length < BOOKING_COLLATERAL_MAX_ITEMS ? (
-              <Button
-                label={t('add')}
-                icon="add"
-                variant="secondary"
-                onPress={() =>
-                  items.append({
-                    collateralType: BOOKING_COLLATERAL_TYPE.CITIZEN_ID,
-                    description: '',
-                  })
-                }
-              />
-            ) : null}
-          </>
-        ) : null}
-
-        {mode === STAFF_COLLATERAL_MODE.NONE ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('noneHint')}
-          </Text>
-        ) : null}
+            })
+          )}
+        </YStack>
       </YStack>
     </Card>
   );

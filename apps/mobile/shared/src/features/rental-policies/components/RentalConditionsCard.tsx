@@ -8,13 +8,14 @@ import {
   RENTAL_TERMS_MAX_LENGTH,
   type RentalTermsGroup,
 } from '@xeprime/types';
-import { Divider } from '@/components/ui/DataRow';
-import { InfoCard } from '@/components/ui/InfoCard';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { FieldLabel, FieldShell } from '@/components/ui/Field';
+import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
+import { RowDivider, SwitchRow } from '@/components/ui/SwitchRow';
 import { TextField } from '@/components/ui/TextField';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import { useRentalConditionsText } from '../rental-conditions';
-import { ToggleRow } from './PolicySections';
 
 /** Điều khoản thuê của MỘT nhóm dịch vụ trên form màn Chính sách thuê (ADR 0112 điều 3). */
 export interface RentalTermsFormGroup {
@@ -43,35 +44,36 @@ export function RentalConditionsCard({
 }) {
   const t = useTranslations('Shop.policies.workspace.conditions');
   return (
-    <InfoCard title={t('title')}>
-      <YStack gap={space.lg}>
-        {RENTAL_TERMS_GROUP_VALUES.map((group, index) => (
-          <YStack key={group} gap={space.md}>
-            {index > 0 ? <Divider /> : null}
-            <TermsGroup
-              group={group}
-              disabled={disabled}
-              {...(control ? { control } : {})}
-              {...(onOpenContracts ? { onOpenContracts } : {})}
-            />
-          </YStack>
-        ))}
-        {footer}
-      </YStack>
-    </InfoCard>
+    <InfoGroupCard title={t('title')}>
+      {RENTAL_TERMS_GROUP_VALUES.map((group) => (
+        <TermsGroup
+          key={group}
+          group={group}
+          disabled={disabled}
+          {...(control ? { control } : {})}
+          {...(onOpenContracts ? { onOpenContracts } : {})}
+        />
+      ))}
+      {footer}
+    </InfoGroupCard>
   );
 }
 
-function ReadonlyField({ label, value }: { label: string; value: string }) {
+/**
+ * Ô "chọn" KHOÁ (Figma `24789:85455` vẽ ô chọn): giấy tờ và cách đối chiếu là luật chuẩn nền tảng
+ * (ADR 0112 điều 3) - chỉ hiện, không chọn được (người dùng chốt 27/11/2026). Câu giải thích vào ⓘ.
+ */
+function LockedSelect({ label, value, hint }: { label: string; value: string; hint?: string }) {
   const colors = useColors();
   return (
-    <YStack gap={2} p={space.sm} br={radius.md} bg={colors.surfaceMuted} bw={1} bc={colors.borderSubtle}>
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {label}
-      </Text>
-      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-        {value}
-      </Text>
+    <YStack gap={6}>
+      <FieldLabel label={label} {...(hint ? { hint } : {})} />
+      <FieldShell disabled>
+        <Text f={1} py={space.sm} col={colors.placeholder} fos={typeScale.body.fontSize} numberOfLines={2}>
+          {value}
+        </Text>
+        <LineIcon name="chevron-down-md" size={20} color={colors.placeholder} />
+      </FieldShell>
     </YStack>
   );
 }
@@ -91,25 +93,28 @@ function TermsGroup({
   const t = useTranslations('Shop.policies.workspace.conditions');
   const rules = useRentalConditionsText();
   const withDriver = group === RENTAL_TERMS_GROUP.WITH_DRIVER;
+  /* Figma: mỗi nhóm một khung viền `stroke/gray-low200` bo 12, đệm 12. */
   return (
-    <YStack gap={space.sm}>
-      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+    <YStack gap={GROUP_GAP} p={GROUP_GAP} br={radius.control} bw={1} bc={colors.border}>
+      <Text
+        col={colors.text}
+        fos={typeScale.body.fontSize}
+        lh={typeScale.body.lineHeight}
+        fow={fontWeight.semibold}
+      >
         {t(`groups.${group}`)}
       </Text>
-      <ReadonlyField label={t('documents')} value={rules.documents} />
-      <ReadonlyField label={t('verify')} value={rules.verify} />
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {t('platformNote')}
-      </Text>
+      <LockedSelect label={t('documents')} value={rules.documents} hint={t('platformNote')} />
+      <LockedSelect label={t('verify')} value={rules.verify} />
       {control ? (
         <>
           <Controller
             control={control}
             name={`terms.${group}.requireTermsAcceptance`}
             render={({ field }) => (
-              <ToggleRow
-                label={withDriver ? t('acceptTitleWithDriver') : t('acceptTitle')}
-                hint={
+              <SwitchRow
+                title={withDriver ? t('acceptTitleWithDriver') : t('acceptTitle')}
+                description={
                   <>
                     {withDriver ? t('acceptHintWithDriver') : t('acceptHint')}
                     {withDriver ? ' ' : null}
@@ -119,6 +124,8 @@ function TermsGroup({
                             onOpenContracts ? (
                               <Text
                                 col={colors.brandLink}
+                                fos={typeScale.label.fontSize}
+                                lh={typeScale.label.lineHeight}
                                 textDecorationLine="underline"
                                 onPress={onOpenContracts}
                               >
@@ -131,12 +138,13 @@ function TermsGroup({
                       : null}
                   </>
                 }
-                checked={field.value === true}
+                value={field.value === true}
                 disabled={disabled}
-                onToggle={() => field.onChange(!field.value)}
+                onChange={(next) => field.onChange(next)}
               />
             )}
           />
+          <RowDivider />
           <TextField
             control={control}
             name={`terms.${group}.termsText`}
@@ -153,3 +161,6 @@ function TermsGroup({
     </YStack>
   );
 }
+
+/** Figma "Nhóm" trong thẻ Điều kiện: đệm + khoảng cách 12. */
+const GROUP_GAP = 12;

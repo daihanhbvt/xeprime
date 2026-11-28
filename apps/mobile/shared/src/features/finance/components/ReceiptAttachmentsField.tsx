@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DOCUMENT_UPLOAD_MAX_BYTES } from '@xeprime/types';
 import { FieldMessage } from '@/components/ui/Field';
 import { ReceiptAttachmentRow } from './ReceiptAttachmentRow';
+import { UploadingFileRow } from '@/components/ui/UploadingFileRow';
 import { LineIcon } from '@/components/icons/LineIcon';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { ImageSourceSheet } from '@/components/ui/ImageSourceSheet';
@@ -152,29 +153,7 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
         />
       ))}
       {/* Đang tải tệp lên: một dòng giữ chỗ cùng khuôn dòng tệp, kèm vòng quay - không để màn im lặng. */}
-      {busy ? (
-        <XStack
-          ai="center"
-          gap={space.md}
-          px={space.lg}
-          py={space.md}
-          br={radius.control}
-          bw={1}
-          bc={colors.border}
-          bg={colors.surface}
-          accessibilityLiveRegion="polite"
-          accessibilityLabel={t('uploadingFile')}
-        >
-          <YStack w={40} h={40} ai="center" jc="center" br={radius.sm} bg={colors.surfaceMuted}>
-            <ActivityIndicator size="small" color={colors.brandShape} />
-          </YStack>
-          <YStack f={1} minWidth={0}>
-            <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={22} fontFamily={FONT_FAMILY.medium}>
-              {t('uploadingFile')}
-            </Text>
-          </YStack>
-        </XStack>
-      ) : null}
+      {busy ? <UploadingFileRow label={t('uploadingFile')} /> : null}
 
       <FieldMessage
         error={fieldState.error?.message}

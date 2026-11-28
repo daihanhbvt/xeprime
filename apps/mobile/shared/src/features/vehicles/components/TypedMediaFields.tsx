@@ -29,35 +29,11 @@ const TILE_RATIO = 4 / 3;
 /** Màu rãnh công tắc — cùng bảng với `MarketplaceVisibilityRow`. */
 
 /**
- * Bước ẢNH của hai WIZARD THÊM XE (nhanh + nâng cao) — bản native của `TypedMediaFields` bên web.
- *
- * Các ô theo GÓC CHỤP BẮT BUỘC (`requiredVehicleImageTypes`: ô tô 5, xe máy 2), cùng cách xếp
- * với mục "Hình ảnh" của màn quản lý xe. Khác biệt duy nhất: ở đây ảnh là trường RHF (`media`) và
- * đi cùng một lần `POST /vehicles` — lúc thêm xe chưa có `vehicleId` nào để `PATCH`.
- *
- * Không có ô "ảnh đại diện" (07/10/2026): ảnh bìa là ảnh MẶT TRƯỚC, server suy ra khi lưu.
- *
- * Giữ mảng `images` song song với `media`, đúng như web: payload cũ và thao tác "xoá hết" vẫn
- * chạy như trước.
+ * Trạng thái ảnh theo góc chụp của form thêm xe: trường RHF `media` + mảng `images` song song (payload
+ * cũ), cập nhật dựng từ ref (upload về muộn không đè bản mới), bộ đếm ảnh đang tải và trần thư viện.
+ * Dùng chung cho `TypedMediaFields` (đăng nhanh) và `CreateVehiclePhotosCard` (wizard thêm xe).
  */
-export function TypedMediaFields<T extends FieldValues>({
-  control,
-  vehicleType,
-  vehicleName = '',
-  presign = uploadsApi.vehicleImage,
-  onUploadingChange,
-}: {
-  control: Control<T>;
-  vehicleType: string;
-  vehicleName?: string;
-  /** Wizard đăng nhanh truyền bản MỞ GIAN HÀNG trước tấm ảnh đầu tiên. */
-  presign?: (meta: UploadMeta) => Promise<UploadPresign>;
-  /** Có ảnh đang tải — nơi gọi có thể chặn "Tiếp tục"/"Lưu". */
-  onUploadingChange?: (uploading: boolean) => void;
-}) {
-  const colors = useColors();
-  const t = useTranslations('VehicleManage.images');
-  const domainLabel = useDomainLabel();
+export function useTypedMediaField<T extends FieldValues>(control: Control<T>) {
   const { field: mediaField, fieldState: mediaState } = useController({
     control,
     name: 'media' as Path<T>,
@@ -88,11 +64,63 @@ export function TypedMediaFields<T extends FieldValues>({
     },
     [setMedia, setImages],
   );
+  /** Đặt ảnh vào góc `slot` - ô đơn thì THAY ảnh cũ của góc đó. */
+  const place = useCallback(
+    (slot: VehicleImageType, url: string) =>
+      update((prev) => [
+        ...prev.filter(
+          (i) => i.url !== url && !(isSingleVehicleImageSlot(slot) && i.type === slot),
+        ),
+        { url, type: slot },
+      ]),
+    [update],
+  );
+  const remove = useCallback(
+    (url: string) => update((prev) => prev.filter((i) => i.url !== url)),
+    [update],
+  );
 
   const [uploading, setUploading] = useState(0);
   const track = useCallback((busy: boolean) => {
     setUploading((n) => Math.max(0, n + (busy ? 1 : -1)));
   }, []);
+  const remaining = Math.max(0, VEHICLE_GALLERY_MAX_IMAGES - items.length - uploading);
+
+  return { items, error: mediaState.error, place, remove, track, uploading, remaining };
+}
+
+/**
+ * Bước ẢNH của hai WIZARD THÊM XE (nhanh + nâng cao) — bản native của `TypedMediaFields` bên web.
+ *
+ * Các ô theo GÓC CHỤP BẮT BUỘC (`requiredVehicleImageTypes`: ô tô 5, xe máy 2), cùng cách xếp
+ * với mục "Hình ảnh" của màn quản lý xe. Khác biệt duy nhất: ở đây ảnh là trường RHF (`media`) và
+ * đi cùng một lần `POST /vehicles` — lúc thêm xe chưa có `vehicleId` nào để `PATCH`.
+ *
+ * Không có ô "ảnh đại diện" (07/10/2026): ảnh bìa là ảnh MẶT TRƯỚC, server suy ra khi lưu.
+ *
+ * Giữ mảng `images` song song với `media`, đúng như web: payload cũ và thao tác "xoá hết" vẫn
+ * chạy như trước.
+ */
+export function TypedMediaFields<T extends FieldValues>({
+  control,
+  vehicleType,
+  vehicleName = '',
+  presign = uploadsApi.vehicleImage,
+  onUploadingChange,
+}: {
+  control: Control<T>;
+  vehicleType: string;
+  vehicleName?: string;
+  /** Wizard đăng nhanh truyền bản MỞ GIAN HÀNG trước tấm ảnh đầu tiên. */
+  presign?: (meta: UploadMeta) => Promise<UploadPresign>;
+  /** Có ảnh đang tải — nơi gọi có thể chặn "Tiếp tục"/"Lưu". */
+  onUploadingChange?: (uploading: boolean) => void;
+}) {
+  const colors = useColors();
+  const t = useTranslations('VehicleManage.images');
+  const domainLabel = useDomainLabel();
+  const media = useTypedMediaField(control);
+  const { items, track, uploading, remaining } = media;
   useEffect(() => {
     onUploadingChange?.(uploading > 0);
   }, [uploading, onUploadingChange]);
@@ -102,13 +130,9 @@ export function TypedMediaFields<T extends FieldValues>({
    * đều BẮT BUỘC, không có ô "Ảnh khác"; trần thư viện đếm MỌI ảnh + ảnh đang tải.
    */
   const slots = useMemo(() => requiredVehicleImageTypes(vehicleType ?? ''), [vehicleType]);
-  const remaining = Math.max(0, VEHICLE_GALLERY_MAX_IMAGES - items.length - uploading);
 
   return (
     <YStack gap={space.md}>
-      <Text col={colors.placeholder} fos={fontSize.label}>
-        {t('minimumHint', { max: VEHICLE_GALLERY_MAX_IMAGES })}
-      </Text>
 
       {slots.map((slot) => (
         <SlotTile
@@ -121,23 +145,16 @@ export function TypedMediaFields<T extends FieldValues>({
           full={!isSingleVehicleImageSlot(slot) && remaining === 0}
           remaining={remaining}
           presign={presign}
-          onUploaded={(url) =>
-            update((prev) => [
-              ...prev.filter(
-                (i) => i.url !== url && !(isSingleVehicleImageSlot(slot) && i.type === slot),
-              ),
-              { url, type: slot },
-            ])
-          }
-          onRemove={(url) => update((prev) => prev.filter((i) => i.url !== url))}
+          onUploaded={(url) => media.place(slot, url)}
+          onRemove={media.remove}
           onBusyChange={track}
         />
       ))}
 
       {/* Còn trống một góc ảnh bắt buộc — lỗi của form, hiện ngay dưới bảng ảnh. */}
-      {mediaState.error?.message ? (
+      {media.error?.message ? (
         <Text col={colors.danger} fos={fontSize.bodySm} accessibilityRole="alert">
-          {mediaState.error.message}
+          {media.error.message}
         </Text>
       ) : null}
     </YStack>

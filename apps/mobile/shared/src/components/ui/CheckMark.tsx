@@ -45,7 +45,13 @@ export function CheckMark({
   checked,
   size = 'md',
   shape = 'square',
+  tone = 'primary',
 }: {
+  /**
+   * `brand` - "Checkbox filled" trong thẻ chọn viền vàng (Figma `24789:84314`): nền `bg/primary`
+   * #f5c33b (`brandShape`), sáng hơn `primary` #e9ac29 của ô tích thường.
+   */
+  tone?: 'primary' | 'brand';
   /**
    * `circle` - "Check circle" của Figma (`1142:82407`, checklist chuẩn bị giao xe `24158:102976`):
    * tròn 20, xong = nền `shape/primary` + tích trắng nét 2 (đường Figma, khung 14).
@@ -60,6 +66,7 @@ export function CheckMark({
   const box = sm ? BOX_SM : BOX;
   const tick = sm ? TICK_SM : TICK;
   const circle = shape === 'circle';
+  const fill = tone === 'brand' ? colors.brandShape : colors.primary;
   return (
     <XStack
       width={box}
@@ -68,8 +75,8 @@ export function CheckMark({
       jc="center"
       br={circle ? radius.pill : sm ? BOX_SM_RADIUS : radius.sm}
       bw={1}
-      bc={checked ? colors.primary : colors.borderInput}
-      bg={checked ? colors.primary : colors.surface}
+      bc={checked ? fill : colors.borderInput}
+      bg={checked ? fill : colors.surface}
     >
       {checked && circle ? (
         <Svg width={CIRCLE_TICK} height={CIRCLE_TICK} viewBox="0 0 14 14" fill="none">

@@ -268,7 +268,8 @@ export function BookingRequestDetailScreen({
                       ...(request.deliveryRequested && request.deliveryAddress
                         ? { lines: [request.deliveryAddress] }
                         : {}),
-                      ...(request.deliveryRequested
+                      // Phí đã chốt thì nằm ở ô "Thanh toán" - ⓘ chỉ còn khi chưa duyệt (web #349).
+                      ...(request.deliveryRequested && request.pricing?.deliveryFee == null
                         ? {
                             titleExtra: (
                               <InfoHint
@@ -300,7 +301,7 @@ export function BookingRequestDetailScreen({
                     action={
                       <InfoHint
                         content={
-                          request.deliveryRequested
+                          request.deliveryRequested && request.pricing?.deliveryFee == null
                             ? `${t('schedule.pickupWishHint')} ${t('schedule.deliveryFeeHint')}`
                             : t('schedule.pickupWishHint')
                         }
@@ -481,7 +482,7 @@ export function BookingRequestDetailScreen({
                         fos={last ? fontSize.bodyLg : fontSize.body}
                         fow={last ? fontWeight.bold : fontWeight.medium}
                       >
-                        {fmt.money(row.amount)}
+                        {row.text ?? fmt.money(row.amount)}
                       </Text>
                     </XStack>
                   );

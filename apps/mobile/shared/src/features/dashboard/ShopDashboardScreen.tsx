@@ -192,7 +192,12 @@ export function ShopDashboardScreen() {
 
         <MonthKpis cards={cards} {...(report ? { report } : {})} />
 
-        <TrendCard series={money.visible ? money.series : null} trips={tripsState} />
+        <TrendCard
+          series={money.visible ? money.series : null}
+          bySource={money.visible ? money.bySource : null}
+          branchId={branchId}
+          trips={tripsState}
+        />
 
         {/*
           App Partner: Tổng quan CHỈ hiện đội xe - thông tin gói nằm ở Thông tin gian hàng (sau cờ

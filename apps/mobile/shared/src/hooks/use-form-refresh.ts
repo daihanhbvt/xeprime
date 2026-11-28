@@ -7,6 +7,17 @@ export interface ScreenRefresh {
 }
 
 /**
+ * Tuỳ chọn cho MỌI lượt `reset` có ý "bỏ thay đổi" (Huỷ, Hoàn tác, xác nhận rời màn) và lượt
+ * `reset` sau khi LƯU xong, ở form dùng `resetOptions: { keepDirtyValues: true }`.
+ *
+ * React Hook Form trộn `resetOptions` của `useForm` vào CẢ lời gọi `reset()` thủ công
+ * (`{ ..._options.resetOptions, ...keepStateOptions }`), nên thiếu dòng này thì Huỷ giữ nguyên
+ * mọi ô đã sửa - `isDirty` về `false` (nút tắt) nhưng ô vẫn hiện số mới, và lượt lưu sau gửi lên
+ * số "đã huỷ". `keepDirtyValues` chỉ dành cho lượt dữ liệu server tự nạp lại qua prop `values`.
+ */
+export const RESET_DISCARD = { keepDirtyValues: false } as const;
+
+/**
  * Kéo-làm-mới cho một màn có FORM.
  *
  * `onRefresh` LUÔN có mặt — đây là điểm quan trọng nhất của file này.

@@ -161,6 +161,32 @@ export function publishGapFields(
   return gaps;
 }
 
+/** Ô form gánh một điều kiện lên chợ (giá theo dịch vụ, biển số, ảnh). */
+const REQUIREMENT_FIELD: Partial<Record<PublishRequirement, string>> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'weekdayPrice',
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'monthlyPrice',
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'withDriverDailyPrice',
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'plateNumber',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'media',
+};
+
+/**
+ * Ô CỤ THỂ còn trống của các điều kiện lên chợ đang thiếu - để form tô viền đỏ đúng ô có dấu `*`
+ * (vd "Hộp số") thay vì chỉ nêu tên trong dòng thông báo chung.
+ */
+export function publishGapFormFields(
+  missing: readonly PublishRequirement[],
+  values: Parameters<typeof missingPublishRequirementsForForm>[0],
+): string[] {
+  return missing.flatMap((key) => {
+    const field = REQUIREMENT_FIELD[key];
+    if (field) return [field];
+    return publishGapFields(key, values).map((gap) =>
+      gap === 'model' ? 'vehicleCatalogModelId' : gap,
+    );
+  });
+}
+
 /** Khoá các điều kiện còn thiếu — rỗng nghĩa là đủ điều kiện gửi duyệt. */
 export function missingPublishRequirements(vehicle: VehicleDetail): PublishRequirement[] {
   return missingRequirements(toInput(vehicle), publicationImages(vehicle));

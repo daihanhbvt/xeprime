@@ -4,13 +4,13 @@ import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import { DRIVER_WAGE_REASON_MAX_LENGTH, MONEY_STEP_VND } from '@xeprime/types';
-import { Callout } from '@/components/ui/Callout';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { Chip } from '@/components/ui/Chip';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { RadioField } from '@/components/ui/RadioField';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { DriverWageQuote } from '../api';
 
 /**
@@ -82,7 +82,10 @@ export function DriverDailyWageFields({
   currentTotal = null,
   showQuick = true,
   afterField,
+  beforeTotal,
 }: {
+  /** Khối chen trước khung tổng (hộp sửa: ô "Lý do" - web `beforeTotal`). */
+  beforeTotal?: ReactNode;
   control: Control<DailyWageValues>;
   quote: DriverWageQuote;
   canSetDefault: boolean;
@@ -114,6 +117,7 @@ export function DriverDailyWageFields({
   const range = { min: fmt.money(quote.wageDaily.min), max: fmt.money(quote.wageDaily.max) };
   const diff = total !== null && currentTotal !== null ? total - currentTotal : null;
 
+  const aboveRent = total !== null && total > Number(quote.rentAmount);
   return (
     <>
       <MoneyField
@@ -142,41 +146,66 @@ export function DriverDailyWageFields({
           ))}
         </XStack>
       ) : null}
-      <XStack ai="center" jc="space-between" gap={space.sm}>
-        <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-          {currentTotal === null ? tPicker('wageTotal', { days: quote.days }) : tEdit('total')}
-        </Text>
+      {beforeTotal}
+      {/* Khung tổng (Figma `24145:61977`): nền xám bo 12, nhãn và số CÙNG cỡ 14, chênh lệch xanh/đỏ. */}
+      <XStack
+        ai="center"
+        jc="space-between"
+        gap={space.sm}
+        px={space.md}
+        py={space.sm + space.xs}
+        br={radius.control}
+        bg={colors.background}
+      >
+        <XStack f={1} minWidth={0} ai="center" gap={space.xs}>
+          <Text flexShrink={1} col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+            {currentTotal === null ? tPicker('wageTotal', { days: quote.days }) : tEdit('total')}
+          </Text>
+          {/* Cao hơn tiền thuê: lời nhắc nằm trong ⓘ của dòng tổng (người dùng 28/11/2026). */}
+          {aboveRent ? (
+            <InfoHint content={t('aboveRent', { rent: fmt.money(quote.rentAmount) })} label={tEdit('total')} />
+          ) : null}
+        </XStack>
         {diff !== null && diff !== 0 ? (
-          <Text col={diff > 0 ? colors.success : colors.danger} fos={fontSize.bodySm} fow={fontWeight.medium}>
+          <Text
+            col={diff > 0 ? colors.success : colors.danger}
+            fos={typeScale.body.fontSize}
+            lh={typeScale.body.lineHeight}
+            fow={fontWeight.medium}
+          >
             {`${diff > 0 ? '+' : '-'}${fmt.count(Math.abs(diff))}`}
           </Text>
         ) : null}
-        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+        <Text
+          col={colors.text}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.semibold}
+        >
           {total === null ? '-' : fmt.money(String(total))}
         </Text>
       </XStack>
-      {total !== null && total > Number(quote.rentAmount) ? (
-        <Callout tone="warning" title={t('aboveRent', { rent: fmt.money(quote.rentAmount) })} />
-      ) : null}
       {showScope ? (
+        /*
+          Gọn cho mobile (người dùng 28/11/2026): hai lựa chọn nằm NGANG không khung (khuôn `inline`
+          của Figma), câu giải thích của từng lựa chọn dồn vào ⓘ cạnh nhãn "Áp dụng".
+        */
         <RadioField
           control={control}
           name="scope"
           label={t('scope.label')}
+          inline
+          hint={[
+            `${t('scope.trip')}: ${
+              shopDefault === null
+                ? t('scope.tripNoDefault')
+                : t('scope.tripHint', { current: fmt.money(quote.dailyWage) })
+            }`,
+            `${t('scope.default')}: ${t('scope.defaultHint', { daily: fmt.money(String(daily)) })}`,
+          ].join(String.fromCharCode(10))}
           options={[
-            {
-              value: WAGE_SCOPE.TRIP,
-              label: t('scope.trip'),
-              hint:
-                shopDefault === null
-                  ? t('scope.tripNoDefault')
-                  : t('scope.tripHint', { current: fmt.money(quote.dailyWage) }),
-            },
-            {
-              value: WAGE_SCOPE.DEFAULT,
-              label: t('scope.default'),
-              hint: t('scope.defaultHint', { daily: fmt.money(String(daily)) }),
-            },
+            { value: WAGE_SCOPE.TRIP, label: t('scope.trip') },
+            { value: WAGE_SCOPE.DEFAULT, label: t('scope.default') },
           ]}
         />
       ) : null}

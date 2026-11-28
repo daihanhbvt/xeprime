@@ -16,6 +16,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { DashedDivider } from '@/components/ui/DashedDivider';
 import { InfoCard, InfoRow, InfoRows, type InfoCardLook } from '@/components/ui/InfoCard';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { RichText } from '@/components/ui/RichText';
 import { TextField } from '@/components/ui/TextField';
@@ -592,11 +593,17 @@ export function ShopLegalSheet({
   onCancel,
   onSubmit,
   onManageBranches,
+  noticesAsToast = false,
+  helpInTitle = false,
 }: {
   open: boolean;
   control: Control<ShopProfileWithContactValues>;
   saving: boolean;
   kind?: StorefrontKind;
+  /** Lời nhắc của ô địa chỉ (lệch tỉnh, tra hỏng) hiện bằng toast - Quản lý gian hàng. */
+  noticesAsToast?: boolean;
+  /** Câu gợi ý tỉnh/chi nhánh mặc định vào dấu (!) cạnh tiêu đề tấm thay vì dòng chữ dưới ô. */
+  helpInTitle?: boolean;
   onCancel: () => void;
   onSubmit: () => void;
   /**
@@ -616,6 +623,9 @@ export function ShopLegalSheet({
       open={open}
       onClose={onCancel}
       title={personal ? tOwner('address') : t('title')}
+      {...(helpInTitle && !personal
+        ? { titleAdornment: <InfoHint content={tShop('province.help')} label={t('title')} /> }
+        : {})}
       subtitle={personal ? tOwner('addressHint') : t('dialogHint')}
       footer={<SheetFooter saving={saving} onCancel={onCancel} onSubmit={onSubmit} />}
     >
@@ -624,6 +634,7 @@ export function ShopLegalSheet({
           control={control}
           names={ADDRESS_FIELD_NAMES}
           pin={ADDRESS_PIN_NAMES}
+          noticesAsToast={noticesAsToast}
           required
           wardRequired={false}
           addressLineRequired={false}
@@ -636,9 +647,11 @@ export function ShopLegalSheet({
         ) : (
           <YStack gap={space.xs}>
             {/* Địa chỉ ở đây là của CHI NHÁNH MẶC ĐỊNH - đổi nó là dời vị trí công khai của xe (web). */}
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {tShop('province.help')}
-            </Text>
+            {helpInTitle ? null : (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {tShop('province.help')}
+              </Text>
+            )}
             {onManageBranches ? (
               <XStack>
                 <InlineAction label={tShop('province.branchLink')} onPress={onManageBranches} />

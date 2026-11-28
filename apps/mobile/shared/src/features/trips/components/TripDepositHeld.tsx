@@ -37,7 +37,7 @@ export function TripDepositHeld({
           <Text col={colors.textMuted} fos={fontSize.bodySm} flexShrink={0}>
             {t('cash')}
           </Text>
-          <XStack f={1} fw="wrap" jc="flex-end" ai="center" gap={space.xs}>
+          <XStack f={1} flexWrap="wrap" jc="flex-end" ai="center" gap={space.xs}>
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
               {isZeroMoney(finance.depositReceived)
                 ? t('cashNone')

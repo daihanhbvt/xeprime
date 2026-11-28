@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, type LayoutChangeEvent } from 'react-native';
+import type { ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useHideTabBar } from '@/components/layout/tab-bar-visibility';
 import { goBackOr } from '@/navigation/go-back-or';
@@ -20,11 +20,14 @@ import {
   type VehicleType,
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Chip } from '@/components/ui/Chip';
-import { InfoCard } from '@/components/ui/InfoCard';
+import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { RowDivider } from '@/components/ui/SwitchRow';
+import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -41,8 +44,14 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
-import { POLICY_ANCHOR, PolicySections, type PolicyAnchor } from './components/PolicySections';
+import { fontWeight, space, typeScale } from '@/theme/tokens';
+import {
+  CollateralPolicySection,
+  DeliveryPolicySection,
+  LongTermDiscountPolicySection,
+  POLICY_BLOCK,
+  PolicySections,
+} from './components/PolicySections';
 import { TurnaroundBufferField } from './components/TurnaroundBufferField';
 import {
   RentalConditionsCard,
@@ -66,9 +75,51 @@ import type {
   SaveRentalPolicyInput,
   SaveTenantRentalTermsInput,
   ShopOperationDefaults,
-  ShopRentalPolicy,
   TenantRentalTerms,
 } from './api';
+import { RESET_DISCARD } from '@/hooks/use-form-refresh';
+
+/**
+ * Sáu tab của trang (Figma `24231:112108`, người dùng chốt 27/11/2026) - mỗi tab MỘT phần của chính
+ * sách; form và nút Lưu vẫn chung cho cả trang.
+ */
+const POLICY_TAB = {
+  PAYMENT: 'payment',
+  COLLATERAL: 'collateral',
+  LIMITS: 'limits',
+  DELIVERY: 'delivery',
+  LONG_TERM: 'longTerm',
+  CONDITIONS: 'conditions',
+} as const;
+/** Khay Ô tô · Xe máy ở đầu trang (Figma 114 + chỗ cho chữ tiếng Anh). */
+const VEHICLE_TYPE_TABS_WIDTH = 132;
+type PolicyTab = (typeof POLICY_TAB)[keyof typeof POLICY_TAB];
+const POLICY_TAB_VALUES = Object.values(POLICY_TAB) as PolicyTab[];
+const POLICY_TAB_LABEL = {
+  [POLICY_TAB.PAYMENT]: 'nav.paymentInsurance',
+  [POLICY_TAB.COLLATERAL]: 'nav.collateralApp',
+  [POLICY_TAB.LIMITS]: 'nav.limitsApp',
+  [POLICY_TAB.DELIVERY]: 'nav.delivery',
+  [POLICY_TAB.LONG_TERM]: 'nav.longTerm',
+  [POLICY_TAB.CONDITIONS]: 'nav.conditions',
+} as const satisfies Record<PolicyTab, string>;
+
+/**
+ * Bấm Lưu mà ô lỗi nằm ở tab KHÁC ⇒ mở đúng tab đó (một form trải trên sáu tab). Đọc theo tên trường
+ * gốc của lỗi; trường không thuộc tab nào thì giữ tab đang mở.
+ */
+function tabOfErrors(errors: Record<string, unknown>): PolicyTab | null {
+  const keys = Object.keys(errors);
+  const has = (prefixes: readonly string[]) =>
+    keys.some((key) => prefixes.some((prefix) => key.startsWith(prefix)));
+  if (has(['insurance'])) return POLICY_TAB.PAYMENT;
+  if (has(['collateral', 'deposit'])) return POLICY_TAB.COLLATERAL;
+  if (has(['mileage', 'includedDistance', 'excessDistance', 'overtime'])) return POLICY_TAB.LIMITS;
+  if (has(['delivery', 'turnaround'])) return POLICY_TAB.DELIVERY;
+  if (has(['discount'])) return POLICY_TAB.LONG_TERM;
+  if (has(['terms'])) return POLICY_TAB.CONDITIONS;
+  return null;
+}
 
 /**
  * Chính sách thuê MẶC ĐỊNH của gian hàng (SHP-04) — bản native của `/manage/shop/policies`.
@@ -98,6 +149,8 @@ export function ShopPolicyScreen() {
   const [vehicleType, setVehicleType] = useState<VehicleType>(
     typeParam === VEHICLE_TYPE.MOTORBIKE ? VEHICLE_TYPE.MOTORBIKE : VEHICLE_TYPE.CAR,
   );
+  /* Tab ở ĐÂY (ngoài `key={vehicleType}`): đổi Ô tô ↔ Xe máy giữ nguyên tab đang xem. */
+  const [tab, setTab] = useState<PolicyTab>(POLICY_TAB.PAYMENT);
 
   if (!permissions.isLoading && !canView) {
     return (
@@ -122,6 +175,8 @@ export function ShopPolicyScreen() {
       key={vehicleType}
       vehicleType={vehicleType}
       onSelectVehicleType={setVehicleType}
+      tab={tab}
+      onTab={setTab}
       canView={canView}
       canEdit={canEdit}
     />
@@ -218,11 +273,15 @@ function toPolicyInput(values: ShopPolicyFormValues): SaveRentalPolicyInput {
 function PolicyWorkspace({
   vehicleType,
   onSelectVehicleType,
+  tab,
+  onTab,
   canView,
   canEdit,
 }: {
   vehicleType: VehicleType;
   onSelectVehicleType: (next: VehicleType) => void;
+  tab: PolicyTab;
+  onTab: (next: PolicyTab) => void;
   canView: boolean;
   canEdit: boolean;
 }) {
@@ -244,31 +303,7 @@ function PolicyWorkspace({
   const navigateOnce = useNavigateOnce();
 
   const query = useShopPolicy(vehicleType, canView);
-  /*
-   * Cả hai loại để ĐẾM xe trên tab (web `SegmentedTabs` + `count`) — cùng key với `query`, nên loại
-   * đang mở không tải hai lần và đổi tab không tải lại.
-   */
-  const carPolicy = useShopPolicy(VEHICLE_TYPE.CAR, canView);
-  const motorbikePolicy = useShopPolicy(VEHICLE_TYPE.MOTORBIKE, canView);
-  const vehicleCount = (policy: ShopRentalPolicy | undefined) =>
-    policy ? policy.inheritingVehicles + policy.overriddenVehicles : undefined;
-
-  /*
-   * Mục lục (web `PoliciesLayout`, P2): ở màn hẹp cột phải lên ĐẦU — một dải chip, chạm là cuộn tới
-   * khối. Toạ độ khối tương đối với khung `PolicySections`, khung đó lại nằm trong cột nội dung.
-   */
   const scrollRef = useRef<ScrollView | null>(null);
-  const columnY = useRef(0);
-  const sectionsY = useRef(0);
-  const anchorY = useRef<Partial<Record<PolicyAnchor, number>>>({});
-  const scrollToAnchor = (anchor: PolicyAnchor) => {
-    const y = anchorY.current[anchor];
-    if (y === undefined) return;
-    scrollRef.current?.scrollTo({
-      y: Math.max(0, columnY.current + sectionsY.current + y - space.md),
-      animated: true,
-    });
-  };
   const defaultsQuery = useShopOperationDefaults(vehicleType, canView);
   const save = useSaveShopPolicy(vehicleType);
   /*
@@ -302,11 +337,33 @@ function PolicyWorkspace({
   const dirty = formState.isDirty && canEdit;
 
   /*
+   * Kéo-để-làm-mới: nạp lại chính sách, thời gian chuẩn bị, điều khoản và cảnh báo bảo hiểm. Ô đang
+   * sửa dở giữ nguyên nhờ `keepDirtyValues` - chỉ ô chưa đụng tới nhận số mới.
+   */
+  const refreshAll = useCallback(
+    () =>
+      Promise.all([
+        query.refetch(),
+        defaultsQuery.refetch(),
+        termsQuery.refetch(),
+        ...(insuranceImpact.isFetched || insuranceImpact.isError ? [insuranceImpact.refetch()] : []),
+      ]),
+    [query, defaultsQuery, termsQuery, insuranceImpact],
+  );
+  const pull = usePullRefresh(refreshAll);
+
+  /*
    * Xác nhận TRƯỚC khi gửi, sau khi đã validate: giá trị mới áp ngay cho mọi lượt đặt mới của
    * các xe đang kế thừa. Hỏi "chắc chưa?" rồi mới báo "thiếu 2 mục" là bắt người dùng đi qua
    * một hộp thoại vô ích.
    */
-  const askConfirm = handleSubmit((next) => setConfirming(next));
+  const askConfirm = handleSubmit(
+    (next) => setConfirming(next),
+    (errors) => {
+      const target = tabOfErrors(errors as Record<string, unknown>);
+      if (target && target !== tab) onTab(target);
+    },
+  );
 
   const submit = useCallback(async () => {
     const next = confirming;
@@ -322,7 +379,7 @@ function PolicyWorkspace({
         ? await saveDefaults.mutateAsync({ turnaroundBufferMinutes: next.turnaroundBufferMinutes })
         : defaultsQuery.data;
       const savedTerms = termsChanged ? await saveTerms.mutateAsync(termsBody) : termsQuery.data;
-      reset(toFormValues(policy?.policy, savedDefaults, savedTerms));
+      reset(toFormValues(policy?.policy, savedDefaults, savedTerms), RESET_DISCARD);
       setConfirming(null);
       toast.showSuccess(t('saved', { vehicle: domainLabel('vehicleType', vehicleType) }));
     } catch (err) {
@@ -362,36 +419,56 @@ function PolicyWorkspace({
     (defaultsQuery.isError && !defaults) ||
     (termsQuery.isError && !terms);
   const typeLabel = (type: VehicleType) => domainLabel('vehicleType', type);
+  const disabled = !canEdit || submitting;
+  const tabItems = POLICY_TAB_VALUES.map((key) => ({
+    key,
+    label: tWorkspace(POLICY_TAB_LABEL[key]),
+  }));
 
   return (
     <>
+      {/*
+        Figma `24231:109939`: tiêu đề + khay Ô tô · Xe máy ở góc phải, dưới là hàng tab gạch chân - mỗi
+        tab MỘT phần của chính sách (người dùng chốt 27/11/2026). Một form, một nút Lưu cho cả 6 tab.
+      */}
       <ManagePageHeader
         title={tWorkspace('title')}
         onBack={() => goBackOr(router, ROUTES.manage.shop())}
+        actions={
+          // Figma "Horizontal tabs" 114 rộng ở góc phải - khung cố định để khay không giãn hết hàng.
+          <XStack w={VEHICLE_TYPE_TABS_WIDTH}>
+            <SegmentedTabs
+              fit
+              variant="neutral"
+              items={VEHICLE_TYPE_VALUES.map((value) => ({ key: value, label: typeLabel(value) }))}
+              value={vehicleType}
+              onChange={requestType}
+            />
+          </XStack>
+        }
+        below={<UnderlineTabs items={tabItems} value={tab} onChange={onTab} />}
       />
       <Screen
         edges={['left', 'right', 'bottom']}
         padded={false}
         scrollRef={scrollRef}
+        {...(canView ? pull : {})}
         footer={
           canEdit && ready ? (
-            /*
-              "Hủy · Lưu thay đổi" DÍNH ĐÁY — cặp nút của web (P15): cả hai luôn ở đó, chỉ SÁNG khi có
-              thay đổi (thay cho thanh "thay đổi chưa lưu" của bản cũ).
-            */
+            /* "Hủy · Lưu thay đổi" DÍNH ĐÁY (Figma `24231:112092`): chỉ SÁNG khi có thay đổi. */
             <XStack gap={space.sm}>
-              <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
+              <YStack flexShrink={0}>
                 <Button
                   label={tActions('cancel')}
-                  variant="neutral"
+                  variant="outline"
                   disabled={!formState.isDirty || submitting}
-                  onPress={() => reset()}
+                  onPress={() => reset(values, RESET_DISCARD)}
                 />
               </YStack>
               <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   label={tActions('saveChanges')}
-                  icon="save-outline"
+                  lineIcon="tick"
                   variant="gradient"
                   loading={submitting}
                   disabled={!formState.isDirty}
@@ -402,74 +479,7 @@ function PolicyWorkspace({
           ) : undefined
         }
       >
-        <YStack px={gutter} pt={space.md} pb={space.sm}>
-          <Text col={colors.textMuted} fos={fontSize.body}>
-            {tWorkspace('subtitle')}
-          </Text>
-        </YStack>
-
-        <YStack
-          px={gutter}
-          gap={layout.section}
-          pb={layout.section}
-          onLayout={(event: LayoutChangeEvent) => {
-            columnY.current = event.nativeEvent.layout.y;
-          }}
-        >
-          {/*
-            Tab Ô tô · Xe máy kèm SỐ XE của loại (P1) — đầu trang như `ManagePageHeader extra` web.
-            Đổi loại khi còn thay đổi chưa lưu ⇒ hỏi bỏ thay đổi trước.
-          */}
-          <SegmentedTabs
-            fit
-            variant="neutral"
-            items={VEHICLE_TYPE_VALUES.map((value) => {
-              const count = vehicleCount(
-                value === VEHICLE_TYPE.CAR ? carPolicy.data : motorbikePolicy.data,
-              );
-              return {
-                key: value,
-                label: typeLabel(value),
-                ...(count !== undefined ? { count } : {}),
-              };
-            })}
-            value={vehicleType}
-            onChange={requestType}
-          />
-
-          {/* Mục lục (P2) — màn hẹp: lên đầu, chạm là cuộn tới khối. */}
-          {ready ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              accessibilityLabel={tWorkspace('nav.label')}
-            >
-              <XStack gap={space.xs}>
-              {(
-                [
-                  [POLICY_ANCHOR.RULES, tWorkspace('nav.rules')],
-                  [POLICY_ANCHOR.DELIVERY, tWorkspace('nav.delivery')],
-                  [POLICY_ANCHOR.LONG_TERM, tWorkspace('nav.longTerm')],
-                ] as const
-              ).map(([anchor, label]) => (
-                <Chip key={anchor} label={label} onPress={() => scrollToAnchor(anchor)} />
-              ))}
-              </XStack>
-            </ScrollView>
-          ) : null}
-          {/*
-            "Thanh toán & hóa đơn" — hai thiết lập cho MỌI xe của gian hàng, lưu ngay khi bấm, không
-            thuộc form theo loại xe bên dưới (web `ShopPaymentCard`). Thu giữ chỗ tự ẩn khi thiếu
-            quyền `seller_profile.view` hoặc khi nền tảng khoá theo giai đoạn.
-          */}
-          {/* "Thanh toán & hóa đơn" — MỘT thẻ, hai hàng lưu ngay (web `ShopPaymentCard`, P3). */}
-          <InfoCard title={tWorkspace('payment.title')} hint={tWorkspace('payment.subtitle')}>
-            <DepositSettingsSection showHead={false} />
-            <VatInvoiceSection canEdit={canEdit} renderHead={() => null} variant="row" />
-          </InfoCard>
-
-          {data ? <AppliedSummary data={data} vehicleType={vehicleType} /> : null}
-
+        <YStack px={gutter} pt={space.md} gap={space.md} pb={layout.section}>
           {failed ? (
             <ScreenError
               error={query.error ?? defaultsQuery.error ?? termsQuery.error}
@@ -482,76 +492,124 @@ function PolicyWorkspace({
             />
           ) : null}
 
+          {/* Thanh toán & hoá đơn: hai thiết lập LƯU NGAY cho mọi xe, không thuộc form theo loại xe. */}
+          {tab === POLICY_TAB.PAYMENT ? (
+            <InfoGroupCard title={tWorkspace('payment.title')}>
+              <DepositSettingsSection showHead={false} />
+              <VatInvoiceSection canEdit={canEdit} renderHead={() => null} variant="row" />
+            </InfoGroupCard>
+          ) : null}
+
           {!ready && !failed ? <SkeletonText lines={12} /> : null}
 
           {data && defaults && terms ? (
-            <YStack gap={layout.section}>
+            <>
               {data.policy === null ? (
                 <Callout tone="info" title={t('emptyTitle')}>
                   {t('emptyBody')}
                 </Callout>
               ) : null}
-
               {!canEdit ? <Callout tone="info">{t('readOnly')}</Callout> : null}
 
-              <YStack
-                onLayout={(event: LayoutChangeEvent) => {
-                  sectionsY.current = event.nativeEvent.layout.y;
-                }}
-              >
-              <PolicySections
-                onAnchorLayout={(anchor, y) => {
-                  anchorY.current[anchor] = y;
-                }}
-                control={control}
-                disabled={!canEdit || submitting}
-                shopWorkspace={{ vehicleType }}
-                {...(data.inheritingVehicles > 0
-                  ? { depositHint: t('depositHint', { count: data.inheritingVehicles }) }
-                  : {})}
-                {...(insuranceApplies
-                  ? {
-                      afterRules: (
-                        <InsuranceModeBlock
-                          control={control}
-                          disabled={!canEdit || submitting}
-                          impact={insuranceImpact.data}
-                        />
-                      ),
-                    }
-                  : {})}
-                {...(data.policy?.legacyDiscountTiers?.length
-                  ? { legacyDiscountTiers: data.policy.legacyDiscountTiers }
-                  : {})}
-                afterDelivery={
-                  /* Nằm trong thẻ "Giao nhận xe" cùng khối giao xe - web `TurnaroundBlock` sau vạch chia. */
-                  <YStack>
-                    <YStack gap={space.sm}>
-                      <BlockHead
-                        title={tTurnaround('title')}
-                        hint={tTurnaround('hint')}
-                        {...(defaults.inheritingVehicles > 0
-                          ? { note: tTurnaround('applies', { count: defaults.inheritingVehicles }) }
-                          : {})}
-                      />
-                      <TurnaroundBufferField
-                        control={control}
-                        name="turnaroundBufferMinutes"
-                        label={tTurnaround('title')}
-                        disabled={!canEdit || submitting}
-                      />
-                    </YStack>
+              {tab === POLICY_TAB.PAYMENT && insuranceApplies ? (
+                <InfoGroupCard
+                  title={tWorkspace('insurance.title')}
+                  headerRight={
+                    <InfoHint
+                      label={tWorkspace('insurance.title')}
+                      content={tWorkspace('insurance.hint')}
+                      size={typeScale.body.fontSize}
+                    />
+                  }
+                >
+                  <InsuranceModeBlock
+                    control={control}
+                    disabled={disabled}
+                    impact={insuranceImpact.data}
+                    headless
+                  />
+                </InfoGroupCard>
+              ) : null}
+
+              {tab === POLICY_TAB.COLLATERAL ? (
+                <InfoGroupCard
+                  title={tWorkspace('collateral.title')}
+                  subheader={
+                    <Text
+                      col={colors.placeholder}
+                      fos={typeScale.label.fontSize}
+                      lh={typeScale.label.lineHeight}
+                      mt={-space.sm}
+                    >
+                      {tWorkspace('collateral.subtitle')}
+                    </Text>
+                  }
+                >
+                  <CollateralPolicySection
+                    control={control}
+                    disabled={disabled}
+                    bare
+                    headless
+                    {...(data.inheritingVehicles > 0
+                      ? { hint: t('depositHint', { count: data.inheritingVehicles }) }
+                      : {})}
+                  />
+                </InfoGroupCard>
+              ) : null}
+
+              {tab === POLICY_TAB.LIMITS ? (
+                <InfoGroupCard title={tWorkspace('limits.title')}>
+                  <PolicySections
+                    control={control}
+                    disabled={disabled}
+                    numbered={false}
+                    blocks={[POLICY_BLOCK.MILEAGE, POLICY_BLOCK.OVERTIME]}
+                    compact
+                  />
+                </InfoGroupCard>
+              ) : null}
+
+              {tab === POLICY_TAB.DELIVERY ? (
+                <InfoGroupCard>
+                  <DeliveryPolicySection control={control} disabled={disabled} bare headless />
+                  <RowDivider />
+                  <YStack gap={space.sm + space.xs}>
+                    <BlockHead
+                      title={tTurnaround('title')}
+                      hint={tTurnaround('hint')}
+                      {...(defaults.inheritingVehicles > 0
+                        ? { note: tTurnaround('applies', { count: defaults.inheritingVehicles }) }
+                        : {})}
+                    />
+                    <TurnaroundBufferField
+                      control={control}
+                      name="turnaroundBufferMinutes"
+                      label={tTurnaround('title')}
+                      disabled={disabled}
+                    />
                   </YStack>
-                }
-              />
-              </YStack>
+                </InfoGroupCard>
+              ) : null}
+
+              {tab === POLICY_TAB.LONG_TERM ? (
+                <InfoGroupCard title={tWorkspace('longTerm.title')}>
+                  <LongTermDiscountPolicySection
+                    control={control}
+                    disabled={disabled}
+                    legacyTiers={data.policy?.legacyDiscountTiers}
+                  />
+                </InfoGroupCard>
+              ) : null}
+
               {/* Điều kiện cho thuê (ADR 0112 điều 3): luật chuẩn nền tảng + điều khoản gian hàng. */}
-              <RentalConditionsCard
-                control={control as unknown as Control<{ terms: RentalTermsFormValues }>}
-                disabled={!canEdit || submitting}
-                onOpenContracts={() => navigateOnce(ROUTES.manage.contractsDocuments())}
-              />
-            </YStack>
+              {tab === POLICY_TAB.CONDITIONS ? (
+                <RentalConditionsCard
+                  control={control as unknown as Control<{ terms: RentalTermsFormValues }>}
+                  disabled={disabled}
+                  onOpenContracts={() => navigateOnce(ROUTES.manage.contractsDocuments())}
+                />
+              ) : null}
+            </>
           ) : null}
         </YStack>
       </Screen>
@@ -603,50 +661,26 @@ function PolicyWorkspace({
   );
 }
 
-/** Tiêu đề + mô tả + (tuỳ chọn) dòng phạm vi của một khối tự dựng trên màn này. */
+/**
+ * Tiêu đề + mô tả + (tuỳ chọn) dòng phạm vi của một khối tự dựng trên màn này - Figma "Info Group"
+ * (`24789:85092`): tiêu đề 16/24 đậm vừa, mô tả 14/20 `text/gray/low`.
+ */
 function BlockHead({ title, hint, note }: { title: string; hint: string; note?: string }) {
   const colors = useColors();
   return (
     <YStack gap={2}>
-      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+      <Text col={colors.text} fos={typeScale.title.fontSize} lh={typeScale.title.lineHeight} fow={fontWeight.semibold}>
         {title}
       </Text>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
         {hint}
       </Text>
       {note ? (
-        <Text col={colors.textMuted} fos={fontSize.label}>
+        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
           {note}
         </Text>
       ) : null}
     </YStack>
-  );
-}
-
-/**
- * "Đã áp dụng cho N ô tô" + chú thích về xe đang ghi đè riêng.
- *
- * Con số đến từ SERVER (`inheritingVehicles`/`overriddenVehicles`) — không đếm ở client, vì
- * client chỉ nhìn thấy trang xe đang mở.
- */
-function AppliedSummary({
-  data,
-  vehicleType,
-}: {
-  data: ShopRentalPolicy;
-  vehicleType: VehicleType;
-}) {
-  const t = useTranslations('Shop.policies');
-  const domainLabel = useDomainLabel();
-  const locale = useLocale();
-  const label = domainLabel('vehicleType', vehicleType).toLocaleLowerCase(locale);
-
-  return (
-    <Callout tone="info" title={t('applied', { count: data.inheritingVehicles, vehicle: label })}>
-      {data.overriddenVehicles > 0
-        ? t('overridden', { count: data.overriddenVehicles })
-        : undefined}
-    </Callout>
   );
 }
 

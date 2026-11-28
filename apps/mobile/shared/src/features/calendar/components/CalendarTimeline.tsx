@@ -9,66 +9,62 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { toAppTz } from '@xeprime/domain';
 import {
   OCCUPANCY_SOURCE_TYPE,
   OCCUPANCY_SOURCE_TYPE_META,
-  VEHICLE_TYPE,
+  isMarketplaceBooking,
   type OccupancySourceType,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import {
   RENTAL_STAGE_TONE,
   rentalStageOfBookingStatus,
   rentalStageOfRequestStatus,
-  type RentalStage,
 } from '@/features/bookings/rental-stages';
 import { RemoteImage } from '@/components/ui/RemoteImage';
+import {
+  bookingSourceSkinOf,
+  useBookingSourceSkins,
+  useBookingSourceText,
+} from '@/components/ui/BookingSourceChip';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { themed, useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { fontWeight, radius, typeScale } from '@/theme/tokens';
 import type { CalendarEvent, CalendarResource, Holiday } from '../api';
-import { useCalSurface, eventTone, isDashedEvent } from '../calendar-tone';
-import { EVENT_ICON, eventBarShowsLabel, eventStatusGroup } from '../event-tone';
+import { isDashedEvent, serviceAccent, stageFill } from '../calendar-tone';
+import { eventStatusGroup } from '../event-tone';
 import { priceMarkerKey, type PriceMarker } from '../hooks/use-calendar-data';
 import type { CalendarRange, DayCell } from '../utils/calendar-date.util';
 import { layoutEventBars } from '../utils/calendar-position.util';
 
 /**
- * Kích thước lưới — JS cần biết để ảo hoá + định vị thanh event.
+ * Kích thước lưới - Figma Lịch thuê xe "Option 2" (`24729:82215`).
  *
- * `ROW_H` chứa đúng HAI tầng event (`4 + lane*22 + 20`): trên lịch thật, ba đơn chồng nhau trong
- * cùng một ngày của cùng một xe gần như không xảy ra, và cho hàng cao hơn nữa thì màn 360dp chỉ
- * còn thấy bốn chiếc xe cùng lúc.
+ * - Header ngày cao 44, cột xe rộng 100 (ảnh 63×40 + tên + biển số xếp DỌC).
+ * - Cột ngày 97 ở khổ 390 ⇒ sàn 96: ba ngày nhìn thấy, cuộn ngang cho phần còn lại.
+ * - Hàng: Figma 92 chở thẻ 4 dòng (mã · chặng · tiền · giờ). Người dùng chốt GIỮ thêm tên khách
+ *   (27/11/2026) thành dòng thứ năm ⇒ hàng 108, thẻ 98.
  */
-const HEADER_H = 52;
-const ROW_H = 56;
+const HEADER_H = 44;
+const ROW_H = 108;
+const RESOURCE_W = 100;
+/** Cột xe THU GỌN: chỉ còn ảnh - nhường tối đa bề ngang cho lưới ngày. */
+const RESOURCE_W_COLLAPSED = 52;
+const MIN_DAY_W = 96;
+
+/** Ảnh xe ở cột ghim (Figma "Vehicle Image" `24729:82238`): 63×40 bo 8. */
+const THUMB_W = 63;
+const THUMB_H = 40;
+const THUMB_W_COLLAPSED = 36;
+const THUMB_H_COLLAPSED = 24;
 
 /**
- * Bề ngang cột xe — đủ cho BIỂN SỐ đọc trọn.
- *
- * Biển Việt Nam dài nhất (`43A-123.45`) ở cỡ chữ `meta` chiếm ~62dp; cộng ảnh 24 + lề 8 + khe 4
- * là 98, nên 112 còn dư cho biển hiếm và cho cỡ chữ hệ thống lớn hơn. Tên xe VẪN được phép cắt —
- * nó dài tuỳ ý và đã có đủ trong thẻ thông tin; biển số thì là ĐỊNH DANH, cắt đi là hỏng.
- *
- * Nới thêm 12dp KHÔNG lấy mất bề ngang của cột ngày: cột ngày đã chạm sàn `MIN_DAY_W` từ trước,
- * nên phần nới chỉ đổi số cột NHÌN THẤY (5,4 thay vì 5,8) — cuộn ngang bù lại.
- */
-const RESOURCE_W = 112;
-/** Cột xe THU GỌN: chỉ còn ảnh — nhường tối đa bề ngang cho lưới ngày. */
-const RESOURCE_W_COLLAPSED = 44;
-/** Sàn bề rộng một cột ngày: (360−44)/7 ≈ 45, nên 46 giữ 7 ngày vừa khít máy hẹp nhất. */
-const MIN_DAY_W = 46;
-
-/**
- * Hình học của lưới, XUẤT RA cho khung chờ dùng lại.
- *
- * Khung chờ phải có đúng hình của lưới thật, nếu không lúc dữ liệu về mọi thứ nhảy một cái —
- * và cái nhảy đó còn khó chịu hơn là không có khung chờ. "Đúng hình" chỉ giữ được nếu hai bên
- * đọc CÙNG một bộ số: bản trước khung chờ giữ bản sao riêng (cột xe 100dp, không có hàng tổng),
- * và nó lặng lẽ trôi khỏi lưới ngay lần đầu cột xe được nới lên 112.
+ * Hình học của lưới, XUẤT RA cho khung chờ dùng lại - khung chờ phải có đúng hình của lưới thật,
+ * nếu không lúc dữ liệu về mọi thứ nhảy một cái.
  */
 export const GRID_METRICS = {
   headerHeight: HEADER_H,
@@ -78,87 +74,45 @@ export const GRID_METRICS = {
 } as const;
 
 /**
- * Cửa sổ ảo hoá của lưới.
- *
- * Bản trước siết `maxToRenderPerBatch` xuống 4 và giãn nhịp lô lên 60ms để "đỡ nặng" — và mua
- * đúng cái lỗi người dùng báo: vuốt nhanh thì hàng chưa kịp dựng, để lại từng mảng TRẮNG ở giữa
- * và ở cuối lưới. Với danh sách ảo hoá thì vùng trắng luôn có một nghĩa duy nhất — dựng không
- * kịp — và cách chữa luôn là NỚI, không phải siết.
- *
- * `windowSize` là con dao HAI LƯỠI ở màn này, và bản trước đã cầm sai đầu.
- *
- * Nó không chỉ quyết định "còn bao nhiêu hàng sẵn khi fling" — nó còn là SỐ HÀNG PHẢI DỰNG LẠI
- * mỗi khi `renderItem` đổi danh tính. Mà ở lưới lịch, đổi khoảng ngày làm đúng điều đó: `days`
- * và `dayWidth` đi vào `renderTrack`, nên bấm một cú "tiến 14 ngày" là dựng lại trọn cửa sổ.
- * Ở `9` (~4 màn mỗi phía ≈ 99 hàng × 14 ô) thì cú bấm đó khoá luồng JS vài giây, và người dùng
- * thấy đúng một thứ: ngày trên thanh công cụ không đổi.
- *
- * `5` (~2 màn mỗi phía) là chỗ cân bằng: vẫn đủ đệm cho fling — vùng trắng lần trước đến từ lô
- * dựng bị siết còn 4 mỗi 60ms, chứ không từ cửa sổ hẹp — mà cắt hơn nửa chi phí đổi khoảng.
- *
- * Dùng CHUNG cho cả hai danh sách, không phải để cho gọn: đồng bộ chạy theo OFFSET, nên hai bên
- * phải dựng cùng một dải hàng thì lúc fling mới không có bên nào còn trống trong khi bên kia đã
- * vẽ xong.
- *
- * `removeClippedSubviews` để TẮT: cột xe bị cuộn bằng lệnh chứ không bằng ngón tay, và cờ kia
- * hay tháo nhầm view còn đang nhìn thấy ở đúng tình huống đó trên Android.
+ * Cửa sổ ảo hoá của lưới - xem lịch sử ở git: `windowSize` 5 cân giữa fling không trắng và đổi
+ * khoảng không khoá luồng JS; `removeClippedSubviews` TẮT vì cột xe cuộn bằng lệnh.
  */
 const LIST_WINDOW = {
-  initialNumToRender: 12,
+  initialNumToRender: 8,
   windowSize: 5,
-  maxToRenderPerBatch: 8,
+  maxToRenderPerBatch: 6,
   updateCellsBatchingPeriod: 30,
   removeClippedSubviews: false,
 } as const;
 
-/**
- * Nét kẻ của lưới — bậc ĐẬM (`color-border-strong`), không phải `color-border` như web.
- *
- * Đây là một chỗ cố ý lệch khỏi web, và lý do nằm ở chính việc bỏ nền vằn: khi hàng chẵn lẻ còn
- * so le màu thì nét kẻ chỉ là phụ trợ, mắt bám hàng bằng dải nền. Bỏ nền đi thì nét kẻ trở thành
- * thứ DUY NHẤT chia ô — và `color-border` (#e8e4dd) trên nền trắng chỉ chênh vài phần trăm độ
- * sáng, đủ thấy trên màn hình PC ở 1x nhưng tan biến trên điện thoại.
- *
- * `CAL_SURFACE.line` vẫn giữ nguyên giá trị web dùng — nó là bản dịch của `--xp-cal-line` và
- * không được phép trôi theo một quyết định trình bày của riêng app.
- *
- * ## Nét nằm trên chính Ô, KHÔNG nằm trên hàng
- *
- * Hàng vẽ nền và viền của nó trước, rồi mới vẽ các ô con lên trên. Ô ngày có nền riêng (hôm nay,
- * cuối tuần, ngày lễ) nên nền đó PHỦ MẤT nét ngăn hàng — kết quả là cột hôm nay và hai cột cuối
- * tuần chạy liền một dải dọc, không còn ranh giới hàng nào, đúng như người dùng báo.
- *
- * Để chính ô vẽ nét thì nét luôn nằm TRÊN nền của nó, không phụ thuộc thứ tự vẽ hay cách Yoga
- * quy đổi `height: '100%'` ra chiều cao thật. Vì vậy hàng/header/hàng tổng đều KHÔNG còn
- * `borderBottomWidth`; từng ô mang nét của chính nó.
- */
-const useGridLine = themed((colors) => colors.borderInput);
+/** Nét ngăn HÀNG và mép cột ghim: `stroke/gray-low200` (#e9eaeb). */
+const useGridLine = themed((colors) => colors.border);
+/** Nét ngăn CỘT ngày trong thân lưới: `bg/gray-100` (#f5f5f5) - Figma vẽ vạch 1px nhạt hơn nét hàng. */
+const useColumnLine = themed((colors) => colors.borderSubtle);
 
-/**
- * Lá cờ ngày lễ — 9dp, GHIM ở góc trên phải ô, đúng `.holidayFlag` của web.
- *
- * Nó nằm ngoài dòng chảy, không phải là con thứ ba của ô. Xếp nó vào dòng chảy (bản trước) thì ô
- * header cao lên ba dòng: thứ · ngày · cờ — mà ba dòng đó nhân với chiều cao header cố định là
- * chữ bị bóp lại, và cột ngày lễ trông khác hẳn cột thường ở đúng thứ không nên khác.
- *
- * Nhỏ 9dp có chủ đích: đây là DẤU HIỆU, không phải nội dung. Nó tồn tại vì nền cột ngày lễ cố ý
- * pha rất nhạt (8%) — cờ mới là thứ nhìn thấy được, kể cả với người không phân biệt sắc đỏ.
- */
 const HOLIDAY_FLAG_SIZE = 9;
 
-const EVENT_H = 20;
-const EVENT_TOP = 4;
+/** Thẻ đơn (Figma "Vehicle details" `24729:82244`): lề trong ô 2, cách đỉnh hàng 5, hai tầng cách 4. */
+const CARD_INSET_X = 2;
+const CARD_INSET_Y = 5;
+const CARD_LANE_GAP = 4;
+/** Vạch trái 4×32, bo phải 12. */
+const STRIP_W = 4;
+const STRIP_H = 32;
+const CARD_PAD_Y = 6;
+const CARD_PAD_R = 12;
+const CARD_GAP = 6;
+const LINE_GAP = 2;
 
 /** Hàng không có event: CÙNG một mảng, nếu không `memo(EventTrack)` hỏng ở mọi hàng trống. */
 const NO_EVENTS: readonly CalendarEvent[] = [];
-const EVENT_LANE_STEP = 22;
 
 export interface TimelineHandlers {
-  /** Chạm ô TRỐNG — mở bộ chọn hành động. `null` khi người dùng không có quyền thao tác nào. */
+  /** Chạm ô TRỐNG - mở bộ chọn hành động. `null` khi người dùng không có quyền thao tác nào. */
   onCellPress: ((resource: CalendarResource, day: DayCell) => void) | null;
   onEventPress: (event: CalendarEvent, resource: CalendarResource) => void;
   onResourcePress: (resource: CalendarResource) => void;
-  /** Chạm thẻ ngày — mở bảng thao tác cả-đội-xe. `null` khi không có quyền nào. */
+  /** Chạm thẻ ngày - mở bảng thao tác cả-đội-xe. `null` khi không có quyền nào. */
   onDayPress: ((day: DayCell) => void) | null;
 }
 
@@ -169,39 +123,21 @@ interface TimelineProps extends TimelineHandlers {
   holidaysByDay: ReadonlyMap<string, Holiday>;
   days: readonly DayCell[];
   range: CalendarRange;
-  /** Bề ngang/chiều cao thật của vùng lưới — đo ở màn, truyền xuống để mọi phép tính dùng chung. */
+  /** Bề ngang/chiều cao thật của vùng lưới - đo ở màn, truyền xuống để mọi phép tính dùng chung. */
   viewport: { width: number; height: number };
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }
 
 /**
- * Lưới lịch dạng resource timeline — bản native của `CalendarScheduler` bên web.
+ * Lưới lịch dạng resource timeline - bản native của `CalendarScheduler` bên web, khoác giao diện
+ * Figma Lịch thuê xe (`24729:81894`).
  *
- * ## Cột xe ghim ra sao khi React Native không có `position: sticky`
+ * Cột xe nằm HOÀN TOÀN NGOÀI vùng cuộn ngang (ghim thật, không dịch ngược); trục DỌC đồng bộ trên
+ * luồng UI qua `useScrollViewOffset` - xem docblock {@link ResourceColumn}. Hàng CAO CỐ ĐỊNH +
+ * `getItemLayout` nên đội 1.000 xe chỉ dựng vài hàng đang nhìn thấy.
  *
- * Cột xe nằm HOÀN TOÀN NGOÀI vùng cuộn ngang — nó là một cột anh em của `ScrollView` chứ không
- * phải một thứ bên trong được dịch ngược lại. Nhờ vậy khi vuốt trái phải nó không dịch một pixel
- * nào và cũng không có phép biến đổi nào để trễ: nó ĐỨNG YÊN theo đúng nghĩa `position: sticky`
- * của web, chứ không phải "được kéo về chỗ cũ mỗi khung hình".
- *
- * Đổi lại, hai cột là hai `FlatList` và trục DỌC phải đồng bộ bằng tay. React Native chỉ cho một
- * bộ cuộn native mỗi trục, nên một trong hai trục bắt buộc phải làm thủ công; đặt việc đó lên
- * trục dọc là chọn chỗ ít lộ nhất, vì trên trục đó hai cột vốn đã đi cùng nhau. Chi tiết ba cách
- * đã thử và vì sao hai cách kia sai: xem docblock của `syncColumn`.
- *
- * Danh sách cột xe `scrollEnabled={false}`: nó không bao giờ tự cuộn, chỉ đi theo. Nhờ vậy không
- * có vòng lặp "A cuộn → B cuộn → A cuộn"; đồng bộ chạy đúng MỘT chiều.
- *
- * Hàng CAO CỐ ĐỊNH + `getItemLayout`, nên đội 1.000 xe chỉ dựng khoảng mười hàng đang nhìn
- * thấy — không bao giờ dựng ma trận xe × ngày.
- *
- * ## Vì sao KHÔNG có kéo-thả
- *
- * Web đã bỏ kéo-thả CÓ CHỦ ĐÍCH (`CalendarScheduler` docblock): đổi giờ đi qua form sửa
- * đơn/khoá/bảo dưỡng, nơi có xác nhận và backend quyết định (ADR 0006). App bám đúng quyết định
- * đó — thêm kéo-thả ở đây là mở một đường ghi lịch mà web không có, và trên cảm ứng thì một cú
- * cuộn ngang rất dễ thành một cú kéo nhầm.
+ * KHÔNG có kéo-thả: web đã bỏ có chủ đích (đổi giờ đi qua form có xác nhận, backend quyết - ADR 0006).
  */
 export function CalendarTimeline({
   resources,
@@ -218,50 +154,20 @@ export function CalendarTimeline({
   onResourcePress,
   onDayPress,
 }: TimelineProps) {
-  const CAL_SURFACE = useCalSurface();
   const colors = useColors();
   const GRID_LINE = useGridLine();
   const t = useTranslations('Calendar');
 
   const resourceW = collapsed ? RESOURCE_W_COLLAPSED : RESOURCE_W;
-  const carCount = resources.filter((r) => r.vehicleType === VEHICLE_TYPE.CAR).length;
-  const bikeCount = resources.filter((r) => r.vehicleType === VEHICLE_TYPE.MOTORBIKE).length;
   const trackViewportW = Math.max(0, viewport.width - resourceW);
   const dayWidth = Math.max(
     MIN_DAY_W,
     trackViewportW > 0 ? Math.floor(trackViewportW / days.length) : MIN_DAY_W,
   );
   const trackWidth = days.length * dayWidth;
-  // Hàng "Xe còn trống" đã gỡ (web 25/11/2026) — danh sách xe chiếm trọn phần còn lại.
-  const listHeight = Math.max(0, viewport.height - HEADER_H);
+  /* −1: mép trên 1px của lưới (Figma "Option 2" viền trên/dưới) nằm trong vùng đo. */
+  const listHeight = Math.max(0, viewport.height - HEADER_H - 1);
 
-  /**
-   * Vị trí cuộn DỌC của dải ngày — nguồn chuyển động của cột xe, sống trên luồng UI.
-   *
-   * Đây là chỗ đã hỏng ba lần theo ba kiểu khác nhau, nên ghi lại cả ba:
-   *
-   * 1. Cột xe là `FlatList` bị cuộn bằng `scrollTo` của worklet. Ảo hoá của `FlatList` sống ở
-   *    luồng JS: danh sách bị cuộn từ worklet KHÔNG biết mình đã dịch chuyển, giữ nguyên dải
-   *    hàng dựng lúc đầu, và vuốt nhanh một cái là cột xe TRẮNG TRƠN.
-   * 2. Cột xe nằm TRONG vùng cuộn ngang, dịch ngược lại theo `scrollX`. Giữ được ảo hoá nhưng
-   *    RUNG khi vuốt ngang: nội dung `ScrollView` do bộ cuộn native dời ngay trong lúc vẽ, còn
-   *    transform chỉ được áp sau khi sự kiện cuộn bắn ra — luôn trễ một khung hình, và mắt đọc
-   *    ra ngay vì cột xe là thứ đáng lẽ đứng im tuyệt đối.
-   * 3. Cột xe là `FlatList` bị cuộn bằng `scrollToOffset` từ `onScroll` của JS. Đúng về ảo hoá,
-   *    nhưng cả chuyển động lẫn việc dựng đều xếp hàng sau luồng JS — mà luồng JS lúc fling thì
-   *    đang bận dựng hàng mới. Kết quả là cột xe ĐUỔI THEO sau vài trăm mili giây.
-   *
-   * Lối ra là TÁCH hai thứ mà cả ba cách trên đều buộc vào nhau: chuyển động và cửa sổ dựng.
-   * Chuyển động là một phép dịch trên luồng UI, không lệ thuộc JS. Cửa sổ dựng thì vẫn ở JS,
-   * nhưng chỉ được đánh thức mỗi khi vượt qua MỘT hàng (56dp) chứ không phải mỗi khung hình —
-   * xem {@link ResourceColumn}. Trễ ở JS lúc đó chỉ ăn vào phần đệm, không ăn vào vị trí.
-   *
-   * `useScrollViewOffset` chứ KHÔNG phải `useAnimatedScrollHandler`, và khác biệt này quan
-   * trọng: `onScroll` là một prop mà `VirtualizedList` dùng cho việc ghi sổ của chính nó, nên
-   * chiếm chỗ đó bằng một bộ nhận worklet là đặt cược vào việc hai bên chịu nhường nhau. Hook
-   * này gắn thẳng vào node cuộn qua `ref` và không đụng tới prop nào — ảo hoá của dải ngày chạy
-   * y như khi không có Reanimated trong file.
-   */
   const trackRef = useAnimatedRef<Animated.FlatList<CalendarResource>>();
   const scrollY = useScrollViewOffset(trackRef);
 
@@ -303,9 +209,13 @@ export function CalendarTimeline({
   );
 
   return (
-    <XStack f={1} bg={colors.surface}>
+    <XStack f={1} bg={colors.surface} borderTopWidth={1} borderColor={GRID_LINE}>
       {/* ── Cột xe: GHIM, nằm NGOÀI vùng cuộn ngang ─────────────────────── */}
       <YStack w={resourceW} borderRightWidth={1} borderColor={GRID_LINE}>
+        {/*
+          Góc "PHƯƠNG TIỆN" (Figma `24729:82217`). Nút thu gọn cột Figma không vẽ - người dùng chốt
+          giữ (27/11/2026), nên góc mang thêm một mũi tên nhỏ.
+        */}
         <Pressable
           onPress={onToggleCollapsed}
           accessibilityRole="button"
@@ -316,30 +226,29 @@ export function CalendarTimeline({
             h={HEADER_H}
             ai="center"
             jc={collapsed ? 'center' : 'space-between'}
-            px={space.xs}
-            bg={colors.surfaceElevated}
+            px={8}
+            bg={colors.background}
             borderBottomWidth={1}
             borderColor={GRID_LINE}
           >
             {collapsed ? null : (
-              /* Góc cột xe (lịch v2, web `grid.resourceTitle` + `grid.resourceCount`). */
-              <YStack f={1} minWidth={0}>
-                <Text col={colors.textMuted} fos={fontSize.meta} fow={fontWeight.semibold} numberOfLines={1}>
-                  {t('grid.resourceTitle')}
-                </Text>
-                <Text col={colors.placeholder} fos={fontSize.meta} numberOfLines={1}>
-                  {t('grid.resourceCount', {
-                    cars: carCount,
-                    bikes: bikeCount,
-                    both: carCount > 0 && bikeCount > 0 ? 'yes' : 'no',
-                  })}
-                </Text>
-              </YStack>
+              <Text
+                f={1}
+                minWidth={0}
+                col={colors.textMuted}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+                fow={fontWeight.semibold}
+                textTransform="uppercase"
+                numberOfLines={1}
+              >
+                {t('grid.resourceTitle')}
+              </Text>
             )}
-            <Ionicons
-              name={collapsed ? 'chevron-forward' : 'chevron-back'}
-              size={iconSize.sm}
-              color={colors.textMuted}
+            <LineIcon
+              name={collapsed ? 'chevron-right' : 'chevron-left'}
+              size={14}
+              color={colors.placeholder}
             />
           </XStack>
         </Pressable>
@@ -351,7 +260,6 @@ export function CalendarTimeline({
           scrollY={scrollY}
           onPress={onResourcePress}
         />
-
       </YStack>
 
       {/* ── Dải ngày: cuộn NGANG theo thời gian, cuộn DỌC theo xe ────────── */}
@@ -362,7 +270,7 @@ export function CalendarTimeline({
         contentContainerStyle={{ width: trackWidth }}
       >
         <YStack w={trackWidth}>
-          <XStack h={HEADER_H} bg={colors.surfaceElevated}>
+          <XStack h={HEADER_H} bg={colors.background}>
             {days.map((day) => (
               <DayHeaderCell
                 key={day.key}
@@ -384,50 +292,18 @@ export function CalendarTimeline({
             {...LIST_WINDOW}
             showsVerticalScrollIndicator={false}
           />
-
         </YStack>
       </ScrollView>
     </XStack>
   );
 }
 
-/**
- * Băng hàng GIỮ SỐNG của cột xe, đo bằng số MÀN mỗi phía — rộng hơn hẳn cửa sổ của dải ngày.
- *
- * Hai cột có chi phí ngược nhau, nên chúng không được dùng chung một con số:
- *
- * - Một hàng dải ngày là 14 ô cộng thanh event: ĐẮT khi giữ, RẺ khi dựng lại (chỉ là mấy khối
- *   màu). Nên nó giữ hẹp (`windowSize: 5`).
- * - Một ô cột xe là một tấm ảnh MẠNG: rẻ khi giữ, nhưng dựng lại thì `RemoteImage` quay về
- *   `phase: 'pending'` và diễn lại trọn khung chờ + fade — kể cả khi ảnh đã nằm sẵn trong cache.
- *   Người dùng thấy đúng điều đó: cuộn xuống rồi kéo lên, những chiếc xe VỪA XEM lại trắng ra
- *   một lượt nữa.
- *
- * Ba màn mỗi phía là chỗ dừng: với đội xe cỡ thường (vài chục chiếc) thì băng này phủ trọn danh
- * sách và không ô nào phải mount lại lần thứ hai; với đội 1.000 xe nó vẫn chỉ giữ khoảng tám
- * chục ảnh 24dp.
- */
+/** Băng hàng GIỮ SỐNG của cột xe, đo bằng số MÀN mỗi phía - ảnh mạng rẻ khi giữ, đắt khi dựng lại. */
 const RESOURCE_OVERSCAN_SCREENS = 3;
 
 /**
- * Cột xe — dựng bằng tay, không phải `FlatList`.
- *
- * ## Vì sao không dùng `FlatList`
- *
- * `FlatList` buộc chuyển động vào cửa sổ dựng: muốn nó hiện đúng dải hàng thì phải CUỘN nó, mà
- * cuộn nó thì hoặc đi qua luồng JS (trễ vài trăm ms lúc fling) hoặc đi qua worklet (nó không
- * biết mình đã dịch và để lại một cột trắng). Xem docblock của `scrollY` về cả ba lần hỏng.
- *
- * Ở đây hai thứ đó tách hẳn nhau:
- *
- * - **Chuyển động** là một phép dịch trên luồng UI, đọc thẳng từ `scrollY`. Không có JS trong
- *   đường đi, nên cột bám dải ngày kể cả khi luồng JS đang dựng hàng.
- * - **Cửa sổ dựng** là state React thường, nhưng `useAnimatedReaction` chỉ đánh thức nó khi chỉ
- *   số hàng đầu ĐỔI — tức mỗi 56dp cuộn, không phải mỗi khung hình. Một cú fling dài sinh ra
- *   vài chục lần `setState`, đúng bằng thứ `FlatList` tự làm bên trong.
- *
- * Miếng đệm `height: start * ROW_H` đặt dải hàng đang dựng vào đúng toạ độ tuyệt đối của nó
- * trong danh sách, nên phép dịch `-scrollY` khớp một-đối-một với dải ngày.
+ * Cột xe - dựng bằng tay, không phải `FlatList`: chuyển động là phép dịch trên luồng UI đọc thẳng
+ * `scrollY`; cửa sổ dựng là state React, chỉ đánh thức khi chỉ số hàng đầu ĐỔI (mỗi `ROW_H`).
  */
 const ResourceColumn = memo(function ResourceColumn({
   resources,
@@ -457,10 +333,7 @@ const ResourceColumn = memo(function ResourceColumn({
 
   const style = useAnimatedStyle(() => ({ transform: [{ translateY: -scrollY.value }] }));
 
-  /*
-   * Kẹp lại theo danh sách HIỆN TẠI: đổi bộ lọc làm danh sách ngắn đi mà vị trí cuộn thì chưa
-   * kịp về 0, và một `start` quá cuối mảng sẽ dựng ra cột rỗng.
-   */
+  /* Kẹp theo danh sách HIỆN TẠI: đổi bộ lọc làm danh sách ngắn đi khi vị trí cuộn chưa kịp về 0. */
   const start = Math.min(firstRow, Math.max(0, resources.length - 1));
   const visible = resources.slice(start, start + rowsPerScreen + overscan * 2);
 
@@ -482,12 +355,9 @@ const ResourceColumn = memo(function ResourceColumn({
 });
 
 /**
- * Một cột ngày ở header — và là ĐƯỜNG VÀO các thao tác cả-đội-xe cho ngày đó.
- *
- * Ngày lễ được đánh dấu bằng HAI thứ, không chỉ màu nền: một lá cờ nhìn thấy được và một
- * `accessibilityLabel` nói thẳng tên ngày lễ — nền cột cố ý rất nhạt nên màu một mình không đủ.
- *
- * Mọi ngày đều chạm được, không riêng ngày lễ: khoá xe và đặt giá là việc của mọi ngày trong năm.
+ * Một cột ngày ở header (Figma `24729:82221`): thứ 12/18 medium `text/gray/low` (cuối tuần đỏ) trên
+ * số ngày 12/18 semibold; HÔM NAY nền `bg/primary-low` + số `text/brand/primary-2`. Ngày lễ: số đỏ +
+ * cờ ghim góc. Chạm ⇒ bảng thao tác cả-đội-xe của ngày đó.
  */
 const DayHeaderCell = memo(function DayHeaderCell({
   day,
@@ -500,24 +370,10 @@ const DayHeaderCell = memo(function DayHeaderCell({
   width: number;
   onPress: ((day: DayCell) => void) | null;
 }) {
-  const CAL_SURFACE = useCalSurface();
   const colors = useColors();
   const GRID_LINE = useGridLine();
   const t = useTranslations('Calendar');
   const fmt = useAppFormat();
-
-  /*
-   * Thứ tự ưu tiên: cuối tuần < ngày lễ < hôm nay — đúng thứ tự web khai ở CSS. Hôm nay là mốc
-   * điều hướng nên nó thắng; ngày lễ chỉ là ngữ cảnh. Ô thường để TRONG SUỐT cho nền hàng header
-   * hiện lên, y như `.dayHeaderCell` bên web.
-   */
-  const background = day.isToday
-    ? CAL_SURFACE.todayBg
-    : holiday
-      ? CAL_SURFACE.holidayBg
-      : day.isWeekend
-        ? CAL_SURFACE.weekendBg
-        : 'transparent';
 
   const body = (
     <YStack
@@ -526,28 +382,30 @@ const DayHeaderCell = memo(function DayHeaderCell({
       ai="center"
       jc="center"
       gap={1}
-      bg={background}
-      borderRightWidth={1}
+      px={2}
+      bg={day.isToday ? colors.brandLow : 'transparent'}
       borderBottomWidth={1}
       borderColor={GRID_LINE}
     >
-      <Text col={colors.textMuted} fos={fontSize.meta} numberOfLines={1}>
+      <Text
+        col={day.isWeekend ? colors.danger : colors.placeholder}
+        fos={typeScale.label.fontSize}
+        lh={typeScale.label.lineHeight}
+        fow={fontWeight.medium}
+        numberOfLines={1}
+      >
         {fmt.weekdayShort(day.at)}
       </Text>
-      {/*
-        SỐ ngày đổi màu theo ngày lễ, không phải cả ô — web đặt màu ở `.dayHeaderCell` nhưng
-        `.weekdayLabel` có màu riêng nên chỉ số ngày thừa hưởng. Hôm nay THẮNG ngày lễ: nó là mốc
-        điều hướng, ngày lễ chỉ là ngữ cảnh.
-      */}
       <Text
-        col={day.isToday ? colors.primaryActive : holiday ? colors.danger : colors.text}
-        fos={fontSize.bodySm}
-        fow={day.isToday ? fontWeight.bold : fontWeight.semibold}
+        col={day.isToday ? colors.brandLink : holiday ? colors.danger : colors.text}
+        fos={typeScale.label.fontSize}
+        lh={typeScale.label.lineHeight}
+        fow={fontWeight.semibold}
       >
         {day.dayOfMonth}
       </Text>
       {holiday ? (
-        <YStack position="absolute" top={2} right={3}>
+        <YStack position="absolute" top={3} right={4}>
           <Ionicons name="flag" size={HOLIDAY_FLAG_SIZE} color={colors.danger} />
         </YStack>
       ) : null}
@@ -574,11 +432,8 @@ const DayHeaderCell = memo(function DayHeaderCell({
 });
 
 /**
- * Ô cột xe: ảnh nhận diện + tên + biển số/mã. Chạm mở thẻ thông tin xe.
- *
- * KHÔNG có dòng giá dù web có (`.resourcePrice`): trên hàng cao 56dp thì dòng thứ ba ép cả ba
- * dòng xuống bậc chữ nhỏ hơn, và giá đã nằm sẵn ở thẻ thông tin xe mở ngay từ chính ô này — một
- * cú chạm, không phải một chuyến đi.
+ * Ô cột xe (Figma "Car Pin" `24729:82237`): ảnh 63×40 bo 8 · tên 12/18 semibold · biển số 12/18
+ * `text/gray/low`, xếp dọc, đệm 8/6. Chạm mở thẻ thông tin xe. Thu gọn ⇒ chỉ còn ảnh nhỏ.
  */
 const ResourceCell = memo(function ResourceCell({
   resource,
@@ -599,51 +454,68 @@ const ResourceCell = memo(function ResourceCell({
       accessibilityRole="button"
       accessibilityLabel={t('vehicleCard.trigger', { vehicle: resource.name })}
     >
-      <XStack
+      <YStack
         h={ROW_H}
-        ai="center"
-        gap={space.xs}
-        px={space.xs}
+        jc="center"
+        ai={collapsed ? 'center' : 'flex-start'}
+        gap={2}
+        px={8}
+        py={6}
         bg={colors.surface}
         borderBottomWidth={1}
         borderColor={GRID_LINE}
       >
-        <YStack w={24} h={24} br={radius.sm} ov="hidden" bg={colors.surfaceMuted}>
+        <YStack
+          w={collapsed ? THUMB_W_COLLAPSED : THUMB_W}
+          h={collapsed ? THUMB_H_COLLAPSED : THUMB_H}
+          br={8}
+          ov="hidden"
+          bg={colors.surfaceMuted}
+        >
           <RemoteImage
             uri={resource.mainImageUrl}
             recyclingKey={resource.id}
-            fallback={<Ionicons name="car-outline" size={iconSize.sm} color={colors.placeholder} />}
+            fallback={<LineIcon name="car" size={20} color={colors.textPlaceholder} />}
           />
         </YStack>
         {collapsed ? null : (
-          <YStack f={1} gap={1}>
-            <Text col={colors.text} fos={fontSize.meta} fow={fontWeight.semibold} numberOfLines={1}>
+          <>
+            <Text
+              alignSelf="stretch"
+              col={colors.text}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fow={fontWeight.semibold}
+              numberOfLines={1}
+            >
               {resource.name}
             </Text>
-            {/* Biển số KHÔNG cắt — xem docblock `RESOURCE_W`. */}
+            {/* Biển số là ĐỊNH DANH - co chữ (sàn 0.85) chứ không cắt. */}
             <Text
-              col={colors.textMuted}
-              fos={fontSize.meta}
+              alignSelf="stretch"
+              col={colors.placeholder}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fow={fontWeight.regular}
               numberOfLines={1}
               adjustsFontSizeToFit
-              /* Sàn co chữ: bảo vệ biển số khi người dùng bật cỡ chữ hệ thống lớn, nhưng không
-                 cho nó co tới mức không đọc nổi — dưới 0.85 thì thà cắt còn hơn. */
               minimumFontScale={0.85}
             >
               {resource.plateNumber ?? resource.code}
             </Text>
-          </YStack>
+          </>
         )}
-      </XStack>
+      </YStack>
     </Pressable>
   );
 });
 
 /**
- * Dải ô ngày + thanh event của MỘT hàng xe.
+ * Dải ô ngày + thẻ event của MỘT hàng xe. Ô là nền (chạm để tạo lịch), thẻ nằm đè (chạm để mở);
+ * thẻ vẽ SAU trong cây để nhận cú chạm của chính nó.
  *
- * Ô ngày và thanh event nằm trong cùng một khung định vị: ô là nền (chạm để tạo lịch), thanh nằm
- * đè lên (chạm để mở chi tiết). Thanh phải vẽ SAU trong cây để nhận được cú chạm của chính nó.
+ * Nền ô theo chú giải Figma: ngày có GIÁ RIÊNG tô `bg/primary-low` (ô mẫu "Giá riêng"), ngày lễ
+ * tô `status/error-25`. Figma không tô cột hôm nay/cuối tuần trong thân lưới - chỉ ở header.
  */
 const EventTrack = memo(function EventTrack({
   resource,
@@ -666,24 +538,29 @@ const EventTrack = memo(function EventTrack({
   onCellPress: ((resource: CalendarResource, day: DayCell) => void) | null;
   onEventPress: (event: CalendarEvent, resource: CalendarResource) => void;
 }) {
-  const CAL_SURFACE = useCalSurface();
   const colors = useColors();
   const GRID_LINE = useGridLine();
+  const COLUMN_LINE = useColumnLine();
   const t = useTranslations('Calendar');
 
   const bars = useMemo(() => layoutEventBars(events, range, dayWidth), [events, range, dayWidth]);
+  /* Số tầng của HÀNG này - thẻ chia đều chiều cao hàng, nên hai đơn chồng nhau vẫn vừa trong 108. */
+  const laneCount = bars.reduce((max, bar) => Math.max(max, bar.lane + 1), 1);
+  const cardH = Math.floor(
+    (ROW_H - CARD_INSET_Y * 2 - CARD_LANE_GAP * (laneCount - 1)) / laneCount,
+  );
 
   return (
-    /* Nét ngăn hàng do từng Ô vẽ, không do hàng — xem docblock `GRID_LINE`. */
-    <XStack h={ROW_H} w={days.length * dayWidth} bg={colors.surface}>
-      {days.map((day) => {
+    <XStack
+      h={ROW_H}
+      w={days.length * dayWidth}
+      bg={colors.surface}
+      borderBottomWidth={1}
+      borderColor={GRID_LINE}
+    >
+      {days.map((day, index) => {
         const marker = priceMarkers.get(priceMarkerKey(resource.vehicleId, day.key));
         const holiday = holidaysByDay.get(day.key);
-        /*
-         * Ghi chú ghép bằng MÃ chứ không bằng một khoá message có hai chỗ trống: hai ghi chú này
-         * độc lập nhau (có thể có một, cả hai, hoặc không có), và ` · ` là quy ước TRÌNH BÀY
-         * giống nhau ở mọi ngôn ngữ — đúng cách web ghép.
-         */
         const notes = [
           marker ? t('cell.customPriceNote') : null,
           holiday ? t('cell.holidayNote', { name: holiday.name }) : null,
@@ -698,39 +575,11 @@ const EventTrack = memo(function EventTrack({
           <YStack
             w={dayWidth}
             h="100%"
-            borderRightWidth={1}
-            borderBottomWidth={1}
-            borderColor={GRID_LINE}
-            /* Cuối tuần < ngày lễ < hôm nay; ô thường trong suốt để nền hàng hiện lên. */
-            bg={
-              day.isToday
-                ? CAL_SURFACE.todayBg
-                : holiday
-                  ? CAL_SURFACE.holidayBg
-                  : day.isWeekend
-                    ? CAL_SURFACE.weekendBg
-                    : 'transparent'
-            }
-          >
-            {marker ? (
-              /*
-               * Chấm giá riêng — gold ĐẶC viền vòng nhạt, đúng `.priceMarker` của web
-               * (`box-shadow: 0 0 0 2px`). Vòng nhạt không phải trang trí: không có nó thì chấm
-               * biến mất khi rơi đúng vào cột hôm nay, vốn cũng gold.
-               */
-              <YStack
-                position="absolute"
-                bottom={3}
-                right={3}
-                w={10}
-                h={10}
-                br={radius.pill}
-                bg={colors.primary}
-                bw={2}
-                bc={colors.primaryLight}
-              />
-            ) : null}
-          </YStack>
+            /* Vạch ngăn cột 1px `bg/gray-100` (Figma "Rectangle" `24729:82242`). */
+            borderLeftWidth={index === 0 ? 0 : 1}
+            borderColor={COLUMN_LINE}
+            bg={marker ? colors.brandLow : holiday ? colors.dangerWash : 'transparent'}
+          />
         );
 
         return onCellPress ? (
@@ -750,12 +599,13 @@ const EventTrack = memo(function EventTrack({
       })}
 
       {bars.map((bar) => (
-        <EventBar
+        <EventCard
           key={bar.event.id}
           event={bar.event}
-          left={bar.left}
-          width={bar.width}
-          lane={bar.lane}
+          left={bar.left + CARD_INSET_X}
+          width={Math.max(0, bar.width - CARD_INSET_X * 2)}
+          top={CARD_INSET_Y + bar.lane * (cardH + CARD_LANE_GAP)}
+          height={cardH}
           clippedStart={bar.position.clippedStart}
           clippedEnd={bar.position.clippedEnd}
           onPress={() => onEventPress(bar.event, resource)}
@@ -765,18 +615,28 @@ const EventTrack = memo(function EventTrack({
   );
 });
 
+/** Chiều cao tối thiểu để thẻ chở đủ 5 dòng / 2 dòng (mã + chặng) - dưới nữa chỉ còn mã. */
+const FULL_CARD_MIN_H = 96;
+const MEDIUM_CARD_MIN_H = 44;
+
 /**
- * Thanh event.
+ * Thẻ event trên lưới.
  *
- * Màu lấy từ META của `@xeprime/types`; loại còn phân biệt bằng ICON và bằng mép cắt — màu không
- * bao giờ là tín hiệu duy nhất. Nhãn trợ năng nói đủ "loại, tên, từ … đến …, trạng thái" vì trên
- * một thanh rộng 46dp thì chữ hiện ra gần như chắc chắn bị cắt.
+ * - Đơn / yêu cầu (Figma "Vehicle details" `24729:82244`): nền nhạt theo DỊCH VỤ, vạch trái 4×32,
+ *   mã 10/14 cùng sắc · viên chặng nền đặc chữ trắng 10/14 · tiền 12/18 medium · giờ 10/14 · tên
+ *   khách 10/14 (người dùng chốt giữ). Dấu nguồn đơn + dấu đã thu (ADR 0110) nằm cuối dòng mã.
+ *   Yêu cầu chưa chiếm lịch: nền trắng + viền ĐỨT cùng sắc (`isDashedEvent`).
+ * - Khoá xe / bảo dưỡng (Figma `24729:82414`): nền `bg/gray-50`, viền ĐỨT `stroke/gray-low300`,
+ *   ổ khoá + "Đã khóa" 12/18 `text/gray/low`.
+ *
+ * Nhiều tầng chồng nhau thì thẻ thấp đi và bỏ dần dòng phụ - nhãn trợ năng vẫn nói đủ.
  */
-const EventBar = memo(function EventBar({
+const EventCard = memo(function EventCard({
   event,
   left,
   width,
-  lane,
+  top,
+  height,
   clippedStart,
   clippedEnd,
   onPress,
@@ -784,63 +644,54 @@ const EventBar = memo(function EventBar({
   event: CalendarEvent;
   left: number;
   width: number;
-  lane: number;
+  top: number;
+  height: number;
   clippedStart: boolean;
   clippedEnd: boolean;
   onPress: () => void;
 }) {
   const t = useTranslations('Calendar');
   const tBoard = useTranslations('Bookings.board');
+  const tUnits = useTranslations('Common.units');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-
+  const sourceText = useBookingSourceText();
+  const sourceSkins = useBookingSourceSkins();
   const colors = useColors();
-  const tone = eventTone(event, colors);
-  const stageColor = (value: RentalStage) => {
-    const key = RENTAL_STAGE_TONE[value];
-    return key === 'danger'
-      ? colors.danger
-      : key === 'warning'
-        ? colors.warning
-        : key === 'info'
-          ? colors.infoStrong
-          : colors.success;
-  };
-  const typeMeta = OCCUPANCY_SOURCE_TYPE_META[event.type as OccupancySourceType];
-  const icon = EVENT_ICON[event.type as OccupancySourceType];
-  /*
-   * `event.status` mang HAI nghĩa tuỳ loại (contract của `CalendarEventDto`). Tra thẳng ở nhóm
-   * trạng thái đơn thì `unplanned_maintenance` không có nhãn và chính cái MÃ đó đi ra nhãn trợ
-   * năng — người dùng trình đọc màn hình nghe một chuỗi snake_case.
-   */
-  const statusGroup = eventStatusGroup(event);
 
-  /* Bỏ chữ chỉ được phép khi có icon đứng thay — xem `eventBarShowsLabel`. */
-  const showLabel = eventBarShowsLabel(width, icon);
-  /* Nét ĐỨT: khoá xe và yêu cầu chưa chiếm lịch (chờ duyệt) — xem `isDashedEvent`. */
+  const typeMeta = OCCUPANCY_SOURCE_TYPE_META[event.type as OccupancySourceType];
+  const statusGroup = eventStatusGroup(event);
   const dashed = isDashedEvent(event);
-  const isTrip =
-    event.type === OCCUPANCY_SOURCE_TYPE.BOOKING || event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST;
-  /* Nhóm giai đoạn của đơn / yêu cầu (lịch v2, web `eventStage`) — viên chữ trên thanh của web. */
-  const stage =
-    event.type === OCCUPANCY_SOURCE_TYPE.BOOKING
-      ? rentalStageOfBookingStatus(event.status)
-      : event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST
-        ? rentalStageOfRequestStatus(event.status)
-        : null;
-  /*
-   * Chữ trên thanh của đơn / yêu cầu (web `CalendarEventBar`): mã đơn · tiền đã chốt · tên khách
-   * (khách ẩn khi không có quyền xem yêu cầu). Khoá xe / bảo dưỡng giữ tiêu đề server.
-   */
-  const barText = isTrip
-    ? [
-        event.code ? `#${event.code}` : null,
-        event.amount ? fmt.moneyCompact(event.amount) : null,
-        event.customerName ?? t('event.customerHidden'),
-      ]
-        .filter(Boolean)
-        .join(LIST_SEPARATOR)
-    : event.title;
+  const isBooking = event.type === OCCUPANCY_SOURCE_TYPE.BOOKING;
+  const isTrip = isBooking || event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST;
+  const stage = isBooking
+    ? rentalStageOfBookingStatus(event.status)
+    : event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST
+      ? rentalStageOfRequestStatus(event.status)
+      : null;
+
+  /* Nguồn đơn + thanh toán (ADR 0110): chỉ ĐƠN tự khai thác mang dấu nguồn; dấu đã thu đọc `paidPercent` server tính. */
+  const source =
+    isBooking && event.bookingSource && !isMarketplaceBooking(event.bookingSource)
+      ? { code: event.bookingSource, label: event.bookingSourceLabel ?? null }
+      : null;
+  const sourceName = source ? sourceText(source.code, source.label) : null;
+  const sourceSkin = source ? bookingSourceSkinOf(sourceSkins, source.code) : null;
+  const paidPercent = isBooking ? (event.paidPercent ?? null) : null;
+  const paidLabel =
+    paidPercent == null
+      ? null
+      : paidPercent >= 100
+        ? t('event.paidFull')
+        : paidPercent > 0
+          ? t('event.paidPartial', { percent: paidPercent })
+          : t('event.unpaid');
+
+  const clockOf = (iso: string) => {
+    const at = toAppTz(iso);
+    return tUnits('rentalTime', { hour: at.format('HH'), minute: at.format('mm') });
+  };
+  const hours = t('event.hours', { from: clockOf(event.startAt), to: clockOf(event.endAt) });
 
   const label = [
     stage
@@ -850,6 +701,8 @@ const EventBar = memo(function EventBar({
     event.code,
     isTrip && event.serviceType ? domainLabel('serviceType', event.serviceType) : null,
     event.amount ? fmt.money(event.amount) : null,
+    sourceName ? t('event.sourceAria', { source: sourceName }) : null,
+    paidLabel,
     t('eventCard.barAriaRange', {
       start: fmt.dateTime(event.startAt),
       end: fmt.dateTime(event.endAt),
@@ -859,46 +712,175 @@ const EventBar = memo(function EventBar({
     .filter(Boolean)
     .join(', ');
 
+  const corners = {
+    borderTopLeftRadius: clippedStart ? 0 : radius.control,
+    borderBottomLeftRadius: clippedStart ? 0 : radius.control,
+    borderTopRightRadius: clippedEnd ? 0 : radius.control,
+    borderBottomRightRadius: clippedEnd ? 0 : radius.control,
+  };
+  const frame = { position: 'absolute' as const, left, width, top, height };
+
+  if (!isTrip) {
+    const isBlock = event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE;
+    return (
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={frame}>
+        <YStack
+          f={1}
+          jc="center"
+          gap={2}
+          px={12}
+          py={4}
+          bg={colors.background}
+          bw={1}
+          bc={colors.borderInput}
+          borderStyle="dashed"
+          ov="hidden"
+          {...corners}
+        >
+          <LineIcon
+            name={isBlock ? 'lock-2' : 'setting-sm'}
+            size={20}
+            color={colors.textPlaceholder}
+          />
+          {height >= MEDIUM_CARD_MIN_H ? (
+            <Text
+              col={colors.placeholder}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fow={fontWeight.medium}
+              numberOfLines={1}
+            >
+              {isBlock ? t('event.blocked') : event.title}
+            </Text>
+          ) : null}
+        </YStack>
+      </Pressable>
+    );
+  }
+
+  const tone = serviceAccent(event.serviceType, colors);
+  const stageBg = stage ? stageFill(RENTAL_STAGE_TONE[stage], colors) : colors.textPlaceholder;
+  const stageText = stage
+    ? tBoard(`stage.${stage}`)
+    : statusGroup
+      ? domainLabel(statusGroup, event.status)
+      : null;
+  const full = height >= FULL_CARD_MIN_H;
+  const medium = height >= MEDIUM_CARD_MIN_H;
+
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{
-        position: 'absolute',
-        left,
-        width,
-        top: EVENT_TOP + lane * EVENT_LANE_STEP,
-        height: EVENT_H,
-      }}
-    >
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={frame}>
       <XStack
         f={1}
         ai="center"
-        jc={showLabel ? 'flex-start' : 'center'}
-        gap={2}
-        px={3}
-        bg={tone.bg}
-        bw={1}
-        /* Viền là màu trạng thái PHA LOÃNG, không phải màu chữ — nét đặc ở đây làm thanh nặng
-           hơn hẳn web và nuốt luôn khoảng cách giữa hai thanh liền nhau. */
-        bc={tone.border}
-        {...(dashed ? { borderStyle: 'dashed' as const } : {})}
-        // Mép PHẲNG ở đầu bị cắt — dấu hiệu "event còn chạy tiếp ngoài khoảng đang xem".
-        borderTopLeftRadius={clippedStart ? 0 : radius.sm}
-        borderBottomLeftRadius={clippedStart ? 0 : radius.sm}
-        borderTopRightRadius={clippedEnd ? 0 : radius.sm}
-        borderBottomRightRadius={clippedEnd ? 0 : radius.sm}
+        gap={CARD_GAP}
+        pr={CARD_PAD_R}
+        py={full ? CARD_PAD_Y : 2}
+        bg={dashed ? colors.surface : tone.wash}
         ov="hidden"
+        {...(dashed ? { bw: 1, bc: tone.accent, borderStyle: 'dashed' as const } : {})}
+        {...corners}
       >
-        {/* Chấm giai đoạn (web viên "Cần xử lý / Chờ thanh toán / Chờ giao xe / Đang thuê"). */}
-        {stage ? <YStack w={6} h={6} br={3} flexShrink={0} bg={stageColor(stage)} /> : null}
-        {icon ? <Ionicons name={icon} size={iconSize.xs} color={tone.fg} /> : null}
-        {showLabel ? (
-          <Text f={1} col={tone.fg} fos={fontSize.meta} fow={fontWeight.semibold} numberOfLines={1}>
-            {barText}
-          </Text>
-        ) : null}
+        <YStack
+          w={STRIP_W}
+          h={Math.min(STRIP_H, Math.max(0, height - 8))}
+          bg={tone.accent}
+          borderTopRightRadius={radius.control}
+          borderBottomRightRadius={radius.control}
+        />
+        <YStack f={1} minWidth={0} gap={LINE_GAP}>
+          <XStack ai="center" gap={4}>
+            <Text
+              f={1}
+              minWidth={0}
+              col={tone.accent}
+              fos={typeScale.caption.fontSize}
+              lh={typeScale.caption.lineHeight}
+              fow={fontWeight.medium}
+              numberOfLines={1}
+            >
+              {event.code ? `#${event.code}` : (event.customerName ?? t('event.customerHidden'))}
+            </Text>
+            {sourceName && sourceSkin ? (
+              <YStack
+                w={14}
+                h={14}
+                br={7}
+                ai="center"
+                jc="center"
+                flexShrink={0}
+                bg={sourceSkin.bg}
+                bw={1}
+                bc={sourceSkin.border}
+              >
+                <Text col={sourceSkin.fg} fos={9} lh={11} fow={fontWeight.semibold}>
+                  {sourceName.trim().charAt(0).toUpperCase()}
+                </Text>
+              </YStack>
+            ) : null}
+            {paidPercent != null && paidPercent > 0 ? (
+              paidPercent >= 100 ? (
+                <LineIcon name="tick-circle-fill" size={14} color={colors.success} />
+              ) : (
+                <Text
+                  flexShrink={0}
+                  col={colors.warningStrong}
+                  fos={typeScale.caption.fontSize}
+                  lh={typeScale.caption.lineHeight}
+                  fow={fontWeight.semibold}
+                >
+                  {`${paidPercent}%`}
+                </Text>
+              )
+            ) : null}
+          </XStack>
+          {medium && stageText ? (
+            <YStack alignSelf="flex-start" maxWidth="100%" px={4} py={2} br={4} bg={stageBg}>
+              <Text
+                col={colors.textOnSolid}
+                fos={typeScale.caption.fontSize}
+                lh={typeScale.caption.lineHeight}
+                fow={fontWeight.medium}
+                numberOfLines={1}
+              >
+                {stageText}
+              </Text>
+            </YStack>
+          ) : null}
+          {full && event.amount ? (
+            <Text
+              col={colors.text}
+              fos={typeScale.label.fontSize}
+              lh={typeScale.label.lineHeight}
+              fow={fontWeight.medium}
+              numberOfLines={1}
+            >
+              {fmt.money(event.amount)}
+            </Text>
+          ) : null}
+          {full ? (
+            <Text
+              col={colors.textMuted}
+              fos={typeScale.caption.fontSize}
+              lh={typeScale.caption.lineHeight}
+              fow={fontWeight.regular}
+              numberOfLines={1}
+            >
+              {hours}
+            </Text>
+          ) : null}
+          {full ? (
+            <Text
+              col={colors.placeholder}
+              fos={typeScale.caption.fontSize}
+              lh={typeScale.caption.lineHeight}
+              fow={fontWeight.regular}
+              numberOfLines={1}
+            >
+              {event.customerName ?? t('event.customerHidden')}
+            </Text>
+          ) : null}
+        </YStack>
       </XStack>
     </Pressable>
   );

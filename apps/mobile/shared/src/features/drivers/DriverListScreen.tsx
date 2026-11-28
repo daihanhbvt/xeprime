@@ -580,7 +580,8 @@ export function DriverListScreen() {
 
       <AlertDialog
         open={suspending !== null}
-        title={t('actions.suspendConfirm')}
+        title={t('actions.suspend')}
+        message={t('actions.suspendConfirm')}
         confirmLabel={t('actions.suspend')}
         cancelLabel={tActions('close')}
         loading={suspend.isPending}
@@ -594,13 +595,15 @@ export function DriverListScreen() {
 
       <AlertDialog
         open={ending !== null}
-        title={
-          endingInvite
-            ? t('actions.revokeConfirm')
-            : ending && ending.activeBookingCount > 0
-              ? t('actions.endConfirmWithTrips', { count: ending.activeBookingCount })
-              : t('actions.endConfirm')
-        }
+        title={endingInvite ? t('actions.revokeConfirm') : t('actions.end')}
+        {...(endingInvite
+          ? {}
+          : {
+              message:
+                ending && ending.activeBookingCount > 0
+                  ? t('actions.endConfirmWithTrips', { count: ending.activeBookingCount })
+                  : t('actions.endConfirm'),
+            })}
         confirmLabel={endingInvite ? t('actions.revoke') : t('actions.end')}
         cancelLabel={tActions('close')}
         destructive

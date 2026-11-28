@@ -1,9 +1,11 @@
 {
   "toolbar": {
     "searchPlaceholder": "Search by name, code or plate",
+    "searchPlaceholderApp": "Plate, vehicle...",
     "searchAriaLabel": "Search vehicles on the calendar",
     "allVehicleTypes": "All",
     "sortAriaLabel": "Sort vehicle rows",
+    "sortAriaLabelApp": "Sort by",
     "sort": {
       "next_booking": "Next booking",
       "name": "Vehicle name",
@@ -17,7 +19,14 @@
     "previousRange": "Back {count, plural, one {# day} other {# days}}",
     "nextRange": "Forward {count, plural, one {# day} other {# days}}",
     "pagerAriaLabel": "Move the visible range",
-    "rangeLabel": "{from} - {to}"
+    "rangeLabel": "{from} - {to}",
+    "viewMode": "View",
+    "view": {
+      "list": "List",
+      "month": "Month"
+    },
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month"
   },
   "grid": {
     "ariaLabel": "Vehicle rental calendar by day",
@@ -120,7 +129,8 @@
     "free": "Free",
     "busy": "Already scheduled",
     "dateStatus": "{date} - {status}",
-    "bookingFrom": "From {from} → {to}"
+    "bookingFrom": "From {from} → {to}",
+    "title": "Actions"
   },
   "block": {
     "createTitle": "Block vehicle",
@@ -290,7 +300,9 @@
   "page": {
     "title": "Rental calendar",
     "subtitle": "Track every pickup and return, avoid double bookings and make the most of idle time across your fleet.",
-    "create": "Create booking"
+    "create": "Create booking",
+    "createApp": "Create rental",
+    "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}"
   },
   "event": {
     "blocked": "Blocked",
@@ -300,9 +312,29 @@
     "paidFull": "Paid in full",
     "paidPartial": "{percent}% collected",
     "unpaid": "Not collected",
-    "sourceAria": "source {source}"
+    "sourceAria": "source {source}",
+    "hours": "{from} - {to}"
   },
   "requestDialog": {
     "loading": "Rental request details"
+  },
+  "quick": {
+    "title": "Booking summary",
+    "vehicle": "Vehicle",
+    "pickup": "Pick-up",
+    "return": "Return",
+    "amount": "Booking value",
+    "contact": "Contact customer",
+    "detail": "Booking details"
+  },
+  "month": {
+    "gridAriaLabel": "Month view - booked vehicles per day",
+    "cellAria": "{date}: {busy}/{total} vehicles booked",
+    "daySummary": "{date} - {busy}/{total} booked",
+    "free": "{count} free",
+    "busy": "{rent} rented{off, plural, =0 {} other { · # off}}",
+    "freeAllDay": "Free all day",
+    "freeAllDayPrice": "Free all day · {price}",
+    "create": "Create"
   }
 }

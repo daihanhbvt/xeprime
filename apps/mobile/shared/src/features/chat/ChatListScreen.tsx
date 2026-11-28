@@ -15,8 +15,9 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { ManageHeader } from '@/features/shell/ManageHeader';
-import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
+import { useRouter } from 'expo-router';
+import { AppHeader } from '@/components/layout/AppHeader';
+import { goBackOr } from '@/navigation/go-back-or';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
@@ -59,6 +60,7 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
   const t = useTranslations('Chat');
   const tNav = useTranslations('Navigation.manage');
   const navigateOnce = useNavigateOnce();
+  const router = useRouter();
 
   const shop = side === CHAT_SIDE.SHOP;
 
@@ -133,8 +135,6 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
       scroll={false}
       padded={false}
     >
-      {shop ? <ManagePageTitle title={tNav('chat')} /> : null}
-
       <YStack gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.sm}>
         <SearchInput
           variant="boxed"
@@ -203,7 +203,8 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
 
   return (
     <>
-      <ManageHeader />
+      {/* Trang riêng của khu quản lý: thanh lui + tiêu đề, không ManageHeader / thanh menu. */}
+      <AppHeader onBack={() => goBackOr(router, ROUTES.manage.home())} title={tNav('chat')} />
       {body}
     </>
   );

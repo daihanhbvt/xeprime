@@ -1,8 +1,14 @@
 import { Ionicons } from '@/components/icons/Ionicons';
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { Pressable, Switch } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { RowDivider, SwitchRow } from '@/components/ui/SwitchRow';
+import { ChoiceRow } from '@/components/ui/ChoiceRow';
+import { CheckMark } from '@/components/ui/CheckMark';
+import { LineIcon } from '@/components/icons/LineIcon';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
 import {
   Controller,
   useController,
@@ -36,10 +42,10 @@ import { FieldLabel, FieldMessage } from '@/components/ui/Field';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { IconLine } from '@/components/ui/IconLine';
 import { NumberField } from '@/components/ui/NumberField';
-import { CheckOption, RadioOption } from '@/components/ui/RadioOption';
 import { ChipTabs } from '@/components/ui/ChipTabs';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { TextField } from '@/components/ui/TextField';
+import { LongTermFormulaNotice } from './LongTermPriceHint';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { themed, useColors } from '@/theme/ThemeProvider';
@@ -51,6 +57,7 @@ import {
   radius,
   sizing,
   space,
+  typeScale,
 } from '@/theme/tokens';
 import type { PolicyFormValues } from '../schema';
 
@@ -467,7 +474,11 @@ export function PolicySections<T extends PolicyFormValues>({
   afterDelivery,
   afterRules,
   onAnchorLayout,
+  compact = false,
+  discountWeekdayPrice,
 }: {
+  /** Giá ngày thường của xe cho khung "Công thức tính giá gói" (`compact`, màn sửa xe). */
+  discountWeekdayPrice?: number | string | null | undefined;
   /**
    * Form của nơi gọi có thể RỘNG hơn `PolicyFormValues` (màn gian hàng thêm trường riêng). Generic
    * để nơi gọi khỏi ép kiểu; một lần thu hẹp ở đây, như web `PolicySections`.
@@ -491,6 +502,13 @@ export function PolicySections<T extends PolicyFormValues>({
    * đối với khung của `PolicySections`. Chỉ màn gian hàng dùng.
    */
   onAnchorLayout?: (anchor: PolicyAnchor, y: number) => void;
+  /**
+   * Màn sửa xe › Dịch vụ xe (Figma Partner `24237:56980`): hai khối Hạn mức quãng đường + quá giờ
+   * thành HÀNG CÔNG TẮC v2 nằm thẳng trong thẻ nơi gọi, cách nhau một đường kẻ - không thẻ con, không
+   * khối xem trước/công thức (người dùng chốt 27/11/2026). Áp cho `MILEAGE` + `OVERTIME` + `DISCOUNT`
+   * (ưu đãi dài hạn: mốc là dòng tóm tắt, sửa trong tấm trượt - cùng kiểu bậc giao xe).
+   */
+  compact?: boolean;
   /**
    * Khối nào HIỆN — mặc định đủ năm (web `blocks`). Khối ẩn vẫn nằm trong form (giá trị nạp từ
    * chính sách đang có) và vẫn được gửi đi: ẩn một khối không làm mất nó.
@@ -568,6 +586,39 @@ export function PolicySections<T extends PolicyFormValues>({
    * Điều khoản" (bảo đảm + quãng đường + quá giờ) · "Giao nhận xe" (giao xe + thời gian chết) · "Ưu
    * đãi dài hạn". Khối con bỏ thẻ riêng và bỏ số thứ tự. Màn giá theo xe giữ năm khối đánh số.
    */
+  if (compact) {
+    const parts = [
+      shown.includes(POLICY_BLOCK.MILEAGE) ? (
+        <CompactMileage key="mileage" control={control} disabled={disabled} />
+      ) : null,
+      shown.includes(POLICY_BLOCK.OVERTIME) ? (
+        <CompactOvertime key="overtime" control={control} disabled={disabled} />
+      ) : null,
+      shown.includes(POLICY_BLOCK.DISCOUNT) ? (
+        <LongTermDiscountSection
+          key="discount"
+          control={control}
+          disabled={disabled}
+          step={step}
+          legacyTiers={legacyDiscountTiers}
+          byTiers={Boolean(shopWorkspace)}
+          compact
+          weekdayPrice={discountWeekdayPrice}
+        />
+      ) : null,
+    ].filter(Boolean);
+    return (
+      <YStack gap={COMPACT_GAP}>
+        {parts.map((part, index) => (
+          <YStack key={index} gap={COMPACT_GAP}>
+            {index > 0 ? <RowDivider /> : null}
+            {part}
+          </YStack>
+        ))}
+      </YStack>
+    );
+  }
+
   if (shopWorkspace) {
     const group = (anchor: PolicyAnchor, title: string, parts: readonly ReactNode[]) => {
       const present = parts.filter(Boolean);
@@ -665,6 +716,7 @@ function DepositSection({
   step,
   hint,
   title,
+  headless = false,
 }: {
   control: PolicyControl;
   disabled: boolean;
@@ -675,6 +727,8 @@ function DepositSection({
   title?: string;
   /** Giữ chữ ký cũ cho nơi gọi - mô tả lựa chọn nay là câu chung của ADR 0112. */
   optionDescriptions?: Partial<Record<string, string>>;
+  /** Thẻ nơi gọi đã có tiêu đề + mô tả (màn sửa xe) - bỏ đầu khối và nhãn lặp. */
+  headless?: boolean;
 }) {
   const colors = useColors();
   const TONE = useTone();
@@ -710,35 +764,37 @@ function DepositSection({
 
   return (
     <SectionShell>
-      <YStack gap={space.md}>
-        <SectionHead
-          tone={TONE.deposit}
-          title={step(1, title ?? tc('title'))}
-          hint={tc('subtitle')}
-        />
-
-        <YStack gap={space.xs}>
-          <FieldLabel label={tc('modeLabel')} required />
-          {COLLATERAL_MODE_VALUES.map((value) => (
-            <RadioOption
-              key={value}
-              label={domainLabel('collateralMode', value)}
-              hint={value === COLLATERAL_MODE.REQUIRED ? tc('modeRequired') : tc('modeNone')}
-              checked={mode === value}
-              disabled={disabled}
-              onPress={() => selectMode(value)}
-            />
-          ))}
-        </YStack>
+      <YStack gap={COMPACT_GAP}>
+        {headless ? null : (
+          <SectionHead tone={TONE.deposit} title={step(1, title ?? tc('title'))} hint={tc('subtitle')} />
+        )}
+        {headless ? null : <FieldLabel label={tc('modeLabel')} required />}
+        {/* Figma `24705:45572`: hai hàng radio không khung. */}
+        {COLLATERAL_MODE_VALUES.map((value) => (
+          <ChoiceRow
+            key={value}
+            kind="radio"
+            label={domainLabel('collateralMode', value)}
+            hint={value === COLLATERAL_MODE.REQUIRED ? tc('modeRequired') : tc('modeNone')}
+            checked={mode === value}
+            disabled={disabled}
+            onPress={() => selectMode(value)}
+          />
+        ))}
 
         {mode === COLLATERAL_MODE.REQUIRED ? (
-          <YStack gap={space.sm}>
-            <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-              {tc('methodTitle')}
+          <YStack gap={COMPACT_GAP}>
+            <Text
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {tc('methodTitleApp')}
             </Text>
             {/*
-              Chip viên thuốc như web/Figma (`24729:80545`): luôn hiện, chỉ chọn được khi bật cả hai
-              hình thức - một hình thức thì cố định "Khách chọn 1 trong 2".
+              Chip "Khách chọn 1 trong 2 / Bắt buộc cả 2" (ADR 0112) - Figma màn xe không vẽ, người dùng
+              chốt giữ (27/11/2026): luôn hiện, chỉ chọn được khi bật cả hai hình thức.
             */}
             <YStack
               opacity={both && !disabled ? 1 : 0.6}
@@ -746,7 +802,7 @@ function DepositSection({
               accessibilityState={{ disabled: !both || disabled }}
             >
               <ChipTabs<CollateralCombination>
-                label={tc('methodTitle')}
+                label={tc('methodTitleApp')}
                 gutter={0}
                 items={COLLATERAL_COMBINATION_VALUES.map((value) => ({
                   value,
@@ -761,22 +817,15 @@ function DepositSection({
               />
             </YStack>
 
-            <YStack
-              gap={space.sm}
-              p={space.sm}
-              br={radius.md}
-              bw={1}
-              bc={cash ? colors.primaryHover : colors.borderSubtle}
+            <CollateralOptionBox
+              title={tc('cashTitle')}
+              hint={tc('cashHint')}
+              checked={cash}
+              disabled={disabled}
+              onToggle={() => toggle('cash')}
             >
-              <CheckOption
-                label={tc('cashTitle')}
-                hint={tc('cashHint')}
-                checked={cash}
-                disabled={disabled}
-                onPress={() => toggle('cash')}
-              />
               {cash ? (
-                <YStack gap={space.xs}>
+                <YStack gap={space.sm}>
                   <MoneyField
                     control={control}
                     name="depositAmount"
@@ -785,7 +834,8 @@ function DepositSection({
                     required
                     editable={!disabled}
                   />
-                  <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={tc('presetsLabel')}>
+                  {/* Figma "Quick Presets": viên 12/18 đệm 10/2, chọn = nền vàng nhạt viền vàng. */}
+                  <XStack gap={PRESET_GAP} flexWrap="wrap" accessibilityLabel={tc('presetsLabel')}>
                     {DEPOSIT_PRESETS.map((amount) => {
                       const active = Number(amountField.value) === amount;
                       return (
@@ -797,18 +847,19 @@ function DepositSection({
                           onPress={() => amountField.onChange(amount)}
                         >
                           <YStack
-                            px={space.sm}
-                            py={space.xs}
-                            br={radius.md}
+                            px={PRESET_PAD_X}
+                            py={2}
+                            br={radius.pill}
                             bw={1}
-                            bc={active ? colors.primaryHover : colors.borderInput}
-                            bg={active ? colors.primaryLight : colors.surface}
+                            bc={active ? colors.brandShape : colors.border}
+                            bg={active ? colors.brandLow : colors.background}
                             opacity={disabled ? 0.6 : 1}
                           >
                             <Text
-                              col={active ? colors.primaryActive : colors.text}
-                              fos={fontSize.bodySm}
-                              fow={fontWeight.semibold}
+                              col={active ? colors.brandLink : colors.text}
+                              fos={typeScale.label.fontSize}
+                              lh={typeScale.label.lineHeight}
+                              fow={active ? fontWeight.semibold : fontWeight.regular}
                             >
                               {tUnits('millionShort', { count: amount / 1_000_000 })}
                             </Text>
@@ -817,29 +868,23 @@ function DepositSection({
                       );
                     })}
                   </XStack>
+                  {/* "N xe đang dùng mức cọc này" - Figma không vẽ, người dùng chốt giữ ở dạng chữ phụ (27/11/2026). */}
                   {hint ? (
-                    <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                    <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
                       {hint}
                     </Text>
                   ) : null}
                 </YStack>
               ) : null}
-            </YStack>
+            </CollateralOptionBox>
 
-            <YStack
-              gap={space.sm}
-              p={space.sm}
-              br={radius.md}
-              bw={1}
-              bc={asset ? colors.primaryHover : colors.borderSubtle}
+            <CollateralOptionBox
+              title={tc('assetTitle')}
+              hint={tc('assetHintApp')}
+              checked={asset}
+              disabled={disabled}
+              onToggle={() => toggle('asset')}
             >
-              <CheckOption
-                label={tc('assetTitle')}
-                hint={tc('assetHint')}
-                checked={asset}
-                disabled={disabled}
-                onPress={() => toggle('asset')}
-              />
               {asset ? (
                 <Controller
                   control={control}
@@ -847,11 +892,13 @@ function DepositSection({
                   render={({ field, fieldState }) => {
                     const selected = field.value ?? [];
                     return (
-                      <YStack gap={space.xs}>
-                        <FieldLabel label={t('assetTypes')} required />
+                      <YStack gap={space.sm}>
+                        {headless ? null : <FieldLabel label={t('assetTypes')} required />}
                         {COLLATERAL_ASSET_TYPE_VALUES.map((value) => (
-                          <CheckOption
+                          <ChoiceRow
                             key={value}
+                            kind="checkbox"
+                            tone="soft"
                             label={domainLabel('collateralAssetType', value)}
                             checked={selected.includes(value)}
                             disabled={disabled}
@@ -872,7 +919,7 @@ function DepositSection({
                   }}
                 />
               ) : null}
-            </YStack>
+            </CollateralOptionBox>
             {cashState.error?.message ? <FieldMessage error={cashState.error.message} /> : null}
           </YStack>
         ) : (
@@ -885,12 +932,77 @@ function DepositSection({
   );
 }
 
+/** Figma "Quick Presets": viên cách 6, đệm ngang 10. */
+const PRESET_GAP = 6;
+const PRESET_PAD_X = 10;
+
+/**
+ * Khung một hình thức cọc (Figma `24705:45586` / `24705:45621`): tiêu đề 14 đậm vừa + mô tả 12, ô tick
+ * 20 bên phải; đang bật = nền `bg/primary-25` viền `stroke/primary`, tắt = nền trắng viền xám. Chạm
+ * hàng đầu là bật/tắt hình thức đó; nội dung (ô số tiền, loại tài sản) nằm dưới.
+ */
+function CollateralOptionBox({
+  title,
+  hint,
+  checked,
+  disabled,
+  onToggle,
+  children,
+}: {
+  title: string;
+  hint: string;
+  checked: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+  children?: ReactNode;
+}) {
+  const colors = useColors();
+  return (
+    <YStack
+      p={COMPACT_GAP}
+      gap={COMPACT_GAP}
+      br={radius.control}
+      bw={1}
+      bc={checked ? colors.brandShape : colors.border}
+      /* Figma `24789:84314`: chọn = nền `bg/primary-25` #fffdf5 (`brandWash`) + viền `stroke/primary`. */
+      bg={checked ? colors.brandWash : colors.surface}
+    >
+      <Pressable
+        onPress={onToggle}
+        disabled={disabled}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked, disabled }}
+        accessibilityLabel={title}
+      >
+        <XStack gap={COMPACT_GAP} ai="flex-start" opacity={disabled ? 0.6 : 1}>
+          <YStack f={1} minWidth={0} gap={2}>
+            <Text
+              col={colors.text}
+              fos={typeScale.body.fontSize}
+              lh={typeScale.body.lineHeight}
+              fow={fontWeight.semibold}
+            >
+              {title}
+            </Text>
+            <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+              {hint}
+            </Text>
+          </YStack>
+          <CheckMark checked={checked} tone="brand" />
+        </XStack>
+      </Pressable>
+      {children}
+    </YStack>
+  );
+}
+
 function DeliverySection({
   control,
   disabled,
   step,
   title,
   hint,
+  headless = false,
 }: {
   control: PolicyControl;
   disabled: boolean;
@@ -898,9 +1010,12 @@ function DeliverySection({
   /** Màn gian hàng: chữ `Shop.policies.workspace.delivery.service*` như web `DeliveryBlock`. */
   title?: string;
   hint?: string;
+  /** Màn sửa xe (Figma `24705:45799`): đầu khối là MỘT hàng công tắc v2 trong thẻ của nơi gọi. */
+  headless?: boolean;
 }) {
   const TONE = useTone();
   const t = useTranslations('Vehicles.pricing.delivery');
+  const tWorkspace = useTranslations('Shop.policies.workspace.delivery');
   const fmt = useAppFormat();
   const enabled = useWatch({ control, name: 'deliveryEnabled' });
   /*
@@ -915,6 +1030,8 @@ function DeliverySection({
   const maxRadiusKm = useWatch({ control, name: 'deliveryMaxRadiusKm' });
   const { fields, append, remove } = useFieldArray({ control, name: 'deliveryTiers' });
   const { errors } = useFormState({ control, name: ['deliveryTiers', 'deliveryMaxRadiusKm'] });
+  /* `headless` (Figma `24231:111519`): bậc là dòng tóm tắt, sửa trong tấm trượt - đây là bậc đang mở. */
+  const [editing, setEditing] = useState<number | null>(null);
 
   const crossError = arrayErrorOf(errors.deliveryTiers);
   /* Bộ bậc "liền mạch" là quan hệ giữa NHIỀU dòng cộng với bán kính — cùng điều kiện với web. */
@@ -923,7 +1040,22 @@ function DeliverySection({
 
   return (
     <SectionShell>
-      <YStack gap={space.md}>
+      <YStack gap={headless ? COMPACT_GAP : space.md}>
+        {headless ? (
+          <Controller
+            control={control}
+            name="deliveryEnabled"
+            render={({ field }) => (
+              <SwitchRow
+                title={tWorkspace('serviceTitle')}
+                description={tWorkspace('serviceHint')}
+                value={field.value === true}
+                disabled={disabled}
+                onChange={(next) => field.onChange(next)}
+              />
+            )}
+          />
+        ) : (
         <SectionHead
           tone={TONE.delivery}
           title={step(2, title ?? t('title'))}
@@ -943,6 +1075,7 @@ function DeliverySection({
             />
           }
         />
+        )}
 
         {enabled ? (
           <>
@@ -953,6 +1086,48 @@ function DeliverySection({
               nó chỉ có nghĩa khi đã nhìn thấy các bậc. Đặt nó lên đầu như bản trước là bắt người
               dùng chốt giới hạn ngoài trước khi biết mình sẽ chia mấy khoảng, rồi quay lại sửa.
             */}
+            {headless ? (
+              <YStack gap={COMPACT_GAP}>
+                {fields.map((row, index) => (
+                  <TierSummaryRow
+                    key={row.id}
+                    from={index === 0 ? '0' : `>${tiers[index - 1]?.toKm ?? '-'}`}
+                    to={tiers[index]?.toKm ?? null}
+                    fee={tiers[index]?.fee ?? null}
+                    removeLabel={t('removeTierAt', { index: index + 1 })}
+                    editLabel={t('tierName', { index: index + 1 })}
+                    disabled={disabled}
+                    onRemove={() => remove(index)}
+                    onEdit={() => setEditing(index)}
+                  />
+                ))}
+                {disabled ? null : (
+                  <AddLink
+                    label={t('addTier')}
+                    onPress={() => {
+                      append({ toKm: null, fee: null });
+                      setEditing(fields.length);
+                    }}
+                  />
+                )}
+                <TierStatus
+                  {...(crossError ? { error: crossError } : {})}
+                  {...(!crossError && tiersComplete ? { ok: t('tierOk') } : {})}
+                />
+                <TierEditSheet
+                  control={control}
+                  index={editing}
+                  tierLabel={editing == null ? '' : t('tierName', { index: editing + 1 })}
+                  disabled={disabled}
+                  onClose={() => {
+                    // Bậc vừa thêm mà đóng khi còn trống hết ⇒ bỏ luôn, không để một dòng rỗng.
+                    const current = editing == null ? null : tiers[editing];
+                    if (editing != null && current?.toKm == null && current?.fee == null) remove(editing);
+                    setEditing(null);
+                  }}
+                />
+              </YStack>
+            ) : (
             <YStack gap={space.sm}>
               <GroupLabel label={t('tiers')} hint={t('fromKmTip')} />
 
@@ -1008,6 +1183,7 @@ function DeliverySection({
                 {...(!crossError && tiersComplete ? { ok: t('tierOk') } : {})}
               />
             </YStack>
+            )}
 
             <NumberField
               control={control}
@@ -1021,8 +1197,10 @@ function DeliverySection({
             />
 
             {/* Câu khách đặt sẽ đọc — dựng bằng `deliverySummaryText` dùng chung với web, nên
-                hai bên không thể mô tả cùng một cấu hình theo hai kiểu. */}
-            {tiersComplete ? (
+                hai bên không thể mô tả cùng một cấu hình theo hai kiểu. Bản v2 (`headless` - màn
+                Bảo hiểm & Giao nhận xe, tab Giao nhận của Chính sách thuê) bỏ khối này: các dòng
+                tóm tắt bậc đã nói đủ (người dùng chốt 27/11/2026). */}
+            {tiersComplete && !headless ? (
               <Callout tone="info" title={t('previewTitle')}>
                 {deliverySummaryText(
                   { deliveryTiers: tiers, deliveryMaxRadiusKm: maxRadiusKm },
@@ -1059,6 +1237,299 @@ function DeliverySection({
  * thành một khoản ĐỀ XUẤT lúc quyết toán, và chủ xe vẫn phải bấm ghi. Dòng xem trước nói đúng
  * câu mà khách sẽ đọc trên trang xe, nên chủ xe thấy được hệ quả trước khi lưu.
  */
+/**
+ * Một bậc giao xe dạng dòng tóm tắt (Figma "Discount Toggle" `24231:111519`): "Bán kính: 0 - 3 km" /
+ * "Phí giao xe: Miễn phí" (xanh) hoặc số tiền; nút xoá + sửa 20 bên phải. Sửa mở `TierEditSheet`.
+ */
+function TierSummaryRow({
+  from,
+  to,
+  fee,
+  removeLabel,
+  editLabel,
+  disabled,
+  onRemove,
+  onEdit,
+}: {
+  from: string;
+  to: number | null;
+  fee: number | null;
+  removeLabel: string;
+  editLabel: string;
+  disabled: boolean;
+  onRemove: () => void;
+  onEdit: () => void;
+}) {
+  const colors = useColors();
+  const t = useTranslations('Vehicles.pricing.delivery');
+  const fmt = useAppFormat();
+  const free = isFreeDeliveryFee(fee);
+  return (
+    <EditableSummaryRow
+      lines={[
+        { label: t('rowRadius'), value: `${from} - ${to ?? '-'} ${t('unitKm')}` },
+        fee == null
+          ? { label: t('rowFee'), value: '-' }
+          : {
+              label: t('rowFee'),
+              value: free ? t('free') : fmt.money(String(fee)),
+              ...(free ? { tone: colors.success } : {}),
+            },
+      ]}
+      removeLabel={removeLabel}
+      editLabel={editLabel}
+      disabled={disabled}
+      onRemove={onRemove}
+      onEdit={onEdit}
+    />
+  );
+}
+
+interface SummaryLine {
+  label: string;
+  value: string;
+  /** Màu chữ giá trị (vd. "Miễn phí" xanh); vắng = chữ thường đậm. */
+  tone?: string;
+}
+
+/**
+ * Khung dòng tóm tắt v2 (Figma "Discount Toggle" `24231:111519`): các cặp "Nhãn: giá trị" bên trái,
+ * nút xoá + sửa 20 bên phải. Dùng cho bậc giao xe và mốc ưu đãi dài hạn.
+ */
+function EditableSummaryRow({
+  lines,
+  removeLabel,
+  editLabel,
+  disabled,
+  onRemove,
+  onEdit,
+}: {
+  lines: readonly SummaryLine[];
+  removeLabel: string;
+  editLabel: string;
+  disabled: boolean;
+  onRemove: () => void;
+  onEdit: () => void;
+}) {
+  const colors = useColors();
+  const line = ({ label, value, tone }: SummaryLine) => (
+    <XStack f={1} minWidth={0} gap={space.xs} ai="center">
+      <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+        {label}
+      </Text>
+      <Text
+        f={1}
+        minWidth={0}
+        numberOfLines={1}
+        col={tone ?? colors.text}
+        fos={typeScale.body.fontSize}
+        lh={typeScale.body.lineHeight}
+        fow={tone ? fontWeight.medium : fontWeight.semibold}
+      >
+        {value}
+      </Text>
+    </XStack>
+  );
+  return (
+    <XStack
+      ai="center"
+      gap={COMPACT_GAP}
+      p={COMPACT_GAP}
+      br={radius.control}
+      bw={1}
+      bc={colors.border}
+      bg={colors.surface}
+    >
+      <YStack f={1} minWidth={0} gap={6}>
+        {lines.map((entry) => (
+          <XStack key={entry.label}>{line(entry)}</XStack>
+        ))}
+      </YStack>
+      {disabled ? null : (
+        <>
+          <Pressable onPress={onRemove} hitSlop={space.sm} accessibilityRole="button" accessibilityLabel={removeLabel}>
+            <LineIcon name="trash" size={20} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={onEdit} hitSlop={space.sm} accessibilityRole="button" accessibilityLabel={editLabel}>
+            <LineIcon name="edit-2" size={20} color={colors.textMuted} />
+          </Pressable>
+        </>
+      )}
+    </XStack>
+  );
+}
+
+/** Nút chữ có dấu + (Figma "Button" `24789:85089`): icon Add 20 + chữ 14 đậm vừa `text/brand/primary-2`. */
+function AddLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={space.xs}>
+      <XStack ai="center" gap={6} alignSelf="flex-start">
+        <LineIcon name="add" size={20} color={colors.brandLink} />
+        <Text
+          col={colors.brandLink}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
+          fow={fontWeight.semibold}
+        >
+          {label}
+        </Text>
+      </XStack>
+    </Pressable>
+  );
+}
+
+/** Tấm trượt sửa MỘT bậc giao xe - hai ô của bậc, ghi thẳng vào form (Lưu thay đổi mới gửi đi). */
+function TierEditSheet({
+  control,
+  index,
+  tierLabel,
+  disabled,
+  onClose,
+}: {
+  control: PolicyControl;
+  index: number | null;
+  tierLabel: string;
+  disabled: boolean;
+  onClose: () => void;
+}) {
+  const t = useTranslations('Vehicles.pricing.delivery');
+  const tActions = useTranslations('Common.actions');
+  return (
+    <BottomSheet
+      open={index != null}
+      onClose={onClose}
+      title={tierLabel}
+      footer={<Button label={tActions('done')} variant="gradient" onPress={onClose} />}
+    >
+      {index == null ? null : (
+        <YStack gap={COMPACT_GAP}>
+          <NumberField
+            control={control}
+            name={`deliveryTiers.${index}.toKm`}
+            label={t('toKmLabel')}
+            required
+            suffix={t('unitKm')}
+            min={0}
+            editable={!disabled}
+          />
+          <MoneyField
+            control={control}
+            name={`deliveryTiers.${index}.fee`}
+            label={t('feeLabel')}
+            editable={!disabled}
+          />
+        </YStack>
+      )}
+    </BottomSheet>
+  );
+}
+
+/** Khoảng cách giữa các hàng trong thẻ v2 - Figma "Nhóm thông tin" gap 12. */
+const COMPACT_GAP = 12;
+/** Figma "_Select input base" Mức giảm của một mốc ưu đãi: rộng 81. */
+const DISCOUNT_PERCENT_WIDTH = 81;
+
+/** Hạn mức quãng đường dạng hàng công tắc v2 - xem `compact` của `PolicySections`. */
+function CompactMileage({ control, disabled }: { control: PolicyControl; disabled: boolean }) {
+  const t = useTranslations('Vehicles.pricing.mileage');
+  const tWorkspace = useTranslations('Shop.policies.workspace.mileage');
+  return (
+    <Controller
+      control={control}
+      name="mileageLimitEnabled"
+      render={({ field }) => (
+        <YStack gap={COMPACT_GAP}>
+          <SwitchRow
+            title={t('title')}
+            description={tWorkspace('hint')}
+            descriptionSize="body"
+            value={field.value === true}
+            disabled={disabled}
+            onChange={(next) => field.onChange(next)}
+          />
+          {field.value === true ? (
+            <>
+              <NumberField
+                control={control}
+                name="includedDistanceKmPerDay"
+                label={t('includedLabel')}
+                hint={t('includedHint')}
+                suffix={t('unitPerDayApp')}
+                integer
+                min={MILEAGE_LIMIT.minKmPerDay}
+                max={MILEAGE_LIMIT.maxKmPerDay}
+                required
+                editable={!disabled}
+              />
+              <MoneyField
+                control={control}
+                name="excessDistanceFeePerKm"
+                label={t('excessLabel')}
+                hint={t('excessHint')}
+                unit={t('unitPerKmApp')}
+                required
+                editable={!disabled}
+              />
+            </>
+          ) : null}
+        </YStack>
+      )}
+    />
+  );
+}
+
+/**
+ * Hạn mức & phí trả xe quá giờ dạng hàng công tắc v2. Không có ô "Làm tròn tối thiểu" dù Figma vẽ:
+ * ô đó đã gỡ 06/11/2026 (quyết toán luôn làm tròn LÊN theo giờ) - người dùng chốt không dựng lại.
+ */
+function CompactOvertime({ control, disabled }: { control: PolicyControl; disabled: boolean }) {
+  const t = useTranslations('Vehicles.pricing.overtime');
+  const tWorkspace = useTranslations('Shop.policies.workspace.overtime');
+  return (
+    <Controller
+      control={control}
+      name="overtimeEnabled"
+      render={({ field }) => (
+        <YStack gap={COMPACT_GAP}>
+          <SwitchRow
+            title={tWorkspace('title')}
+            description={tWorkspace('hintApp')}
+            descriptionSize="body"
+            value={field.value === true}
+            disabled={disabled}
+            onChange={(next) => field.onChange(next)}
+          />
+          {field.value === true ? (
+            <>
+              <MoneyField
+                control={control}
+                name="overtimeFeePerHour"
+                label={t('feePerHourApp')}
+                hint={t('feePerHourHint')}
+                placeholder={t('placeholder')}
+                required
+                editable={!disabled}
+              />
+              <NumberField
+                control={control}
+                name="overtimeGraceMinutes"
+                integer
+                min={0}
+                label={tWorkspace('grace')}
+                hint={t('graceMinutesHint')}
+                placeholder={t('placeholder')}
+                suffix={t('unitMinutes')}
+                editable={!disabled}
+              />
+            </>
+          ) : null}
+        </YStack>
+      )}
+    />
+  );
+}
+
 function MileageSection({
   control,
   disabled,
@@ -1112,7 +1583,7 @@ function MileageSection({
               name="includedDistanceKmPerDay"
               label={t('includedLabel')}
               hint={t('includedHint')}
-              suffix={t('unitPerDay')}
+              suffix={t('unitPerDayApp')}
               integer
               min={MILEAGE_LIMIT.minKmPerDay}
               max={MILEAGE_LIMIT.maxKmPerDay}
@@ -1124,7 +1595,7 @@ function MileageSection({
               name="excessDistanceFeePerKm"
               label={t('excessLabel')}
               hint={t('excessHint')}
-              unit={t('unitPerKm')}
+              unit={t('unitPerKmApp')}
               required
               editable={!disabled}
             />
@@ -1181,7 +1652,7 @@ function OvertimeSection({
         <SectionHead
           tone={TONE.overtime}
           title={step(4, withToggle ? tWorkspace('title') : t('title'))}
-          hint={withToggle ? tWorkspace('hint') : t('hintRounded')}
+          hint={withToggle ? tWorkspace('hintApp') : t('hintRounded')}
           {...(withToggle
             ? {
                 toggle: (
@@ -1207,7 +1678,7 @@ function OvertimeSection({
             <MoneyField
               control={control}
               name="overtimeFeePerHour"
-              label={t('feePerHour')}
+              label={t('feePerHourApp')}
               hint={t('feePerHourHint')}
               placeholder={t('placeholder')}
               {...(withToggle ? { required: true } : {})}
@@ -1255,11 +1726,23 @@ function LongTermDiscountSection({
   step,
   legacyTiers,
   byTiers,
+  headless = false,
+  compact = false,
+  weekdayPrice,
 }: {
   control: PolicyControl;
   disabled: boolean;
   step: StepTitle;
   legacyTiers?: readonly LegacyTierView[];
+  /**
+   * Xem `PolicySections.compact` - Figma `24789:85352`: mỗi mốc một khung sửa tại chỗ ("Gói thuê từ:
+   * 1 tháng ▾" + xoá, rồi Mức giảm · Ghi chú), cuối là khung "Công thức tính giá gói".
+   */
+  compact?: boolean;
+  /** Giá ngày thường của xe - có thì khung công thức nói khoảng giá tháng đề xuất (màn sửa xe). */
+  weekdayPrice?: number | string | null | undefined;
+  /** Thẻ nơi gọi đã có tiêu đề (tab Ưu đãi dài hạn, Figma `24789:85350`) - bỏ đầu khối lặp. */
+  headless?: boolean;
   /**
    * Màn chính sách GIAN HÀNG (web 06/11/2026): không còn công tắc — có mốc là đang bật, xoá hết là
    * tắt (`discountEnabled` đi theo số mốc). Màn ghi đè theo xe giữ công tắc như web.
@@ -1301,9 +1784,133 @@ function LongTermDiscountSection({
 
   const crossError = arrayErrorOf(errors.discountTiers);
 
+  const legacyCallout = legacyTiers?.length ? (
+    <Callout tone="warning" title={t('legacyTitle', { count: legacyTiers.length })}>
+      {`${legacyTiers
+        .map((tier) => t('legacyTier', { days: tier.minDays, percent: tier.percent }))
+        .join(LIST_SEPARATOR)}\n${t('legacyBody')}`}
+    </Callout>
+  ) : null;
+
+  if (compact) {
+    return (
+      <YStack gap={COMPACT_GAP}>
+        {byTiers ? null : (
+          <Controller
+            control={control}
+            name="discountEnabled"
+            render={({ field }) => (
+              <SwitchRow
+                title={t('title')}
+                titleHint={{ label: t('tipLabel'), content: t('hint') }}
+                description={t('leadApp')}
+                value={field.value === true}
+                disabled={disabled}
+                onChange={(next) => field.onChange(next)}
+              />
+            )}
+          />
+        )}
+        {byTiers && !enabled && fields.length > 0 ? (
+          <Callout tone="warning" title={tWorkspace('inactive')} />
+        ) : null}
+        {enabled || byTiers ? (
+          <>
+            {byTiers && fields.length === 0 ? (
+              <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
+                {tWorkspace('empty')}
+              </Text>
+            ) : null}
+            {fields.map((row, index) => (
+              /* Figma "Discount Toggle" `24789:85353`: khung viền bo 12, đệm 12, sửa tại chỗ. */
+              <YStack
+                key={row.id}
+                p={COMPACT_GAP}
+                gap={COMPACT_GAP}
+                br={radius.control}
+                bw={1}
+                bc={colors.border}
+                bg={colors.surface}
+              >
+                <XStack ai="center" gap={space.sm}>
+                  <YStack f={1} minWidth={0}>
+                    {/* `Controller` trên đúng ô `minMonths` - `update()` thay cả dòng làm ô ghi chú mất focus. */}
+                    <Controller
+                      control={control}
+                      name={`discountTiers.${index}.minMonths`}
+                      render={({ field, fieldState }) => (
+                        <SelectControl
+                          inline
+                          label={t('packageFromLabel')}
+                          value={field.value == null ? null : String(field.value)}
+                          options={optionsFor(index)}
+                          placeholder={t('selectPackage')}
+                          disabled={disabled}
+                          {...(fieldState.error?.message ? { error: fieldState.error.message } : {})}
+                          onChange={(next) => field.onChange(Number(next))}
+                        />
+                      )}
+                    />
+                  </YStack>
+                  {disabled ? null : (
+                    <Pressable
+                      onPress={() => {
+                        remove(index);
+                        syncEnabled(fields.length - 1);
+                      }}
+                      hitSlop={space.sm}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('removeTierAt', { index: index + 1 })}
+                    >
+                      <LineIcon name="trash" size={20} color={colors.textMuted} />
+                    </Pressable>
+                  )}
+                </XStack>
+                <XStack gap={COMPACT_GAP} ai="flex-start">
+                  <YStack w={DISCOUNT_PERCENT_WIDTH}>
+                    <NumberField
+                      control={control}
+                      name={`discountTiers.${index}.percent`}
+                      percent
+                      label={t('percentShort')}
+                      editable={!disabled}
+                    />
+                  </YStack>
+                  <YStack f={1} minWidth={0}>
+                    <TextField
+                      control={control}
+                      name={`discountTiers.${index}.note`}
+                      label={t('tierNote')}
+                      placeholder={t('notePlaceholder')}
+                      editable={!disabled}
+                    />
+                  </YStack>
+                </XStack>
+              </YStack>
+            ))}
+            {disabled || nextUnusedMonths == null ? null : (
+              <AddLink
+                label={t('addTier')}
+                onPress={() => {
+                  append({ minMonths: nextUnusedMonths, percent: null, note: '' });
+                  syncEnabled(fields.length + 1);
+                }}
+              />
+            )}
+            <TierStatus {...(crossError ? { error: crossError } : {})} />
+            {legacyCallout}
+            {/* Màn gian hàng (`byTiers`) không gắn xe nào ⇒ công thức chữ, như web (người dùng chốt 28/11/2026). */}
+            <LongTermFormulaNotice weekdayPrice={byTiers ? null : weekdayPrice} />
+          </>
+        ) : null}
+      </YStack>
+    );
+  }
+
   return (
     <SectionShell>
       <YStack gap={space.md}>
+        {headless && byTiers ? null : (
         <SectionHead
           tone={TONE.discount}
           title={step(5, t('title'))}
@@ -1327,6 +1934,7 @@ function LongTermDiscountSection({
                 ),
               })}
         />
+        )}
 
         {byTiers && !enabled && fields.length > 0 ? (
           <Callout tone="warning" title={tWorkspace('inactive')} />
@@ -1421,13 +2029,7 @@ function LongTermDiscountSection({
               không tự quy đổi — quy đổi ngầm là đổi giá bán mà chủ xe không biết. Nói ra để họ
               chọn lại theo gói rồi lưu.
             */}
-            {legacyTiers?.length ? (
-              <Callout tone="warning" title={t('legacyTitle', { count: legacyTiers.length })}>
-                {`${legacyTiers
-                  .map((tier) => t('legacyTier', { days: tier.minDays, percent: tier.percent }))
-                  .join(LIST_SEPARATOR)}\n${t('legacyBody')}`}
-              </Callout>
-            ) : null}
+            {legacyCallout}
 
             {/* Công thức giá gói — thiếu nó thì con số % ở trên không quy ra được tiền. */}
             <NotePanel
@@ -1474,9 +2076,12 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
   control,
   disabled,
   bare = false,
+  headless = false,
 }: {
   control: PolicyFormSuperset<T>;
   disabled: boolean;
+  /** Xem `DeliverySection.headless`. */
+  headless?: boolean;
   /** Đã nằm trong một thẻ của nơi gọi (thẻ mục ADR 0112) - không dựng thẻ lồng thẻ. */
   bare?: boolean;
 }) {
@@ -1486,6 +2091,7 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
         control={control as unknown as PolicyControl}
         disabled={disabled}
         step={PLAIN_STEP}
+        headless={headless}
       />
     </SectionShellContext.Provider>
   );
@@ -1497,9 +2103,15 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
   title,
   optionDescriptions,
   bare = false,
+  headless = false,
+  hint,
 }: {
   control: PolicyFormSuperset<T>;
   disabled: boolean;
+  /** Thẻ nơi gọi đã có tiêu đề + mô tả (màn sửa xe ADR 0112) - bỏ đầu khối lặp lại. */
+  headless?: boolean;
+  /** Phạm vi ảnh hưởng của mức cọc ("N xe đang dùng mức cọc này") - màn gian hàng. */
+  hint?: string;
   /**
    * Tiêu đề do NƠI GỌI đặt. Cùng khối này đứng ở hai ngữ cảnh: màn chính sách gian hàng gọi nó là
    * "Tiền cọc / thế chấp", còn màn Thủ tục cho thuê của một xe gọi là "Tài sản thế chấp".
@@ -1518,6 +2130,33 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
         step={PLAIN_STEP}
         {...(title === undefined ? {} : { title })}
         {...(optionDescriptions === undefined ? {} : { optionDescriptions })}
+        headless={headless}
+        {...(hint ? { hint } : {})}
+      />
+    </SectionShellContext.Provider>
+  );
+}
+
+/** Ưu đãi dài hạn theo mốc đứng một mình (tab Ưu đãi dài hạn của Chính sách thuê) - đầu khối do nơi gọi vẽ. */
+export function LongTermDiscountPolicySection<T extends PolicyFormValues>({
+  control,
+  disabled,
+  legacyTiers,
+}: {
+  control: PolicyFormSuperset<T>;
+  disabled: boolean;
+  legacyTiers?: readonly LegacyTierView[] | undefined;
+}) {
+  return (
+    <SectionShellContext.Provider value>
+      <LongTermDiscountSection
+        control={control as unknown as PolicyControl}
+        disabled={disabled}
+        step={PLAIN_STEP}
+        {...(legacyTiers ? { legacyTiers } : {})}
+        byTiers
+        headless
+        compact
       />
     </SectionShellContext.Provider>
   );

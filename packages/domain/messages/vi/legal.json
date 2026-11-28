@@ -52,6 +52,8 @@
     "bookingCheckHostPlain": "Tôi đã đọc và đồng ý với điều khoản thuê của chủ xe, Điều khoản sử dụng, Chính sách huỷ chuyến và hoàn tiền và Chính sách bảo vệ dữ liệu cá nhân của XePrime.",
     "bookingAgree": "Tôi đã đọc và đồng ý với <terms>Điều khoản sử dụng</terms> và <cancellation>Chính sách huỷ chuyến</cancellation> của XePrime.",
     "bookingAgreeHost": "Tôi đã đọc và đồng ý với điều khoản thuê của chủ xe, <terms>Điều khoản sử dụng</terms> và <cancellation>Chính sách huỷ chuyến</cancellation> của XePrime.",
+    "bookingAgreePlain": "Tôi đã đọc và đồng ý với Điều khoản sử dụng và Chính sách huỷ chuyến của XePrime.",
+    "bookingAgreeHostPlain": "Tôi đã đọc và đồng ý với điều khoản thuê của chủ xe, Điều khoản sử dụng và Chính sách huỷ chuyến của XePrime.",
     "subscription": "Mua gói tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <rules>Quy chế hoạt động sàn</rules>.",
     "packagePurchase": "Mua gói tức là bạn đồng ý với <subscription>Điều kiện gói dịch vụ gian hàng</subscription>, <terms>Điều khoản sử dụng</terms> và <rules>Quy chế hoạt động sàn</rules>.",
     "shop": "Tạo gian hàng tức là bạn đồng ý với <rules>Quy chế hoạt động sàn</rules> và <terms>Điều khoản sử dụng</terms>.",

@@ -47,8 +47,12 @@ export function ConfirmSheet({
       open={open}
       onClose={loading ? () => undefined : onClose}
       chrome="v2"
-      /* Không có lời giải thích ⇒ không vẽ phần thân: chỉ đầu tấm + chân tấm, một vạch kẻ ở giữa. */
-      {...(message ? { headerDivider: true } : { headerDivider: false, padded: false, scroll: false })}
+      /*
+        Không có lời giải thích ⇒ không vẽ phần thân: chỉ đầu tấm + chân tấm, một vạch kẻ ở giữa.
+        GIỮ `scroll` mặc định: `scroll={false}` cho tấm chiều cao CỐ ĐỊNH bằng trần (dành cho danh sách
+        ảo hoá) ⇒ hộp xác nhận bị kéo gần hết màn, trắng trơn (lỗi "Tạm khoá" tài xế 27/11/2026).
+      */
+      {...(message ? { headerDivider: true } : { headerDivider: false, padded: false })}
       title={title}
       {...(subtitle ? { subtitle } : {})}
       footer={

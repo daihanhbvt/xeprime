@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
-import { Text, YStack } from 'tamagui';
+import { Text } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { Card } from '@/components/ui/Card';
-import { SectionHeader } from '@/components/ui/CardTitle';
+import { InfoGroupCard } from '@/components/ui/InfoGroupCard';
+import { InfoHint } from '@/components/ui/InfoHint';
+import { RowDivider, SwitchRow } from '@/components/ui/SwitchRow';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
-import { ToggleRow } from './PolicySections';
+import { typeScale } from '@/theme/tokens';
+
+/** Khoảng tiêu đề → mô tả của `InfoGroupCard` là 8; Figma vẽ sát (0). */
+const HEAD_PULL = 8;
 
 /** Công tắc "Áp dụng chính sách của gian hàng" của MỘT mục (ADR 0112 điều 1) - chỉ màn sửa xe. */
 export interface PolicyInheritControl {
@@ -18,19 +21,23 @@ export interface PolicyInheritControl {
 }
 
 /**
- * Thẻ một mục chính sách ở màn sửa xe - bản native của web `PolicySectionCard` + `VehiclePolicySection`:
- * tiêu đề, mô tả, nhãn góc phải, và (khi có `inherit`) hàng công tắc kế thừa ngay dưới tiêu đề.
- * Chủ xe tuyến hoa hồng (chế độ `direct`) không có công tắc - sửa thẳng.
+ * Thẻ một mục chính sách ở màn sửa xe - bản native của web `PolicySectionCard` + `VehiclePolicySection`,
+ * dựng theo "Nhóm thông tin" của Figma Partner (`24237:56980`): tiêu đề 16/24, (khi có `inherit`) hàng
+ * công tắc kế thừa + đường kẻ, rồi nội dung. Chủ xe tuyến hoa hồng (chế độ `direct`) không có công
+ * tắc - sửa thẳng.
  */
 export function VehiclePolicySectionCard({
   title,
   subtitle,
+  titleHint,
   badge,
   inherit,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /** Câu giới thiệu dài - vào dấu ⓘ cuối hàng tiêu đề thay vì chiếm chỗ (người dùng chốt 27/11/2026). */
+  titleHint?: string;
   badge?: ReactNode;
   inherit?: PolicyInheritControl;
   children: ReactNode;
@@ -38,25 +45,50 @@ export function VehiclePolicySectionCard({
   const colors = useColors();
   const t = useTranslations('Shop.policies.workspace.inherit');
   return (
-    <Card lift="flat">
-      <YStack gap={space.md}>
-        <YStack gap={space.xs}>
-          <SectionHeader {...(badge ? { action: badge } : {})}>{title}</SectionHeader>
-          {subtitle ? (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {subtitle}
-            </Text>
-          ) : null}
-        </YStack>
-        {inherit ? (
-          <ToggleRow
-            label={t('title')}
-            hint={t.rich('hint', {
+    <InfoGroupCard
+      title={title}
+      {...(badge || titleHint
+        ? {
+            headerRight: (
+              <>
+                {badge}
+                {titleHint ? (
+                  <InfoHint label={title} content={titleHint} size={typeScale.body.fontSize} />
+                ) : null}
+              </>
+            ),
+          }
+        : {})}
+      // Figma: dòng mô tả nằm SÁT dưới tiêu đề (cùng khối "Info"), không cách 12 như các phần khác.
+      {...(subtitle
+        ? {
+            subheader: (
+              <Text
+                col={colors.placeholder}
+                fos={typeScale.label.fontSize}
+                lh={typeScale.label.lineHeight}
+                mt={-HEAD_PULL}
+              >
+                {subtitle}
+              </Text>
+            ),
+          }
+        : {})}
+    >
+      {inherit ? (
+        <>
+          <SwitchRow
+            title={t('title')}
+            description={t.rich('hint', {
+              // Figma: "chính sách chung" gạch chân, `text/brand/primary-2`.
               policies: (chunks) =>
                 inherit.onOpenPolicies ? (
                   <Text
                     col={colors.brandLink}
+                    fos={typeScale.label.fontSize}
+                    lh={typeScale.label.lineHeight}
                     textDecorationLine="underline"
+                    accessibilityRole="link"
                     onPress={inherit.onOpenPolicies}
                   >
                     {chunks}
@@ -65,13 +97,14 @@ export function VehiclePolicySectionCard({
                   chunks
                 ),
             })}
-            checked={inherit.checked}
+            value={inherit.checked}
             disabled={inherit.disabled ?? false}
-            onToggle={() => inherit.onChange(!inherit.checked)}
+            onChange={inherit.onChange}
           />
-        ) : null}
-        {children}
-      </YStack>
-    </Card>
+          <RowDivider />
+        </>
+      ) : null}
+      {children}
+    </InfoGroupCard>
   );
 }

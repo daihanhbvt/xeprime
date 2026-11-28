@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { ActivityIndicator } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -25,20 +25,25 @@ import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
+import { FIELD_V2, FieldLabel } from '@/components/ui/Field';
 import { SelectField } from '@/components/ui/SelectField';
+import { SheetConfirmFooter } from '@/components/ui/SheetConfirmFooter';
+import { TextControl } from '@/components/ui/TextControl';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { Driver } from '../api';
 import { useDriverAccountLookup, useInviteDriver, useUpdateDriver } from '../hooks/use-drivers';
 import { InternalDriverForm } from './InternalDriverFormSheet';
 
 /** Chờ người dùng ngừng gõ rồi mới tra tài khoản (web `LOOKUP_DEBOUNCE_MS`). */
 const LOOKUP_DEBOUNCE_MS = 400;
+/** Figma ô "Thông tin tài xế": ảnh tài khoản 24. */
+const ACCOUNT_AVATAR = 24;
 
 /**
  * Hộp mời mới (Figma `23737:46392`, web 25/11/2026) KHÔNG có ô tên: tên lưu là tên tài khoản tra
@@ -107,11 +112,15 @@ export function AddDriverSheet({
 }) {
   const t = useTranslations('Drivers');
   const [tab, setTab] = useState<DriverRosterKind>(DRIVER_ROSTER_KIND.LINKED);
+  /* Chân tấm cố định (Figma "Footer cố định") gọi lượt gửi của form đang hiện qua ref. */
+  const submitRef = useRef<() => void>(NOOP);
+  const [saving, setSaving] = useState(false);
   const close = () => {
     setTab(DRIVER_ROSTER_KIND.LINKED);
     onClose();
   };
   const active = prefill ? DRIVER_ROSTER_KIND.LINKED : tab;
+  const linked = active === DRIVER_ROSTER_KIND.LINKED;
   const tabs = useMemo(
     () => [
       { key: DRIVER_ROSTER_KIND.LINKED, label: t('add.tabs.invite') },
@@ -126,6 +135,18 @@ export function AddDriverSheet({
       chrome="v2"
       headerDivider
       title={prefill ? t('form.titleReinvite') : t('add.title')}
+      /* Figma `24512:118654`: phụ đề chỉ có ở lượt MỜI (tài xế nội bộ không gửi gì cho XePrime). */
+      {...(linked ? { subtitle: t('app.invite.subtitle') } : {})}
+      footer={
+        <SheetConfirmFooter
+          backLabel={t('app.invite.cancel')}
+          onBack={close}
+          confirmLabel={linked ? t('add.invite.submit') : t('add.internal.submit')}
+          onConfirm={() => submitRef.current()}
+          tone="primary"
+          loading={saving}
+        />
+      }
     >
       {/* Mount theo `open`: mỗi lần mở là một form mới, lỗi của lần trước không ở lại. */}
       {open ? (
@@ -133,10 +154,21 @@ export function AddDriverSheet({
           {prefill ? null : (
             <SegmentedTabs<DriverRosterKind> items={tabs} value={active} onChange={setTab} />
           )}
-          {active === DRIVER_ROSTER_KIND.LINKED ? (
-            <InviteForm onDone={close} defaults={prefill ?? EMPTY_INVITE} />
+          {linked ? (
+            <InviteForm
+              onDone={close}
+              defaults={prefill ?? EMPTY_INVITE}
+              submitRef={submitRef}
+              onSaving={setSaving}
+            />
           ) : (
-            <InternalDriverForm driver={null} onDone={close} onCancel={close} />
+            <InternalDriverForm
+              driver={null}
+              onDone={close}
+              onCancel={close}
+              submitRef={submitRef}
+              onSaving={setSaving}
+            />
           )}
         </YStack>
       ) : null}
@@ -144,12 +176,26 @@ export function AddDriverSheet({
   );
 }
 
+const NOOP = () => undefined;
+
 /**
  * MỜI tài xế bằng SĐT (ADR 0063) — bản native của `InviteDriverModal`. Tài xế là TÀI KHOẢN KHÁCH
  * đã xác minh; chưa có thì server trả `DRIVER_ACCOUNT_NOT_FOUND` và câu lỗi hiện NGAY trong tấm
  * (không chỉ toast) — nó nói rõ việc cần làm: nhờ tài xế đăng ký bằng đúng số đó.
  */
-function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: InviteDriverValues }) {
+function InviteForm({
+  onDone,
+  defaults,
+  submitRef,
+  onSaving,
+}: {
+  onDone: () => void;
+  defaults: InviteDriverValues;
+  /** Chân tấm cố định của `AddDriverSheet` gọi lượt gửi qua ref này. */
+  submitRef: MutableRefObject<() => void>;
+  onSaving: (saving: boolean) => void;
+}) {
+  const colors = useColors();
   const t = useTranslations('Drivers');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -193,9 +239,25 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
     );
   });
 
+  useEffect(() => {
+    submitRef.current = () => void submit();
+  });
+  useEffect(() => {
+    onSaving(invite.isPending);
+    return () => onSaving(false);
+  }, [invite.isPending, onSaving]);
+
+  /* Một chữ trong câu "Lưu ý" (Figma `24512:118931`): mỗi `Text` lồng khai lại đủ kiểu chữ. */
+  const hintRun = (color: string) => (chunks: ReactNode) => (
+    <Text col={color} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.semibold}>
+      {chunks}
+    </Text>
+  );
+
   return (
     <YStack gap={space.md}>
       {invite.isError ? <Callout tone="danger">{errorMessage(invite.error)}</Callout> : null}
+      {/* Figma không vẽ dấu * - luật bắt buộc vẫn ở schema (người dùng chốt 27/11/2026). */}
       <TextField
         control={control}
         name="phone"
@@ -203,7 +265,6 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
         placeholder={t('form.phonePlaceholder')}
         keyboardType="phone-pad"
         autoComplete="tel"
-        required
       />
       <AccountLookupBox
         phone={debounced}
@@ -211,13 +272,7 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
         failed={lookup.isError}
         account={account}
       />
-      <SelectField
-        control={control}
-        name="driverType"
-        label={t('form.type')}
-        required
-        options={typeOptions}
-      />
+      <SelectField control={control} name="driverType" label={t('form.type')} options={typeOptions} />
       <TextField
         control={control}
         name="note"
@@ -226,17 +281,25 @@ function InviteForm({ onDone, defaults }: { onDone: () => void; defaults: Invite
         multiline scrollable
         rows={3}
       />
-      {/* Khối "Lưu ý" cuối form như web (tiêu đề + mô tả). */}
-      <Callout title={t('form.hintTitle')}>{t('form.inviteHint')}</Callout>
-      <FormActions
-        saving={invite.isPending}
-        submitLabel={t('add.invite.submit')}
-        onClose={onDone}
-        onSubmit={() => void submit()}
-      />
+      {/* Figma `24512:118929`: nền `status/information-low`, không viền/icon; tiêu đề xanh 14 medium. */}
+      <YStack p={NOTE_PAD} gap={NOTE_GAP} br={radius.control} bg={colors.infoLow}>
+        <Text col={colors.infoStrong} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} fow={fontWeight.medium}>
+          {t('form.hintTitle')}
+        </Text>
+        <Text col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+          {t.rich('form.inviteHintRich', {
+            b: hintRun(colors.textMuted),
+            link: hintRun(colors.infoStrong),
+          })}
+        </Text>
+      </YStack>
     </YStack>
   );
 }
+
+/** Figma khối "Lưu ý": đệm 12, tiêu đề ↔ thân 4. */
+const NOTE_PAD = 12;
+const NOTE_GAP = 4;
 
 /** SỬA một liên kết — SĐT không đổi được (mời lại là một liên kết mới). Bản native `EditDriverModal`. */
 /**
@@ -257,8 +320,9 @@ function AccountLookupBox({
 }) {
   const colors = useColors();
   const t = useTranslations('Drivers.add.invite');
-  const hint = (text: string, tone: string = colors.textMuted) => (
-    <Text col={tone} fos={fontSize.bodySm}>
+  // Figma `24612:140769`: ô chỉ đọc nền `bg/gray-50`, chữ 14/20; gợi ý `text/gray/very-low`.
+  const hint = (text: string, tone: string = colors.textPlaceholder) => (
+    <Text f={1} col={tone} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
       {text}
     </Text>
   );
@@ -266,34 +330,43 @@ function AccountLookupBox({
   if (!phone) body = hint(t('accountPlaceholder'));
   else if (loading)
     body = (
-      <XStack ai="center" gap={space.sm}>
+      <>
         <ActivityIndicator size="small" color={colors.primaryActive} />
         {hint(t('lookingUp'))}
-      </XStack>
+      </>
     );
   else if (failed) body = hint(t('lookupError'));
   else if (account)
     body = (
-      <XStack ai="center" gap={space.sm}>
-        <Avatar name={account.displayName ?? ''} url={account.avatarUrl ?? null} size={24} />
-        <Text f={1} col={colors.text} fos={fontSize.body} numberOfLines={1}>
+      <>
+        <Avatar name={account.displayName ?? ''} url={account.avatarUrl ?? null} size={ACCOUNT_AVATAR} />
+        {/* Tên `text/gray/medium` rồi SĐT `text/gray/very-low` cùng một dòng, cách hai khoảng trắng. */}
+        <Text f={1} col={colors.textMuted} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight} numberOfLines={1}>
           {account.displayName}
+          <Text col={colors.textPlaceholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
+            {`  ${phone}`}
+          </Text>
         </Text>
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {phone}
-        </Text>
-      </XStack>
+      </>
     );
   else body = hint(t('notFound'), colors.danger);
 
   return (
-    <YStack gap={space.xs} accessibilityLiveRegion="polite">
-      <Text col={colors.text} fos={fontSize.bodySm}>
-        {t('account')}
-      </Text>
-      <YStack p={space.sm} br={8} bw={1} bc={colors.border} bg={colors.background}>
+    <YStack gap={FIELD_V2.labelGap} accessibilityLiveRegion="polite">
+      <FieldLabel label={t('account')} />
+      <XStack
+        minHeight={FIELD_V2.height}
+        px={FIELD_V2.padX}
+        py={space.sm}
+        ai="center"
+        gap={space.sm}
+        br={radius.control}
+        bw={1}
+        bc={colors.borderInput}
+        bg={colors.background}
+      >
         {body}
-      </YStack>
+      </XStack>
       {account?.alreadyLinked ? hint(t('alreadyLinked'), colors.warningStrong) : null}
     </YStack>
   );
@@ -315,7 +388,6 @@ export function EditDriverSheet({
 }
 
 function EditForm({ driver, onDone }: { driver: Driver; onDone: () => void }) {
-  const colors = useColors();
   const t = useTranslations('Drivers');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
@@ -352,9 +424,8 @@ function EditForm({ driver, onDone }: { driver: Driver; onDone: () => void }) {
   return (
     <YStack gap={space.md}>
       {update.isError ? <Callout tone="danger">{errorMessage(update.error)}</Callout> : null}
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {driver.phone}
-      </Text>
+      {/* SĐT là định danh tài khoản liên kết - hiện như một ô KHOÁ cùng cỡ các ô khác (người dùng 28/11/2026). */}
+      <TextControl label={t('form.phone')} value={driver.phone} onChangeText={() => undefined} editable={false} />
       <TextField
         control={control}
         name="name"

@@ -518,9 +518,12 @@ function SheetSurface({
               ) : title ? (
                 <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.xs}>
                   <YStack f={1} gap={2}>
-                    <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                      {title}
-                    </Text>
+                    <XStack ai="center" gap={space.xs}>
+                      <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} flexShrink={1}>
+                        {title}
+                      </Text>
+                      {titleAdornment}
+                    </XStack>
                     {subtitle ? (
                       <Text col={colors.textMuted} fos={fontSize.bodySm}>
                         {subtitle}

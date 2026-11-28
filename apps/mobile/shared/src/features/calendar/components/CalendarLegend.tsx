@@ -1,139 +1,93 @@
 import { memo } from 'react';
-import { ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { Ionicons } from '@/components/icons/Ionicons';
-import { OCCUPANCY_SOURCE_TYPE } from '@xeprime/types';
-import type { IconName } from '@/components/ui/Chip';
-import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, radius, space } from '@/theme/tokens';
-import {
-  LEGEND_SERVICES,
-  legendExtraToneOf,
-  serviceColorTone,
-  sourceTone,
-  type CalendarTone,
-} from '../calendar-tone';
+import { fontWeight, typeScale } from '@/theme/tokens';
+import { LEGEND_SERVICES, serviceAccent } from '../calendar-tone';
 
 interface LegendItem {
   key: string;
   label: string;
-  tone: CalendarTone;
-  icon?: IconName;
-  dashed?: boolean;
-  round?: boolean;
+  fill: string;
+  /** Viền ô mẫu - chỉ khi Figma vẽ viền ("Giá riêng", "Ngày lễ"). */
+  border?: string;
 }
 
-/** Ô mẫu 14dp: web dùng 12px, cộng 2dp vì vài ô ở đây còn phải chở một biểu tượng bên trong. */
-const SWATCH = 14;
-const SWATCH_ICON = 9;
+/** Figma "Selection Indicator" `24729:83810`: ô 8 bo 2. */
+const SWATCH = 8;
+const SWATCH_RADIUS = 2;
+/** Khoảng cách ô ↔ chữ 6, giữa hai mục 20, giữa hai hàng 4 (Figma `24729:83807`). */
+const ITEM_GAP = 6;
+const COLUMN_GAP = 20;
+const ROW_GAP = 4;
 
 /**
- * Chú giải — SINH RA TỪ chính dữ liệu mà lưới vẽ, không phải một danh sách chép tay.
+ * Chú giải lịch v2 - Figma Lịch thuê xe "Header MB" (`24729:83807`): ô vuông 8px tô ĐẶC theo dịch
+ * vụ + Khoá/Bảo dưỡng · Giá riêng · Ngày lễ, chữ 12/18 `text/gray/medium`, XUỐNG DÒNG (không cuộn
+ * ngang). Hai mục ADR 0110 ("Đơn tự khai thác", "Đã thu đủ") Figma không vẽ - người dùng chốt giữ
+ * (27/11/2026), vẽ cùng khuôn ô 8px.
  *
- * Trạng thái đơn lấy từ `LEGEND_BOOKING_STATUSES`, nhãn lấy từ `Domain.bookingStatus` — cùng
- * nguồn với viên trạng thái ở màn chi tiết, nên chú giải và nhãn không thể gọi tên khác nhau.
- * Màu thì đi qua `statusColorTone`/`sourceTone`, đúng hai hàm mà thanh event dùng, nên chú giải
- * không thể nói một màu khác với lưới.
- *
- * Bản trước chép tay theo web CŨ: liệt kê "Đơn thuê" (không phải trạng thái nào), tô "Đang thuê"
- * xanh lá trong khi lưới vẽ `active` xanh dương, và không hề có ô nào cho `reserved`. Web đã sửa
- * ở `fix(web): sync calendar status colors and legend`; đây là bản dịch của mô hình mới.
- *
- * Ô mẫu là ô VUÔNG CÓ VIỀN vì đó là hình của thanh event trên lưới; `booking_request` và
- * `blocked_range` mang thêm nét ĐỨT — tín hiệu không dựa vào màu, dùng lại đúng `isDashedEvent`
- * mà thanh event dùng. Riêng "Giá riêng" là hình TRÒN tô đặc, đúng hình chấm giá trên ô ngày.
- *
- * Cuộn ngang vì bảy mục không xếp vừa một hàng ở 320dp, và xuống dòng thì dải này cao gấp đôi
- * trên mọi máy — nó là chú thích, không phải nội dung.
+ * Màu đi qua `serviceAccent` - đúng hàm thẻ đơn trên lưới dùng, nên chú giải không thể nói một màu
+ * khác với lưới.
  */
 export const CalendarLegend = memo(function CalendarLegend() {
   const colors = useColors();
   const t = useTranslations('Calendar');
 
-  /*
-   * Chú giải lịch v2 (web `CalendarLegend`, 25/11/2026): thẻ đơn tô theo DỊCH VỤ · Khoá/Bảo dưỡng
-   * (xám) · Giá riêng · Ngày lễ. Trạng thái đơn nay là viên chữ trên thanh, không còn là màu thẻ.
-   */
   const items: LegendItem[] = [
     ...LEGEND_SERVICES.map((service) => ({
       key: `service-${service}`,
       label: t(`legend.service.${service}`),
-      tone: serviceColorTone(service, colors),
+      fill: serviceAccent(service, colors).accent,
     })),
-    {
-      key: 'off',
-      label: t('legend.off'),
-      tone: sourceTone(OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE, colors),
-      dashed: true,
-      icon: 'lock-closed' as IconName,
-    },
+    { key: 'off', label: t('legend.off'), fill: colors.textPlaceholder },
     {
       key: 'customPrice',
       label: t('legend.customPrice'),
-      tone: legendExtraToneOf(colors).customPrice,
-      round: true,
+      fill: colors.brandLow,
+      border: colors.brandIconBg,
     },
     {
       key: 'holiday',
       label: t('legend.holiday'),
-      tone: legendExtraToneOf(colors).holiday,
-      icon: 'flag',
+      fill: colors.dangerBorder,
+      border: colors.danger,
     },
+    {
+      key: 'direct',
+      label: t('legend.direct'),
+      fill: colors.surfaceMuted,
+      border: colors.borderInput,
+    },
+    { key: 'paidFull', label: t('legend.paidFull'), fill: colors.success },
   ];
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      /*
-       * `flexGrow: 0` KHÔNG phải tinh chỉnh — thiếu nó là màn hình vỡ.
-       *
-       * `Screen` dựng nội dung thành một cột flex (`flexGrow: 1`), và một `ScrollView` không bị
-       * chặn sẽ TRANH chỗ với vùng lưới `flex: 1` ngay dưới: hai bên chia đôi khoảng trống, chú
-       * giải phình ra vài trăm dp, các mục bên trong bị kéo giãn rồi căn giữa theo chiều dọc — ra
-       * đúng hai mảng trắng lớn kẹp lấy một dòng chú giải lơ lửng, còn lưới thì bị dồn xuống đáy
-       * và chỉ còn ba hàng xe.
-       *
-       * `flexShrink: 0` đi kèm để chiều cao chú giải không bị bóp ngược lại khi lưới đòi chỗ.
-       */
-      style={{ flexGrow: 0, flexShrink: 0 }}
-      contentContainerStyle={{
-        paddingHorizontal: layout.screenX,
-        paddingVertical: space.xs,
-        gap: space.sm,
-        // Mục căn giữa theo CHIỀU DỌC của chính nó, không kéo giãn theo chiều cao dải.
-        alignItems: 'center',
-      }}
+    <XStack
+      flexWrap="wrap"
+      columnGap={COLUMN_GAP}
+      rowGap={ROW_GAP}
       accessibilityLabel={t('legend.ariaLabel')}
     >
       {items.map((item) => (
-        <XStack key={item.key} ai="center" gap={4}>
+        <XStack key={item.key} ai="center" gap={ITEM_GAP}>
           <YStack
             w={SWATCH}
             h={SWATCH}
-            ai="center"
-            jc="center"
-            br={item.round ? radius.pill : radius.sm}
-            bg={item.tone.bg}
-            bw={1}
-            bc={item.tone.border}
-            /*
-             * `borderStyle` chỉ đặt khi CẦN nét đứt: trên Android, đổi kiểu viền của một view có
-             * bo góc là chỗ hay vẽ hỏng, nên các ô còn lại không đi qua nhánh đó.
-             */
-            {...(item.dashed ? { borderStyle: 'dashed' as const } : {})}
+            br={SWATCH_RADIUS}
+            bg={item.fill}
+            {...(item.border ? { bw: 1, bc: item.border } : {})}
+          />
+          <Text
+            col={colors.textMuted}
+            fos={typeScale.label.fontSize}
+            lh={typeScale.label.lineHeight}
+            fow={fontWeight.regular}
           >
-            {item.icon ? (
-              <Ionicons name={item.icon} size={SWATCH_ICON} color={item.tone.fg} />
-            ) : null}
-          </YStack>
-          <Text col={colors.textMuted} fos={fontSize.meta}>
             {item.label}
           </Text>
         </XStack>
       ))}
-    </ScrollView>
+    </XStack>
   );
 });

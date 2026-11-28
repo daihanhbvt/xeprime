@@ -4,7 +4,8 @@ import Animated from 'react-native-reanimated';
 import { Text, XStack } from 'tamagui';
 import { useFieldFeedback } from '@/components/motion/use-field-feedback';
 import { useTranslations } from 'use-intl';
-import { InfoHint } from './InfoHint';
+import { IS_PARTNER_APP } from '@/lib/app-kind';
+import { InfoHint, TextWithHint } from './InfoHint';
 import { useColors } from '@/theme/ThemeProvider';
 import {
   buttonHeight,
@@ -98,7 +99,11 @@ export const FIELD_V2 = {
  * `inLabelHint` cho nhãn, `belowHint` cho `FieldMessage` - để một gợi ý không hiện hai lần.
  */
 export function inLabelHint(hint: string | undefined, force = false): string | undefined {
-  return hint && (force || hint.length > HINT_INLINE_MAX) ? hint : undefined;
+  /*
+   * App Partner: MỌI ghi chú của ô (khoá vì xe đang trên chợ, chọn theo mẫu xe, gợi ý…) thành ⓘ cạnh
+   * nhãn, không còn dòng dưới ô - đúng ngôn ngữ Figma Partner (người dùng 27/11/2026, màn sửa xe).
+   */
+  return hint && (force || IS_PARTNER_APP || hint.length > HINT_INLINE_MAX) ? hint : undefined;
 }
 
 /** `force` PHẢI trùng với `inLabelHint` của cùng ô - ép gợi ý lên nhãn thì dưới ô không lặp lại. */
@@ -139,8 +144,14 @@ export function FieldLabel({
     như một khối. Nhãn là thứ được quét đầu tiên khi dò form nên nó phải đậm nhất trong ba; chữ
     gợi ý ở `FieldMessage` mới là phần được phép mờ.
   */
-  const text = (
-    <Text
+  /*
+    Dấu ⓘ LỒNG trong dòng chữ (`TextWithHint`, người dùng 28/11/2026): nhãn dài xuống dòng thì ⓘ
+    vẫn đứng sát chữ cuối ("…có tài xế ⓘ"), không bị đẩy ra mép phải. Cỡ BẰNG chữ nhãn (25/11/2026).
+  */
+  return (
+    <TextWithHint
+      hint={hint}
+      hintLabel={label}
       col={v2 ? colors.textMuted : colors.text}
       fos={v2 ? FIELD_V2.fontSize : fieldFontSize.label}
       {...(v2 ? { lh: FIELD_V2.labelLineHeight } : {})}
@@ -153,15 +164,7 @@ export function FieldLabel({
           {' ●'}
         </Text>
       ) : null}
-    </Text>
-  );
-  if (!hint) return text;
-  return (
-    <XStack ai="center" gap={space.xs}>
-      {text}
-      {/* Dấu ⓘ BẰNG cỡ chữ của nhãn (người dùng 25/11/2026), căn giữa theo dòng nhãn. */}
-      <InfoHint content={hint} label={label} size={v2 ? FIELD_V2.fontSize : fieldFontSize.label} />
-    </XStack>
+    </TextWithHint>
   );
 }
 
@@ -204,12 +207,16 @@ export function FieldMessage({
   return null;
 }
 
+/** Khung thấp của hàng lọc (Figma "Input - Select" min-h 40, bằng ô tìm `field`). */
+const COMPACT_FIELD_HEIGHT = 40;
+
 export function FieldShell({
   children,
   focused = false,
   invalid = false,
   disabled = false,
   align = 'center',
+  compact = false,
   onPress,
   accessibilityRole,
   accessibilityLabel,
@@ -226,6 +233,8 @@ export function FieldShell({
    */
   disabled?: boolean;
   align?: 'center' | 'flex-start';
+  /** Khung thấp 40 (Figma "Input - Select" ở hàng lọc, cạnh ô tìm `field`). */
+  compact?: boolean;
   onPress?: () => void;
   accessibilityRole?: 'button';
   accessibilityLabel?: string;
@@ -268,7 +277,7 @@ export function FieldShell({
       bw={1}
       bc={restColor}
       px={v2 ? FIELD_V2.padX : space.sm}
-      minHeight={v2 ? FIELD_V2.height : sizing.touchTarget}
+      minHeight={compact ? COMPACT_FIELD_HEIGHT : v2 ? FIELD_V2.height : sizing.touchTarget}
       {...(onPress ? { onPress } : {})}
       {...(accessibilityRole ? { accessibilityRole } : {})}
       {...(accessibilityLabel ? { accessibilityLabel } : {})}

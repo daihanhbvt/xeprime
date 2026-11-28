@@ -1,14 +1,10 @@
-import { Ionicons } from '@/components/icons/Ionicons';
-import { memo, useMemo, useState } from 'react';
-import { Pressable } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   DRIVER_LICENCE_STATE,
   DRIVER_ROSTER_KIND,
   DRIVER_SOURCE,
-  PERMISSION,
-  STATUS_COLOR,
   type DriverRosterKind,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -16,23 +12,17 @@ import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { Chip } from '@/components/ui/Chip';
-import { SearchInput } from '@/components/ui/SearchInput';
+import { SelectControl } from '@/components/ui/SelectControl';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { InternalDriverFormSheet } from '@/features/drivers/components/InternalDriverFormSheet';
 import { useAssignableInternalDrivers } from '@/features/drivers/hooks/use-internal-drivers';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
-import { useAssignableDrivers } from '../hooks/use-bookings';
+import { fontSize, space } from '@/theme/tokens';
+import { useAssignableDrivers, useDriverWageQuote } from '../hooks/use-bookings';
+import { AssignDriverWageStep, type AssignWageStepState } from './AssignDriverWageSheet';
+import { InfoHint } from '@/components/ui/InfoHint';
 import type { BookingDetail } from '../api';
-
-const ALL = 'all';
-const AVAILABILITY = { FREE: 'free', BUSY: 'busy' } as const;
-type Availability = (typeof AVAILABILITY)[keyof typeof AVAILABILITY] | typeof ALL;
 
 /** Một ứng viên của bộ chọn — tài xế liên kết hoặc tài xế nội bộ (web `ChangeDriverDialog.Candidate`). */
 export interface DriverCandidate {
@@ -64,8 +54,12 @@ export function AssignDriverSheet({
   pending = false,
   selectedId,
   linkedOnly = false,
+  prefetch = false,
   onSelect,
+  onAssigned,
 }: {
+  /** Tải sẵn danh sách lúc vào màn (đóng tấm vẫn giữ cache) - mở tấm là có ngay, làm mới ngầm. */
+  prefetch?: boolean;
   open: boolean;
   onClose: () => void;
   booking: BookingDetail;
@@ -73,22 +67,36 @@ export function AssignDriverSheet({
   selectedId?: string | null;
   linkedOnly?: boolean;
   onSelect: (candidate: DriverCandidate) => void;
+  /**
+   * Có ⇒ tài xế LIÊN KẾT đi tiếp sang bước tiền công NGAY TRONG tấm này (không mở tấm mới);
+   * gán xong gọi hàm này. Không có ⇒ giữ hành vi cũ: `onSelect` cho mọi người.
+   */
+  onAssigned?: () => void;
 }) {
   const colors = useColors();
   const t = useTranslations('Drivers.booking.picker');
   const tBooking = useTranslations('Drivers.booking');
   const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
-  const { has } = usePermissions();
-  const canAddInternal = !linkedOnly && has(PERMISSION.DRIVER_MANAGE);
+  const domainLabel = useDomainLabel();
   const [search, setSearch] = useState('');
-  const [availability, setAvailability] = useState<Availability>(ALL);
-  const [kind, setKind] = useState<DriverRosterKind | typeof ALL>(ALL);
-  const [creatingInternal, setCreatingInternal] = useState(false);
+  const [pickedKey, setPickedKey] = useState<string | null>(null);
+  // Bước 2 (tiền công) trong cùng tấm: người đã chọn + điều khiển do bước con báo lên.
+  const [wageState, setWageState] = useState<AssignWageStepState | null>(null);
+  const tWage = useTranslations('Drivers.wage.assign');
+  // Cùng khoá cache với màn chi tiết (đã tải sẵn) - sang bước 2 là có số ngay.
+  const wageQuote = useDriverWageQuote(booking.id, Boolean(onAssigned) && (open || prefetch));
 
   const window = { pickupAt: booking.pickupAt, returnAt: booking.returnAt, excludeBookingId: booking.id };
-  const linkedQ = useAssignableDrivers(window, open);
-  const internalQ = useAssignableInternalDrivers(window, open && !linkedOnly);
+  const linkedQ = useAssignableDrivers(window, open || prefetch);
+  const internalQ = useAssignableInternalDrivers(window, (open || prefetch) && !linkedOnly);
+  // Mở tấm: hiện ngay dữ liệu cũ, làm mới ngầm (không skeleton).
+  useEffect(() => {
+    if (!open) return;
+    void linkedQ.refetch();
+    if (!linkedOnly) void internalQ.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const current = booking.driver ?? null;
 
   const candidates = useMemo<DriverCandidate[]>(
@@ -121,6 +129,36 @@ export function AssignDriverSheet({
     [linkedQ.data, internalQ.data, linkedOnly],
   );
 
+  /** Dòng phụ của một lựa chọn: SĐT · loại · bằng lái · rảnh/trùng chuyến (web `ChangeDriverDialog`). */
+  const candidateHint = (c: DriverCandidate, isCur: boolean): string => {
+    const internal = c.kind === DRIVER_ROSTER_KIND.INTERNAL;
+    const classes = c.licenceClasses.join(', ');
+    const licence = internal
+      ? null
+      : c.licenceState === DRIVER_LICENCE_STATE.VERIFIED
+        ? classes
+          ? t('licenceVerified', { classes })
+          : t('licenceVerifiedNoClass')
+        : c.licenceState === DRIVER_LICENCE_STATE.PENDING
+          ? t('licencePending')
+          : t('licenceNone');
+    const availability = isCur
+      ? t('current')
+      : c.busy
+        ? t('busy')
+        : c.expiredCount > 0
+          ? t('freeExpired', { count: c.expiredCount })
+          : t('free');
+    return [
+      c.phone,
+      internal ? t('internal') : domainLabel('driverType', c.driverType ?? '', c.driverType ?? ''),
+      licence,
+      availability,
+    ]
+      .filter(Boolean)
+      .join(LIST_SEPARATOR);
+  };
+
   /* "Đang gán" = đúng người + đúng nguồn (id liên kết và id danh bạ không chung không gian). */
   const isCurrent = (c: DriverCandidate) =>
     selectedId !== undefined
@@ -134,8 +172,6 @@ export function AssignDriverSheet({
   const digits = needle.replace(/\D/g, '');
   const visible = candidates.filter(
     (c) =>
-      (kind === ALL || c.kind === kind) &&
-      (availability === ALL || (availability === AVAILABILITY.BUSY) === c.busy) &&
       (!needle ||
         c.name.toLowerCase().includes(needle) ||
         (digits.length >= 3 && c.phone.replace(/\D/g, '').includes(digits))),
@@ -143,57 +179,85 @@ export function AssignDriverSheet({
   const loading = linkedQ.isLoading || (!linkedOnly && internalQ.isLoading);
   const loadError = linkedQ.isError || (!linkedOnly && internalQ.isError);
 
+  const keyOf = (c: DriverCandidate) => `${c.kind}:${c.id}`;
+  // Mặc định ô chọn hiện người đang gán; "Tiếp tục" chỉ bật khi chọn người KHÁC.
+  const currentKey = candidates.find((c) => isCurrent(c));
+  const shownKey = pickedKey ?? (currentKey ? keyOf(currentKey) : null);
+  const pickedRaw = candidates.find((c) => keyOf(c) === pickedKey) ?? null;
+  const picked = pickedRaw && !isCurrent(pickedRaw) ? pickedRaw : null;
+  const options = visible.map((c) => ({
+    value: keyOf(c),
+    label: c.name,
+    hint: candidateHint(c, isCurrent(c)),
+    leading: <Avatar name={c.name} url={c.avatarUrl} size={36} />,
+    valueLeading: <Avatar name={c.name} url={c.avatarUrl} size={24} />,
+    // Người trùng chuyến / đang gán: hiện mờ, không chọn được (web).
+    disabled: c.busy || isCurrent(c),
+  }));
+
+  // MỘT bước (người dùng 28/11/2026): chọn tài xế LIÊN KẾT ⇒ ô tiền công + phạm vi áp dụng hiện
+  // ngay bên dưới ô chọn, nút chân tấm gán luôn. Tài xế nội bộ (không tiền công) đi `onSelect`.
+  const wageFor = onAssigned && picked?.kind === DRIVER_ROSTER_KIND.LINKED ? picked : null;
+  const reset = () => {
+    setPickedKey(null);
+    setWageState(null);
+  };
+  const title = current ? t('titleChange') : t('titleAssign');
+  const wageBusy = wageFor ? (wageState?.busy ?? false) : false;
+
   return (
     <BottomSheet
       open={open}
-      onClose={onClose}
-      title={current ? t('titleChange') : t('titleAssign')}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title={title}
+      {...(wageFor && wageState
+        ? { titleAdornment: <InfoHint content={wageState.notes} label={title} /> }
+        : {})}
       subtitle={t('subtitle', {
         code: booking.code,
         range: fmt.rentalRange(booking.pickupAt, booking.returnAt),
       })}
-    >
-      <YStack gap={space.sm}>
-        <SearchInput value={search} onChange={setSearch} label={t('searchLabel')} placeholder={t('search')} />
-        <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={t('status')}>
-          {([ALL, AVAILABILITY.FREE, AVAILABILITY.BUSY] as const).map((value) => (
-            <Chip
-              key={value}
-              size="sm"
-              selected={availability === value}
-              label={
-                value === ALL ? t('statusAll') : value === AVAILABILITY.FREE ? t('statusFree') : t('statusBusy')
-              }
-              onPress={() => setAvailability(value)}
+      chrome="v2"
+      headerDivider
+      footer={
+        <XStack gap={space.md}>
+          <YStack f={1}>
+            <Button
+              label={t('back')}
+              variant="outline"
+              disabled={pending || wageBusy}
+              onPress={() => {
+                reset();
+                onClose();
+              }}
             />
-          ))}
-        </XStack>
-        {linkedOnly ? null : (
-          <XStack gap={space.xs} flexWrap="wrap" accessibilityLabel={t('type')}>
-            {([ALL, DRIVER_ROSTER_KIND.LINKED, DRIVER_ROSTER_KIND.INTERNAL] as const).map((value) => (
-              <Chip
-                key={value}
-                size="sm"
-                selected={kind === value}
-                label={
-                  value === ALL
-                    ? t('typeAll')
-                    : value === DRIVER_ROSTER_KIND.LINKED
-                      ? t('typeLinked')
-                      : t('typeInternal')
-                }
-                onPress={() => setKind(value)}
-              />
-            ))}
-          </XStack>
-        )}
-
-        {loading ? (
-          <YStack gap={space.sm}>
-            <Skeleton height={56} />
-            <Skeleton height={56} />
-            <Skeleton height={56} />
           </YStack>
+          <YStack f={1}>
+            <Button
+              label={wageFor ? tWage('submit') : tActions('next')}
+              variant="gradient"
+              loading={pending || wageBusy}
+              disabled={!picked || (wageFor !== null && !wageState)}
+              onPress={() => {
+                if (!picked) return;
+                if (wageFor) {
+                  wageState?.submit();
+                  return;
+                }
+                setPickedKey(null);
+                onSelect(picked);
+              }}
+            />
+          </YStack>
+        </XStack>
+      }
+    >
+      <YStack gap={space.md}>
+        {loading ? (
+          <Skeleton height={64} />
         ) : loadError ? (
           <Callout tone="danger" title={t('loadError')}>
             <XStack>
@@ -209,162 +273,60 @@ export function AssignDriverSheet({
               />
             </XStack>
           </Callout>
-        ) : visible.length === 0 ? (
+        ) : candidates.length === 0 ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {candidates.length === 0
-              ? linkedOnly
-                ? tBooking('pickerEmpty')
-                : t('emptyAll')
-              : t('empty')}
+            {linkedOnly ? tBooking('pickerEmpty') : t('emptyAll')}
           </Text>
         ) : (
-          <YStack gap={space.sm} accessibilityLabel={t('listLabel')}>
-            {visible.map((c) => (
-              <CandidateRow
-                key={`${c.kind}:${c.id}`}
-                candidate={c}
-                current={isCurrent(c)}
-                disabled={pending}
-                onPress={onSelect}
-              />
-            ))}
-          </YStack>
+          <SelectControl
+            label={t('sideTitle')}
+            value={shownKey}
+            options={options}
+            onChange={(key) => {
+              setWageState(null);
+              setPickedKey(key);
+            }}
+            placeholder={t('noSelectionApp')}
+            onSearch={setSearch}
+            searchPlaceholder={t('search')}
+            emptyText={t('empty')}
+            required
+          />
         )}
-
-        {canAddInternal ? (
-          <XStack>
-            <Button
-              label={tBooking('addInternal')}
-              icon="add"
-              variant="ghost"
-              size="sm"
-              block={false}
-              onPress={() => setCreatingInternal(true)}
+        {wageFor ? (
+          wageQuote.data ? (
+            <AssignDriverWageStep
+              key={wageFor.id}
+              bookingId={booking.id}
+              driver={wageFor}
+              licenceUnverified={
+                wageFor.licenceState != null && wageFor.licenceState !== DRIVER_LICENCE_STATE.VERIFIED
+              }
+              pickupAt={booking.pickupAt}
+              quote={wageQuote.data}
+              onState={setWageState}
+              onAssigned={() => {
+                reset();
+                onAssigned?.();
+              }}
             />
-          </XStack>
+          ) : wageQuote.isError ? (
+            <Callout tone="danger" title={tWage('loadError')}>
+              <XStack>
+                <Button
+                  label={tActions('retry')}
+                  variant="secondary"
+                  size="sm"
+                  block={false}
+                  onPress={() => void wageQuote.refetch()}
+                />
+              </XStack>
+            </Callout>
+          ) : (
+            <Skeleton height={120} />
+          )
         ) : null}
       </YStack>
-
-      {canAddInternal ? (
-        <InternalDriverFormSheet
-          open={creatingInternal}
-          driver={null}
-          onClose={() => setCreatingInternal(false)}
-          onSaved={(created) =>
-            // Web chọn luôn người vừa thêm — ở app, chuyển thẳng sang bước xác nhận gán.
-            onSelect({
-              kind: DRIVER_ROSTER_KIND.INTERNAL,
-              id: created.id,
-              name: created.name,
-              phone: created.phone,
-              avatarUrl: created.photoUrl ?? null,
-              busy: false,
-              driverType: null,
-              licenceState: null,
-              licenceClasses: [],
-              expiredCount: 0,
-            })
-          }
-        />
-      ) : null}
     </BottomSheet>
   );
 }
-
-const CandidateRow = memo(function CandidateRow({
-  candidate,
-  current,
-  disabled,
-  onPress,
-}: {
-  candidate: DriverCandidate;
-  current: boolean;
-  disabled: boolean;
-  onPress: (candidate: DriverCandidate) => void;
-}) {
-  const colors = useColors();
-  const t = useTranslations('Drivers.booking.picker');
-  const domainLabel = useDomainLabel();
-  const unavailable = candidate.busy || current || disabled;
-  const internal = candidate.kind === DRIVER_ROSTER_KIND.INTERNAL;
-  const classes = candidate.licenceClasses.join(', ');
-
-  const availabilityText = current
-    ? t('current')
-    : candidate.busy
-      ? t('busy')
-      : candidate.expiredCount > 0
-        ? t('freeExpired', { count: candidate.expiredCount })
-        : t('free');
-  const availabilityColor = current
-    ? STATUS_COLOR.INFO
-    : candidate.busy
-      ? STATUS_COLOR.DANGER
-      : candidate.expiredCount > 0
-        ? STATUS_COLOR.WARNING
-        : STATUS_COLOR.SUCCESS;
-
-  return (
-    <Pressable
-      onPress={() => onPress(candidate)}
-      disabled={unavailable}
-      accessibilityRole="button"
-      accessibilityState={{ selected: current, disabled: unavailable }}
-    >
-      <XStack
-        ai="center"
-        gap={space.md}
-        p={space.md}
-        br={radius.lg}
-        bw={1}
-        bg={current ? colors.surfaceSelected : colors.surface}
-        bc={current ? colors.primary : colors.border}
-        minHeight={sizing.touchTarget}
-        opacity={candidate.busy || disabled ? 0.45 : 1}
-      >
-        <Avatar name={candidate.name} url={candidate.avatarUrl} size={36} />
-        <YStack f={1} gap={2} minWidth={0}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
-            {candidate.name}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-            {[
-              candidate.phone,
-              internal
-                ? t('internal')
-                : domainLabel('driverType', candidate.driverType ?? '', candidate.driverType ?? ''),
-            ].join(LIST_SEPARATOR)}
-          </Text>
-          <XStack gap={space.xs} flexWrap="wrap">
-            {internal ? null : (
-              <StatusBadge
-                size="sm"
-                /* Web `LicenceBadge`: xác thực xanh, đang đọc xám, chưa xác minh đỏ. */
-                color={
-                  candidate.licenceState === DRIVER_LICENCE_STATE.VERIFIED
-                    ? STATUS_COLOR.SUCCESS
-                    : candidate.licenceState === DRIVER_LICENCE_STATE.PENDING
-                      ? STATUS_COLOR.NEUTRAL
-                      : STATUS_COLOR.DANGER
-                }
-                label={
-                  candidate.licenceState === DRIVER_LICENCE_STATE.VERIFIED
-                    ? classes
-                      ? t('licenceVerified', { classes })
-                      : t('licenceVerifiedNoClass')
-                    : candidate.licenceState === DRIVER_LICENCE_STATE.PENDING
-                      ? t('licencePending')
-                      : t('licenceNone')
-                }
-              />
-            )}
-            <StatusBadge size="sm" color={availabilityColor} label={availabilityText} />
-          </XStack>
-        </YStack>
-        {current ? (
-          <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.primaryActive} />
-        ) : null}
-      </XStack>
-    </Pressable>
-  );
-});

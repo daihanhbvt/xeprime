@@ -28,6 +28,7 @@ import {
   receiptFiltersToParams,
   receiptsApi,
   type FinanceSeries,
+  type FinanceSourceBreakdown,
   type FinanceSummary,
   type Receipt,
 } from '@/features/finance/api';
@@ -213,6 +214,8 @@ export interface DashboardMoney {
   previousSummary: UseQueryResult<FinanceSummary>;
   /** Doanh thu · chi phí · lợi nhuận theo ngày, `DASHBOARD_REVENUE_DAYS` ngày gần nhất. */
   series: UseQueryResult<FinanceSeries>;
+  /** Doanh thu theo nguồn đơn (ADR 0110) của cùng cửa sổ - tỷ trọng sàn / tự khai thác. */
+  bySource: UseQueryResult<FinanceSourceBreakdown>;
   todayReceipts: UseQueryResult<Paged<Receipt>>;
 }
 
@@ -258,6 +261,14 @@ export function useDashboardMoney(branchId?: string): DashboardMoney {
     staleTime: STALE_TIME.STANDARD,
   });
 
+  // Cùng khoá với `useFinanceBySource` - màn Tổng quan doanh thu cùng kỳ đọc trúng cache này (web).
+  const bySource = useQuery({
+    queryKey: queryKeys.finance.bySource(financeRangeParams(seriesFilters)),
+    queryFn: () => financeApi.bySource(seriesFilters),
+    enabled: visible,
+    staleTime: STALE_TIME.STANDARD,
+  });
+
   const todayReceipts = useQuery({
     queryKey: queryKeys.receipts.list(receiptFiltersToParams(receiptFilters)),
     queryFn: () => receiptsApi.list(receiptFilters),
@@ -265,5 +276,5 @@ export function useDashboardMoney(branchId?: string): DashboardMoney {
     staleTime: STALE_TIME.STANDARD,
   });
 
-  return { visible, summary, previousSummary, series, todayReceipts };
+  return { visible, summary, previousSummary, series, bySource, todayReceipts };
 }

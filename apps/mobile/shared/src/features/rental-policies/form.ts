@@ -146,11 +146,18 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
      */
     overtimeRoundingMinutes: null,
     discountEnabled: values.discountEnabled,
-    discountTiers: (values.discountTiers ?? []).map((t) => ({
-      minMonths: (t.minMonths ?? 1) as LongTermPackageMonths,
-      percent: t.percent ?? 1,
-      ...(t.note?.trim() ? { note: t.note.trim() } : {}),
-    })),
+    /*
+     * Server đòi mốc theo số tháng TĂNG DẦN (`PricingService.validatePolicy`), còn thứ tự trong form
+     * là thứ tự người dùng thêm (thêm "2 tháng" sau "3 tháng"). Thứ tự không mang nghĩa nghiệp vụ ⇒
+     * sắp lại trước khi gửi thay vì bắt người dùng xoá đi nhập lại.
+     */
+    discountTiers: (values.discountTiers ?? [])
+      .map((t) => ({
+        minMonths: (t.minMonths ?? 1) as LongTermPackageMonths,
+        percent: t.percent ?? 1,
+        ...(t.note?.trim() ? { note: t.note.trim() } : {}),
+      }))
+      .sort((a, b) => a.minMonths - b.minMonths),
     // Có ô chọn thì gửi; form không có ô này để trống ⇒ server giữ chế độ đang lưu (ADR 0091).
     ...(values.insuranceMode ? { insuranceMode: values.insuranceMode } : {}),
   };

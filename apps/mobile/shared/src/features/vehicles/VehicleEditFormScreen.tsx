@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -23,7 +23,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
-import { useFormRefresh } from '@/hooks/use-form-refresh';
+import { useFormRefresh, RESET_DISCARD } from '@/hooks/use-form-refresh';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -31,13 +31,11 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
-import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { VehicleEditHeader } from './components/VehicleEditHeader';
 import { VehicleEditHeaderCard } from './components/VehicleEditHeaderCard';
-import { VehicleInfoSummaryCard } from './components/VehicleInfoSummaryCard';
 import { BodyTypePicker } from './components/VehicleFormSteps';
 import {
   ConsumptionFields,
@@ -59,6 +57,20 @@ import { branchLabel, type VehicleDetail } from './api';
  * bên web (30/09/2026). KHÔNG có `serviceTypes` (công tắc dịch vụ lưu ngay) và `operationStatus`
  * (sửa tại chỗ trên thẻ đầu xe); CÓ `features`/`description` (dời sang mục này).
  */
+/** Trường của khối "Thông số nâng cao" (thu gọn được). */
+const ADVANCED_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
+  'lengthMm',
+  'widthMm',
+  'heightMm',
+  'curbWeightKg',
+  'horsepowerHp',
+  'fuelConsumptionCity',
+  'fuelConsumptionHighway',
+];
+
+/** Khe trong thẻ - Figma `num/12` (giữa tiêu đề và các ô, giữa các ô). */
+const INNER_GAP = space.sm + space.xs;
+
 export const INFORMATION_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   'name',
   'branchId',
@@ -178,6 +190,13 @@ function EditForm({
   const colors = useColors();
   const t = useTranslations('Vehicles.edit');
   const tInfo = useTranslations('Vehicles.editor.information');
+  // Figma: "Tiện ích xe" mở sẵn (mũi tên lên), "Thông số nâng cao" (không có trong Figma) đóng sẵn.
+  const [featuresCollapsed, setFeaturesCollapsed] = useState(false);
+  const [advancedCollapsed, setAdvancedCollapsed] = useState(true);
+  const bodyTypeCarousel = useMemo(
+    () => ({ prevLabel: tInfo('bodyTypePrev'), nextLabel: tInfo('bodyTypeNext') }),
+    [tInfo],
+  );
   const tActions = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const toast = useAppToast();
@@ -251,6 +270,15 @@ function EditForm({
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   const lockedNotice = isPublic ? t('lockedField') : undefined;
   const activeErrors = INFORMATION_FIELDS.filter((field) => errors[field]).length;
+  // Lỗi nằm trong khối đang thu gọn ⇒ mở khối đó, không để người dùng tìm lỗi không thấy.
+  const advancedError = ADVANCED_FIELDS.some((field) => errors[field]);
+  const featuresError = Boolean(errors.features);
+  useEffect(() => {
+    if (advancedError) setAdvancedCollapsed(false);
+  }, [advancedError]);
+  useEffect(() => {
+    if (featuresError) setFeaturesCollapsed(false);
+  }, [featuresError]);
 
   /** Mở mục Hình ảnh từ thẻ đầu xe — qua cùng câu hỏi "bỏ thay đổi?" như mọi lối rời màn. */
   const openImages = () =>
@@ -263,7 +291,7 @@ function EditForm({
     if (!valid) return;
     try {
       const updated = await update.mutateAsync(informationValuesToInput(getValues()));
-      reset(vehicleToFormValues(updated));
+      reset(vehicleToFormValues(updated), RESET_DISCARD);
       toast.showSuccess(t('saved.information'));
     } catch (error) {
       // Lỗi validate của SERVER đặt ĐÚNG Ô nó nói tới; còn lại một toast.
@@ -294,14 +322,14 @@ function EditForm({
                 <Button
                   label={isDirty ? t('revert') : tActions('cancel')}
                   variant="outline"
-                  onPress={() => (isDirty ? reset(initialValues) : onBack())}
+                  onPress={() => (isDirty ? reset(initialValues, RESET_DISCARD) : onBack())}
                 />
               </YStack>
               <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
                 <Button
                   variant="gradient"
                   label={tActions('saveChanges')}
-                  icon="checkmark-outline"
+                  lineIcon="tick"
                   loading={update.isPending}
                   disabled={!isDirty}
                   onPress={() => void save()}
@@ -311,13 +339,14 @@ function EditForm({
           ) : undefined
         }
       >
-        <YStack gap={layout.section}>
+        <YStack gap={space.md}>
           {/* Trạng thái vận hành sửa TẠI CHỖ (lưu ngay) — cần `vehicles.update`. */}
           <VehicleEditHeaderCard
             vehicle={vehicle}
             onEditImages={openImages}
             statusEditable={canUpdate}
             showSource={can.source}
+            compact
           />
 
           {activeErrors > 0 ? (
@@ -327,18 +356,21 @@ function EditForm({
           ) : null}
 
           {/*
-            MỘT trang cuộn, đúng thứ tự thẻ của `InformationPane` web (sổ redesign §3.6 E6-E7):
-            Thông tin chung · Kiểu dáng xe (ô tô) · Động cơ & nhiên liệu · Tiện ích xe · Thông số
-            nâng cao · Mô tả xe. Không còn hai tab Cơ bản / Nâng cao.
+            Figma "Chỉnh sửa xe" MB (`24228:103820`): thẻ trắng viền, đệm 16, khe trong 12, tiêu đề
+            chỉ chữ. Thứ tự: Thông tin chung · Kiểu dáng xe (ô tô) · Động cơ & nhiên liệu · Tiện ích
+            xe (thu gọn được). Figma không vẽ "Thông số nâng cao" và "Mô tả xe" - người dùng chốt
+            27/11/2026 giữ cả hai cùng khuôn thẻ (nâng cao thu gọn, mặc định đóng) và bỏ thẻ "Thông
+            tin tóm tắt" (thẻ đầu xe đã có trạng thái, giá, số KM).
           */}
           <Card lift="flat">
-            <YStack gap={space.md}>
-              <SectionHeader icon="car-outline">{tInfo('general')}</SectionHeader>
+            <YStack gap={INNER_GAP}>
+              <SectionHeader>{tInfo('general')}</SectionHeader>
               <VehicleGeneralFields
                 control={control}
                 branchOptions={branchOptions}
                 branchLoading={branches.isPending}
                 branchDisabled={!canUpdate}
+                lockedNotice={lockedNotice}
               />
               <VehicleIdentityCardFields
                 control={control}
@@ -351,20 +383,23 @@ function EditForm({
           </Card>
           {isCar ? (
             <Card lift="flat">
-              <YStack gap={space.md}>
-                <YStack gap={space.xs}>
-                  <SectionHeader icon="car-sport-outline">{tInfo('bodyType')}</SectionHeader>
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {tInfo('bodyTypeHint')}
-                  </Text>
-                </YStack>
-                <BodyTypePicker control={control} />
+              <YStack gap={INNER_GAP}>
+                <SectionHeader
+                  action={
+                    <Text col={colors.textDisabled} fos={fontSize.bodySm}>
+                      {tInfo('bodyTypeSwipe')}
+                    </Text>
+                  }
+                >
+                  {tInfo('bodyType')}
+                </SectionHeader>
+                <BodyTypePicker control={control} carousel={bodyTypeCarousel} />
               </YStack>
             </Card>
           ) : null}
           <Card lift="flat">
-            <YStack gap={space.md}>
-              <SectionHeader icon="flash-outline">{tInfo('energy')}</SectionHeader>
+            <YStack gap={INNER_GAP}>
+              <SectionHeader>{tInfo('energy')}</SectionHeader>
               <VehicleEnergyCardFields
                 control={control}
                 isCar={isCar}
@@ -374,41 +409,49 @@ function EditForm({
             </YStack>
           </Card>
           <Card lift="flat">
-            <YStack gap={space.md}>
-              <SectionHeader icon="checkmark-done-outline">{tInfo('features')}</SectionHeader>
-              <FeaturesOnlyFields control={control} isCar={isCar} />
+            <YStack gap={INNER_GAP}>
+              <SectionHeader
+                collapsed={featuresCollapsed}
+                onToggleCollapsed={() => setFeaturesCollapsed((v) => !v)}
+              >
+                {tInfo('features')}
+              </SectionHeader>
+              {featuresCollapsed ? null : <FeaturesOnlyFields control={control} isCar={isCar} />}
             </YStack>
           </Card>
           <Card lift="flat">
-            <YStack gap={space.md}>
-              <YStack gap={space.xs}>
-                <SectionHeader icon="construct-outline">{tInfo('advanced')}</SectionHeader>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {tInfo('advancedHint')}
-                </Text>
-              </YStack>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                {tInfo('dimensions')}
-              </Text>
-              <DimensionsFields control={control} />
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                {tInfo('engine')}
-              </Text>
-              <EngineOutputFields control={control} />
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                {tInfo('consumption')}
-              </Text>
-              <ConsumptionFields control={control} />
+            <YStack gap={INNER_GAP}>
+              <SectionHeader
+                collapsed={advancedCollapsed}
+                onToggleCollapsed={() => setAdvancedCollapsed((v) => !v)}
+                lead={advancedCollapsed ? undefined : tInfo('advancedHint')}
+              >
+                {tInfo('advanced')}
+              </SectionHeader>
+              {advancedCollapsed ? null : (
+                <>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                    {tInfo('dimensions')}
+                  </Text>
+                  <DimensionsFields control={control} />
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                    {tInfo('engine')}
+                  </Text>
+                  <EngineOutputFields control={control} />
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                    {tInfo('consumption')}
+                  </Text>
+                  <ConsumptionFields control={control} />
+                </>
+              )}
             </YStack>
           </Card>
           <Card lift="flat">
-            <YStack gap={space.md}>
-              <SectionHeader icon="document-text-outline">{tInfo('description')}</SectionHeader>
+            <YStack gap={INNER_GAP}>
+              <SectionHeader>{tInfo('description')}</SectionHeader>
               <DescriptionField control={control} label={tInfo('description')} />
             </YStack>
           </Card>
-
-          <VehicleInfoSummaryCard vehicle={vehicle} />
         </YStack>
       </Screen>
 
@@ -420,7 +463,7 @@ function EditForm({
         cancelLabel={t('discard.cancel')}
         destructive
         onConfirm={() => {
-          reset(initialValues);
+          reset(initialValues, RESET_DISCARD);
           leave.confirm();
         }}
         onCancel={leave.cancel}

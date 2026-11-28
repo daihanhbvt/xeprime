@@ -132,8 +132,8 @@ function ResetForm({
       <XStack gap={space.sm}>
         <YStack flexShrink={0}>
           <Button
-            label={tActions('close')}
-            variant="ghost"
+            label={tActions('cancel')}
+            variant="secondary"
             disabled={reset.isPending}
             onPress={onDone}
           />
@@ -141,7 +141,7 @@ function ResetForm({
         <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={t('resetPassword.submit')}
-            icon="key-outline"
+            variant="gradient"
             loading={reset.isPending}
             onPress={() => void submit()}
           />

@@ -57,6 +57,19 @@ function HintAction({ label, onPress }: { label: string; onPress: () => void }) 
   );
 }
 
+/** Câu "Giá trị tham khảo: … (căn cứ)" - dùng chung cho dòng gợi ý và chú thích ô (wizard thêm xe). */
+export function useCatalogValueText() {
+  const t = useTranslations('Vehicles.form.catalog');
+  const fmt = useAppFormat();
+  return (value: VehicleDataValue) => {
+    const basis =
+      value.age > 0
+        ? t('valueBasis', { age: value.age, percent: value.residualPercent })
+        : t('valueBasisNew');
+    return `${t('valueHint', { amount: fmt.money(value.amount) })} ${basis}`;
+  };
+}
+
 /** Giá trị xe tham khảo cho bảo hiểm - giá xe mới × khấu hao theo tuổi xe. */
 export function CatalogValueHint({
   value,
@@ -67,22 +80,49 @@ export function CatalogValueHint({
 }) {
   const colors = useColors();
   const t = useTranslations('Vehicles.form.catalog');
-  const fmt = useAppFormat();
-  const basis =
-    value.age > 0
-      ? t('valueBasis', { age: value.age, percent: value.residualPercent })
-      : t('valueBasisNew');
+  const text = useCatalogValueText()(value);
   return (
     <YStack gap={2}>
       <XStack ai="flex-start" gap={space.xs}>
         <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textMuted} />
         <Text col={colors.textMuted} fos={fontSize.bodySm} f={1}>
-          {t('valueHint', { amount: fmt.money(value.amount) })} {basis}
+          {text}
         </Text>
       </XStack>
       <HintAction label={t('useValue')} onPress={() => onApply(Number(value.amount))} />
     </YStack>
   );
+}
+
+/**
+ * Câu gợi ý của MỘT ô giá (giá tham khảo + khoảng giá trên chợ) - wizard thêm xe nhét nó vào ⓘ của ô,
+ * vì giá đã TỰ ĐIỀN (`useAutofillCatalogRent`) nên không còn nút "Dùng …". `null` = không có gì.
+ */
+export function useCatalogRentText() {
+  const t = useTranslations('Vehicles.form.catalog');
+  const fmt = useAppFormat();
+  return (suggestion: VehicleDataSuggestion | null, field: VehicleDataRentField): string | null => {
+    const rent = suggestion?.rent.find((r) => r.field === field);
+    if (!rent || (!rent.reference && !rent.market)) return null;
+    const lines: string[] = [];
+    if (rent.reference) {
+      lines.push(
+        rent.referenceBasis === RENT_REFERENCE_BASIS.MODEL
+          ? t('rentReferenceModel', { price: fmt.money(rent.reference) })
+          : t('rentReference', { price: fmt.money(rent.reference) }),
+      );
+    }
+    if (rent.market) {
+      lines.push(
+        t('rentMarket', {
+          low: fmt.money(rent.market.low),
+          high: fmt.money(rent.market.high),
+          count: rent.market.sampleSize,
+        }),
+      );
+    }
+    return lines.join('\n');
+  };
 }
 
 /**

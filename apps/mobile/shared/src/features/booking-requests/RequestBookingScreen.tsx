@@ -70,7 +70,6 @@ import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import { BookingPriceSummary } from './components/BookingPriceSummary';
-import { NearPickupHoldNotice } from './components/NearPickupHoldNotice';
 import { PromoCodeField } from '@/features/promo-codes/PromoCodeField';
 import { usePromoCode } from '@/features/promo-codes/use-promo-code';
 import { VehicleSummaryCard } from './components/VehicleSummaryCard';
@@ -1361,15 +1360,9 @@ function RequestBookingBody({
                       promoSlot={promoField}
                     />
                     {/*
-                    Đặt sát giờ ⇒ hạn thanh toán ngắn, có thể không có huỷ miễn phí — nói TRƯỚC khi
-                    gửi (ADR 0032 điều 5 · ADR 0064), như web. Dài hạn chưa có giờ nhận nên không ước.
-                  */}
-                    {serviceType === SERVICE_TYPE.LONG_TERM ? null : (
-                      <NearPickupHoldNotice
-                        pickupAt={pickupAt}
-                        fees={quoteWithPromo?.breakdown.fees}
-                      />
-                    )}
+                      Hộp ước tính "đặt sát giờ nhận xe" đã gỡ khỏi màn Xem lại (web #347, 27/11/2026): mốc
+                      thanh toán và huỷ miễn phí THẬT được công bố ở bước thanh toán, kèm ô xác nhận.
+                    */}
                   </>
                 }
               />

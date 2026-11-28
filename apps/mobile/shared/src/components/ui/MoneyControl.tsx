@@ -57,8 +57,11 @@ export function MoneyControl({
   required = false,
   publishRequired = false,
   editable = true,
+  hintInLabel = false,
 }: {
   label: string;
+  /** Ép gợi ý lên nhãn dạng ⓘ (ô hẹp hai cột - web `HelpAsTipProvider`). */
+  hintInLabel?: boolean;
   /** `null` = **chưa nhập**, khác `0` = **miễn phí**. */
   value: number | null;
   onChange: (next: number | null) => void;
@@ -78,8 +81,14 @@ export function MoneyControl({
   const { fontSize: inputFontSize, minHeight: inputHeight } = useSingleLineInputMetrics();
   const fieldGap = useFieldGap();
   const INPUT_STYLE = useMemo(
-    () => ({ ...baseInputStyle, fontSize: inputFontSize, minHeight: inputHeight }),
-    [baseInputStyle, inputFontSize, inputHeight],
+    () => ({
+      ...baseInputStyle,
+      fontSize: inputFontSize,
+      minHeight: inputHeight,
+      // Chữ của ô khoá MỜ như web `disabled`, không đậm như ô sửa được.
+      ...(editable ? {} : { color: colors.textPlaceholder }),
+    }),
+    [baseInputStyle, inputFontSize, inputHeight, editable, colors.textPlaceholder],
   );
   const inputRef = useRef<TextInput>(null);
   const revealOnFocus = useRevealOnFocus();
@@ -87,11 +96,13 @@ export function MoneyControl({
 
   return (
     <YStack gap={fieldGap}>
-      <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint)} />
+      <FieldLabel label={label} required={required} publishRequired={publishRequired} hint={inLabelHint(hint, hintInLabel)} />
 
       <FieldShell
         focused={focused}
         invalid={Boolean(error)}
+        // Ô khoá (xe đã duyệt, thiếu quyền…) nền xám như web `disabled` - không chỉ chặn gõ.
+        disabled={!editable}
         align="center"
         onPress={() => inputRef.current?.focus()}
       >
@@ -124,7 +135,7 @@ export function MoneyControl({
         </Text>
       </FieldShell>
 
-      <FieldMessage error={error} hint={belowHint(hint)} />
+      <FieldMessage error={error} hint={belowHint(hint, hintInLabel)} />
     </YStack>
   );
 }

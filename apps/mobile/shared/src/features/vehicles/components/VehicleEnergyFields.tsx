@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
+import { PAIR_GAP } from './field-layout';
 import { useTranslations } from 'use-intl';
 import {
   CATALOG_TYPE,
@@ -234,18 +235,44 @@ export function VehicleEnergyFields({
         ) : null}
       </XStack>
 
-      {policy.fuelConsumption !== 'hidden' ? (
+      {/* Figma: Dung tích động cơ | Tiêu hao cùng một hàng; thiếu một ô thì ô còn lại đứng riêng. */}
+      {policy.engineDisplacementCc !== 'hidden' || policy.fuelConsumption !== 'hidden' ? (
+        <XStack gap={PAIR_GAP} ai="flex-start">
+          {policy.engineDisplacementCc !== 'hidden' ? (
+            <YStack f={1} minWidth={0}>
+        <NumberField
+          control={control}
+          name="engineDisplacementCc"
+          label={t('engineDisplacementCc')}
+          required={policy.engineDisplacementCc === 'required'}
+          placeholder={t('enginePlaceholder')}
+          suffix="cc"
+          integer
+          min={1}
+          editable={!disabled}
+          {...(helpFor(engineLock) ? { hint: helpFor(engineLock) } : {})}
+          lock={fieldLock(engineLock, t('engineDisplacementCc'))}
+        />
+                  </YStack>
+          ) : null}
+          {policy.fuelConsumption !== 'hidden' ? (
+            <YStack f={1} minWidth={0}>
         <NumberField
           control={control}
           name="fuelConsumptionCombined"
-          label={t('consumption')}
+          // Figma: "Tiêu hao trung bình" + đơn vị trong ô, không dòng giải thích (người dùng chốt 27/11/2026).
+          label={t('consumptionShort')}
           placeholder={t('consumptionPlaceholder')}
-          hint={helpFor(consumptionLock, t('consumptionHelp'))}
+          suffix={t('consumptionUnit')}
+          {...(helpFor(consumptionLock) ? { hint: helpFor(consumptionLock) } : {})}
           required={policy.fuelConsumption === 'required'}
           min={0}
           editable={!disabled}
           lock={fieldLock(consumptionLock, t('consumption'))}
         />
+                  </YStack>
+          ) : null}
+        </XStack>
       ) : null}
 
       {policy.electricRangeKm !== 'hidden' ? (
@@ -291,21 +318,6 @@ export function VehicleEnergyFields({
         />
       ) : null}
 
-      {policy.engineDisplacementCc !== 'hidden' ? (
-        <NumberField
-          control={control}
-          name="engineDisplacementCc"
-          label={t('engineDisplacementCc')}
-          required={policy.engineDisplacementCc === 'required'}
-          placeholder={t('enginePlaceholder')}
-          suffix="cc"
-          integer
-          min={1}
-          editable={!disabled}
-          {...(helpFor(engineLock) ? { hint: helpFor(engineLock) } : {})}
-          lock={fieldLock(engineLock, t('engineDisplacementCc'))}
-        />
-      ) : null}
     </YStack>
   );
 }

@@ -42,6 +42,11 @@ export default function ManageTabsLayout() {
   return (
     <TabBarHideContext.Provider value={tabBarSlide}>
     <Tabs
+      /*
+       * Các màn phẳng của bộ tab (Thông tin cửa hàng, Tài khoản, Chi nhánh…) mở nối nhau như một
+       * chồng: "lui" phải về ĐÚNG màn vừa rời, không về tab đầu (Tổng quan) - mặc định `firstRoute`.
+       */
+      backBehavior="history"
       tabBar={() => <ManageTabBar onHeight={setTabBarHeight} />}
       // Thanh tab NỔI đè nội dung và tự đệm vạch home - màn bên trong không đệm thêm vạch home mà
       // chừa chiều cao thanh qua `TabBarInsetContext`.
@@ -80,7 +85,6 @@ export default function ManageTabsLayout() {
       <Tabs.Screen name="maintenance" />
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="customers" />
-      <Tabs.Screen name="chat" />
       <Tabs.Screen name="balance" />
       <Tabs.Screen name="finance" />
       <Tabs.Screen name="receipts" />

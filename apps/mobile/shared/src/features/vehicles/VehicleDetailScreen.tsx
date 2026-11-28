@@ -65,7 +65,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, iconSize, market, radius, space, typeScale } from '@/theme/tokens';
-import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
+import { VehicleFinanceEntry } from './VehicleFinanceView';
 import { VehicleAlertList } from './components/VehicleAlertList';
 import { publicStatusPresentation, todoLeadAlert, vehiclePublicationTask } from './publication';
 import { Callout, type CalloutTone } from '@/components/ui/Callout';
@@ -117,9 +117,9 @@ const GALLERY_COLUMNS = 3;
  * lịch thuê sắp tới · hiệu suất → giá & chính sách → giấy tờ (chỉ ĐẾM) → thông số → nguồn xe →
  * thư viện ảnh → gửi duyệt → hoạt động gần đây.
  *
- * Khối TIỀN THEO KỲ (`FinanceEntityPanel`) đứng ngay sau dải liên kết nhanh, đúng vị trí web —
- * và là ĐÚNG component mà hồ sơ khách dùng, chỉ khác mệnh đề thu hẹp. Hai bề mặt là cùng một
- * câu truy vấn nên con số của chúng không thể lệch nhau.
+ * Tab "Tài chính" chỉ còn dòng tóm tắt (`VehicleFinanceEntry`) dẫn vào màn Tài chính xe
+ * (`VehicleFinanceScreen`) - bản native của tab Tài chính web (#344/#345), cùng bộ endpoint của
+ * Tổng quan doanh thu thu hẹp theo `vehicleId` nên con số không thể lệch nhau.
  */
 interface VehicleDetailScreenProps {
   vehicleId: string;
@@ -372,10 +372,11 @@ function VehicleDetailBody({
 
           {view === OVERVIEW_VIEW.FINANCE && can.money ? (
             /* Tiền của riêng chiếc xe này, THEO KỲ — gác `can.money` (quyền ∧ cờ gói). */
-            <FinanceEntityPanel
-              scope={{ vehicleId: vehicle.id }}
-              kind="vehicle"
-            />
+            /*
+              Web thay khối này bằng tab Tài chính đầy đủ (#344/#345 - doanh thu theo nguồn, chi phí,
+              nghĩa vụ nguồn xe); app mở nó thành MÀN RIÊNG (người dùng chốt 27/11/2026), tab chỉ còn tóm tắt.
+            */
+            <VehicleFinanceEntry vehicleId={vehicle.id} />
           ) : null}
 
           {view === OVERVIEW_VIEW.FEATURES ? <FeaturesCard vehicle={vehicle} /> : null}

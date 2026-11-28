@@ -5,8 +5,9 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { holidayRunAround, LIST_SEPARATOR, startOfAppDay } from '@xeprime/domain';
 import { OCCUPANCY_SOURCE_TYPE, PERMISSION, VEHICLE_BLOCK_REASON } from '@xeprime/types';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { Screen } from '@/components/layout/Screen';
+import { IconSquareButton } from '@/components/ui/IconSquareButton';
 import { Callout } from '@/components/ui/Callout';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -14,7 +15,8 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCanCreateBooking } from '@/features/bookings/hooks/use-can-create-booking';
-import { ManageHeader } from '@/features/shell/ManageHeader';
+import { withBranchReturn } from '@/features/branches/branch-link';
+import { ManagePageHeader } from '@/features/shell/ManagePageHeader';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -23,14 +25,20 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, radius, space } from '@/theme/tokens';
+import { fontSize, iconSize, radius, space } from '@/theme/tokens';
 import type { CalendarEvent, CalendarResource } from './api';
 import { BulkDayBlockSheet, type BulkDayBlockState } from './components/BulkDayBlockSheet';
 import { BulkDayPriceSheet, type BulkDayPriceState } from './components/BulkDayPriceSheet';
 import { CalendarGridSkeleton } from './components/CalendarGridSkeleton';
 import { CalendarLegend } from './components/CalendarLegend';
+import { CalendarMonthView } from './components/CalendarMonthView';
 import { CalendarTimeline } from './components/CalendarTimeline';
-import { CalendarToolbar } from './components/CalendarToolbar';
+import {
+  CALENDAR_VIEW,
+  CalendarDateControls,
+  CalendarSearchBar,
+  type CalendarView,
+} from './components/CalendarToolbar';
 import {
   CellActionsSheet,
   type CellActionKey,
@@ -39,19 +47,17 @@ import {
 import { DailyPriceSheet, type DailyPriceSheetState } from './components/DailyPriceSheet';
 import { DayActionSheet, type DayActionKey, type DayPanelState } from './components/DayActionSheet';
 import { MaintenanceEventSheet } from './components/MaintenanceEventSheet';
+import { QuickBookingSheet, type QuickBookingTarget } from './components/QuickBookingSheet';
 import { VehicleBlockDetailSheet } from './components/VehicleBlockDetailSheet';
 import { VehicleBlockSheet, type VehicleBlockSheetState } from './components/VehicleBlockSheet';
 import { VehicleInfoSheet } from './components/VehicleInfoSheet';
 import { useBulkBlockDay, useBulkDayPreview, useReleaseBulkBlock } from './hooks/use-bulk-day';
 import { useCalendarData } from './hooks/use-calendar-data';
 import { useCalendarFilters } from './hooks/use-calendar-filters';
-import {
-  BranchFilterField,
-  useBranchEmptyCopy,
-} from '@/features/branches/components/BranchFilterField';
+import { useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { useCalendarHolidays } from './hooks/use-calendar-holidays';
-import { listDays, type DayCell } from './utils/calendar-date.util';
+import { listDays, todayIsoDate, type DayCell } from './utils/calendar-date.util';
 import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Giờ nhận xe mặc định khi tạo đơn từ ô lịch (giờ Việt Nam) — cùng con số web dùng. */
@@ -217,7 +223,25 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
    * `filters` thật — chúng xảy ra sau khi người dùng đã dừng tay, lúc hai giá trị đã bằng nhau.
    */
   const gridFilters = useDeferredValue(filters);
-  const data = useCalendarData(gridFilters, canView);
+
+  /** Cách bày (Figma "Chế độ xem"): lưới Danh sách hay Lịch tháng - trạng thái của màn, không lên URL. */
+  const [view, setView] = useState<CalendarView>(CALENDAR_VIEW.LIST);
+  const monthView = view === CALENDAR_VIEW.MONTH;
+
+  /**
+   * Lịch tháng hỏi ĐÚNG các API của lưới, chỉ đổi khoảng: trọn các tuần (bắt đầu thứ Hai) phủ tháng
+   * chứa `from` - tối đa 42 ngày, dưới trần 62 ngày của backend. Cùng bộ lọc (chi nhánh, loại xe,
+   * từ khoá), nên con số "x/N xe kín" khớp đúng tập xe của lưới.
+   */
+  const monthFilters = useMemo(() => {
+    const monthStart = startOfAppDay(gridFilters.from).startOf('month');
+    const lead = (monthStart.day() + 6) % 7;
+    const gridStart = monthStart.subtract(lead, 'day');
+    const weeks = Math.ceil((lead + monthStart.daysInMonth()) / 7);
+    return { ...gridFilters, from: gridStart.format('YYYY-MM-DD'), days: weeks * 7 };
+  }, [gridFilters]);
+  const monthIndex = startOfAppDay(gridFilters.from).month();
+  const data = useCalendarData(monthView ? monthFilters : gridFilters, canView);
 
   /**
    * Lưới đang bày một khoảng KHÁC với khoảng thanh công cụ đang nói.
@@ -236,6 +260,9 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
   const [sheet, setSheet] = useState<SheetState>(null);
+  const [quickBooking, setQuickBooking] = useState<QuickBookingTarget | null>(null);
+  /** Ngày đang chọn của Lịch tháng; ngoài tháng đang xem ⇒ về hôm nay (nếu trong tháng) hoặc mùng 1. */
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
   const [cellTarget, setCellTarget] = useState<CellActionTarget | null>(null);
   const [infoResource, setInfoResource] = useState<CalendarResource | null>(null);
   const [dayPanel, setDayPanel] = useState<DayPanelState | null>(null);
@@ -295,6 +322,36 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
       );
     },
     [panelPreview.data, quickBlock, t, toast],
+  );
+
+  /** Ngày đang chọn của Lịch tháng - mặc định hôm nay nếu nó thuộc tháng đang xem, không thì mùng 1. */
+  const selectedDayKey = useMemo(() => {
+    const inMonth = (key: string | null) =>
+      key !== null && days.some((day) => day.key === key && day.at.month() === monthIndex);
+    if (inMonth(pickedDay)) return pickedDay as string;
+    const today = todayIsoDate();
+    if (inMonth(today)) return today;
+    return days.find((day) => day.at.month() === monthIndex)?.key ?? '';
+  }, [days, monthIndex, pickedDay]);
+
+  /**
+   * "Tạo đơn" cho một xe trống của Lịch tháng: cùng đường với "Đặt xe" của ô lưới - nhận 8h ngày
+   * đó, trả 8h sáng hôm sau (một ngày thuê, web `DEFAULT_PICKUP_HOUR`).
+   */
+  const createForDay = useCallback(
+    (resource: CalendarResource, dayKey: string) => {
+      const pickupAt = startOfAppDay(dayKey).hour(DEFAULT_PICKUP_HOUR).minute(0).second(0).millisecond(0);
+      navigateOnce(
+        ROUTES.manage.bookingCreate({
+          vehicleId: resource.vehicleId,
+          vehicleName: resource.name,
+          ...(resource.mainImageUrl ? { vehicleImageUrl: resource.mainImageUrl } : {}),
+          pickupAt: pickupAt.toISOString(),
+          returnAt: pickupAt.add(1, 'day').toISOString(),
+        }),
+      );
+    },
+    [navigateOnce],
   );
 
   /** Chạm ô TRỐNG → mở bộ chọn hành động. Không thao tác nào chạy thẳng từ một cú chạm ô. */
@@ -397,23 +454,20 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
   );
 
   /**
-   * Chạm thanh event → THẲNG vào chi tiết đúng loại. Không có tầng trung gian nào.
+   * Chạm thẻ event → đúng loại.
    *
-   * Web có một thẻ xem nhanh cho thanh event, nhưng nó mở bằng `trigger={['hover', 'focus']}` —
-   * còn cú CLICK thì đi thẳng vào modal chi tiết. Bản đầu ở đây dịch thẻ hover đó thành một tấm
-   * trượt mở bằng cú chạm, và thành ra chạm hai lần cho một việc: cảm ứng không có "hover" để
-   * dịch, nên thứ duy nhất còn lại của cú chạm là vai trò của cú click.
-   *
-   * Không mất thông tin: mọi thứ thẻ xem nhanh chở (xe, giờ nhận/trả, thời lượng) đều nằm sẵn
-   * trong chính màn chi tiết mà cú chạm nay mở ra.
-   *
-   * Web phân nhánh đúng bốn loại này (yêu cầu mở hộp chi tiết yêu cầu từ 25/11/2026).
+   * - ĐƠN: tấm "Chi tiết nhanh đơn" (Figma `24729:79063`, người dùng chốt 27/11/2026) - bản chạm của
+   *   thẻ xem nhanh mà web mở bằng hover (`CalendarEventBar` `EventQuickCard`); nút "Chi tiết đơn"
+   *   trong tấm đi tiếp vào màn chi tiết.
+   * - YÊU CẦU: thẳng vào màn duyệt (web `CalendarRequestDialog`, 25/11/2026).
+   * - Khoá xe / bảo dưỡng: tấm chi tiết của chính chúng.
    */
   const openEvent = useCallback(
     (event: CalendarEvent, resource: CalendarResource) => {
       if (!event.sourceId) return;
       if (event.type === OCCUPANCY_SOURCE_TYPE.BOOKING) {
-        navigateOnce(ROUTES.manage.bookingDetail(event.sourceId));
+        // Đơn: tấm "Chi tiết nhanh đơn" (Figma `24729:79063`, người dùng chốt 27/11/2026).
+        setQuickBooking({ event, resource });
       } else if (event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST) {
         // Yêu cầu (chờ duyệt / đang giữ chỗ) — mở thẳng chi tiết yêu cầu, nơi duyệt / từ chối /
         // huỷ được (web `CalendarRequestDialog`, 25/11/2026).
@@ -451,20 +505,56 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
   );
   const onCellPress = cellActions.length > 0 ? openCellMenu : null;
 
-  /*
-   * Thanh trên dựng MỘT LẦN rồi dùng lại ở cả ba nhánh trả về (thiếu quyền · lưới · trạng thái):
-   * ba lời gọi riêng là ba chỗ phải nhớ đổi khi vỏ đổi, và bản trước đã quên đúng một chỗ.
+  /**
+   * Thanh trang v2 (Figma "Header MB" `24729:83783`, người dùng chốt 27/11/2026 - như "Đơn thuê xe"):
+   * ← · "Lịch thuê xe" · viên số xe · nút "+" vàng (Tạo đơn thuê, cùng cổng `useCanCreateBooking`).
+   * ← chỉ khi CÓ chỗ để về: vào từ hồ sơ xe (`?back=1`, web cùng tham số) hoặc vỏ `account` của chủ
+   * xe. Ô tìm + "Lọc" và chú giải nằm TRONG thanh như Figma.
+   *
+   * Dựng MỘT LẦN rồi dùng lại ở cả hai nhánh trả về (thiếu quyền · lưới).
    */
-  const header =
-    shell === 'account' ? (
-      <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
-        title={tAccount('title')}
-        subtitle={tAccount('subtitle')}
-      />
-    ) : (
-      <ManageHeader />
-    );
+  const onBack =
+    params.back === '1'
+      ? () =>
+          goBackOr(router, shell === 'account' ? ROUTES.account.vehicles() : ROUTES.manage.vehicles())
+      : shell === 'account'
+        ? () => goBackOr(router, ROUTES.account.home())
+        : undefined;
+  const header = (
+    <ManagePageHeader
+      title={shell === 'account' ? tAccount('title') : t('page.title')}
+      {...(canView && data.resources ? { titleBadge: t('page.vehicleCount', { count: resources.length }) } : {})}
+      onBack={onBack}
+      actions={
+        canCreate ? (
+          <IconSquareButton
+            label={t('page.createApp')}
+            tone="brand"
+            onPress={() => navigateOnce(withBranchReturn(ROUTES.manage.bookingCreate(), branchId))}
+          >
+            <LineIcon name="plus" size={iconSize.lg} color={colors.onPrimary} />
+          </IconSquareButton>
+        ) : undefined
+      }
+      below={
+        canView ? (
+          <YStack gap={12}>
+            <CalendarSearchBar
+              filters={filters}
+              setFilters={setFilters}
+              searchValue={search}
+              onSearchChange={setSearch}
+              view={view}
+              onViewChange={setView}
+              branchFilter={branchFilter}
+              branchId={branchId}
+            />
+            <CalendarLegend />
+          </YStack>
+        ) : undefined
+      }
+    />
+  );
 
   // Thiếu quyền là 403 của CHÍNH màn này — không gọi API rồi mới nhận lỗi.
   if (!permissionsLoading && !canView) {
@@ -486,34 +576,9 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
     <>
       {header}
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
-        {/*
-          KHÔNG có khối tiêu đề trang — cùng quyết định web ghi ở `manage/calendar/page.tsx`: mọi
-          pixel dọc ở màn này thuộc về LƯỚI. Mục đang sáng trong menu đã nói người dùng đang ở đâu,
-          và tổng số xe nằm ở ô góc của chính lưới (`grid.resourceHeader`).
-        */}
-        <CalendarToolbar
-          filters={filters}
-          setFilters={setFilters}
-          searchValue={search}
-          onSearchChange={setSearch}
-          {...(params.back === '1'
-            ? {
-                onBack: () =>
-                  goBackOr(
-                    router,
-                    shell === 'account' ? ROUTES.account.vehicles() : ROUTES.manage.vehicles(),
-                  ),
-              }
-            : {})}
-        />
-
-        {branchFilter.visible ? (
-          <XStack px={layout.screenX} pb={space.xs}>
-            <BranchFilterField filter={branchFilter} value={branchId} />
-          </XStack>
-        ) : null}
-
-        <CalendarLegend />
+        <YStack px={layout.screenX} pt={16} pb={monthView ? 16 : 0}>
+          <CalendarDateControls filters={filters} setFilters={setFilters} view={view} />
+        </YStack>
 
         {data.isLoading ? (
           <CalendarGridSkeleton />
@@ -562,6 +627,29 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
               </YStack>
             ) : null}
 
+            {monthView ? (
+              <View
+                style={styles.month}
+                pointerEvents={gridStale ? 'none' : 'auto'}
+                accessibilityState={{ busy: gridStale || data.isFetching }}
+              >
+                <CalendarMonthView
+                  days={days}
+                  monthIndex={monthIndex}
+                  resources={resources}
+                  eventsByResource={data.eventsByResource}
+                  priceMarkers={data.priceMarkers}
+                  holidaysByDay={holidaysByDay}
+                  selectedKey={selectedDayKey}
+                  onSelectDay={setPickedDay}
+                  onEventPress={openEvent}
+                  onCreate={canCreate ? createForDay : null}
+                  onDayActions={onDayPress && dayActions.length > 0 ? onDayPress : null}
+                />
+                {gridStale ? <GridBusyOverlay /> : null}
+              </View>
+            ) : (
+              <>
             {!data.hasAnyEvent ? (
               // Khoảng đang xem chưa có lịch nào: nói NHỎ một dòng — lưới vẫn hiện và chạm được.
               <Text
@@ -636,11 +724,22 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
 
               {gridStale ? <GridBusyOverlay /> : null}
             </View>
+              </>
+            )}
           </>
         )}
       </Screen>
 
       {/* ── Overlay ──────────────────────────────────────────────────────── */}
+      <QuickBookingSheet
+        target={quickBooking}
+        onClose={() => setQuickBooking(null)}
+        onOpenDetail={(bookingId) => {
+          setQuickBooking(null);
+          navigateOnce(ROUTES.manage.bookingDetail(bookingId));
+        }}
+      />
+
       <CellActionsSheet
         target={cellTarget}
         actions={cellActions}
@@ -764,7 +863,9 @@ function GridBusyOverlay() {
 }
 
 const styles = StyleSheet.create({
-  grid: { flex: 1, marginBottom: space.xs },
+  /* Figma: lưới cách hàng ngày 16, chỉ mép trên/dưới (Option 2 `24729:82215`). */
+  grid: { flex: 1, marginTop: 16, marginBottom: space.xs },
+  month: { flex: 1 },
   busyOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

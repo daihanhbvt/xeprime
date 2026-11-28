@@ -19,6 +19,7 @@ import type { MySubscription } from '@/api/subscription/api';
 import { images } from '@/assets';
 import { AntIcon } from '@/components/icons/AntIcon';
 import { LineIcon } from '@/components/icons/LineIcon';
+import { ActionSheetButtons } from '@/components/ui/ActionSheetButtons';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { InfoCard } from '@/components/ui/InfoCard';
@@ -87,7 +88,7 @@ function daysLeftOf(endsAt: string): number {
 export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEvent) => void }) {
   const colors = useColors();
   const t = useTranslations('Subscription');
-  const tShop = useTranslations('Subscription.shopPlan');
+  const tPlan = useTranslations('Subscription.mobilePlan');
   const tCommon = useTranslations('Common');
   const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const me = useMySubscription();
@@ -99,8 +100,9 @@ export function ShopPlanCard({ onLayout }: { onLayout?: (event: LayoutChangeEven
   return (
     <InfoCard
       look="figma"
-      title={tShop('title')}
-      hint={tShop('hint')}
+      /* App Partner không nhắc "gói" (né IAP): tiêu đề + mô tả trung tính của app, web giữ "Gói & hạn mức". */
+      title={tPlan('title')}
+      hint={tPlan('subtitleHidden')}
       {...(onLayout ? { onLayout } : {})}
       extra={
         <YStack
@@ -205,12 +207,12 @@ function EnterpriseOffer({ onContact }: { onContact: () => void }) {
           </Text>
         </YStack>
       </XStack>
-      <Button
-        label={tPlan('contactButton')}
-        lineIcon="calling"
-        variant="gradient"
-        shape="square"
-        onPress={onContact}
+      {/*
+        Figma `24231:113956`: cao 40, bo 12, dải `#efc423 → #f3c84a`, icon Calling 20 + chữ 14/20 đậm
+        vừa - đúng khuôn nút chính của `ActionSheetButtons` (Button `md` cao 44, chữ 16, dải khác).
+      */}
+      <ActionSheetButtons
+        actions={[{ key: 'contact', label: tPlan('contactButton'), icon: 'calling', primary: true, onPress: onContact }]}
       />
     </YStack>
   );
@@ -363,7 +365,7 @@ function ActiveEnterprise({
   return (
     <YStack gap={space.md} p={layout.cardPad} br={radius.card} bg={market.inverse}>
       <XStack ai="center" gap={12}>
-        <YStack w={LANE_ICON_BOX} h={LANE_ICON_BOX} br={8} bg={colors.primary} ai="center" jc="center">
+        <YStack w={ENTERPRISE_ICON_BOX} h={ENTERPRISE_ICON_BOX} br={8} bg={colors.primary} ai="center" jc="center">
           <AntIcon icon={BankOutlined} size={LANE_ICON} color={colors.onPrimary} />
         </YStack>
         <YStack f={1} minWidth={0}>
@@ -403,12 +405,9 @@ function ActiveEnterprise({
           <Text col={market.onDarkMuted} fos={fontSize.bodySm} fontStyle="italic">
             {tEnterprise('changeHint')}
           </Text>
-          <Button
-            label={t('contactXePrime')}
-            icon="call-outline"
-            variant="secondary"
-            shape="square"
-            onPress={onContact}
+          {/* Cùng khuôn nút "Liên hệ tư vấn" (Figma `24231:113956`). */}
+          <ActionSheetButtons
+            actions={[{ key: 'contact', label: t('contactXePrime'), icon: 'calling', primary: true, onPress: onContact }]}
           />
         </>
       ) : null}

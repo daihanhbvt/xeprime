@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'use-intl';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
@@ -76,6 +76,11 @@ export function usePushNotifications(): void {
   const registeredFor = useRef<string | null>(null);
   /** Đích của thông báo mở app từ trạng thái tắt hẳn, xử lý đúng một lần. */
   const coldStartHandled = useRef(false);
+  /**
+   * Đường dẫn của thông báo cold start, CHỜ màn cửa vào (`app/index.tsx`) chuyển xong. Mở ngay
+   * thì lượt `<Redirect>` về trang chủ khu (Tổng quan) tới SAU và đè mất trang của thông báo.
+   */
+  const [coldStartUrl, setColdStartUrl] = useState<string | null>(null);
 
   /**
    * Điều hướng theo `data.url` — hoặc CẤT LẠI nếu chưa đăng nhập.
@@ -284,9 +289,18 @@ export function usePushNotifications(): void {
       if (!message) return;
       chatDebug.pushReceived(PUSH_TRIGGER.COLD_START, Boolean(message.notification));
       chatDebug.pushRaw(PUSH_TRIGGER.COLD_START, message);
-      open(urlOf(message), PUSH_TRIGGER.COLD_START);
+      const url = urlOf(message);
+      if (url) setColdStartUrl(url);
     }, 'usePushNotifications.coldStart');
-  }, [open, sessionLoading]);
+  }, [sessionLoading]);
+
+  // Mở đích cold start khi đã rời màn cửa vào `/` (đã có trang chủ khu hoặc màn đăng nhập bên
+  // dưới - lui từ trang thông báo về đó).
+  useEffect(() => {
+    if (!coldStartUrl || pathname === '/') return;
+    setColdStartUrl(null);
+    open(coldStartUrl, PUSH_TRIGGER.COLD_START);
+  }, [coldStartUrl, open, pathname]);
 }
 
 /** Metadata thiết bị — chỉ để người dùng nhận ra máy nào, không dùng cho bảo mật. */

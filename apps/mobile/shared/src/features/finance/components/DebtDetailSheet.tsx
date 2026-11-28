@@ -93,7 +93,7 @@ export function DebtDetailSheet({
    * Dữ liệu ĐÃ CÓ ở thẻ danh sách - đầu tấm hiện ngay "Đơn #mã" + trạng thái + xe trong lúc chờ API
    * thay vì "Đơn #…" (người dùng 26/11/2026). Chỉ để hiển thị trước; dữ liệu thật vẫn đọc từ API.
    */
-  preview?: { code: string; status: string; vehicleName: string; plateNumber: string | null } | null;
+  preview?: { code: string; status: string; vehicleName: string; plateNumber?: string | null } | null;
   onClose: () => void;
   /** Tạm ẩn (đang ở màn khác mở từ tấm này) - giữ nguyên đơn đang xem để quay về là thấy lại. */
   hidden?: boolean;

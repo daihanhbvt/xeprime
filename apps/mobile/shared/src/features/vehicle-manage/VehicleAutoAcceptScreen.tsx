@@ -1,7 +1,7 @@
-import { useReportDirty } from '@/hooks/use-report-dirty';
+import { useRegisterSave, useReportDirty, type SubFormSave } from '@/hooks/use-report-dirty';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Ionicons } from '@/components/icons/Ionicons';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -21,7 +21,7 @@ import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { CheckMark } from '@/components/ui/CheckMark';
-import { InlineAction } from '@/components/ui/InlineAction';
+import { SwitchRow } from '@/components/ui/SwitchRow';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { SelectField } from '@/components/ui/SelectField';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
@@ -35,6 +35,7 @@ import {
   usePatchVehicleServiceSetting,
   useVehicleServiceSettings,
 } from './hooks/use-vehicle-settings';
+import { RESET_DISCARD } from '@/hooks/use-form-refresh';
 
 /** Bốn điều kiện server dùng để tự nhận — chỉ là danh sách khoá nhãn, không đổi theo render. */
 const RULES = ['schedule', 'window', 'quote', 'longTerm'] as const;
@@ -75,9 +76,15 @@ export function AutoAcceptBody({
   canEdit,
   part = 'all',
   onDirtyChange,
+  registerSave,
 }: {
   /** Báo "đang sửa dở" lên màn chứa (`useReportDirty`). */
   onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * Màn chứa có MỘT nút Lưu chung (tab Dịch vụ xe): đăng ký hàm lưu lên đó và ẩn nút Lưu riêng của
+   * thẻ - trước 27/11/2026 thẻ "Khác" có tài xế có nút Lưu thứ hai trùng với nút đáy màn.
+   */
+  registerSave?: (save: SubFormSave | null) => void;
   vehicleId: string;
   serviceType: ServiceType;
   canEdit: boolean;
@@ -109,6 +116,7 @@ export function AutoAcceptBody({
       canEdit={canEdit}
       part={part}
       onDirtyChange={onDirtyChange}
+      registerSave={registerSave}
     />
   );
 }
@@ -120,6 +128,7 @@ function AutoAcceptForm({
   canEdit,
   part,
   onDirtyChange,
+  registerSave,
 }: {
   setting: VehicleServiceSetting;
   serviceType: ServiceType;
@@ -127,11 +136,11 @@ function AutoAcceptForm({
   canEdit: boolean;
   part: AutoAcceptPart;
   onDirtyChange?: ((dirty: boolean) => void) | undefined;
+  registerSave?: ((save: SubFormSave | null) => void) | undefined;
 }) {
   const colors = useColors();
   const t = useTranslations('VehicleManage');
   const tEditor = useTranslations('Vehicles.editor.services');
-  const [rulesOpen, setRulesOpen] = useState(false);
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -168,20 +177,33 @@ function AutoAcceptForm({
     (_, i) => (i + 1) * HOUR,
   ).map((m) => ({ value: String(m), label: t('common.hours', { count: m / HOUR }) }));
 
+  const toBody = (next: FormValues) => ({
+    minRentalMinutes: next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
+    // Lọc qua `isRouteType` — form giữ string, dây chỉ nhận mã lộ trình thật.
+    preferredRouteTypes: next.preferredRouteTypes.filter(isRouteType),
+  });
   const submit = handleSubmit((next) => {
     // Chỉ có tài xế còn nút Lưu — tự lái không còn trường nào ngoài công tắc lưu ngay.
-    patch.mutate(
-      {
-        minRentalMinutes: next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
-        // Lọc qua `isRouteType` — form giữ string, dây chỉ nhận mã lộ trình thật.
-        preferredRouteTypes: next.preferredRouteTypes.filter(isRouteType),
-      },
-      {
-        onSuccess: () => toast.showSuccess(t('autoAccept.saved')),
-        onError: (err) => toast.showError(errorMessage(err)),
-      },
-    );
+    patch.mutate(toBody(next), {
+      onSuccess: () => toast.showSuccess(t('autoAccept.saved')),
+      onError: (err) => toast.showError(errorMessage(err)),
+    });
   });
+  /* Lưu qua nút chung của màn chứa: im lặng (màn chứa toast một lần), reset theo số vừa gửi. */
+  useRegisterSave(async () => {
+    if (!formState.isDirty) return true;
+    let ok = false;
+    await handleSubmit(async (next) => {
+      try {
+        await patch.mutateAsync(toBody(next));
+        reset(next, RESET_DISCARD);
+        ok = true;
+      } catch (err) {
+        toast.showError(errorMessage(err));
+      }
+    })();
+    return ok;
+  }, part === 'extras' ? registerSave : undefined);
 
   /* Có tài xế không tự nhận (19/11/2026) - nói lý do thay cho khung năng lực tài xế (như web). */
   const capabilityCallout = withDriver ? (
@@ -189,40 +211,40 @@ function AutoAcceptForm({
   ) : null;
 
   if (part === 'toggle') {
-    // Web `AutoAcceptRow`: MỘT hàng công tắc, cảnh báo năng lực tài xế kèm nút "Mở tài xế", danh sách
-    // luật mở/đóng tại chỗ (nút ⓘ của web).
+    /*
+     * Web `AutoAcceptRow`, dựng theo Figma Partner `24237:56664`: MỘT hàng công tắc nằm TRONG thẻ dịch
+     * vụ (nơi gọi bọc thẻ). Luật tự nhận (nút "Luật" mở/đóng của bản trước) vào dấu ⓘ cạnh tiêu đề -
+     * người dùng chốt 27/11/2026; cảnh báo năng lực tài xế giữ ngay dưới hàng.
+     */
     return (
-      <Card>
-        <YStack gap={space.sm}>
-          <ToggleRow
-            label={t('autoAccept.toggleTitle')}
-            hint={t('autoAccept.toggleBody')}
-            checked={enabled}
-            disabled={toggleAuto.disabled}
-            onToggle={() => toggleAuto.change(!enabled)}
-          />
-          {capabilityCallout}
-          <InlineAction
-            label={t('autoAccept.rulesTitle')}
-            onPress={() => setRulesOpen((open) => !open)}
-          />
-          {rulesOpen ? (
-            <YStack gap={space.xs}>
-              {PANE_RULES.map((rule) => (
-                <Text key={rule} col={colors.textMuted} fos={fontSize.label}>
-                  {`• ${t(`autoAccept.rules.${rule}` as never)}`}
+      <YStack gap={space.sm}>
+        <SwitchRow
+          title={t('autoAccept.toggleTitle')}
+          titleHint={{
+            label: t('autoAccept.rulesTitle'),
+            content: (
+              <YStack gap={space.xs}>
+                {PANE_RULES.map((rule) => (
+                  <Text key={rule} col={colors.textMuted} fos={fontSize.bodySm}>
+                    {`• ${t(`autoAccept.rules.${rule}` as never)}`}
+                  </Text>
+                ))}
+                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {t('autoAccept.policyTitle')}
                 </Text>
-              ))}
-              <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
-                {t('autoAccept.policyTitle')}
-              </Text>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {t('autoAccept.policyBody')}
-              </Text>
-            </YStack>
-          ) : null}
-        </YStack>
-      </Card>
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {t('autoAccept.policyBody')}
+                </Text>
+              </YStack>
+            ),
+          }}
+          description={t('autoAccept.toggleBodyApp')}
+          value={enabled}
+          disabled={toggleAuto.disabled}
+          onChange={(next) => toggleAuto.change(next)}
+        />
+        {capabilityCallout}
+      </YStack>
     );
   }
 
@@ -284,7 +306,7 @@ function AutoAcceptForm({
   );
 
   const saveRow =
-    canEdit && withDriver ? (
+    canEdit && withDriver && !registerSave ? (
       <XStack gap={space.sm}>
         {formState.isDirty ? (
           <YStack flexShrink={0}>
@@ -292,14 +314,14 @@ function AutoAcceptForm({
               label={tActions('cancel')}
               variant="ghost"
               disabled={patch.isPending}
-              onPress={() => reset(values)}
+              onPress={() => reset(values, RESET_DISCARD)}
             />
           </YStack>
         ) : null}
         <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
           <Button
             label={tActions('saveChanges')}
-            icon="checkmark-outline"
+            lineIcon="tick"
             loading={patch.isPending}
             disabled={!formState.isDirty}
             onPress={() => void submit()}
@@ -349,7 +371,7 @@ function AutoAcceptForm({
         <Card>
           <ToggleRow
             label={t('autoAccept.toggleTitle')}
-            hint={t('autoAccept.toggleBody')}
+            hint={t('autoAccept.toggleBodyApp')}
             checked={enabled}
             disabled={toggleAuto.disabled}
             onToggle={() => toggleAuto.change(!enabled)}

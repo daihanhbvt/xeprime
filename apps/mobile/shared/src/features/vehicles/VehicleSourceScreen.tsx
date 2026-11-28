@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { VehicleEditSummaryCard } from '@/features/vehicles/components/VehicleEditSummaryCard';
-import { Ionicons } from '@/components/icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { LineIcon } from '@/components/icons/LineIcon';
 import {
   PERMISSION,
   STATUS_COLOR,
@@ -21,7 +20,6 @@ import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
-import { InlineAction } from '@/components/ui/InlineAction';
 import { SectionHeader } from '@/components/ui/CardTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -35,7 +33,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useFormRefresh } from '@/hooks/use-form-refresh';
+import { useFormRefresh, RESET_DISCARD } from '@/hooks/use-form-refresh';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -44,7 +42,7 @@ import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import { DateField } from '@/components/ui/DateField';
 import { SourceContractFiles } from './components/SourceContractFiles';
 import {
@@ -55,19 +53,19 @@ import {
 import { useSaveVehicleSource, useVehicle, useVehicleSource } from './hooks/use-vehicle';
 import type { VehicleDetail, VehicleSource } from './api';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { VEHICLE_SOURCE_ICON } from './source-icons';
 
 /** Đường kính viên hình ở dải trạng thái đầu màn. */
 
 /** Cùng bộ hình với web (`HomeOutlined`/`BankOutlined`/`KeyOutlined`/`TeamOutlined`). */
 /** Ô icon tròn của thẻ hình thức — web `.typeIcon` 40px. */
-const TYPE_ICON = 40;
+/** Vòng icon Figma: đệm 6 quanh icon 20 = 32. */
+const TYPE_ICON = 32;
+/** Thẻ hình thức: đệm 12, bo 12, khe 8 (Figma "Discount Details"). */
+const TYPE_CARD_PAD = space.sm + space.xs;
 
-const SOURCE_ICON: Record<VehicleSourceType, React.ComponentProps<typeof Ionicons>['name']> = {
-  [VEHICLE_SOURCE_TYPE.OWNED]: 'home-outline',
-  [VEHICLE_SOURCE_TYPE.FINANCED]: 'business-outline',
-  [VEHICLE_SOURCE_TYPE.RENTED]: 'key-outline',
-  [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: 'people-outline',
-};
+/** Figma `24238:60447`: Home 4 · Card 1 · Search 1 · Group 2 (khung 20). */
+const SOURCE_ICON = VEHICLE_SOURCE_ICON;
 
 /**
  * Tab "Nguồn xe & tài chính" (VEH-11).
@@ -219,6 +217,7 @@ function SourceForm({
           data.detail
             ? sourceDetailToFormValues(data.detail)
             : emptySourceFormValues(data.sourceType),
+          RESET_DISCARD,
         );
         setConfirmValues(null);
         toast.showSuccess(t('saved'));
@@ -245,7 +244,8 @@ function SourceForm({
 
   const contractFileLabel =
     sourceType === VEHICLE_SOURCE_TYPE.FINANCED
-      ? t('contract.fileFinanced')
+      ? // App: bỏ "(đã tải lên)" - nhãn đứng trên danh sách tệp (chốt 27/11/2026).
+        t('contract.fileFinancedShort')
       : sourceType === VEHICLE_SOURCE_TYPE.RENTED
         ? t('contract.fileRented')
         : sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP
@@ -275,7 +275,7 @@ function SourceForm({
                   label={tEditTab('revert')}
                   variant="outline"
                   disabled={!isDirty || save.isPending}
-                  onPress={() => reset(initialValues)}
+                  onPress={() => reset(initialValues, RESET_DISCARD)}
                 />
               </YStack>
               <YStack flexGrow={1} flexShrink={1} flexBasis="auto">
@@ -298,11 +298,6 @@ function SourceForm({
             dải nói hình thức đã LƯU còn thẻ sáng lại là thẻ vừa CHỌN — người dùng không biết xe
             đang thuộc gì. Hình thức đã lưu mang nhãn "Đang áp dụng" ngay trên lựa chọn của nó.
           */}
-          <VehicleEditSummaryCard
-            vehicleId={vehicle.id}
-            tab={VEHICLE_EDIT_TAB.SOURCE}
-            guard={leave.guard}
-          />
           {!canEdit ? <Callout>{t('readOnly')}</Callout> : null}
 
           {errorCount > 0 ? (
@@ -330,11 +325,11 @@ function SourceForm({
                       f={1}
                       ai="center"
                       gap={space.sm}
-                      p={space.md}
-                      br={radius.control}
+                      p={TYPE_CARD_PAD}
+                      br={TYPE_CARD_PAD}
                       bw={1}
                       bc={selected ? colors.primary : colors.border}
-                      bg={selected ? colors.primaryLight : colors.surface}
+                      bg={selected ? colors.primarySubtle : colors.surface}
                       opacity={canEdit ? 1 : 0.7}
                       accessibilityRole="radio"
                       accessibilityState={{ checked: selected, disabled: !canEdit }}
@@ -349,19 +344,19 @@ function SourceForm({
                         br={radius.pill}
                         ai="center"
                         jc="center"
-                        bg={selected ? colors.primaryMuted : colors.background}
+                        bg={selected ? colors.brandLow : colors.surfaceMuted}
                       >
-                        <Ionicons
+                        <LineIcon
                           name={SOURCE_ICON[value]}
-                          size={fontSize.bodyLg}
-                          color={selected ? colors.primaryActive : colors.textMuted}
+                          color={selected ? colors.primary : colors.textMuted}
                         />
                       </YStack>
                       <YStack f={1} minWidth={0} gap={2}>
                         <XStack flexWrap="wrap" ai="center" gap={space.xs}>
                           <Text
-                            col={selected ? colors.primaryActive : colors.text}
-                            fos={fontSize.body}
+                            col={selected ? colors.primary : colors.text}
+                            fos={typeScale.body.fontSize}
+                            lh={typeScale.body.lineHeight}
                             fow={fontWeight.semibold}
                           >
                             {domainLabel('vehicleSourceType', value)}
@@ -374,7 +369,7 @@ function SourceForm({
                             />
                           ) : null}
                         </XStack>
-                        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                        <Text col={colors.textMuted} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
                           {t(cardHintKey(value))}
                         </Text>
                       </YStack>
@@ -383,28 +378,7 @@ function SourceForm({
                 );
               })}
             </XStack>
-            {sourceType !== savedType ? (
-              /* Đổi mà chưa lưu: nói rõ đổi từ gì sang gì + lối "Giữ X" (web `typeChange`). */
-              <YStack gap={space.xs} pt={space.sm}>
-                <Text col={colors.warning} fos={fontSize.bodySm}>
-                  {t.rich('typeChange', {
-                    from: domainLabel('vehicleSourceType', savedType),
-                    to: domainLabel('vehicleSourceType', sourceType),
-                    b: (chunks) => (
-                      <Text fow={fontWeight.semibold} col={colors.warning}>
-                        {chunks}
-                      </Text>
-                    ),
-                  })}
-                </Text>
-                <XStack>
-                  <InlineAction
-                    label={t('typeKeep', { label: domainLabel('vehicleSourceType', savedType) })}
-                    onPress={() => setValue('sourceType', savedType, { shouldDirty: true })}
-                  />
-                </XStack>
-              </YStack>
-            ) : null}
+            {/* Không còn dòng "Đổi từ … sang …" + lối "Giữ …" trên app (người dùng chốt 27/11/2026) - Hoàn tác ở chân đã trả lại hình thức cũ. */}
           </SectionCard>
 
           {sourceType === VEHICLE_SOURCE_TYPE.OWNED ? (
@@ -494,7 +468,7 @@ function SourceForm({
         cancelLabel={tEditTab('discard.cancel')}
         destructive
         onConfirm={() => {
-          reset(initialValues);
+          reset(initialValues, RESET_DISCARD);
           leave.confirm();
         }}
         onCancel={leave.cancel}
@@ -653,6 +627,7 @@ function FinancedSection({ control, canEdit }: SectionProps) {
         name="interestMethod"
         label={t('interestMethod')}
         disabled={!canEdit}
+        inline
         options={VEHICLE_FINANCE_INTEREST_METHOD_VALUES.map((value) => ({
           value,
           label: domainLabel('vehicleFinanceInterestMethod', value),
@@ -792,12 +767,7 @@ function PartnershipSection({ control, canEdit }: SectionProps) {
         <DateField control={control} name="startDate" label={t('startDate')} disabled={!canEdit} />
         <DateField control={control} name="endDate" label={t('endDate')} disabled={!canEdit} />
 
-        {/*
-          Cơ sở chia doanh thu (chốt ở wave 4): CHỈ tiền thuê sau giảm giá. Cọc hoàn lại, phí giao
-          nhận, phí quá giờ, phạt/bồi thường đều đứng ngoài — khớp quy tắc giảm giá chỉ áp lên
-          tiền thuê cơ bản của `rental_policies`.
-        */}
-        <Callout>{t('formula')}</Callout>
+        {/* Bỏ khung "Công thức tính: …" trên app (người dùng chốt 27/11/2026); cơ sở chia vẫn là tiền thuê sau giảm giá. */}
       </SectionCard>
     </>
   );

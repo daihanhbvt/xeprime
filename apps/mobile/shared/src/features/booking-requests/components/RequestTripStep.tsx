@@ -31,7 +31,7 @@ import {
 import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import type { PublicQuote } from '@/api/marketplace/api';
-import { InsuranceOptionList } from '@/features/insurance/components/InsuranceOptionList';
+import { InsuranceOfferCard } from '@/features/insurance/components/InsuranceOfferCard';
 import { useInsuranceOffer } from '@/features/insurance/hooks';
 import { Chip } from '@/components/ui/Chip';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
@@ -396,8 +396,7 @@ export function RequestTripStep({
       {insuranceOffer.items.length > 0 ? (
         <Card>
           <YStack gap={space.sm}>
-            <FieldLabel label={t('insurance.title')} />
-            <InsuranceOptionList
+            <InsuranceOfferCard
               items={insuranceOffer.items}
               selected={{
                 [INSURANCE_PRODUCT_KIND.VEHICLE_TRIP]: vehicleProtectionSelected,

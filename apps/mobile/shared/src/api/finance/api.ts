@@ -26,6 +26,8 @@ export type FinanceSeries = Schemas['FinanceSeriesDto'];
 export type FinanceSeriesBucket = Schemas['FinanceSeriesBucketDto'];
 export type FinanceCategoryBreakdown = Schemas['FinanceCategoryBreakdownDto'];
 export type FinanceCategoryBreakdownItem = Schemas['FinanceCategoryBreakdownItemDto'];
+/** Doanh thu theo nguồn đơn (ADR 0110) - tổng, phần qua sàn, phần tự khai thác, từng nguồn. */
+export type FinanceSourceBreakdown = Schemas['FinanceSourceBreakdownDto'];
 export type VehicleProfit = Schemas['VehicleProfitItemDto'];
 export type CustomerRevenue = Schemas['CustomerRevenueItemDto'];
 
@@ -381,6 +383,14 @@ export const financeApi = {
     return getApiClient().get<FinanceCategoryBreakdown>(
       '/finance/by-category',
       financeByCategoryParams(filters, type, scope),
+    );
+  },
+
+  /** Doanh thu theo nguồn đơn trong kỳ (ADR 0110) - cùng phạm vi lọc với thẻ tổng. */
+  bySource(filters: FinancePeriodFilters, scope?: FinanceScope): Promise<FinanceSourceBreakdown> {
+    return getApiClient().get<FinanceSourceBreakdown>(
+      '/finance/by-source',
+      financeRangeParams(filters, scope),
     );
   },
 

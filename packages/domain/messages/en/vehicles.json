@@ -530,6 +530,7 @@
       "insuredValueRange": "Car value must be between 50,000,000 and 20,000,000,000 VND, rounded to the million.",
       "insuredValueCarOnly": "Car value applies to cars only",
       "photosRequired": "{count, plural, one {# photo angle is} other {# photo angles are}} still missing - every slot needs a photo",
+      "requiredFieldApp": "This field is required",
       "brandRequired": "Choose a brand",
       "modelRequired": "Choose a model"
     },
@@ -715,6 +716,74 @@
       "edit": "Edit",
       "sharedTitle": "This address is used by {count, plural, one {# vehicle} other {# vehicles}}",
       "sharedBody": "Editing it here changes the public location of all of them."
+    },
+    "appCreate": {
+      "discountPercent": "-{percent}%",
+      "sourceTitle": "Vehicle source",
+      "infoTitle": "Vehicle information",
+      "chassisLabel": "Chassis number",
+      "chassisPlaceholder": "Enter chassis number",
+      "engineLabel": "Engine number",
+      "enginePlaceholder": "Enter engine number",
+      "stepCount": "Step {current}/{total}",
+      "photosRequired": "{done}/{total} required photos",
+      "registrationTile": "Registration",
+      "saveDraft": "Save draft",
+      "policyInherit": "Inherits the shop policy",
+      "policyDetail": "Details →",
+      "deposit": "Deposit",
+      "overtime": "Late fee",
+      "delivery": "Delivery",
+      "discounts": "Long-term rental discounts",
+      "services": {
+        "self_drive": {
+          "title": "Self-drive rental",
+          "description": "Priced by day or by hour"
+        },
+        "with_driver": {
+          "title": "With driver",
+          "description": "A driver serves each trip"
+        },
+        "long_term": {
+          "title": "Long-term rental",
+          "description": "Rent by the month or longer"
+        }
+      },
+      "prices": {
+        "weekday": "Weekday",
+        "weekend": "Weekend",
+        "hourly": "Hourly",
+        "discount": "Discount",
+        "withDriverDaily": "Daily / in town",
+        "withDriverInterCity": "Intercity",
+        "withDriverOneWay": "Intercity one-way"
+      },
+      "featuresTitle": "Vehicle features",
+      "descriptionTitle": "Vehicle description",
+      "descriptionPlaceholder": "Describe your vehicle",
+      "confirm": {
+        "photoCount": "{done}/{total} photos",
+        "weekday": "Weekday price",
+        "weekend": "Weekend price",
+        "hourly": "Hourly price",
+        "discount": "Discount",
+        "withDriverDaily": "Daily / in town",
+        "withDriverInterCity": "Daily / intercity",
+        "withDriverOneWay": "Daily / intercity one-way",
+        "monthly": "Long-term / month",
+        "electricRange": "Range per charge",
+        "electricConsumption": "Energy consumption",
+        "discountValue": "{percent}%",
+        "electricConsumptionValue": "{value} kWh/100km",
+        "holderName": "Owner name (registration)",
+        "variant": "Variant",
+        "insuredValue": "Vehicle value"
+      },
+      "success": {
+        "submittedTitle": "Vehicle submitted for review!",
+        "checklistTitle": "Complete the profile for a faster review",
+        "documentsBody": "Registration, inspection, insurance,..."
+      }
     }
   },
   "publish": {
@@ -1310,10 +1379,13 @@
     "selfDrive": {
       "title": "Self-drive pricing",
       "weekday": "Weekday price",
+      "weekdayApp": "Market price",
       "weekdayHint": "The required base price for self-drive. Used on weekdays and as the fallback when no weekend price is set.",
       "weekend": "Weekend price (optional)",
+      "weekendApp": "Weekend price",
       "weekendHint": "Leave empty to use the weekday price on weekends too.",
       "hourly": "Hourly price (optional)",
+      "hourlyApp": "Hourly price",
       "hourlyHint": "Leave empty if this vehicle is not rented by the hour.",
       "tipLabel": "About self-drive prices",
       "info": "The base rate for self-drive; weekend and hourly rates are optional.",
@@ -1323,6 +1395,7 @@
     },
     "discount": {
       "title": "Instant discount",
+      "titleApp": "Promotion",
       "info": "Applies to the self-drive rental amount on quotes and new bookings; it does not reduce long-term prices, with-driver prices, surcharges or the deposit.",
       "percent": "Discount rate",
       "percentInfo": "Applies to the weekday price, the weekend price and per-day overrides of the self-drive service.",
@@ -1340,7 +1413,11 @@
       "on": "On",
       "off": "Off",
       "previewAria": "Marketplace price preview",
-      "perHour": "/hour"
+      "perHour": "/hour",
+      "lead": "Customers see both the original and the promotional price, helping you sell better.",
+      "byLabel": "Discount by",
+      "byPercent": "%",
+      "savingBadge": "Save {percent}%"
     },
     "longTerm": {
       "title": "Long-term rental",
@@ -1430,11 +1507,14 @@
       "tierPerKmLabel": "Price per km for band {index}",
       "perKmUnit": "VND / km",
       "perKmHint": "Fee = price per km × one-way distance, exact to the dong.",
-      "perKmSummary": "{amount}/km"
+      "perKmSummary": "{amount}/km",
+      "rowRadius": "Radius:",
+      "rowFee": "Delivery fee:"
     },
     "overtime": {
       "title": "Agreed late-return fee",
       "feePerHour": "Fee per extra hour",
+      "feePerHourApp": "Overtime fee/hour",
       "graceMinutes": "Maximum grace period",
       "roundingMinutes": "Minimum rounding unit",
       "hint": "The late fee is computed at handover, after the grace period and using the configured rounding unit.",
@@ -1484,7 +1564,15 @@
       "tierMonthsLabel": "Package of tier {index}",
       "tierPercentLabel": "Discount of tier {index}",
       "tierNoteLabel": "Note of tier {index}",
-      "removeTierAt": "Remove discount tier {index}"
+      "removeTierAt": "Remove discount tier {index}",
+      "leadApp": "Discount for customers who commit to a monthly package.",
+      "rowPackage": "Package:",
+      "rowPercent": "Discount:",
+      "rowNote": "Note:",
+      "tierName": "Discount tier {index}",
+      "formulaTitleShort": "Package price formula",
+      "packageFromLabel": "Package from:",
+      "percentShort": "Discount"
     },
     "inherited": {
       "title": "Inherited policy in effect",
@@ -1534,11 +1622,15 @@
       "perMonth": "{amount}/month",
       "suggestedLine": "Suggested price: {min} - {max}/month",
       "notCheaperShort": "not cheaper than a full month of daily rentals ({reference})",
-      "suggestTipLabel": "How the suggested price is worked out"
+      "suggestTipLabel": "How the suggested price is worked out",
+      "suggestionRich": "Suggested monthly price: <b>{min} - {max}/month</b>. This is well below <b>{reference}</b> for {days} days of daily rental, giving customers a reason to commit long term."
     },
     "unitPerDay": "đ / day",
+    "unitPerDayApp": "₫/day",
     "unitPerHour": "đ / hour",
+    "unitPerHourApp": "₫/hour",
     "unitPerMonth": "đ / month",
+    "unitPerMonthApp": "₫/month",
     "discard": "Discard",
     "validation": {
       "moneyInteger": "The amount must be a whole number of VND",
@@ -1599,7 +1691,9 @@
       "excessHint": "Suggested amount for each kilometre over the allowance. You can still edit it before recording the surcharge.",
       "excessTipLabel": "About the fee per extra kilometre",
       "unitPerDay": "km / day",
+      "unitPerDayApp": "km/day",
       "unitPerKm": "₫ / km",
+      "unitPerKmApp": "₫/km",
       "previewTitle": "Renters will see this on the vehicle page:",
       "preview": "Includes {km}/day. {fee} for each kilometre over the limit.",
       "previewIncomplete": "Fill in both fields for the allowance to show on the vehicle page.",
@@ -2036,7 +2130,12 @@
       "extras": "Other",
       "collateralNow": "Current collateral: {collateral}",
       "collateralSetup": "Set up in Insurance & handover",
-      "policyInvalid": "Some fields in Insurance & handover are invalid - open that section, fix them, then save again."
+      "policyInvalid": "Some fields in Insurance & handover are invalid - open that section, fix them, then save again.",
+      "tab": {
+        "self_drive": "Self-drive",
+        "with_driver": "With driver",
+        "long_term": "Long-term"
+      }
     },
     "policy": {
       "useShop": "Apply the shop's policy",
