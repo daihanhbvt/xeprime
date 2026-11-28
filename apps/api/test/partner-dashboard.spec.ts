@@ -264,8 +264,8 @@ describe('Tổng quan partner — việc trong ngày', () => {
       nextReturnAt: await expectedNext('returnAt', [BOOKING_STATUS.ACTIVE]),
     });
     // Spec dựng sẵn lượt giao và lượt trả còn ở phía trước — mốc gần nhất phải có thật.
-    expect(res.today.nextPickupAt).not.toBeNull();
-    expect(res.today.nextReturnAt).not.toBeNull();
+    expect(res.today?.nextPickupAt).toEqual(expect.any(String));
+    expect(res.today?.nextReturnAt).toEqual(expect.any(String));
   });
 
   maybe('huy hiệu menu: khối hôm nay và khối yêu cầu đứng riêng khớp Tổng quan', async () => {
