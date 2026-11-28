@@ -12,7 +12,7 @@ import { ToneBadge } from '@/components/ui/ToneBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { MyDriverLink } from '../api';
 
 /** Ý định trên một liên kết — xác nhận (từ chối, ngừng) nằm ở KHU danh sách, không ở thẻ. */
@@ -68,18 +68,21 @@ function DriverLinkCardImpl({
       >
         <Card>
           <YStack gap={space.md}>
-            <XStack ai="center" gap={GAP_12} flexWrap="wrap">
+            <XStack ai="center" gap={GAP_12}>
               <EmployerAvatar link={link} size={AVATAR_CARD} />
+              {/* Tên 16/24 một dòng + chip nhỏ (người dùng 28/11/2026: tên và chip quá to). */}
               <Text
                 f={1}
                 minWidth={0}
                 col={colors.text}
-                fos={fontSize.h3}
+                fos={typeScale.title.fontSize}
+                lh={typeScale.title.lineHeight}
                 fow={fontWeight.semibold}
+                numberOfLines={1}
               >
                 {link.employer.name}
               </Text>
-              <ToneBadge tone={driverLinkTone(link.linkStatus)}>
+              <ToneBadge size="sm" tone={driverLinkTone(link.linkStatus)}>
                 {tStatus(link.linkStatus as LinkStatusKey)}
               </ToneBadge>
             </XStack>

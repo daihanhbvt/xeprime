@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@xeprime/prisma';
 import {
+  MOBILE_CLIENT_APP,
   PUSH_DELIVERY_STATUS,
   PUSH_ERROR_CODE,
   isPushPlatform,
@@ -12,6 +13,7 @@ import {
   pushDataPayload,
   pushPriority,
 } from '@xeprime/domain';
+import { PUSH_IMAGE_BASE_URL } from '../lib/env';
 import { classifyPushError, firebaseSender, type PushSender } from '../lib/fcm';
 
 const BATCH = 50;
@@ -119,7 +121,7 @@ export async function dispatchPushDeliveries(
       id: true,
       attempts: true,
       expiresAt: true,
-      device: { select: { id: true, providerToken: true, platform: true, enabled: true } },
+      device: { select: { id: true, providerToken: true, platform: true, enabled: true, clientApp: true } },
       notification: {
         select: { id: true, type: true, title: true, body: true, targetType: true, targetId: true, dataJson: true },
       },
@@ -162,6 +164,7 @@ export async function dispatchPushDeliveries(
         priority: pushPriority(type),
         androidChannelId: androidChannelFor(type),
         collapseKey: pushCollapseKey(type, target),
+        imageUrl: pushImageUrl(row.device.clientApp),
       });
 
       await prisma.pushDelivery.update({
@@ -253,4 +256,15 @@ function deepLinkOf(dataJson: unknown): string | null {
 /** Backoff mũ, trần 5 phút — cùng khuôn với `outbox-pump`, chỉ khác trần. */
 function backoffMs(attempts: number): number {
   return Math.min(300_000, 1000 * 2 ** attempts);
+}
+
+/**
+ * Logo MÀU của đúng app nhận tin (ảnh lớn Android). Ảnh tĩnh của web (`apps/web/public/brand`),
+ * nên không cần thêm hạ tầng; thiếu `PUSH_IMAGE_BASE_URL` thì không gắn ảnh.
+ */
+function pushImageUrl(clientApp: string | null): string | null {
+  if (!PUSH_IMAGE_BASE_URL) return null;
+  const file =
+    clientApp === MOBILE_CLIENT_APP.PARTNER ? 'xeprime-partner-icon-192.png' : 'xeprime-icon-192.png';
+  return `${PUSH_IMAGE_BASE_URL}/brand/${file}`;
 }
