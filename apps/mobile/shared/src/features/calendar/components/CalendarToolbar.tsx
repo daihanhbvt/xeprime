@@ -159,9 +159,9 @@ export function CalendarSearchBar({
 
 /** Figma "Date Controls" `24729:83879`: cao 40, cách 12; nút viền `stroke/gray-low300` bo 12. */
 const CONTROL_H = 40;
-const CONTROL_GAP = 8;
-/** Nút ‹ › gọn (vuông 36, không đệm) để ô ngày giữa đủ chỗ (người dùng 28/11/2026). */
-const ARROW_W = 36;
+const CONTROL_GAP = 6;
+/** Nút ‹ › gọn (rộng 32, không đệm) để ô ngày giữa đủ chỗ (người dùng 28/11/2026). */
+const ARROW_W = 32;
 
 /**
  * Hàng điều hướng ngày - Figma Lịch thuê xe "Date Controls" (`24729:83879`): "Hôm nay" (giãn hết
@@ -304,7 +304,7 @@ function ControlButton({
           {...(compact ? { w: ARROW_W } : { minWidth: CONTROL_H })}
           ai="center"
           jc="center"
-          px={compact ? 0 : 10}
+          px={compact ? 0 : 8}
           br={radius.control}
           bw={1}
           bc={colors.borderInput}
