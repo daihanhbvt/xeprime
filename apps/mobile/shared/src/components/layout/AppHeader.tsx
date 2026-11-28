@@ -49,6 +49,8 @@ interface AppHeaderProps {
   /** Vắng mặt = không có nút lui (màn gốc của một tab). */
   onBack?: () => void;
   title?: string;
+  /** `compact` = 16/24 thay 18/28 cho tiêu đề dài (vd. "Tạo đơn thuê xe cho khách", người dùng 28/11/2026). */
+  titleSize?: 'default' | 'compact';
   subtitle?: string;
   /**
    * Nhãn nhỏ đứng NGAY CẠNH tiêu đề — mức rủi ro của khách, trạng thái lưu trữ của một hồ sơ.
@@ -133,6 +135,7 @@ export function AppHeader({
   onBack,
   left,
   title,
+  titleSize = 'default',
   subtitle: subtitleProp,
   badge,
   context,
@@ -156,6 +159,7 @@ export function AppHeader({
    * 16/12, tiêu đề 18 semibold, bóng mảnh Figma, KHÔNG vạch vàng đáy, KHÔNG câu mô tả dưới tiêu đề.
    */
   const figma = IS_PARTNER_APP && !overlay && !brand;
+  const headingType = titleSize === 'compact' ? typeScale.title : typeScale.heading;
   const subtitle = IS_PARTNER_APP ? undefined : subtitleProp;
 
   const bg = brand ? colors.primary : figma ? colors.surface : colors.background;
@@ -223,8 +227,8 @@ export function AppHeader({
                 <Text
                   flexShrink={1}
                   col={fg}
-                  fos={figma ? typeScale.heading.fontSize : fontSize.body}
-                  {...(figma ? { lh: typeScale.heading.lineHeight } : {})}
+                  fos={figma ? headingType.fontSize : fontSize.body}
+                  {...(figma ? { lh: headingType.lineHeight } : {})}
                   fow={below && !figma ? fontWeight.bold : fontWeight.semibold}
                   numberOfLines={1}
                   /*

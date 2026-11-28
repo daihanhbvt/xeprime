@@ -191,7 +191,7 @@ export function StaffVehiclePicker({
 
   return (
     <>
-      <AppHeader
+      <AppHeader titleSize="compact"
         title={t('title')}
         onBack={onCancel}
         right={

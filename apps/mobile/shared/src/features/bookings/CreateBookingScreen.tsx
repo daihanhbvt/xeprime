@@ -161,7 +161,7 @@ export function CreateBookingScreen() {
   if (permissions.isLoading) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <AppHeader titleSize="compact" title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenLoading />
         </Screen>
@@ -173,7 +173,7 @@ export function CreateBookingScreen() {
     const message = tCreate('permissionDenied');
     return (
       <>
-        <AppHeader title={t('title')} onBack={back} />
+        <AppHeader titleSize="compact" title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage icon="lock-closed-outline" title={message} />
         </Screen>
@@ -311,7 +311,7 @@ function StaffBookingFlow({
   if (!vehicle) {
     return (
       <>
-        <AppHeader title={t('title')} onBack={onBack} />
+        <AppHeader titleSize="compact" title={t('title')} onBack={onBack} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenLoading />
         </Screen>
@@ -821,7 +821,7 @@ function StaffBookingTrip({
   if (step === STEP.REVIEW) {
     return (
       <>
-        <AppHeader
+        <AppHeader titleSize="compact"
           title={tPicker('title')}
           onBack={backToTrip}
           right={
@@ -1084,7 +1084,7 @@ function StaffBookingTrip({
 
   return (
     <>
-      <AppHeader
+      <AppHeader titleSize="compact"
         title={tPicker('title')}
         onBack={onBack}
         right={
@@ -1578,7 +1578,7 @@ function StaffBookingDone({
 
   return (
     <>
-      <AppHeader title={tPicker('title')} onBack={onClose} />
+      <AppHeader titleSize="compact" title={tPicker('title')} onBack={onClose} />
       <Screen
         edges={['left', 'right', 'bottom']}
         footer={
