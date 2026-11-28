@@ -1,4 +1,4 @@
-import { Ionicons } from '@/components/icons/Ionicons';
+import { LineIcon } from '@/components/icons/LineIcon';
 import { useEffect, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -20,8 +20,7 @@ import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { AccountTrackNotice } from './components/AccountTrackNotice';
 import { Button } from '@/components/ui/Button';
-import { Callout, CalloutBody } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
+import { InfoCard } from '@/components/ui/InfoCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -34,10 +33,12 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
 import { ACCOUNT_SECTION } from '@/navigation/account-section';
 import { ROUTES, SHOP_SECTION } from '@/navigation/routes';
-import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { fontSize, fontWeight, iconSize, radius, space, typeScale } from '@/theme/tokens';
+
+/** Vòng bước của tiến trình đăng ký chủ xe. */
+const STEP_DOT = 36;
 
 /** Xe đang trên đường lên chợ — mọi trạng thái TRỪ "đã lên chợ". */
 const IN_FLIGHT: readonly VehiclePublicStatus[] = [
@@ -114,7 +115,7 @@ export function OwnerRegistrationScreen({
   const hasVehicle = items.length > 0;
 
   const addVehicle = () =>
-    navigateOnce(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT));
+    navigateOnce(ROUTES.manage.vehicleNew());
 
   /*
    * Bước đang đứng suy từ DỮ LIỆU THẬT, chấm bằng `missingShopProfileRequirements` — CÙNG hàm
@@ -143,9 +144,10 @@ export function OwnerRegistrationScreen({
       {canViewProfile ? (
         <Button
           label={t('editProfile')}
-          icon="id-card-outline"
-          variant="ghost"
-          size="sm"
+          lineIcon="profile-octagon"
+          variant="neutral"
+          size="md"
+          shape="square"
           block={false}
           onPress={() => navigateOnce(ROUTES.manage.shop())}
         />
@@ -153,8 +155,10 @@ export function OwnerRegistrationScreen({
       {hasVehicle ? (
         <Button
           label={t('steps.vehicle.addMore')}
-          variant="ghost"
-          size="sm"
+          lineIcon="add"
+          variant="neutral"
+          size="md"
+          shape="square"
           block={false}
           onPress={addVehicle}
         />
@@ -219,38 +223,40 @@ export function OwnerRegistrationScreen({
           void vehicles.refetch();
         }}
       >
-        <YStack gap={space.sm}>
+        <YStack gap={layout.section}>
           {/* Trang chủ Owner Lite mở đầu bằng dải tuyến ở CẢ HAI bậc (web `OwnerLiteHome`). */}
           {shell === 'manage' ? <AccountTrackNotice /> : null}
 
           {shop.isPending ? (
             <MiniRowsSkeleton rows={3} />
           ) : (
-            <Card>
-              <YStack gap={space.sm}>
+            /* Tiến trình ba bước - khuôn thẻ Figma của app Partner (viền xám, bo 16, đệm 16). */
+            <InfoCard look="figma" title={t('progressTitleApp')} hint={t('progressHintApp')}>
+              <YStack>
                 <Step
                   index={0}
                   current={current}
-                  icon="storefront-outline"
+                  icon="profile-octagon"
                   title={t('steps.profile.title')}
                   description={t('steps.profile.description')}
                 />
                 <Step
                   index={1}
                   current={current}
-                  icon="car-outline"
+                  icon="car"
                   title={t('steps.vehicle.title')}
                   description={t('steps.vehicle.description')}
                 />
                 <Step
                   index={2}
                   current={current}
-                  icon="bag-check-outline"
+                  icon="shield-tick"
+                  last
                   title={t('steps.live.title')}
                   description={t('steps.live.description')}
                 />
               </YStack>
-            </Card>
+            </InfoCard>
           )}
 
           {/*
@@ -258,15 +264,15 @@ export function OwnerRegistrationScreen({
             "chưa có xe" vì đó là thứ tự của ba bước.
           */}
           {shop.data && !profileDone && canViewProfile ? (
-            <Callout tone="warning" title={t('profileIncomplete.title')}>
-              <CalloutBody>{t('profileIncomplete.body')}</CalloutBody>
+            <InfoCard look="figma" title={t('profileIncomplete.title')} hint={t('profileIncomplete.body')}>
               <Button
                 label={t('profileIncomplete.cta')}
-                icon="id-card-outline"
-                size="sm"
+                lineIcon="profile-octagon"
+                variant="gradient"
+                shape="square"
                 onPress={openProfile}
               />
-            </Callout>
+            </InfoCard>
           ) : null}
 
           {/*
@@ -274,10 +280,15 @@ export function OwnerRegistrationScreen({
             "duyệt" hay chưa — chủ xe đăng được xe ngay (ADR 0036).
           */}
           {!hasVehicle && !vehicles.isPending ? (
-            <Callout tone="info" title={t('noVehicle.title')}>
-              <CalloutBody>{t('noVehicle.body')}</CalloutBody>
-              <Button icon="add" label={t('noVehicle.cta')} size="sm" onPress={addVehicle} />
-            </Callout>
+            <InfoCard look="figma" title={t('noVehicle.title')} hint={t('noVehicle.body')}>
+              <Button
+                lineIcon="add"
+                label={t('noVehicle.cta')}
+                variant="gradient"
+                shape="square"
+                onPress={addVehicle}
+              />
+            </InfoCard>
           ) : null}
 
           {vehicles.isPending ? <MiniRowsSkeleton rows={2} /> : null}
@@ -287,11 +298,8 @@ export function OwnerRegistrationScreen({
             người duyệt trả xe về ngay tại dòng đó.
           */}
           {inFlight.length > 0 ? (
-            <Card>
-              <YStack gap={space.sm} accessibilityLabel={t('queue.title')}>
-                <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-                  {t('queue.title')}
-                </Text>
+            <InfoCard look="figma" title={t('queue.title')}>
+              <YStack gap={space.md} accessibilityLabel={t('queue.title')}>
                 {inFlight.map((vehicle) => (
                   <Pressable
                     key={vehicle.id}
@@ -333,7 +341,7 @@ export function OwnerRegistrationScreen({
                   </Pressable>
                 ))}
               </YStack>
-            </Card>
+            </InfoCard>
           ) : null}
         </YStack>
       </Screen>
@@ -347,30 +355,54 @@ function Step({
   icon,
   title,
   description,
+  last = false,
 }: {
   index: number;
   current: number;
-  icon: 'storefront-outline' | 'car-outline' | 'bag-check-outline';
+  icon: 'profile-octagon' | 'car' | 'shield-tick';
   title: string;
   description: string;
+  last?: boolean;
 }) {
   const colors = useColors();
   const done = index < current;
   const active = index === current;
-  const tone = done ? colors.success : active ? colors.primary : colors.placeholder;
 
+  /*
+   * Dòng bước kiểu stepper dọc: vòng 36 (xong = nền xanh + dấu tick, đang làm = nền primary, chưa =
+   * nền xám) nối bằng vạch dọc tới bước sau - cùng ngôn ngữ thanh bước của wizard thêm xe.
+   */
   return (
-    <XStack ai="flex-start" gap={space.sm}>
-      <Ionicons name={done ? 'checkmark-circle' : icon} size={iconSize.lg} color={tone} />
-      <YStack f={1} minWidth={0} gap={2}>
+    <XStack gap={12} ai="stretch">
+      <YStack ai="center" w={STEP_DOT}>
+        <YStack
+          w={STEP_DOT}
+          h={STEP_DOT}
+          br={radius.pill}
+          ai="center"
+          jc="center"
+          bg={done ? colors.success : active ? colors.primary : colors.surfaceMuted}
+        >
+          <LineIcon
+            name={done ? 'tick' : icon}
+            size={iconSize.md}
+            color={done || active ? colors.onPrimary : colors.placeholder}
+          />
+        </YStack>
+        {last ? null : (
+          <YStack f={1} w={2} minHeight={12} my={4} br={1} bg={done ? colors.success : colors.border} />
+        )}
+      </YStack>
+      <YStack f={1} minWidth={0} gap={2} pb={last ? 0 : space.md} pt={6}>
         <Text
-          col={active ? colors.text : colors.textMuted}
-          fos={fontSize.bodySm}
+          col={active || done ? colors.text : colors.textMuted}
+          fos={typeScale.body.fontSize}
+          lh={typeScale.body.lineHeight}
           fow={fontWeight.semibold}
         >
           {title}
         </Text>
-        <Text col={colors.textMuted} fos={fontSize.label}>
+        <Text col={colors.placeholder} fos={typeScale.label.fontSize} lh={typeScale.label.lineHeight}>
           {description}
         </Text>
       </YStack>

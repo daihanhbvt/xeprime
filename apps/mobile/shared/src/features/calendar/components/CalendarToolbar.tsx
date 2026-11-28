@@ -21,7 +21,7 @@ import {
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontWeight, radius, typeScale } from '@/theme/tokens';
+import { fontWeight, iconSize, radius, typeScale } from '@/theme/tokens';
 import { CALENDAR_SORT_VALUES, type CalendarFilters, type CalendarSort } from '../api';
 import {
   DEFAULT_SORT,
@@ -159,7 +159,9 @@ export function CalendarSearchBar({
 
 /** Figma "Date Controls" `24729:83879`: cao 40, cách 12; nút viền `stroke/gray-low300` bo 12. */
 const CONTROL_H = 40;
-const CONTROL_GAP = 12;
+const CONTROL_GAP = 8;
+/** Nút ‹ › gọn (vuông 36, không đệm) để ô ngày giữa đủ chỗ (người dùng 28/11/2026). */
+const ARROW_W = 36;
 
 /**
  * Hàng điều hướng ngày - Figma Lịch thuê xe "Date Controls" (`24729:83879`): "Hôm nay" (giãn hết
@@ -224,13 +226,17 @@ export const CalendarDateControls = memo(function CalendarDateControls({
         label={t('toolbar.previousMonth')}
         onPress={() => shift(-1)}
         disabled={!canGoBack}
+        compact
       >
         <LineIcon name="chevron-left" size={20} color={canGoBack ? colors.textMuted : colors.textPlaceholder} />
       </ControlButton>
       {/* Nhãn khoảng = nút chọn NGÀY BẮT ĐẦU (Danh sách); Lịch tháng chọn ngày nào thì về tháng đó. */}
       <ControlButton label={label} onPress={() => setPicking(true)} grow>
         <XStack ai="center" gap={6} maxWidth="100%">
-          <LineIcon name="calendar" size={18} color={colors.textMuted} />
+          {/* Bọc `flexShrink={0}`: chữ dài không được bóp nhỏ icon (người dùng 28/11/2026). */}
+          <YStack flexShrink={0}>
+            <LineIcon name="calendar" size={iconSize.lg} color={colors.textMuted} />
+          </YStack>
           {/* `accessibilityLiveRegion` để trình đọc màn hình đọc khoảng MỚI sau mỗi lần lùi/tiến. */}
           <Text
             flexShrink={1}
@@ -240,15 +246,14 @@ export const CalendarDateControls = memo(function CalendarDateControls({
             lh={typeScale.body.lineHeight}
             fow={fontWeight.semibold}
             numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.85}
+            ellipsizeMode="tail"
             accessibilityLiveRegion="polite"
           >
             {label}
           </Text>
         </XStack>
       </ControlButton>
-      <ControlButton label={t('toolbar.nextMonth')} onPress={() => shift(1)}>
+      <ControlButton label={t('toolbar.nextMonth')} onPress={() => shift(1)} compact>
         <LineIcon name="chevron-right" size={20} color={colors.textMuted} />
       </ControlButton>
       <DatePickerSheet
@@ -271,9 +276,12 @@ function ControlButton({
   label,
   onPress,
   grow = false,
+  compact = false,
   disabled = false,
   children,
 }: {
+  /** Nút chỉ có icon (‹ ›): vuông ARROW_W, không đệm ngang. */
+  compact?: boolean;
   label: string;
   onPress: () => void;
   grow?: boolean;
@@ -293,10 +301,10 @@ function ControlButton({
       {({ pressed }) => (
         <YStack
           h={CONTROL_H}
-          minWidth={CONTROL_H}
+          {...(compact ? { w: ARROW_W } : { minWidth: CONTROL_H })}
           ai="center"
           jc="center"
-          px={grow ? 16 : 10}
+          px={compact ? 0 : 10}
           br={radius.control}
           bw={1}
           bc={colors.borderInput}

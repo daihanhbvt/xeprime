@@ -70,12 +70,13 @@ describe('isCommissionPath', () => {
     '/manage/bank-accounts',
     '/manage/registration',
     '/manage/support/cases',
+    // MỘT wizard thêm xe cho hai tuyến (web 18/11/2026).
+    '/manage/vehicles/new',
   ])('mở cho tuyến hoa hồng: %s', (path) => {
     expect(isCommissionPath(path)).toBe(true);
   });
 
   it.each([
-    '/manage/vehicles/new',
     '/manage/vehicles/v1/edit',
     '/manage/vehicles/v1/edit/pricing',
     '/manage/customers',

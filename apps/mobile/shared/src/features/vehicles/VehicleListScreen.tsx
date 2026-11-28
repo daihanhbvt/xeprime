@@ -32,7 +32,6 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/domain';
 import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { useCardGrid } from '@/theme/use-responsive';
@@ -108,15 +107,11 @@ export function VehicleListScreen({ scope = 'shop' }: { scope?: VehicleListScope
   const { branchId, filter: branchFilter } = useScreenBranchFilter(undefined, !isOwner);
   const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
-  /** Lối thêm xe — gian hàng: wizard đầy đủ; chủ xe tuyến hoa hồng: luồng đăng xe (web `goCreate`). */
+  /** Lối thêm xe - MỘT wizard cho hai tuyến (web `goCreate` 18/11/2026); màn tự ẩn phần của gian hàng. */
   const goCreate = useCallback(() => {
-    if (isOwner) {
-      navigateOnce(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT));
-      return;
-    }
     // Chi nhánh đang lọc là GỢI Ý cho form (ADR 0052 điều 6) — form điền sẵn, đổi được.
     navigateOnce(withBranchReturn(ROUTES.manage.vehicleNew(), branchId));
-  }, [branchId, isOwner, navigateOnce]);
+  }, [branchId, navigateOnce]);
 
 
   const query = useInfiniteVehicles({

@@ -32,6 +32,7 @@ import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
+import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
 import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
@@ -212,7 +213,13 @@ export function CreateVehicleScreen() {
    * hàng (chi nhánh khi chỉ có một, nguồn xe, chính sách gian hàng). Server vẫn là cổng thật.
    */
   const session = useCurrentUser();
-  const commission = resolvePartnerTrack(session.data) === PARTNER_TRACK.COMMISSION;
+  const track = resolvePartnerTrack(session.data);
+  const commission = track === PARTNER_TRACK.COMMISSION;
+  /** Chưa có gian hàng ⇒ wizard đăng nhanh: bước hồ sơ chủ xe mở gian hàng ở đó (web `needsShop`). */
+  const needsShop = Boolean(session.data) && track === PARTNER_TRACK.NONE;
+  useEffect(() => {
+    if (needsShop) router.replace(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT));
+  }, [needsShop, router]);
   /** Hồ sơ gian hàng tuyến gói còn thiếu gì để đăng xe (ADR 0040 điều 7) - `null` = không áp. */
   const shop = useMyShop(true);
   const shopGaps = useMemo(() => packageShopListingGapsOf(shop.data), [shop.data]);
@@ -269,6 +276,8 @@ export function CreateVehicleScreen() {
       })),
     [branches.data, noProvince],
   );
+  /* Chủ xe hoa hồng MỘT chi nhánh: thay ô chọn bằng "Địa chỉ nhận xe" (web `branchHidden`). */
+  const branchHidden = commission && branchOptions.length <= 1;
   const selectedBranchLabel = branchOptions.find((b) => b.value === branchId)?.label ?? null;
   const hintedBranchId = useBranchReturnParam();
   useEffect(() => {
@@ -607,7 +616,15 @@ export function CreateVehicleScreen() {
                 setValue={setValue}
                 branchOptions={branchOptions}
                 branchLoading={branches.isPending}
-                hideBranch={commission && branchOptions.length <= 1}
+                hideBranch={branchHidden}
+                pickupAddress={
+                  branchHidden
+                    ? {
+                        branch: branches.data?.items.find((b) => b.id === branchId) ?? null,
+                        loading: branches.isPending,
+                      }
+                    : null
+                }
                 registration={registration}
                 onRegistrationChange={setRegistration}
                 vehiclePlate={plateNumber}

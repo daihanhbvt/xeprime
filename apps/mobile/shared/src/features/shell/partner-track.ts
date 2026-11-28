@@ -110,14 +110,16 @@ interface PageRule {
  * Trang tuyến HOA HỒNG dùng được — DANH SÁCH TRẮNG như `COMMISSION_PAGES` của web: một màn tuyến
  * gói thêm sau mặc định bị chặn với tuyến hoa hồng, thay vì mặc định mở cho tới khi ai đó nhớ.
  *
- * `/manage/vehicles` chỉ khớp tuyệt đối: `/manage/vehicles/new` là form đầy đủ của tuyến gói, còn
- * chủ xe hoa hồng đăng xe qua wizard đăng nhanh. Chi tiết xe và không gian `…/manage/**` xét riêng
+ * `/manage/vehicles` chỉ khớp tuyệt đối: `/manage/vehicles/new` (MỘT wizard
+ * cho hai tuyến, web 18/11/2026) khớp riêng ở dòng dưới. Chi tiết xe và không gian `…/manage/**` xét riêng
  * ở `isCommissionPath`.
  */
 const COMMISSION_PAGES: readonly PageRule[] = [
   { href: PARTNER_PATH.HOME, exact: true },
   { href: PARTNER_PATH.REGISTRATION },
   { href: PARTNER_PATH.VEHICLES, exact: true },
+  // Thêm xe: MỘT wizard cho hai tuyến (web 18/11/2026) - màn tự ẩn phần chỉ của gian hàng.
+  { href: `${PARTNER_PATH.VEHICLES}/new`, exact: true },
   { href: PARTNER_PATH.CALENDAR },
   { href: PARTNER_PATH.REQUESTS },
   { href: PARTNER_PATH.BOOKINGS },

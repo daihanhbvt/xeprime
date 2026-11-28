@@ -2,7 +2,7 @@
   "expo": {
     "name": "XePrime",
     "slug": "xeprime-mobile",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "scheme": "xeprime",
     "userInterfaceStyle": "automatic",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "vn.xeprime.customerapp",
-      "versionCode": 24,
+      "versionCode": 25,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "../shared/assets/images/xeprime-icon-foreground.png",

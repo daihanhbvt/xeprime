@@ -23,7 +23,8 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Avatar } from '@/components/ui/Avatar';
 import { InfoCard } from '@/components/ui/InfoCard';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Pill, pillToneOfStatusColor } from '@/components/ui/Pill';
+import { statusTone } from '@/components/ui/StatusBadge';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
@@ -43,10 +44,10 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { VatInvoiceSection } from '@/features/shop/components/VatInvoiceSection';
 import { useColors } from '@/theme/ThemeProvider';
-import { fontSize, fontWeight, space } from '@/theme/tokens';
+import { fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import type { UserProfile } from './api';
 import { OwnerInfoForm } from './components/OwnerInfoForm';
-import { SubscriptionWorkspace } from '@/features/subscription/SubscriptionScreen';
+import { ShopPlanCard } from '@/features/shop/components/ShopPlanCard';
 import { useMyProfile } from './hooks/use-account';
 import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
 import { RESET_DISCARD } from '@/hooks/use-form-refresh';
@@ -69,7 +70,7 @@ import { RESET_DISCARD } from '@/hooks/use-form-refresh';
  * ## Khác web ở VỎ
  *
  * Khai thuế là MÀN riêng đã có sẵn trên app (`/manage/tax`) — ở đây là dòng dẫn đi. Gói không có màn
- * riêng: khối "Gói & hạn mức" nhúng `SubscriptionWorkspace` (chỉ đọc, không thanh toán). `?section=` cuộn tới
+ * riêng: khối "Gói & hạn mức" là `ShopPlanCard` dùng chung với Thông tin cửa hàng. `?section=` cuộn tới
  * khối tương ứng như `useScrollToSection` bên web.
  */
 export function OwnerProfileScreen({ section }: { section?: ShopSection }) {
@@ -243,6 +244,8 @@ function OwnerProfileSections({
    * Thứ khách thấy — CÙNG hàm với API (`storefrontIdentity`), nên khối nhận diện không thể nói
    * khác trang công khai.
    */
+  const statusColor = metaColor(TENANT_STATUS_META, shop.status as TenantStatus);
+  const isActive = shop.status === TENANT_STATUS.ACTIVE;
   const identity = storefrontIdentity(
     STOREFRONT_KIND.PERSONAL,
     {
@@ -275,36 +278,53 @@ function OwnerProfileSections({
             Đầu trang mặt tiền CÁ NHÂN (web `ShopWorkspace` personal): ảnh TRÒN của chính chủ xe ·
             họ tên · trạng thái · dòng phụ, rồi "Xem trang chủ xe" khi đang hoạt động.
           */}
-          <YStack gap={space.md}>
+          {/*
+            Cùng khuôn đầu trang "Thông tin cửa hàng" (Figma `24231:112115`, người dùng 28/11/2026):
+            thẻ trắng viền xám, ảnh 54 có chấm trạng thái ở góc, tên 16/24 đậm, dòng phụ 14/20 xám,
+            nút viền "Xem trang" cao 40. Chủ xe CÁ NHÂN giữ ảnh TRÒN của chính mình (web personal).
+          */}
+          <YStack gap={12} p={16} br={radius.card} bw={1} bc={colors.border} bg={colors.surface}>
             <XStack ai="center" gap={12}>
-              <Avatar name={identity.name} url={identity.avatarUrl ?? null} size={54} gradient />
-              <YStack f={1} minWidth={0}>
+              <YStack w={54} h={54} accessible accessibilityLabel={domainLabel('tenantStatus', shop.status)}>
+                <Avatar name={identity.name} url={identity.avatarUrl ?? null} size={54} gradient />
+                <YStack
+                  pos="absolute"
+                  r={2}
+                  b={2}
+                  w={10.4}
+                  h={10.4}
+                  br={radius.pill}
+                  bw={1.2}
+                  bc={colors.surface}
+                  bg={statusTone(statusColor, colors).fg}
+                />
+              </YStack>
+              <YStack f={1} minWidth={0} gap={4}>
                 <XStack ai="center" gap={space.sm} flexWrap="wrap">
                   <Text
                     col={colors.text}
-                    fos={fontSize.lead}
-                    lineHeight={30}
+                    fos={typeScale.title.fontSize}
+                    lh={typeScale.title.lineHeight}
                     fow={fontWeight.semibold}
                     flexShrink={1}
                   >
                     {identity.name}
                   </Text>
-                  <StatusBadge
-                    label={domainLabel('tenantStatus', shop.status)}
-                    color={metaColor(TENANT_STATUS_META, shop.status as TenantStatus)}
-                  />
+                  {isActive ? null : (
+                    <Pill label={domainLabel('tenantStatus', shop.status)} tone={pillToneOfStatusColor(statusColor)} />
+                  )}
                 </XStack>
-                <Text col={colors.placeholder} fos={fontSize.body} lineHeight={20}>
+                <Text col={colors.placeholder} fos={typeScale.body.fontSize} lh={typeScale.body.lineHeight}>
                   {t('pageSubtitle')}
                 </Text>
               </YStack>
             </XStack>
-            {shop.status === TENANT_STATUS.ACTIVE ? (
+            {isActive ? (
               <XStack>
                 <Button
                   label={t('viewPublicPage')}
-                  icon="open-outline"
-                  variant="secondary"
+                  lineIcon="foreign"
+                  variant="neutral"
                   size="md"
                   shape="square"
                   block={false}
@@ -322,7 +342,7 @@ function OwnerProfileSections({
             gap={space.md}
             onLayout={(event: LayoutChangeEvent) => onSectionLayout(SHOP_SECTION.PROFILE, event)}
           >
-            <InfoCard title={t('sections.profile')} hint={t('sections.profileHint')}>
+            <InfoCard look="figma" title={t('sections.profile')} hint={t('sections.profileHint')}>
               <OwnerInfoForm profile={profile} shop={shop} canEditBio={canEdit} />
             </InfoCard>
             {readOnly ? null : (
@@ -343,12 +363,14 @@ function OwnerProfileSections({
             <ShopLegalCard
               shop={shop}
               kind={STOREFRONT_KIND.PERSONAL}
+              look="figma"
               {...(readOnly ? {} : { onEdit: () => setEditingAddress(true) })}
             />
           </YStack>
 
           {canSeeTax ? (
             <ShopTaxCard
+              look="figma"
               onLayout={(event: LayoutChangeEvent) => onSectionLayout(SHOP_SECTION.TAX, event)}
             />
           ) : null}
@@ -362,21 +384,13 @@ function OwnerProfileSections({
               onSectionLayout(SHOP_SECTION.VAT_INVOICE, event)
             }
           >
-            <InfoCard title={tVat('title')} hint={tVat('subtitle')}>
+            <InfoCard look="figma" title={tVat('title')} hint={tVat('subtitle')}>
               <VatInvoiceSection canEdit={canEdit} renderHead={() => null} />
             </InfoCard>
           </YStack>
 
-          {canSeePlan ? (
-            <YStack
-              gap={space.sm}
-              onLayout={(event: LayoutChangeEvent) => onSectionLayout(SHOP_SECTION.PLAN, event)}
-            >
-              <InfoCard title={t('sections.appPlan')} hint={t('sections.appPlanHint')}>
-                <SubscriptionWorkspace />
-              </InfoCard>
-            </YStack>
-          ) : null}
+          {/* Cùng thẻ "Liên hệ tư vấn" với Thông tin cửa hàng (web `ShopPlanSection` dùng chung). */}
+          {canSeePlan ? <ShopPlanCard onLayout={(event: LayoutChangeEvent) => onSectionLayout(SHOP_SECTION.PLAN, event)} /> : null}
 
           {/* "Bảo mật tài khoản" đã thành một mục ở màn Tài khoản của tôi (người dùng chốt 19/11/2026). */}
         </YStack>

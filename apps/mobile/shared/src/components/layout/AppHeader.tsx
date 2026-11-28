@@ -12,6 +12,9 @@ import { useColors } from '@/theme/ThemeProvider';
 import { fontSize, fontWeight, radius, space, typeScale } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
+/** Trần phóng chữ hệ thống cho chữ trên thanh đầu trang (cỡ chữ lớn của máy không làm vỡ thanh). */
+const HEADER_MAX_FONT_SCALE = 1.2;
+
 /** Mũi tên lui trên thanh trần: đúng khung 24 của Figma "Left 1". Nút tròn nổi giữ cỡ 20 của `IconButton`. */
 const BACK_ICON_SIZE = 24;
 
@@ -224,6 +227,11 @@ export function AppHeader({
                   {...(figma ? { lh: typeScale.heading.lineHeight } : {})}
                   fow={below && !figma ? fontWeight.bold : fontWeight.semibold}
                   numberOfLines={1}
+                  /*
+                    Trần phóng chữ hệ thống (người dùng 28/11/2026: header vỡ trên máy để cỡ chữ lớn):
+                    18 chỉ lên tối đa ~22, còn dài thì "…" - thanh cao cố định không bị đẩy vỡ.
+                  */
+                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                 >
                   {title}
                 </Text>
@@ -240,7 +248,7 @@ export function AppHeader({
               </XStack>
               {context ??
                 (subtitle ? (
-                  <Text col={fgMuted} fos={fontSize.label} numberOfLines={1}>
+                  <Text col={fgMuted} fos={fontSize.label} numberOfLines={1} maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}>
                     {subtitle}
                   </Text>
                 ) : null)}

@@ -390,6 +390,8 @@
     "queue": {
       "title": "Xe của bạn đang trên đường lên chợ"
     },
+    "progressTitleApp": "Các bước bắt đầu",
+    "progressHintApp": "Hoàn tất ba bước để xe của bạn lên chợ",
     "profileIncomplete": {
       "title": "Hồ sơ chủ xe còn thiếu thông tin",
       "body": "Khai đủ họ tên, số điện thoại đã xác thực và tỉnh/thành nhận xe để hoàn tất bước 1.",

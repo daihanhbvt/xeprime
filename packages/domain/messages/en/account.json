@@ -390,6 +390,8 @@
     "queue": {
       "title": "Your vehicles on their way to the marketplace"
     },
+    "progressTitleApp": "Getting started",
+    "progressHintApp": "Finish three steps to get your vehicle on the marketplace",
     "profileIncomplete": {
       "title": "Your host profile is missing a few details",
       "body": "Add your full name, a verified phone number and a pickup province to finish step 1.",

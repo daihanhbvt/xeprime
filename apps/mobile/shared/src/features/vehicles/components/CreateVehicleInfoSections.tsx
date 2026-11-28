@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import type { Branch } from '@/api/branches/api';
+import { VehiclePickupAddressField } from './VehiclePickupAddressField';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -40,6 +42,7 @@ export function CreateVehicleInfoCard({
   branchOptions,
   branchLoading,
   hideBranch,
+  pickupAddress,
   registration,
   onRegistrationChange,
   vehiclePlate,
@@ -52,6 +55,8 @@ export function CreateVehicleInfoCard({
   branchLoading: boolean;
   /** Tuyến hoa hồng chỉ có MỘT chi nhánh: ẩn ô (đã chọn sẵn) như web `branchHidden`. */
   hideBranch: boolean;
+  /** Ô chi nhánh bị ẩn ⇒ hiện "Địa chỉ nhận xe" (đọc + sửa) thay chỗ - web `pickupAddress`. */
+  pickupAddress?: { branch: Branch | null; loading: boolean } | null;
   registration: RegistrationCaptureState;
   onRegistrationChange: (
     update: (prev: RegistrationCaptureState) => RegistrationCaptureState,
@@ -100,7 +105,11 @@ export function CreateVehicleInfoCard({
         hintInLabel
         autoCapitalize="characters"
       />
-      {hideBranch ? null : (
+      {hideBranch ? (
+        pickupAddress ? (
+          <VehiclePickupAddressField branch={pickupAddress.branch} loading={pickupAddress.loading} />
+        ) : null
+      ) : (
         <SelectField
           control={control}
           name="branchId"
